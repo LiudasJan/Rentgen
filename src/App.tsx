@@ -233,7 +233,6 @@ export default function App() {
       return;
     }
 
-    // 🔑 header parsing kaip ir sendHttp
     const hdrs = headers
       ? Object.fromEntries(
           headers.split("\n").map((h) => h.split(":").map((s) => s.trim()))
@@ -249,14 +248,53 @@ export default function App() {
       for (const d of dataset) {
         const newBody = { ...parsedBody, [field]: d.value };
 
+        let dataToSend: any = newBody;
+        if (protoFile && messageType) {
+          try {
+            dataToSend = encodeMessage(messageType, newBody);
+          } catch (err) {
+            results.push({
+              field,
+              value: d.value,
+              expected: d.valid ? "2xx" : "4xx",
+              actual: "Encode error",
+              status: "🔴 Bug",
+              request: newBody,
+              response: String(err),
+            });
+            continue;
+          }
+        }
+
         try {
           const res = await axios({
             url,
             method: method as any,
-            headers: hdrs, // 👈 NAUDOJAM HEADERIUS
-            data: newBody,
+            headers: hdrs,
+            data: dataToSend,
+            responseType: "arraybuffer", // visada raw
             validateStatus: () => true,
           });
+
+          let responseText: string;
+          let decoded: string | null = null;
+
+          try {
+            responseText = new TextDecoder().decode(res.data);
+          } catch {
+            responseText = "[Binary data: " + res.data.byteLength + " bytes]";
+          }
+
+          // jei turim proto ir bandom dekoduoti
+          if (protoFile && messageType) {
+            try {
+              const { decodeMessage } = require("./protobufHelper");
+              const obj = decodeMessage(messageType, new Uint8Array(res.data));
+              decoded = JSON.stringify(obj, null, 2);
+            } catch {
+              decoded = null;
+            }
+          }
 
           const ok = res.status >= 200 && res.status < 300;
           let status = "";
@@ -272,13 +310,8 @@ export default function App() {
             actual: `${res.status} ${res.statusText}`,
             status,
             request: newBody,
-            response: (() => {
-              try {
-                return new TextDecoder().decode(res.data);
-              } catch {
-                return "[Binary data]";
-              }
-            })(),
+            response: responseText,
+            decoded,
           });
         } catch (err: any) {
           results.push({
@@ -523,9 +556,16 @@ export default function App() {
                 Request/Response for {r.field}={JSON.stringify(r.value)}
               </summary>
               <pre>Request: {JSON.stringify(r.request, null, 2)}</pre>
-              <pre>Response: {JSON.stringify(r.response, null, 2)}</pre>
+              <pre>Response: {r.response}</pre>
+              {r.decoded && (
+                <>
+                  <div className="decoded-label">Decoded Protobuf:</div>
+                  <pre>{r.decoded}</pre>
+                </>
+              )}
             </details>
           ))}
+
         </div>
       )}
     </div>
