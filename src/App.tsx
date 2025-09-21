@@ -13,7 +13,7 @@ export default function App() {
   const [body, setBody] = useState("{}");
 
   const [messages, setMessages] = useState<
-    { direction: "sent" | "received" | "system"; data: string }[]
+    { direction: "sent" | "received" | "system"; data: string; decoded?: string | null }[]
   >([]);
   const [protoFile, setProtoFile] = useState<File | null>(null);
   const [messageType, setMessageType] = useState("");
@@ -39,13 +39,19 @@ export default function App() {
           )
         : {};
 
-      const parsedBody = JSON.parse(body);
-
-      // 👇 Čia deklaruojam kintamąjį su default JSON
-      let dataToSend: any = parsedBody;
+      let dataToSend: any = body; // raw tekstas
 
       if (protoFile && messageType) {
-        dataToSend = encodeMessage(messageType, parsedBody);
+        try {
+          dataToSend = encodeMessage(messageType, JSON.parse(body));
+        } catch (err) {
+          setHttpResponse({
+            status: "Encode error",
+            body: String(err),
+            headers: {},
+          });
+          return;
+        }
       }
 
       const res = await axios({
@@ -53,35 +59,45 @@ export default function App() {
         method: method as any,
         headers: hdrs,
         data: dataToSend,
-        responseType: protoFile ? "arraybuffer" : "json",
+        responseType: "arraybuffer",
+        validateStatus: () => true,
       });
 
-      let responseBody: any = res.data;
-
-      // Jei ateina Protobuf response – dekoduojam
-      if (protoFile && messageType && res.data instanceof ArrayBuffer) {
-        const { decodeMessage } = await import("./protobufHelper");
-        responseBody = decodeMessage(messageType, new Uint8Array(res.data));
+      // Raw response kaip tekstas
+      let decoded = "";
+      try {
+        decoded = new TextDecoder().decode(res.data);
+      } catch {
+        decoded = "[Binary data: " + res.data.byteLength + " bytes]";
       }
 
       setHttpResponse({
         status: `${res.status} ${res.statusText}`,
-        body: responseBody,
+        body: decoded,
         headers: res.headers,
       });
 
-      // detect fields (naudinga test generatoriui tik su JSON body)
-      if (!protoFile && parsedBody && typeof parsedBody === "object") {
+      // ---- ČIA ESAMAS FIX ----
+      // Testų generavimą remiam į request, o ne response
+      let parsedBody: any;
+      try {
+        parsedBody = JSON.parse(body);
+      } catch {
+        parsedBody = null;
+      }
+
+      if (res.status >= 200 && res.status < 300 && parsedBody) {
         const mappings: Record<string, string> = {};
         Object.entries(parsedBody).forEach(([k, v]) => {
           mappings[k] = detectFieldType(k, v);
         });
         setFieldMappings(mappings);
       }
+
     } catch (err: any) {
       setHttpResponse({
-        status: "Error",
-        body: err.toString(),
+        status: "Network Error",
+        body: String(err),
         headers: {},
       });
     }
@@ -127,23 +143,46 @@ export default function App() {
       };
 
       wsRef.current.onmessage = (event) => {
-        let msg: any;
+        let raw: string | Uint8Array;
+        let decoded: any = null;
 
-        if (protoFile && messageType && event.data instanceof ArrayBuffer) {
-          try {
-            const { decodeMessage } = require("./protobufHelper");
-            msg = decodeMessage(messageType, new Uint8Array(event.data));
-          } catch (err) {
-            msg = "❌ Failed to decode proto: " + err;
+        if (event.data instanceof ArrayBuffer) {
+          raw = new Uint8Array(event.data);
+
+          // Jei turim proto – bandome dekoduoti
+          if (protoFile && messageType) {
+            try {
+              const { decodeMessage } = require("./protobufHelper");
+              decoded = decodeMessage(messageType, raw);
+            } catch (err) {
+              decoded = "❌ Failed to decode proto: " + err;
+            }
           }
-        } else if (event.data instanceof ArrayBuffer) {
-          msg = new TextDecoder().decode(event.data);
         } else {
-          msg = event.data;
+          raw = event.data; // tekstas
         }
 
-        setMessages((prev) => [{ direction: "received", data: JSON.stringify(msg, null, 2) }, ...prev]);
+        setMessages((prev) => [
+          {
+            direction: "received",
+            data:
+              typeof raw === "string"
+                ? raw // tekstas kaip yra
+                : "[Binary data: " +
+                  raw.length +
+                  " bytes]\n" +
+                  Array.from(raw)
+                    .slice(0, 50)
+                    .map((b) => b.toString(16).padStart(2, "0"))
+                    .join(" ") +
+                  (raw.length > 50 ? " ..." : ""), // hexdump preview
+            decoded: decoded ? JSON.stringify(decoded, null, 2) : null,
+          },
+          ...prev,
+        ]);
       };
+
+
     } catch (err) {
       console.error("WS connect exception:", err);
       setMessages((prev) => [
@@ -186,7 +225,21 @@ export default function App() {
     setLoading(true);
     setTestResults([]);
 
-    const parsedBody = JSON.parse(body);
+    let parsedBody: any;
+    try {
+      parsedBody = JSON.parse(body);
+    } catch {
+      setLoading(false);
+      return;
+    }
+
+    // 🔑 header parsing kaip ir sendHttp
+    const hdrs = headers
+      ? Object.fromEntries(
+          headers.split("\n").map((h) => h.split(":").map((s) => s.trim()))
+        )
+      : {};
+
     const results: any[] = [];
 
     for (const [field, type] of Object.entries(fieldMappings)) {
@@ -200,8 +253,9 @@ export default function App() {
           const res = await axios({
             url,
             method: method as any,
-            headers: {},
+            headers: hdrs, // 👈 NAUDOJAM HEADERIUS
             data: newBody,
+            validateStatus: () => true,
           });
 
           const ok = res.status >= 200 && res.status < 300;
@@ -218,7 +272,13 @@ export default function App() {
             actual: `${res.status} ${res.statusText}`,
             status,
             request: newBody,
-            response: res.data,
+            response: (() => {
+              try {
+                return new TextDecoder().decode(res.data);
+              } catch {
+                return "[Binary data]";
+              }
+            })(),
           });
         } catch (err: any) {
           results.push({
@@ -228,7 +288,7 @@ export default function App() {
             actual: "Error",
             status: "🔴 Bug",
             request: newBody,
-            response: err.toString(),
+            response: String(err),
           });
         }
       }
@@ -374,18 +434,24 @@ export default function App() {
       {mode === "WSS" && (
         <div className="response-panel">
           <h3>Messages</h3>
-          {messages.map((m, i) => (
-            <div key={i} className={`msg ${m.direction}`}>
-              <span className="arrow">
-                {m.direction === "sent"
-                  ? "➡"
-                  : m.direction === "received"
-                  ? "⬅"
-                  : "⚠"}
-              </span>
-              <pre>{m.data}</pre>
-            </div>
-          ))}
+            {messages.map((m, i) => (
+              <div key={i} className={`msg ${m.direction}`}>
+                <span className="arrow">
+                  {m.direction === "sent"
+                    ? "➡"
+                    : m.direction === "received"
+                    ? "⬅"
+                    : "⚠"}
+                </span>
+                <pre>{m.data}</pre>
+                {m.decoded && (
+                  <>
+                    <div className="decoded-label">Decoded Protobuf:</div>
+                    <pre>{m.decoded}</pre>
+                  </>
+                )}
+              </div>
+            ))}
         </div>
       )}
 
