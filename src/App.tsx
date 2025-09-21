@@ -38,23 +38,40 @@ export default function App() {
             headers.split("\n").map((h) => h.split(":").map((s) => s.trim()))
           )
         : {};
+
       const parsedBody = JSON.parse(body);
+
+      // 👇 Čia deklaruojam kintamąjį su default JSON
+      let dataToSend: any = parsedBody;
+
+      if (protoFile && messageType) {
+        dataToSend = encodeMessage(messageType, parsedBody);
+      }
 
       const res = await axios({
         url,
         method: method as any,
         headers: hdrs,
-        data: parsedBody,
+        data: dataToSend,
+        responseType: protoFile ? "arraybuffer" : "json",
       });
+
+      let responseBody: any = res.data;
+
+      // Jei ateina Protobuf response – dekoduojam
+      if (protoFile && messageType && res.data instanceof ArrayBuffer) {
+        const { decodeMessage } = await import("./protobufHelper");
+        responseBody = decodeMessage(messageType, new Uint8Array(res.data));
+      }
 
       setHttpResponse({
         status: `${res.status} ${res.statusText}`,
-        body: res.data,
+        body: responseBody,
         headers: res.headers,
       });
 
-      // detect fields
-      if (parsedBody && typeof parsedBody === "object") {
+      // detect fields (naudinga test generatoriui tik su JSON body)
+      if (!protoFile && parsedBody && typeof parsedBody === "object") {
         const mappings: Record<string, string> = {};
         Object.entries(parsedBody).forEach(([k, v]) => {
           mappings[k] = detectFieldType(k, v);
@@ -69,6 +86,7 @@ export default function App() {
       });
     }
   }
+
 
   // --- WSS CONNECT ---
   async function connectWss() {
@@ -109,12 +127,22 @@ export default function App() {
       };
 
       wsRef.current.onmessage = (event) => {
-        const msg =
-          event.data instanceof ArrayBuffer
-            ? new TextDecoder().decode(event.data)
-            : event.data;
+        let msg: any;
 
-        setMessages((prev) => [{ direction: "received", data: msg }, ...prev]);
+        if (protoFile && messageType && event.data instanceof ArrayBuffer) {
+          try {
+            const { decodeMessage } = require("./protobufHelper");
+            msg = decodeMessage(messageType, new Uint8Array(event.data));
+          } catch (err) {
+            msg = "❌ Failed to decode proto: " + err;
+          }
+        } else if (event.data instanceof ArrayBuffer) {
+          msg = new TextDecoder().decode(event.data);
+        } else {
+          msg = event.data;
+        }
+
+        setMessages((prev) => [{ direction: "received", data: JSON.stringify(msg, null, 2) }, ...prev]);
       };
     } catch (err) {
       console.error("WS connect exception:", err);
@@ -286,6 +314,47 @@ export default function App() {
           value={body}
           onChange={(e) => setBody(e.target.value)}
         />
+
+        {/* Protobuf controls */}
+        <div className="protobuf-section" style={{ marginTop: "10px" }}>
+          <label style={{ display: "block", marginBottom: "6px", fontWeight: "bold" }}>
+            Protobuf schema & message type (optional):
+          </label>
+
+          <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+            <input
+              type="file"
+              accept=".proto"
+              onChange={async (e) => {
+                if (e.target.files?.length) {
+                  try {
+                    const root = await loadProto(e.target.files[0]);
+                    setProtoFile(e.target.files[0]);
+                    setMessages((prev) => [
+                      { direction: "system", data: "📂 Proto schema loaded" },
+                      ...prev,
+                    ]);
+                  } catch (err) {
+                    setMessages((prev) => [
+                      { direction: "system", data: "❌ Failed to parse proto: " + err },
+                      ...prev,
+                    ]);
+                  }
+                }
+              }}
+            />
+
+            <input
+              type="text"
+              placeholder="MessageType (e.g. mypackage.MyMessage)"
+              value={messageType}
+              onChange={(e) => setMessageType(e.target.value)}
+              style={{ flex: 1, minWidth: "300px" }}   // ilgesnis, kad tilptų visas pavadinimas
+            />
+          </div>
+        </div>
+
+
 
       {/* Response panel */}
       {mode === "HTTP" && httpResponse && (
