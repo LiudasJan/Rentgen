@@ -282,7 +282,7 @@ export default function App() {
 
         <textarea
           className="editor editor-body"
-          placeholder="Body JSON"
+          placeholder={mode === "HTTP" ? "Body JSON" : "Message body"}
           value={body}
           onChange={(e) => setBody(e.target.value)}
         />
@@ -303,36 +303,21 @@ export default function App() {
 
       {/* WSS messages */}
       {mode === "WSS" && (
-        <>
-          <textarea
-            className="editor editor-headers"
-            placeholder="Header-Key: value"
-            value={headers}
-            onChange={(e) => setHeaders(e.target.value)}
-          />
-          <textarea
-            className="editor editor-body"
-            placeholder="Message body"
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-          />
-
-          <div className="response-panel">
-            <h3>Messages</h3>
-            {messages.map((m, i) => (
-              <div key={i} className={`msg ${m.direction}`}>
-                <span className="arrow">
-                  {m.direction === "sent"
-                    ? "➡"
-                    : m.direction === "received"
-                    ? "⬅"
-                    : "⚠"}
-                </span>
-                <pre>{m.data}</pre>
-              </div>
-            ))}
-          </div>
-        </>
+        <div className="response-panel">
+          <h3>Messages</h3>
+          {messages.map((m, i) => (
+            <div key={i} className={`msg ${m.direction}`}>
+              <span className="arrow">
+                {m.direction === "sent"
+                  ? "➡"
+                  : m.direction === "received"
+                  ? "⬅"
+                  : "⚠"}
+              </span>
+              <pre>{m.data}</pre>
+            </div>
+          ))}
+        </div>
       )}
 
       {/* Field Mapping + Auto Tests */}
