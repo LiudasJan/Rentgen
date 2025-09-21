@@ -1,0 +1,12 @@
+# React build
+/build
+
+# Electron builder output
+/dist
+/dist_electron
+*.exe
+*.dmg
+*.AppImage
+
+# Node modules
+/node_modules
