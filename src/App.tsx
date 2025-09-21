@@ -272,39 +272,67 @@ export default function App() {
         )}
       </div>
 
-      {/* Body */}
-      <textarea
-        className="editor editor-body"
-        placeholder="Body JSON"
-        value={body}
-        onChange={(e) => setBody(e.target.value)}
-      />
+        {/* Request Editors */}
+        <textarea
+          className="editor editor-headers"
+          placeholder="Header-Key: value"
+          value={headers}
+          onChange={(e) => setHeaders(e.target.value)}
+        />
+
+        <textarea
+          className="editor editor-body"
+          placeholder="Body JSON"
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+        />
 
       {/* Response panel */}
       {mode === "HTTP" && httpResponse && (
         <div className="response-panel">
           <h3>Response</h3>
           <div className="status-line">{httpResponse.status}</div>
+
+          <h4>Headers</h4>
+          <pre>{JSON.stringify(httpResponse.headers, null, 2)}</pre>
+
+          <h4>Body</h4>
           <pre>{JSON.stringify(httpResponse.body, null, 2)}</pre>
         </div>
       )}
 
+      {/* WSS messages */}
       {mode === "WSS" && (
-        <div className="response-panel">
-          <h3>Messages</h3>
-          {messages.map((m, i) => (
-            <div key={i} className={`msg ${m.direction}`}>
-              <span className="arrow">
-                {m.direction === "sent"
-                  ? "➡"
-                  : m.direction === "received"
-                  ? "⬅"
-                  : "⚠"}
-              </span>
-              <pre>{m.data}</pre>
-            </div>
-          ))}
-        </div>
+        <>
+          <textarea
+            className="editor editor-headers"
+            placeholder="Header-Key: value"
+            value={headers}
+            onChange={(e) => setHeaders(e.target.value)}
+          />
+          <textarea
+            className="editor editor-body"
+            placeholder="Message body"
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+          />
+
+          <div className="response-panel">
+            <h3>Messages</h3>
+            {messages.map((m, i) => (
+              <div key={i} className={`msg ${m.direction}`}>
+                <span className="arrow">
+                  {m.direction === "sent"
+                    ? "➡"
+                    : m.direction === "received"
+                    ? "⬅"
+                    : "⚠"}
+                </span>
+                <pre>{m.data}</pre>
+              </div>
+            ))}
+          </div>
+        </>
       )}
 
       {/* Field Mapping + Auto Tests */}
