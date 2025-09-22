@@ -1,14 +1,11 @@
-/* === Postman lookalike === */
-
 body, html, #root {
   margin: 0;
   font-family: "Segoe UI", Arial, sans-serif;
   background: #f7f7f7;
   color: #333;
-  height: auto;         /* nebėra priverstinio 100% aukščio */
-  overflow-x: hidden;   /* neleidžiam horizontalaus scroll */
+  height: auto;
+  overflow-x: hidden;
 }
-
 
 /* Header bar */
 .header {
@@ -20,36 +17,51 @@ body, html, #root {
   padding: 8px;
 }
 
+/* Method wrapper: badge + dropdown */
+.method-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.method-badge {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: bold;
+  color: white;
+  min-width: 60px;
+  text-align: center;
+}
+
+.method-badge.method-GET    { background: #21ba45; }
+.method-badge.method-POST   { background: #2185d0; }
+.method-badge.method-PUT    { background: #fbbd08; color: black; }
+.method-badge.method-PATCH  { background: #a333c8; }
+.method-badge.method-DELETE { background: #db2828; }
+.method-badge.method-HEAD   { background: #00b5ad; }
+.method-badge.method-OPTIONS{ background: #767676; }
+
+/* Neutralus select */
 .method-select {
   font-weight: bold;
-  border: none;
+  border: 1px solid #ccc;
   padding: 6px 10px;
   border-radius: 4px;
-  color: white;
+  background: #fff;
+  color: #333;
+  min-width: 100px;
 }
 
-/* Uždaras select */
-.method-GET    { background: #21ba45; }
-.method-POST   { background: #2185d0; }
-.method-PUT    { background: #fbbd08; color: black; }
-.method-PATCH  { background: #a333c8; }
-.method-DELETE { background: #db2828; }
-.method-OPTIONS{ background: #767676; }
-.method-HEAD   { background: #00b5ad; }
+/* Dropdown options (tik tekstas spalvotas) */
+.method-select option[value="GET"]     { color: #21ba45; }
+.method-select option[value="POST"]    { color: #2185d0; }
+.method-select option[value="PUT"]     { color: #fbbd08; }
+.method-select option[value="PATCH"]   { color: #a333c8; }
+.method-select option[value="DELETE"]  { color: #db2828; }
+.method-select option[value="HEAD"]    { color: #00b5ad; }
+.method-select option[value="OPTIONS"] { color: #767676; }
 
-/* Atidarytas dropdown */
-.method-select option {
-  color: black; /* tekstas visada skaitomas */
-  font-weight: normal;
-}
-.method-select option[value="GET"]    { color: #21ba45; }
-.method-select option[value="POST"]   { color: #2185d0; }
-.method-select option[value="PUT"]    { color: #fbbd08; }
-.method-select option[value="PATCH"]  { color: #a333c8; }
-.method-select option[value="DELETE"] { color: #db2828; }
-.method-select option[value="HEAD"]   { color: #00b5ad; }
-.method-select option[value="OPTIONS"]{ color: #767676; }
-
+/* URL input */
 .url-input {
   flex: 1;
   padding: 6px 10px;
@@ -57,6 +69,7 @@ body, html, #root {
   border-radius: 4px;
 }
 
+/* Send button */
 .send-btn {
   background: #2185d0;
   color: white;
@@ -99,10 +112,9 @@ body, html, #root {
   font-family: monospace;
   font-size: 14px;
   outline: none;
-  resize: vertical; /* galima tempti tik žemyn */
+  resize: vertical;
 }
 
-/* Specialiai body, kad būtų didesnis */
 .editor-body {
   min-height: 180px;
 }
@@ -115,22 +127,17 @@ body, html, #root {
   white-space: pre-wrap;
   font-family: monospace;
   font-size: 14px;
-  max-height: 400px;    /* jei labai ilgas atsakymas – vertikalus scroll tik tada */
-  overflow-y: auto;     /* tik vertikalus scroll prireikus */
-  overflow-x: hidden;   /* horizontalus scroll niekada neatsiranda */
-  min-height: 150px;
   max-height: 400px;
   overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 150px;
   background: #f9f9f9;
 }
 
-
-
-/* Aplink visą app turinį */
+/* App wrapper */
 .app {
-  /*max-width: 1200px;*/   /* nebūtina, bet apriboja super platų ekraną */
-  margin: 0 auto;      /* centruoja horizontaliai */
-  padding: 20px 30px;  /* palieka vietos nuo kraštų */
+  margin: 0 auto;
+  padding: 20px 30px;
   box-sizing: border-box;
 }
 
@@ -154,11 +161,10 @@ button {
   margin-bottom: 16px;
 }
 
-
 textarea,
 .url-input,
 .response {
-  width: 100%;       /* visi lygiai tokio pat pločio */
+  width: 100%;
   box-sizing: border-box;
 }
 
@@ -175,39 +181,37 @@ textarea,
   font-weight: bold;
 }
 
-.tabs {
-  display: flex;
-  border-bottom: 1px solid #ddd;
-}
-
-.tab {
-  padding: 8px 16px;
-  cursor: pointer;
-  color: #555;
-}
-
-.tab.active {
-  border-bottom: 2px solid #2185d0;
-  color: #2185d0;
-  font-weight: bold;
-}
-
+/* Messages */
 .msg {
   display: flex;
   align-items: flex-start;
   margin-bottom: 5px;
   font-family: monospace;
 }
-
 .msg .arrow {
   margin-right: 5px;
   font-weight: bold;
 }
-
 .msg.sent .arrow {
   color: blue;
 }
-
 .msg.received .arrow {
   color: green;
+}
+
+/* Test results */
+.results-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.results-table th, .results-table td {
+  border: 1px solid #ddd;
+  padding: 6px 10px;
+  text-align: left;
+}
+.results-table tr.pass td { background: #eaffea; }
+.results-table tr.fail td { background: #ffeaea; }
+.results-table tr.bug td  { background: #fff0e6; font-weight: bold; }
+.results-table th {
+  background: #f0f0f0;
 }
