@@ -1,6 +1,6 @@
 import React, { useState, useRef } from "react";
 import axios from "axios";
-import { loadProto, encodeMessage } from "./protobufHelper";
+import { loadProto, encodeMessage, decodeMessage } from "./protobufHelper";
 import { detectFieldType } from "./fieldDetectors";
 import { datasets } from "./datasets";
 import "./App.css";
@@ -159,12 +159,10 @@ export default function App() {
 
         if (event.data instanceof ArrayBuffer) {
           raw = new Uint8Array(event.data);
-
           // Jei turim proto – bandome dekoduoti
           if (protoFile && messageType) {
             try {
-              const { decodeMessage } = require("./protobufHelper");
-              decoded = decodeMessage(messageType, raw);
+              decoded = decodeMessage(messageType, raw); // 👈 jau importuotas
             } catch (err) {
               decoded = "❌ Failed to decode proto: " + err;
             }
