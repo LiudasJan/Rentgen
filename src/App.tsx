@@ -32,6 +32,13 @@ export default function App() {
 
   // --- HTTP SEND ---
   async function sendHttp() {
+
+    setHttpResponse({
+      status: "Sending...",
+      body: "",
+      headers: {}
+    });
+
     try {
       const hdrs = headers
         ? Object.fromEntries(
