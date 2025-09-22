@@ -512,6 +512,7 @@ export default function App() {
                 <option value="phone">Phone</option>
                 <option value="url">URL</option>
                 <option value="number">Number</option>
+                <option value="ftp_url">FTP URL</option>
               </select>
             </div>
           ))}
