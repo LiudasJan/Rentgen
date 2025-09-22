@@ -42,6 +42,9 @@ But real testing means more:
 
 ---
 
+## Demo
+![Rentgen Demo](./public/demo.gif)
+
 ## 🔧 Installation
 
 ### Dev mode
