@@ -30,6 +30,10 @@ export default function App() {
   const [testResults, setTestResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
+    // --- State ---
+  const [currentTest, setCurrentTest] = useState(0);
+  const [totalTests, setTotalTests] = useState(0);
+
   // --- HTTP SEND ---
   async function sendHttp() {
 
@@ -231,6 +235,7 @@ export default function App() {
     if (!body) return;
     setLoading(true);
     setTestResults([]);
+    setCurrentTest(0);
 
     let parsedBody: any;
     try {
@@ -246,13 +251,25 @@ export default function App() {
         )
       : {};
 
+    // paskaičiuojam kiek testų bus
+    let total = 0;
+    for (const [field, type] of Object.entries(fieldMappings)) {
+      if (type === "do-not-test") continue;
+      total += (datasets[type] || []).length;
+    }
+    setTotalTests(total);
+
     const results: any[] = [];
+    let counter = 0;
 
     for (const [field, type] of Object.entries(fieldMappings)) {
       if (type === "do-not-test") continue;
 
       const dataset = datasets[type] || [];
       for (const d of dataset) {
+        counter++;
+        setCurrentTest(counter); // update progress
+
         const newBody = { ...parsedBody, [field]: d.value };
 
         let dataToSend: any = newBody;
@@ -517,7 +534,9 @@ export default function App() {
             </div>
           ))}
           <button className="send-btn" onClick={runTests} disabled={loading}>
-            {loading ? "Running tests..." : "Generate & Run Tests"}
+            {loading
+              ? `Running tests... (${currentTest}/${totalTests})`
+              : "Generate & Run Tests"}
           </button>
         </div>
       )}
