@@ -54,7 +54,7 @@ npm run electron:dev
 
 ## 🖥️ Building executables
 
-You can package **Rentgen** into a standalone app (`.exe` for Windows, `.dmg` for macOS, `.AppImage` for Linux).
+## You can package Rentgen into a standalone app (.exe for Windows, .dmg for macOS, .AppImage for Linux).
 
 ### 1. Create build
 npm run build
