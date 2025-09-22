@@ -42,7 +42,7 @@ But real testing means more:
 
 ---
 
-## Demo
+## 🎬 Demo
 ![Rentgen Demo](./public/demo.gif)
 
 ## 🔧 Installation
