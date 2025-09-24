@@ -2,13 +2,22 @@
   "name": "rentgen",
   "version": "0.1.0",
   "homepage": ".",
-  "main": "electron.js",
+  "main": "dist-electron/main.js",
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build",
-    "electron:dev": "concurrently \"npm start\" \"wait-on http://localhost:3000 && electron .\"",
+    "build:react": "react-scripts build",
+    "build:electron": "tsc -p tsconfig.electron.json",
+    "build": "npm run build:react && npm run build:electron",
+
+    "electron:watch": "tsc -w -p tsconfig.electron.json",
+    "electron:start": "wait-on http://localhost:3000 && electron dist-electron/main.js",
+
+
+    "electron:dev": "cross-env ELECTRON_START_URL=http://localhost:3000 concurrently --raw \"npm run electron:watch\" \"npm start\" \"npm run electron:start\"",
+
     "electron:build": "npm run build && electron-builder"
   },
+
   "dependencies": {
     "axios": "^1.7.0",
     "protobufjs": "^7.2.4",
@@ -26,22 +35,23 @@
     "postcss": "^8.5.6",
     "react-scripts": "^5.0.1",
     "tailwindcss": "^4.1.13",
-    "wait-on": "^7.2.0"
+    "wait-on": "^7.2.0",
+    "typescript": "^5.6.3"
   },
-  "build": {
-    "appId": "com.rentgen.app",
-    "productName": "Rentgen",
-    "files": [
-      "build/**/*",
-      "public/electron.js"
-    ],
-    "directories": {
-      "buildResources": "assets"
-    },
-    "win": {
-      "target": "nsis"
-    }
+"build": {
+  "appId": "com.rentgen.app",
+  "productName": "Rentgen",
+  "files": [
+    "build/**/*",
+    "dist-electron/**/*"
+  ],
+  "directories": {
+    "buildResources": "assets"
   },
+  "win": {
+    "target": "nsis"
+  }
+},
   "browserslist": {
     "production": [
       ">0.2%",
