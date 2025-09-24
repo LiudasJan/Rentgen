@@ -36,7 +36,6 @@ export default function App() {
 
   // --- HTTP SEND ---
   async function sendHttp() {
-
     setHttpResponse({
       status: "Sending...",
       body: "",
@@ -65,30 +64,18 @@ export default function App() {
         }
       }
 
-      const res = await axios({
+      // 👇 čia vietoje axios kvietimo
+      const res = await (window as any).electronAPI.sendHttp({
         url,
-        method: method as any,
+        method,
         headers: hdrs,
-        data: dataToSend,
-        responseType: "arraybuffer",
-        validateStatus: () => true,
+        body: dataToSend,
       });
 
-      // Raw response kaip tekstas
-      let decoded = "";
-      try {
-        decoded = new TextDecoder().decode(res.data);
-      } catch {
-        decoded = "[Binary data: " + res.data.byteLength + " bytes]";
-      }
+      setHttpResponse(res);
 
-      setHttpResponse({
-        status: `${res.status} ${res.statusText}`,
-        body: decoded,
-        headers: res.headers,
-      });
-
-      // ---- ČIA ESAMAS FIX ----
+      
+      
       // Testų generavimą remiam į request, o ne response
       let parsedBody: any;
       try {
@@ -97,7 +84,7 @@ export default function App() {
         parsedBody = null;
       }
 
-      if (res.status >= 200 && res.status < 300 && parsedBody) {
+      if (res.status.startsWith("2") && parsedBody) {
         const mappings: Record<string, string> = {};
         Object.entries(parsedBody).forEach(([k, v]) => {
           mappings[k] = detectFieldType(k, v);
@@ -125,103 +112,22 @@ export default function App() {
       return;
     }
 
-    try {
-      wsRef.current = new WebSocket(url);
-      wsRef.current.binaryType = "arraybuffer";
+    const hdrs = headers
+      ? Object.fromEntries(
+          headers.split("\n").map((h) => {
+            const [k, ...rest] = h.split(":");
+            return [k.trim(), rest.join(":").trim()];
+          })
+        )
+      : {};
 
-      wsRef.current.onopen = () => {
-        setWsConnected(true);
-        setMessages((prev) => [
-          { direction: "system", data: "✅ Connected" },
-          ...prev,
-        ]);
-      };
-
-      wsRef.current.onerror = (err) => {
-        console.error("WebSocket error:", err);
-        setMessages((prev) => [
-          { direction: "system", data: "❌ Error (check console)" },
-          ...prev,
-        ]);
-      };
-
-      wsRef.current.onclose = () => {
-        setWsConnected(false);
-        setMessages((prev) => [
-          { direction: "system", data: "🔌 Closed" },
-          ...prev,
-        ]);
-      };
-
-      wsRef.current.onmessage = (event) => {
-        let raw: string | Uint8Array;
-        let decoded: any = null;
-
-        if (event.data instanceof ArrayBuffer) {
-          raw = new Uint8Array(event.data);
-          // Jei turim proto – bandome dekoduoti
-          if (protoFile && messageType) {
-            try {
-              decoded = decodeMessage(messageType, raw); // 👈 jau importuotas
-            } catch (err) {
-              decoded = "❌ Failed to decode proto: " + err;
-            }
-          }
-        } else {
-          raw = event.data; // tekstas
-        }
-
-        setMessages((prev) => [
-          {
-            direction: "received",
-            data:
-              typeof raw === "string"
-                ? raw // tekstas kaip yra
-                : "[Binary data: " +
-                  raw.length +
-                  " bytes]\n" +
-                  Array.from(raw)
-                    .slice(0, 50)
-                    .map((b) => b.toString(16).padStart(2, "0"))
-                    .join(" ") +
-                  (raw.length > 50 ? " ..." : ""), // hexdump preview
-            decoded: decoded ? JSON.stringify(decoded, null, 2) : null,
-          },
-          ...prev,
-        ]);
-      };
-
-
-    } catch (err) {
-      console.error("WS connect exception:", err);
-      setMessages((prev) => [
-        { direction: "system", data: "❌ Failed: " + err },
-        ...prev,
-      ]);
-    }
+    // 👇 vietoj naršyklinio WebSocket – IPC į main
+    (window as any).electronAPI.connectWss({ url, headers: hdrs });
   }
 
   // --- WSS SEND ---
   async function sendWss() {
-    if (!wsRef.current) return;
-    let data: any = body;
-
-    if (protoFile && messageType) {
-      try {
-        data = encodeMessage(messageType, JSON.parse(body));
-      } catch {
-        data = body;
-      }
-    }
-
-    wsRef.current.send(data);
-    setMessages((prev) => [
-      {
-        direction: "sent",
-        data: typeof data === "string" ? data : JSON.stringify(data),
-      },
-      ...prev,
-    ]);
+    (window as any).electronAPI.sendWss(body);
   }
 
   function updateFieldType(field: string, type: string) {
