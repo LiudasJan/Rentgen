@@ -22,6 +22,6 @@ export function decodeMessage(typeName: string, buffer: Uint8Array): any {
   return Type.toObject(Type.decode(buffer), {
     longs: String,
     enums: String,
-    bytes: String
+    bytes: String,
   });
 }

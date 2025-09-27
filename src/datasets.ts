@@ -6,8 +6,8 @@ export const datasets: Record<string, { value: any; valid: boolean }[]> = {
     { value: "firstname+lastname@testspread.com", valid: true },
     { value: "email@123.123.123.123", valid: true },
     { value: "email@[123.123.123.123]", valid: true },
-    { value: "\"email\"@testspread.com", valid: true },
-    { value: "\"email.valid\"@testspread.com", valid: true },
+    { value: '"email"@testspread.com', valid: true },
+    { value: '"email.valid"@testspread.com', valid: true },
     { value: "1234567890@testspread.com", valid: true },
     { value: "email@testspread-one.com", valid: true },
     { value: "_______@testspread.com", valid: true },
@@ -19,11 +19,11 @@ export const datasets: Record<string, { value: any; valid: boolean }[]> = {
     { value: "trinming-check@testspread.com", valid: true },
     { value: "firstname.@testspread.com", valid: true },
     { value: "user+mailbox/department=shipping@example.com", valid: true },
-    { value: "\"email@example.com\"@testspread.com", valid: true },
+    { value: '"email@example.com"@testspread.com', valid: true },
     { value: "!#$%&'*+-/=?^_`{}|~@testspread.com", valid: true },
     { value: "!def!xyz%abc@testspread.com", valid: true },
-    { value: "\"email@example.com\"@testspread.com", valid: true },
-    { value: "\"email@testspread.com\"@testspread.com", valid: true },
+    { value: '"email@example.com"@testspread.com', valid: true },
+    { value: '"email@testspread.com"@testspread.com', valid: true },
 
     { value: "plainaddress", valid: false },
     { value: "email.testspread.com", valid: false },
@@ -44,7 +44,7 @@ export const datasets: Record<string, { value: any; valid: boolean }[]> = {
     { value: "email@.com", valid: false },
     { value: "email@testspread.", valid: false },
     { value: "email..email@testspread.com", valid: false },
-    { value: "\"email..valid\"@testspread.com", valid: false },
+    { value: '"email..valid"@testspread.com', valid: false },
     { value: "email@testspread.c", valid: false },
     { value: "email@testspread.co.jp1", valid: false },
     { value: null, valid: false },
@@ -66,7 +66,8 @@ export const datasets: Record<string, { value: any; valid: boolean }[]> = {
     { value: "https://subdomain.testspread.com", valid: true },
     { value: "https://testspread.com/path/to/example/123/ąčęėįšųūž", valid: true },
     {
-      value: "http://username:password@subdomain.testspread.com:8080/path/to/resource/123?key=value#fragment",
+      value:
+        "http://username:password@subdomain.testspread.com:8080/path/to/resource/123?key=value#fragment",
       valid: true,
     },
     { value: "http://www.trimming-check.com", valid: true },
@@ -77,7 +78,8 @@ export const datasets: Record<string, { value: any; valid: boolean }[]> = {
     { value: "https://www.qwertyuiopasdfghjklzxcvbnm-q.com", valid: true },
     { value: "https://testspre%61d.com", valid: true },
     {
-      value: "https://averyveryveryveryveryveryveryveryveryveryveryveryveryveryveryveryveryveryveryveryverylongdoainname.com",
+      value:
+        "https://averyveryveryveryveryveryveryveryveryveryveryveryveryveryveryveryveryveryveryveryverylongdoainname.com",
       valid: true,
     },
     { value: "https://q-w-e-r-t-y-u-i-o-p-a-s-d-f-g-h-j-k-l.online", valid: true },
@@ -110,7 +112,8 @@ export const datasets: Record<string, { value: any; valid: boolean }[]> = {
     { value: "https://test--spread.com", valid: false },
     { value: "https://test|spr~ead.com", valid: false },
     {
-      value: "https://averyveryveryveryveryveryveryqveryveryveryveryveryveryveryveryveryveryveryveryveryveryverylongdoainname.com",
+      value:
+        "https://averyveryveryveryveryveryveryqveryveryveryveryveryveryveryveryveryveryveryveryveryveryverylongdoainname.com",
       valid: false,
     },
   ],
@@ -128,7 +131,8 @@ export const datasets: Record<string, { value: any; valid: boolean }[]> = {
     { value: "ftp://ftp.subdomain.testspread.com", valid: true },
     { value: "ftp://ftp.testspread.com/path/to/example/123/ąčęėįšųūž", valid: true },
     {
-      value: "ftp://ftp.username:password@subdomain.testspread.com:8080/path/123?key=value#fragment",
+      value:
+        "ftp://ftp.username:password@subdomain.testspread.com:8080/path/123?key=value#fragment",
       valid: true,
     },
     { value: "ftp://s.io", valid: true },
@@ -211,5 +215,5 @@ export const datasets: Record<string, { value: any; valid: boolean }[]> = {
     { value: "+37064034810", valid: true },
 
     { value: "+164034810", valid: false },
-  ]
+  ],
 };

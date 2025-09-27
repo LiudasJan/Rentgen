@@ -4,6 +4,7 @@
   "homepage": ".",
   "main": "dist-electron/main.js",
   "scripts": {
+    "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
     "start": "react-scripts start",
     "build:react": "react-scripts build",
     "build:electron": "tsc -p tsconfig.electron.json",
@@ -29,6 +30,7 @@
     "electron": "^31.7.7",
     "electron-builder": "^24.13.3",
     "postcss": "^8.5.6",
+    "prettier": "^3.6.2",
     "react-scripts": "^5.0.1",
     "tailwindcss": "^4.1.13",
     "typescript": "^5.6.3",
@@ -42,10 +44,17 @@
       "dist-electron/**/*"
     ],
     "extraResources": [
-      { "from": "dist-electron/preload.js", "to": "preload.js" }
+      {
+        "from": "dist-electron/preload.js",
+        "to": "preload.js"
+      }
     ],
-    "directories": { "buildResources": "assets" },
-    "win": { "target": "nsis" }
+    "directories": {
+      "buildResources": "assets"
+    },
+    "win": {
+      "target": "nsis"
+    }
   },
   "browserslist": {
     "production": [
