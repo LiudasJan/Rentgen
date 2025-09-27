@@ -6,6 +6,8 @@ import { datasets } from "./datasets";
 import "./App.css";
 
 export default function App() {
+
+  console.log("✅ App.tsx");
   const [mode, setMode] = useState<"HTTP" | "WSS">("HTTP");
   const [url, setUrl] = useState("");
   const [method, setMethod] = useState("GET");
@@ -36,7 +38,6 @@ export default function App() {
 
   // --- HTTP SEND ---
   async function sendHttp() {
-
     setHttpResponse({
       status: "Sending...",
       body: "",
@@ -65,30 +66,18 @@ export default function App() {
         }
       }
 
-      const res = await axios({
+      // 👇 čia vietoje axios kvietimo
+      const res = await (window as any).electronAPI.sendHttp({
         url,
-        method: method as any,
+        method,
         headers: hdrs,
-        data: dataToSend,
-        responseType: "arraybuffer",
-        validateStatus: () => true,
+        body: dataToSend,
       });
 
-      // Raw response kaip tekstas
-      let decoded = "";
-      try {
-        decoded = new TextDecoder().decode(res.data);
-      } catch {
-        decoded = "[Binary data: " + res.data.byteLength + " bytes]";
-      }
+      setHttpResponse(res);
 
-      setHttpResponse({
-        status: `${res.status} ${res.statusText}`,
-        body: decoded,
-        headers: res.headers,
-      });
-
-      // ---- ČIA ESAMAS FIX ----
+      
+      
       // Testų generavimą remiam į request, o ne response
       let parsedBody: any;
       try {
@@ -97,7 +86,7 @@ export default function App() {
         parsedBody = null;
       }
 
-      if (res.status >= 200 && res.status < 300 && parsedBody) {
+      if (res.status.startsWith("2") && parsedBody) {
         const mappings: Record<string, string> = {};
         Object.entries(parsedBody).forEach(([k, v]) => {
           mappings[k] = detectFieldType(k, v);
@@ -125,103 +114,22 @@ export default function App() {
       return;
     }
 
-    try {
-      wsRef.current = new WebSocket(url);
-      wsRef.current.binaryType = "arraybuffer";
+    const hdrs = headers
+      ? Object.fromEntries(
+          headers.split("\n").map((h) => {
+            const [k, ...rest] = h.split(":");
+            return [k.trim(), rest.join(":").trim()];
+          })
+        )
+      : {};
 
-      wsRef.current.onopen = () => {
-        setWsConnected(true);
-        setMessages((prev) => [
-          { direction: "system", data: "✅ Connected" },
-          ...prev,
-        ]);
-      };
-
-      wsRef.current.onerror = (err) => {
-        console.error("WebSocket error:", err);
-        setMessages((prev) => [
-          { direction: "system", data: "❌ Error (check console)" },
-          ...prev,
-        ]);
-      };
-
-      wsRef.current.onclose = () => {
-        setWsConnected(false);
-        setMessages((prev) => [
-          { direction: "system", data: "🔌 Closed" },
-          ...prev,
-        ]);
-      };
-
-      wsRef.current.onmessage = (event) => {
-        let raw: string | Uint8Array;
-        let decoded: any = null;
-
-        if (event.data instanceof ArrayBuffer) {
-          raw = new Uint8Array(event.data);
-          // Jei turim proto – bandome dekoduoti
-          if (protoFile && messageType) {
-            try {
-              decoded = decodeMessage(messageType, raw); // 👈 jau importuotas
-            } catch (err) {
-              decoded = "❌ Failed to decode proto: " + err;
-            }
-          }
-        } else {
-          raw = event.data; // tekstas
-        }
-
-        setMessages((prev) => [
-          {
-            direction: "received",
-            data:
-              typeof raw === "string"
-                ? raw // tekstas kaip yra
-                : "[Binary data: " +
-                  raw.length +
-                  " bytes]\n" +
-                  Array.from(raw)
-                    .slice(0, 50)
-                    .map((b) => b.toString(16).padStart(2, "0"))
-                    .join(" ") +
-                  (raw.length > 50 ? " ..." : ""), // hexdump preview
-            decoded: decoded ? JSON.stringify(decoded, null, 2) : null,
-          },
-          ...prev,
-        ]);
-      };
-
-
-    } catch (err) {
-      console.error("WS connect exception:", err);
-      setMessages((prev) => [
-        { direction: "system", data: "❌ Failed: " + err },
-        ...prev,
-      ]);
-    }
+    // 👇 vietoj naršyklinio WebSocket – IPC į main
+    (window as any).electronAPI.connectWss({ url, headers: hdrs });
   }
 
   // --- WSS SEND ---
   async function sendWss() {
-    if (!wsRef.current) return;
-    let data: any = body;
-
-    if (protoFile && messageType) {
-      try {
-        data = encodeMessage(messageType, JSON.parse(body));
-      } catch {
-        data = body;
-      }
-    }
-
-    wsRef.current.send(data);
-    setMessages((prev) => [
-      {
-        direction: "sent",
-        data: typeof data === "string" ? data : JSON.stringify(data),
-      },
-      ...prev,
-    ]);
+    (window as any).electronAPI.sendWss(body);
   }
 
   function updateFieldType(field: string, type: string) {
@@ -252,7 +160,7 @@ export default function App() {
     // paskaičiuojam kiek testų bus
     let total = 0;
     for (const [field, type] of Object.entries(fieldMappings)) {
-      if (type === "do-not-test") continue;
+      if (type === "do-not-test" || type === "random32") continue;
       total += (datasets[type] || []).length;
     }
     setTotalTests(total);
@@ -263,12 +171,24 @@ export default function App() {
     for (const [field, type] of Object.entries(fieldMappings)) {
       if (type === "do-not-test") continue;
 
-      const dataset = datasets[type] || [];
+      const dataset =
+        type === "random32"
+          ? [{ value: rand32(), valid: true }]
+          : datasets[type] || [];
+
       for (const d of dataset) {
         counter++;
-        setCurrentTest(counter); // update progress
+        setCurrentTest(counter);
 
-        const newBody = { ...parsedBody, [field]: d.value };
+        // pradinė body kopija
+        const newBody: any = { ...parsedBody, [field]: d.value };
+
+        // 💡 kiekvienam request’ui perrašom visus random32 laukus
+        for (const [f, t] of Object.entries(fieldMappings)) {
+          if (t === "random32") {
+            newBody[f] = rand32();
+          }
+        }
 
         let dataToSend: any = newBody;
         if (protoFile && messageType) {
@@ -289,47 +209,61 @@ export default function App() {
         }
 
         try {
-          const res = await axios({
+          const res = await (window as any).electronAPI.sendHttp({
             url,
-            method: method as any,
+            method,
             headers: hdrs,
-            data: dataToSend,
-            responseType: "arraybuffer", // visada raw
-            validateStatus: () => true,
+            body: dataToSend,
           });
 
-          let responseText: string;
-          let decoded: string | null = null;
-
-          try {
-            responseText = new TextDecoder().decode(res.data);
-          } catch {
-            responseText = "[Binary data: " + res.data.byteLength + " bytes]";
+          // --- naujas status parsing ---
+          let statusCode = 0;
+          let statusText = "";
+          if (res.status) {
+            const parts = res.status.split(" ");
+            statusCode = parseInt(parts[0], 10);
+            statusText = parts.slice(1).join(" ");
           }
 
-          // jei turim proto ir bandom dekoduoti
+          const ok = statusCode >= 200 && statusCode < 300;
+
+          // response text
+          let responseText: string;
+          if (typeof res.body === "string") {
+            responseText = res.body;
+          } else {
+            try {
+              responseText = JSON.stringify(res.body, null, 2);
+            } catch {
+              responseText = String(res.body);
+            }
+          }
+
+          let decoded: string | null = null;
           if (protoFile && messageType) {
             try {
               const { decodeMessage } = require("./protobufHelper");
-              const obj = decodeMessage(messageType, new Uint8Array(res.data));
+              const obj = decodeMessage(
+                messageType,
+                new Uint8Array(res.body)
+              );
               decoded = JSON.stringify(obj, null, 2);
             } catch {
               decoded = null;
             }
           }
 
-          const ok = res.status >= 200 && res.status < 300;
           let status = "";
           if (d.valid && ok) status = "✅ Pass";
           else if (!d.valid && ok) status = "❌ Fail";
-          else if (res.status >= 500) status = "🔴 Bug";
+          else if (statusCode >= 500) status = "🔴 Bug";
           else status = "✅ Pass";
 
           results.push({
             field,
             value: d.value,
             expected: d.valid ? "2xx" : "4xx",
-            actual: `${res.status} ${res.statusText}`,
+            actual: res.status,
             status,
             request: newBody,
             response: responseText,
@@ -352,6 +286,15 @@ export default function App() {
     setTestResults(results);
     setLoading(false);
   }
+
+
+  // --- RANDOM STRING ---
+  function rand32() {
+    const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+    let out = "";
+    for (let i = 0; i < 32; i++) out += chars[Math.floor(Math.random() * chars.length)];
+  return out;
+}
 
   return (
     <div className="app">
@@ -481,7 +424,9 @@ export default function App() {
           <pre>{JSON.stringify(httpResponse.headers, null, 2)}</pre>
 
           <h4>Body</h4>
-          <pre>{JSON.stringify(httpResponse.body, null, 2)}</pre>
+          <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+            {typeof httpResponse.body === "string" ? httpResponse.body : JSON.stringify(httpResponse.body, null, 2)}
+          </pre>
         </div>
       )}
 
@@ -522,6 +467,7 @@ export default function App() {
                 onChange={(e) => updateFieldType(field, e.target.value)}
               >
                 <option value="do-not-test">Do not test</option>
+                <option value="random32">Random 32 (unique each request)</option>
                 <option value="string">String</option>
                 <option value="email">Email</option>
                 <option value="phone">Phone</option>
