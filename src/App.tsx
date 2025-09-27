@@ -39,6 +39,12 @@ export default function App() {
   const [expandedRows, setExpandedRows] = useState<Record<number, boolean>>({});
   const toggleRow = (idx: number) => setExpandedRows((prev) => ({ ...prev, [idx]: !prev[idx] }));
 
+  const [securityResults, setSecurityResults] = useState<any[]>([]);
+
+  const [expandedSecurityRows, setExpandedSecurityRows] = useState<Record<number, boolean>>({});
+  const toggleSecurityRow = (idx: number) =>
+  setExpandedSecurityRows(prev => ({ ...prev, [idx]: !prev[idx] }));
+
   // --- HTTP SEND ---
   async function sendHttp() {
     setHttpResponse({
@@ -132,6 +138,7 @@ export default function App() {
 
   // mount
   useEffect(() => {
+    if (!(window as any).electronAPI?.onWssEvent) return; // 👈 skip browser
     const off = (window as any).electronAPI.onWssEvent((ev: any) => {
       if (ev.type === "open") setWsConnected(true);
       if (ev.type === "close") setWsConnected(false);
@@ -147,20 +154,156 @@ export default function App() {
     });
     return () => off?.(); // unmount
   }, []);
+
   // --- WSS SEND ---
   function sendWss() {
     setMessages((prev) => [{ direction: "sent", data: body }, ...prev]);
     (window as any).electronAPI.sendWss(body);
   }
 
-
   function updateFieldType(field: string, type: string) {
     setFieldMappings((prev) => ({ ...prev, [field]: type }));
   }
 
-  // --- RUN TESTS ---
-  async function runTests() {
-    if (!body) return;
+  // --- SECURITY TESTS ---
+  async function runSecurityTests(): Promise<any[]> {
+    const results: any[] = [];
+
+    // paimam user įvestus headerius (tokius pačius kaip sendHttp ir runDataDrivenTests)
+    const hdrs = headers
+      ? Object.fromEntries(
+          headers.split("\n").map((h) => {
+            const [k, ...rest] = h.split(":");
+            return [k.trim(), rest.join(":").trim()];
+          })
+        )
+      : {};
+
+    try {
+      // 1. Sensitive headers
+      const base = await (window as any).electronAPI.sendHttp({
+        url,
+        method: "GET",
+        headers: hdrs,
+        body: null
+      });
+      const headerStr = JSON.stringify(base.headers || {}).toLowerCase();
+      const bad = /(apache|nginx|iis|express|php|jetty|tomcat|caddy)/i.test(headerStr);
+      results.push({
+        name: "No sensitive server headers",
+        expected: "No Server version info",
+        actual: bad ? JSON.stringify(base.headers) : "Headers safe",
+        status: bad ? "🔴 Fail" : "✅ Pass",
+        request: { url, method: "GET", headers: hdrs },
+        response: base
+      });
+
+      // 2. OPTIONS method
+      const opt = await (window as any).electronAPI.sendHttp({
+        url,
+        method: "OPTIONS",
+        headers: hdrs,
+        body: null
+      });
+      const okOptions = opt.status.startsWith("204") && ("allow" in (opt.headers || {}));
+      results.push({
+        name: "OPTIONS method handling",
+        expected: "204 No Content + Allow header",
+        actual: opt.status,
+        status: okOptions ? "✅ Pass" : "❌ Fail",
+        request: { url, method: "OPTIONS", headers: hdrs },
+        response: opt
+      });
+
+      // 3. Unsupported method
+      const weird = await (window as any).electronAPI.sendHttp({
+        url,
+        method: "FOOBAR",
+        headers: hdrs,
+        body: null
+      });
+      const code = weird.status.split(" ")[0];
+      const okWeird = code === "405" || code === "501";
+      results.push({
+        name: "Unsupported method handling",
+        expected: "405 Method Not Allowed (or 501)",
+        actual: weird.status,
+        status: okWeird ? "✅ Pass" : "❌ Fail",
+        request: { url, method: "FOOBAR", headers: hdrs },
+        response: weird
+      });
+
+    } catch (err) {
+      results.push({
+        name: "Security test error",
+        expected: "Should respond",
+        actual: String(err),
+        status: "🔴 Fail",
+        request: { url, headers: hdrs },
+        response: null
+      });
+    }
+
+    // --- Manual checks (pilka spalva) ---
+    results.push(
+      {
+        name: "Invalid authorization cookie/token",
+        expected: "Should return 401 Unauthorized",
+        actual: "Not run",
+        status: "⚪ Manual",
+        request: null,
+        response: null
+      },
+      {
+        name: "Missing authorization cookie/token",
+        expected: "Should return 401 Unauthorized",
+        actual: "Not run",
+        status: "⚪ Manual",
+        request: null,
+        response: null
+      },
+      {
+        name: "Access other user’s data",
+        expected: "Should return 404 or 403",
+        actual: "Not run",
+        status: "⚪ Manual",
+        request: null,
+        response: null
+      },
+      {
+        name: "Role-based access control",
+        expected: "Restricted per role",
+        actual: "Not run",
+        status: "⚪ Manual",
+        request: null,
+        response: null
+      }
+    );
+
+    return results;
+  }
+
+// --- RUN ALL TESTS ---
+async function runAllTests() {
+  setLoading(true);
+  setTestResults([]);
+  setSecurityResults([]);
+  setCurrentTest(0);
+
+  // 1. Data-driven (panaudojam seną runTests logiką kaip helperį)
+  const dataResults = await runDataDrivenTests();
+  setTestResults(dataResults);
+
+  // 2. Security
+  const secResults = await runSecurityTests();
+  setSecurityResults(secResults);
+
+  setLoading(false);
+}
+
+// refactorinta tavo runTests -> return results
+async function runDataDrivenTests(): Promise<any[]> {
+      if (!body) return [];
     setLoading(true);
     setTestResults([]);
     setCurrentTest(0);
@@ -170,7 +313,7 @@ export default function App() {
       parsedBody = JSON.parse(body);
     } catch {
       setLoading(false);
-      return;
+      return [];
     }
 
     const hdrs = headers
@@ -312,16 +455,14 @@ export default function App() {
       }
     }
 
-    setTestResults(results);
-    setLoading(false);
-  }
+    return results;
+}
 
-
-  // --- RANDOM STRING ---
-  function rand32() {
-    const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
-    let out = "";
-    for (let i = 0; i < 32; i++) out += chars[Math.floor(Math.random() * chars.length)];
+// --- RANDOM STRING ---
+function rand32() {
+  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+  let out = "";
+  for (let i = 0; i < 32; i++) out += chars[Math.floor(Math.random() * chars.length)];
   return out;
 }
 
@@ -508,13 +649,77 @@ export default function App() {
               </select>
             </div>
           ))}
-          <button className="send-btn" onClick={runTests} disabled={loading}>
+          <button className="send-btn" onClick={runAllTests} disabled={loading}>
             {loading
               ? `Running tests... (${currentTest}/${totalTests})`
               : "Generate & Run Tests"}
           </button>
         </div>
       )}
+
+    {/* Security & Headers results */}
+    {securityResults.length > 0 && (
+      <div className="response-panel">
+        <h3>Security & Headers Tests</h3>
+        <table className="results-table">
+          <thead>
+            <tr>
+              <th>Check</th>
+              <th>Expected</th>
+              <th>Actual</th>
+              <th>Result</th>
+            </tr>
+          </thead>
+          <tbody>
+            {securityResults.map((r, i) => (
+              <React.Fragment key={i}>
+                <tr
+                  className={
+                    r.status.includes("Pass")
+                      ? "pass"
+                      : r.status.includes("Fail")
+                      ? "fail"
+                      : r.status.includes("Manual")
+                      ? "manual"
+                      : "bug"
+                  }
+                  onClick={() => toggleSecurityRow(i)}
+                  style={{ cursor: "pointer" }}
+                >
+                  <td>{r.name}</td>
+                  <td>{r.expected}</td>
+                  <td>{r.actual}</td>
+                  <td>{r.status}</td>
+                </tr>
+
+                {expandedSecurityRows[i] && (
+                  <tr className="details-row">
+                    <td colSpan={4}>
+                      <div className="details-panel">
+                        <div className="details-grid">
+                          <div>
+                            <div className="details-title">Request</div>
+                            <pre>{JSON.stringify(r.request, null, 2)}</pre>
+                          </div>
+                          <div>
+                            <div className="details-title">Response</div>
+                            <pre className="wrap">
+                              {typeof r.response === "string"
+                                ? r.response
+                                : JSON.stringify(r.response, null, 2)}
+                            </pre>
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
 
     {/* Test Results */}
     {testResults.length > 0 && (
