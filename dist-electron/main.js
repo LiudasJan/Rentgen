@@ -7,6 +7,7 @@ const electron_1 = require("electron");
 const axios_1 = __importDefault(require("axios"));
 const ws_1 = __importDefault(require("ws"));
 const path_1 = __importDefault(require("path"));
+const child_process_1 = require("child_process");
 let mainWindow = null;
 let ws = null;
 electron_1.app.on("ready", () => {
@@ -115,4 +116,18 @@ electron_1.ipcMain.on("wss-connect", (event, { url, headers }) => {
 electron_1.ipcMain.on("wss-send", (_event, msg) => {
     if (ws)
         ws.send(msg);
+});
+// --- PING HANDLER ---
+electron_1.ipcMain.handle("ping-host", async (_event, host) => {
+    return new Promise((resolve, reject) => {
+        const platform = process.platform;
+        const cmd = platform === "win32" ? `ping -n 1 ${host}` : `ping -c 1 ${host}`;
+        const start = Date.now();
+        (0, child_process_1.exec)(cmd, (error) => {
+            if (error)
+                return reject(error);
+            const time = Date.now() - start;
+            resolve(time);
+        });
+    });
 });

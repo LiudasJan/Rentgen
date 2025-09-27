@@ -209,9 +209,21 @@ textarea,
   padding: 6px 10px;
   text-align: left;
 }
-.results-table tr.pass td { background: #eaffea; }
-.results-table tr.fail td { background: #ffeaea; }
-.results-table tr.bug td  { background: #fff0e6; font-weight: bold; }
+.results-table tr.pass {
+  background-color: #d4edda; /* žalia */
+}
+
+.results-table tr.fail {
+  background-color: #f8d7da; /* raudona */
+}
+
+.results-table tr.manual {
+  background-color: #e2e3e5; /* pilka */
+}
+
+.results-table tr.warn {
+  background-color: #fff3cd; /* oranžinė */
+}
 .results-table th {
   background: #f0f0f0;
 }

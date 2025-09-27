@@ -2,15 +2,16 @@ import { app, BrowserWindow, ipcMain } from "electron";
 import axios from "axios";
 import WebSocket from "ws";
 import path from "path";
+import { exec } from "child_process";
 
 let mainWindow: BrowserWindow | null = null;
 let ws: WebSocket | null = null;
 
 app.on("ready", () => {
-console.log("✅ Main process started!");
+  console.log("✅ Main process started!");
 
   const preloadPath = app.isPackaged
-    // copied by extraResources above → .../Resources/preload.js
+  // copied by extraResources above → .../Resources/preload.js
     ? path.join(process.resourcesPath, "preload.js")
     // dev: compiled next to main.js
     : path.join(__dirname, "preload.js");
@@ -23,12 +24,12 @@ console.log("✅ Main process started!");
     },
   });
 
-// dev vs prod skirtingi URL
-if (process.env.ELECTRON_START_URL) {
-  mainWindow.loadURL(process.env.ELECTRON_START_URL);
-} else {
-  mainWindow.loadFile(path.join(__dirname, "../build/index.html"));
-}
+  // dev vs prod skirtingi URL
+  if (process.env.ELECTRON_START_URL) {
+    mainWindow.loadURL(process.env.ELECTRON_START_URL);
+  } else {
+    mainWindow.loadFile(path.join(__dirname, "../build/index.html"));
+  }
 
 });
 
@@ -64,7 +65,7 @@ ipcMain.handle("http-request", async (_event, { url, method, headers, body }) =>
             const parsed = JSON.parse(responseBody);
             responseBody = JSON.stringify(parsed, null, 2);
           } catch {
-            /* keep as text */
+           /* keep as text */
           }
         }
       } else if (typeof data === "string") {
@@ -121,4 +122,19 @@ ipcMain.on("wss-connect", (event, { url, headers }) => {
 
 ipcMain.on("wss-send", (_event, msg) => {
   if (ws) ws.send(msg);
+});
+
+// --- PING HANDLER ---
+ipcMain.handle("ping-host", async (_event, host: string) => {
+  return new Promise<number>((resolve, reject) => {
+    const platform = process.platform;
+    const cmd = platform === "win32" ? `ping -n 1 ${host}` : `ping -c 1 ${host}`;
+
+    const start = Date.now();
+    exec(cmd, (error) => {
+      if (error) return reject(error);
+      const time = Date.now() - start;
+      resolve(time);
+    });
+  });
 });

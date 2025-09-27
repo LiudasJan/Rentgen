@@ -9,4 +9,5 @@ electron_1.contextBridge.exposeInMainWorld("electronAPI", {
     connectWss: (payload) => electron_1.ipcRenderer.send("wss-connect", payload),
     sendWss: (msg) => electron_1.ipcRenderer.send("wss-send", msg),
     onWssEvent: (cb) => electron_1.ipcRenderer.on("wss-event", (_e, data) => cb(data)),
+    pingHost: (host) => electron_1.ipcRenderer.invoke("ping-host", host)
 });

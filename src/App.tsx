@@ -45,6 +45,8 @@ export default function App() {
   const toggleSecurityRow = (idx: number) =>
   setExpandedSecurityRows(prev => ({ ...prev, [idx]: !prev[idx] }));
 
+  const [performanceResults, setPerformanceResults] = useState<any[]>([]);
+
   // --- HTTP SEND ---
   async function sendHttp() {
     setHttpResponse({
@@ -111,7 +113,6 @@ export default function App() {
       });
     }
   }
-
 
   // --- WSS CONNECT ---
   async function connectWss() {
@@ -283,27 +284,32 @@ export default function App() {
     return results;
   }
 
-// --- RUN ALL TESTS ---
-async function runAllTests() {
-  setLoading(true);
-  setTestResults([]);
-  setSecurityResults([]);
-  setCurrentTest(0);
+  // --- RUN ALL TESTS ---
+  async function runAllTests() {
+    setLoading(true);
+    setTestResults([]);
+    setSecurityResults([]);
+    setPerformanceResults([]);
+    setCurrentTest(0);
 
-  // 1. Data-driven (panaudojam seną runTests logiką kaip helperį)
-  const dataResults = await runDataDrivenTests();
-  setTestResults(dataResults);
+    // 1. Data-driven
+    const dataResults = await runDataDrivenTests();
+    setTestResults(dataResults);
 
-  // 2. Security
-  const secResults = await runSecurityTests();
-  setSecurityResults(secResults);
+    // 2. Security
+    const secResults = await runSecurityTests();
+    setSecurityResults(secResults);
 
-  setLoading(false);
-}
+    // 3. Performance
+    const perfResults = await runPerformanceInsights(dataResults);
+    setPerformanceResults(perfResults);
 
-// refactorinta tavo runTests -> return results
-async function runDataDrivenTests(): Promise<any[]> {
-      if (!body) return [];
+    setLoading(false);
+  }
+
+  // --- DATA DRIVEN TESTS ---
+  async function runDataDrivenTests(): Promise<any[]> {
+    if (!body) return [];
     setLoading(true);
     setTestResults([]);
     setCurrentTest(0);
@@ -318,7 +324,10 @@ async function runDataDrivenTests(): Promise<any[]> {
 
     const hdrs = headers
       ? Object.fromEntries(
-          headers.split("\n").map((h) => h.split(":").map((s) => s.trim()))
+          headers.split("\n").map((h) => {
+            const [k, ...rest] = h.split(":");
+            return [k.trim(), rest.join(":").trim()];
+          })
         )
       : {};
 
@@ -368,18 +377,22 @@ async function runDataDrivenTests(): Promise<any[]> {
               status: "🔴 Bug",
               request: newBody,
               response: String(err),
+              responseTime: 0
             });
             continue;
           }
         }
 
         try {
+          const start = performance.now();
           const res = await (window as any).electronAPI.sendHttp({
             url,
             method,
             headers: hdrs,
             body: dataToSend,
           });
+          const end = performance.now();
+          const responseTime = end - start;
 
           // --- naujas status parsing ---
           let statusCode = 0;
@@ -389,7 +402,7 @@ async function runDataDrivenTests(): Promise<any[]> {
             statusCode = parseInt(parts[0], 10);
             statusText = parts.slice(1).join(" ");
           }
-
+          
           const ok = statusCode >= 200 && statusCode < 300;
 
           // response text
@@ -440,6 +453,7 @@ async function runDataDrivenTests(): Promise<any[]> {
             request: newBody,
             response: responseText,
             decoded,
+            responseTime
           });
         } catch (err: any) {
           results.push({
@@ -450,21 +464,91 @@ async function runDataDrivenTests(): Promise<any[]> {
             status: "🔴 Bug",
             request: newBody,
             response: String(err),
+            responseTime: 0
           });
         }
       }
     }
 
     return results;
-}
+  }
 
-// --- RANDOM STRING ---
-function rand32() {
-  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
-  let out = "";
-  for (let i = 0; i < 32; i++) out += chars[Math.floor(Math.random() * chars.length)];
-  return out;
-}
+
+  // --- PERFORMANCE ---
+  async function runPerformanceInsights(dataResults: any[]): Promise<any[]> {
+    const results: any[] = [];
+
+    // Response time mediana
+    const times = dataResults.map(r => r.responseTime).filter(Boolean);
+    const med = median(times);
+
+    let status = "";
+    if (med <= 500) status = "✅ Pass";
+    else if (med <= 1000) status = "🟠 Warning";
+    else status = "🔴 Fail";
+
+    results.push({
+      name: "Median response time",
+      expected: "<= 500ms",
+      actual: `${med.toFixed(0)} ms`,
+      status
+    });
+
+    // Ping
+    try {
+      const domain = new URL(url).hostname;
+      const pings: number[] = [];
+      for (let i = 0; i < 5; i++) {
+        const t = await (window as any).electronAPI.pingHost(domain);
+        pings.push(t);
+      }
+      const badCount = pings.filter(t => t > 50).length;
+      const avg = pings.reduce((a, b) => a + b, 0) / pings.length;
+
+      let pingStatus = badCount >= 3 ? "🔴 Fail" : "✅ Pass";
+      results.push({
+        name: "Ping latency",
+        expected: "<= 50ms (3/5 rule)",
+        actual: `${avg.toFixed(0)} ms (bad ${badCount}/5)`,
+        status: pingStatus
+      });
+    } catch (err) {
+      results.push({
+        name: "Ping test error",
+        expected: "Ping should succeed",
+        actual: String(err),
+        status: "🔴 Fail"
+      });
+    }
+
+    // --- Load test (future) ---
+    results.push({
+      name: "Load test",
+      expected: "Run stress/load test",
+      actual: "Not available yet",
+      status: "⚪ Manual"
+    });
+
+    return results;
+  }
+
+  // --- RANDOM STRING ---
+  function rand32() {
+    const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+    let out = "";
+    for (let i = 0; i < 32; i++) out += chars[Math.floor(Math.random() * chars.length)];
+    return out;
+  }
+
+  // --- Measure median helper ---
+  function median(values: number[]): number {
+    if (values.length === 0) return 0;
+    values.sort((a, b) => a - b);
+    const mid = Math.floor(values.length / 2);
+    return values.length % 2 !== 0
+      ? values[mid]
+      : (values[mid - 1] + values[mid]) / 2;
+  }
 
   return (
     <div className="app">
@@ -720,6 +804,41 @@ function rand32() {
         </table>
       </div>
     )}
+
+    {/* Performance Insights */}
+    {performanceResults.length > 0 && (
+      <div className="response-panel">
+        <h3>Performance Insights</h3>
+        <table className="results-table">
+          <thead>
+            <tr>
+              <th>Check</th>
+              <th>Expected</th>
+              <th>Actual</th>
+              <th>Result</th>
+            </tr>
+          </thead>
+          <tbody>
+            {performanceResults.map((r, i) => (
+              <tr key={i}
+                className={
+                  r.status.includes("Pass") ? "pass" :
+                  r.status.includes("Warning") ? "warn" :
+                  r.status.includes("Manual") ? "manual" :
+                  "fail"
+                }
+              >
+                <td>{r.name}</td>
+                <td>{r.expected}</td>
+                <td>{r.actual}</td>
+                <td>{r.status}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+
 
     {/* Test Results */}
     {testResults.length > 0 && (
