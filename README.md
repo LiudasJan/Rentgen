@@ -25,7 +25,9 @@ But real testing means more:
 
 ## 🚀 Features
 
-- 🌐 **HTTP/HTTPS support** — all standard methods (GET, POST, PUT, PATCH, DELETE, etc.)
+- 🔐 **Security & Headers checks** — built-in automated tests (sensitive headers, OPTIONS, unsupported methods, etc.)
+- 📊 **Data-driven testing** — generate multiple tests from one request & dataset
+- 🌐 **HTTP/HTTPS support** — all standard methods (GET, POST, PUT, PATCH, DELETE, OPTIONS, etc.)
 - 🔄 **WebSocket testing** — connect, send, and inspect messages
 - 🐛 **Protobuf integration** — load `.proto` schemas, encode requests, decode responses
 - 🧪 **Send malformed payloads** — because this is testing, not production
@@ -35,10 +37,15 @@ But real testing means more:
 ---
 
 ## 🏗️ Roadmap
-- [ ] Tabbed requests / workspaces 
-- [ ] Tests generation out of the box
+- [ ] Extend **security test suite** (more headers, SSL configs, CORS checks)
+- [ ] Broader **data handling checks** (trimming, limits, encoding issues)
+- [ ] Authentication & authorization scenarios (401 vs 403, token expiry)
+- [ ] Response code validation (empty vs not found, list pagination)
+- [ ] Performance & abuse prevention (rate limits, stress checks)
+- [ ] Tabbed requests / workspaces  
 - [ ] gRPC support  
 - [ ] Plugins/extensions  
+- [ ] Fuzzing & SQLi/XSS payload libraries 
 
 ---
 
