@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import { loadProto, encodeMessage, decodeMessage } from "./protobufHelper";
 import { detectFieldType } from "./fieldDetectors";
@@ -32,9 +32,12 @@ export default function App() {
   const [testResults, setTestResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
-    // --- State ---
+  // --- State ---
   const [currentTest, setCurrentTest] = useState(0);
   const [totalTests, setTotalTests] = useState(0);
+
+  const [expandedRows, setExpandedRows] = useState<Record<number, boolean>>({});
+  const toggleRow = (idx: number) => setExpandedRows((prev) => ({ ...prev, [idx]: !prev[idx] }));
 
   // --- HTTP SEND ---
   async function sendHttp() {
@@ -127,10 +130,29 @@ export default function App() {
     (window as any).electronAPI.connectWss({ url, headers: hdrs });
   }
 
+  // mount
+  useEffect(() => {
+    const off = (window as any).electronAPI.onWssEvent((ev: any) => {
+      if (ev.type === "open") setWsConnected(true);
+      if (ev.type === "close") setWsConnected(false);
+      if (ev.type === "message") {
+        setMessages((prev) => [
+          { direction: "received", data: String(ev.data), decoded: ev.decoded ?? null },
+          ...prev,
+        ]);
+      }
+      if (ev.type === "error") {
+        setMessages((prev) => [{ direction: "system", data: "❌ " + ev.error }, ...prev]);
+      }
+    });
+    return () => off?.(); // unmount
+  }, []);
   // --- WSS SEND ---
-  async function sendWss() {
+  function sendWss() {
+    setMessages((prev) => [{ direction: "sent", data: body }, ...prev]);
     (window as any).electronAPI.sendWss(body);
   }
+
 
   function updateFieldType(field: string, type: string) {
     setFieldMappings((prev) => ({ ...prev, [field]: type }));
@@ -254,10 +276,17 @@ export default function App() {
           }
 
           let status = "";
-          if (d.valid && ok) status = "✅ Pass";
-          else if (!d.valid && ok) status = "❌ Fail";
-          else if (statusCode >= 500) status = "🔴 Bug";
-          else status = "✅ Pass";
+          if (d.valid) {
+            // tikimės 2xx
+            if (ok) status = "✅ Pass";
+            else status = "❌ Fail";
+          } else {
+            // tikimės 4xx
+            if (statusCode >= 400 && statusCode < 500) status = "✅ Pass";
+            else if (ok) status = "❌ Fail";
+            else if (statusCode >= 500) status = "🔴 Bug";
+            else status = "❌ Fail";
+          }
 
           results.push({
             field,
@@ -324,7 +353,7 @@ export default function App() {
             <option value="PATCH">PATCH</option>
             <option value="DELETE">DELETE</option>
             <option value="HEAD">HEAD</option>
-            <option value="OPTION">OPTION</option>
+            <option value="OPTIONS">OPTIONS</option>
           </select>
         )}
         <input
@@ -424,8 +453,10 @@ export default function App() {
           <pre>{JSON.stringify(httpResponse.headers, null, 2)}</pre>
 
           <h4>Body</h4>
-          <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-            {typeof httpResponse.body === "string" ? httpResponse.body : JSON.stringify(httpResponse.body, null, 2)}
+          <pre className="wrap">
+            {typeof httpResponse.body === "string"
+              ? httpResponse.body
+              : JSON.stringify(httpResponse.body, null, 2)}
           </pre>
         </div>
       )}
@@ -485,60 +516,85 @@ export default function App() {
         </div>
       )}
 
-      {/* Test Results */}
-      {testResults.length > 0 && (
-        <div className="response-panel">
-          <h3>Test Results</h3>
-          <table className="results-table">
-            <thead>
-              <tr>
-                <th>Field</th>
-                <th>Value</th>
-                <th>Expected</th>
-                <th>Actual</th>
-                <th>Result</th>
-              </tr>
-            </thead>
-            <tbody>
-              {testResults.map((r, i) => (
+    {/* Test Results */}
+    {testResults.length > 0 && (
+      <div className="response-panel">
+        <h3>Test Results</h3>
+        <table className="results-table">
+          <thead>
+            <tr>
+              <th>Field</th>
+              <th>Value</th>
+              <th>Expected</th>
+              <th>Actual</th>
+              <th>Result</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {testResults.map((r, i) => (
+              <React.Fragment key={i}>
                 <tr
-                  key={i}
-                  className={
+                  className={`${
                     r.status.includes("Pass")
                       ? "pass"
                       : r.status.includes("Fail")
                       ? "fail"
                       : "bug"
-                  }
+                  } clickable`}
+                  onClick={() => toggleRow(i)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      toggleRow(i);
+                    }
+                  }}
+                  aria-expanded={!!expandedRows[i]}
+                  title="Click to expand"
                 >
-                  <td>{r.field}</td>
+                  <td className="expander">
+                    <span className="chevron">{expandedRows[i] ? "▾" : "▸"}</span>
+                    {r.field}
+                  </td>
                   <td>{JSON.stringify(r.value)}</td>
                   <td>{r.expected}</td>
                   <td>{r.actual}</td>
                   <td>{r.status}</td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
 
-          {testResults.map((r, i) => (
-            <details key={i} style={{ marginTop: "5px" }}>
-              <summary>
-                Request/Response for {r.field}={JSON.stringify(r.value)}
-              </summary>
-              <pre>Request: {JSON.stringify(r.request, null, 2)}</pre>
-              <pre>Response: {r.response}</pre>
-              {r.decoded && (
-                <>
-                  <div className="decoded-label">Decoded Protobuf:</div>
-                  <pre>{r.decoded}</pre>
-                </>
-              )}
-            </details>
-          ))}
+                {expandedRows[i] && (
+                  <tr className="details-row">
+                    <td colSpan={5}>
+                      <div className="details-panel">
+                        <div className="details-grid">
+                          <div>
+                            <div className="details-title">Request</div>
+                            <pre>{JSON.stringify(r.request, null, 2)}</pre>
+                          </div>
+                          <div>
+                            <div className="details-title">Response</div>
+                            <pre className="wrap">{r.response}</pre>
+                            {r.decoded && (
+                              <>
+                                <div className="decoded-label">Decoded Protobuf:</div>
+                                <pre>{r.decoded}</pre>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
 
-        </div>
-      )}
     </div>
   );
 }
