@@ -14,7 +14,11 @@ export default function App() {
   const [body, setBody] = useState("{}");
 
   const [messages, setMessages] = useState<
-    { direction: "sent" | "received" | "system"; data: string; decoded?: string | null }[]
+    {
+      direction: "sent" | "received" | "system";
+      data: string;
+      decoded?: string | null;
+    }[]
   >([]);
   const [protoFile, setProtoFile] = useState<File | null>(null);
   const [messageType, setMessageType] = useState("");
@@ -27,7 +31,9 @@ export default function App() {
     headers: any;
   } | null>(null);
 
-  const [fieldMappings, setFieldMappings] = useState<Record<string, string>>({});
+  const [fieldMappings, setFieldMappings] = useState<Record<string, string>>(
+    {}
+  );
   const [testResults, setTestResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -36,11 +42,14 @@ export default function App() {
   const [totalTests, setTotalTests] = useState(0);
 
   const [expandedRows, setExpandedRows] = useState<Record<number, boolean>>({});
-  const toggleRow = (idx: number) => setExpandedRows((prev) => ({ ...prev, [idx]: !prev[idx] }));
+  const toggleRow = (idx: number) =>
+    setExpandedRows((prev) => ({ ...prev, [idx]: !prev[idx] }));
 
   const [securityResults, setSecurityResults] = useState<any[]>([]);
 
-  const [expandedSecurityRows, setExpandedSecurityRows] = useState<Record<number, boolean>>({});
+  const [expandedSecurityRows, setExpandedSecurityRows] = useState<
+    Record<number, boolean>
+  >({});
   const toggleSecurityRow = (idx: number) =>
     setExpandedSecurityRows((prev) => ({ ...prev, [idx]: !prev[idx] }));
 
@@ -56,7 +65,9 @@ export default function App() {
 
     try {
       const hdrs = headers
-        ? Object.fromEntries(headers.split("\n").map((h) => h.split(":").map((s) => s.trim())))
+        ? Object.fromEntries(
+            headers.split("\n").map((h) => h.split(":").map((s) => s.trim()))
+          )
         : {};
 
       let dataToSend: any = body; // raw tekstas
@@ -139,12 +150,19 @@ export default function App() {
       if (ev.type === "close") setWsConnected(false);
       if (ev.type === "message") {
         setMessages((prev) => [
-          { direction: "received", data: String(ev.data), decoded: ev.decoded ?? null },
+          {
+            direction: "received",
+            data: String(ev.data),
+            decoded: ev.decoded ?? null,
+          },
           ...prev,
         ]);
       }
       if (ev.type === "error") {
-        setMessages((prev) => [{ direction: "system", data: "❌ " + ev.error }, ...prev]);
+        setMessages((prev) => [
+          { direction: "system", data: "❌ " + ev.error },
+          ...prev,
+        ]);
       }
     });
     return () => off?.(); // unmount
@@ -183,7 +201,9 @@ export default function App() {
         body: null,
       });
       const headerStr = JSON.stringify(base.headers || {}).toLowerCase();
-      const bad = /(apache|nginx|iis|express|php|jetty|tomcat|caddy)/i.test(headerStr);
+      const bad = /(apache|nginx|iis|express|php|jetty|tomcat|caddy)/i.test(
+        headerStr
+      );
       results.push({
         name: "No sensitive server headers",
         expected: "No Server version info",
@@ -200,7 +220,8 @@ export default function App() {
         headers: hdrs,
         body: null,
       });
-      const okOptions = opt.status.startsWith("204") && "allow" in (opt.headers || {});
+      const okOptions =
+        opt.status.startsWith("204") && "allow" in (opt.headers || {});
       results.push({
         name: "OPTIONS method handling",
         expected: "204 No Content + Allow header",
@@ -339,7 +360,9 @@ export default function App() {
       if (type === "do-not-test") continue;
 
       const dataset =
-        type === "random32" ? [{ value: rand32(), valid: true }] : datasets[type] || [];
+        type === "random32"
+          ? [{ value: rand32(), valid: true }]
+          : datasets[type] || [];
 
       for (const d of dataset) {
         counter++;
@@ -523,7 +546,8 @@ export default function App() {
   function rand32() {
     const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
     let out = "";
-    for (let i = 0; i < 32; i++) out += chars[Math.floor(Math.random() * chars.length)];
+    for (let i = 0; i < 32; i++)
+      out += chars[Math.floor(Math.random() * chars.length)];
     return out;
   }
 
@@ -532,7 +556,9 @@ export default function App() {
     if (values.length === 0) return 0;
     values.sort((a, b) => a - b);
     const mid = Math.floor(values.length / 2);
-    return values.length % 2 !== 0 ? values[mid] : (values[mid - 1] + values[mid]) / 2;
+    return values.length % 2 !== 0
+      ? values[mid]
+      : (values[mid - 1] + values[mid]) / 2;
   }
 
   return (
@@ -578,10 +604,18 @@ export default function App() {
           </button>
         ) : (
           <>
-            <button className="send-btn" onClick={connectWss} disabled={wsConnected}>
+            <button
+              className="send-btn"
+              onClick={connectWss}
+              disabled={wsConnected}
+            >
               Connect
             </button>
-            <button className="send-btn" onClick={sendWss} disabled={!wsConnected}>
+            <button
+              className="send-btn"
+              onClick={sendWss}
+              disabled={!wsConnected}
+            >
               Send
             </button>
           </>
@@ -605,7 +639,9 @@ export default function App() {
 
       {/* Protobuf controls */}
       <div className="protobuf-section" style={{ marginTop: "10px" }}>
-        <label style={{ display: "block", marginBottom: "6px", fontWeight: "bold" }}>
+        <label
+          style={{ display: "block", marginBottom: "6px", fontWeight: "bold" }}
+        >
           Protobuf schema & message type (optional):
         </label>
 
@@ -624,7 +660,10 @@ export default function App() {
                   ]);
                 } catch (err) {
                   setMessages((prev) => [
-                    { direction: "system", data: "❌ Failed to parse proto: " + err },
+                    {
+                      direction: "system",
+                      data: "❌ Failed to parse proto: " + err,
+                    },
                     ...prev,
                   ]);
                 }
@@ -667,7 +706,11 @@ export default function App() {
           {messages.map((m, i) => (
             <div key={i} className={`msg ${m.direction}`}>
               <span className="arrow">
-                {m.direction === "sent" ? "➡" : m.direction === "received" ? "⬅" : "⚠"}
+                {m.direction === "sent"
+                  ? "➡"
+                  : m.direction === "received"
+                    ? "⬅"
+                    : "⚠"}
               </span>
               <pre>{m.data}</pre>
               {m.decoded && (
@@ -688,9 +731,14 @@ export default function App() {
           {Object.entries(fieldMappings).map(([field, type]) => (
             <div key={field}>
               {field}:{" "}
-              <select value={type} onChange={(e) => updateFieldType(field, e.target.value)}>
+              <select
+                value={type}
+                onChange={(e) => updateFieldType(field, e.target.value)}
+              >
                 <option value="do-not-test">Do not test</option>
-                <option value="random32">Random 32 (unique each request)</option>
+                <option value="random32">
+                  Random 32 (unique each request)
+                </option>
                 <option value="string">String</option>
                 <option value="email">Email</option>
                 <option value="phone">Phone</option>
@@ -701,7 +749,9 @@ export default function App() {
             </div>
           ))}
           <button className="send-btn" onClick={runAllTests} disabled={loading}>
-            {loading ? `Running tests... (${currentTest}/${totalTests})` : "Generate & Run Tests"}
+            {loading
+              ? `Running tests... (${currentTest}/${totalTests})`
+              : "Generate & Run Tests"}
           </button>
         </div>
       )}
@@ -847,7 +897,9 @@ export default function App() {
                     title="Click to expand"
                   >
                     <td className="expander">
-                      <span className="chevron">{expandedRows[i] ? "▾" : "▸"}</span>
+                      <span className="chevron">
+                        {expandedRows[i] ? "▾" : "▸"}
+                      </span>
                       {r.field}
                     </td>
                     <td>{JSON.stringify(r.value)}</td>
@@ -870,7 +922,9 @@ export default function App() {
                               <pre className="wrap">{r.response}</pre>
                               {r.decoded && (
                                 <>
-                                  <div className="decoded-label">Decoded Protobuf:</div>
+                                  <div className="decoded-label">
+                                    Decoded Protobuf:
+                                  </div>
                                   <pre>{r.decoded}</pre>
                                 </>
                               )}

@@ -64,7 +64,10 @@ export const datasets: Record<string, { value: any; valid: boolean }[]> = {
     { value: "https://testspread.com?key=value", valid: true },
     { value: "https://testspread.com#fragment", valid: true },
     { value: "https://subdomain.testspread.com", valid: true },
-    { value: "https://testspread.com/path/to/example/123/ąčęėįšųūž", valid: true },
+    {
+      value: "https://testspread.com/path/to/example/123/ąčęėįšųūž",
+      valid: true,
+    },
     {
       value:
         "http://username:password@subdomain.testspread.com:8080/path/to/resource/123?key=value#fragment",
@@ -82,7 +85,10 @@ export const datasets: Record<string, { value: any; valid: boolean }[]> = {
         "https://averyveryveryveryveryveryveryveryveryveryveryveryveryveryveryveryveryveryveryveryverylongdoainname.com",
       valid: true,
     },
-    { value: "https://q-w-e-r-t-y-u-i-o-p-a-s-d-f-g-h-j-k-l.online", valid: true },
+    {
+      value: "https://q-w-e-r-t-y-u-i-o-p-a-s-d-f-g-h-j-k-l.online",
+      valid: true,
+    },
     { value: "https://null.site", valid: true },
     { value: "https://nill.tech", valid: true },
     { value: "https://true.fun", valid: true },
@@ -124,12 +130,18 @@ export const datasets: Record<string, { value: any; valid: boolean }[]> = {
     { value: "ftp://username:password@ftp.testspread.com", valid: true },
     { value: "ftp://ftp.testspread.com/path/to/file", valid: true },
     { value: "ftp://ftp.testspread.com/zip.zip", valid: true },
-    { value: "ftp://ftp.testspread.com/foldername/file.txt;type=i", valid: true },
+    {
+      value: "ftp://ftp.testspread.com/foldername/file.txt;type=i",
+      valid: true,
+    },
     { value: "ftp://ftp.testspread.com/my%20folder", valid: true },
     { value: "ftp://192.0.2.235", valid: true },
     { value: "ftp://ftp.trimming.com", valid: true },
     { value: "ftp://ftp.subdomain.testspread.com", valid: true },
-    { value: "ftp://ftp.testspread.com/path/to/example/123/ąčęėįšųūž", valid: true },
+    {
+      value: "ftp://ftp.testspread.com/path/to/example/123/ąčęėįšųūž",
+      valid: true,
+    },
     {
       value:
         "ftp://ftp.username:password@subdomain.testspread.com:8080/path/123?key=value#fragment",
@@ -157,7 +169,10 @@ export const datasets: Record<string, { value: any; valid: boolean }[]> = {
   ],
 
   string: [
-    { value: "Hubert Blaine Wolfeschlegelsteinhausenbergerdorff Sr.", valid: true },
+    {
+      value: "Hubert Blaine Wolfeschlegelsteinhausenbergerdorff Sr.",
+      valid: true,
+    },
     { value: "Null", valid: true },
     { value: "Nill", valid: true },
     { value: "TRUE", valid: true },
