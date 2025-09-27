@@ -10,12 +10,21 @@ const path_1 = __importDefault(require("path"));
 const child_process_1 = require("child_process");
 let mainWindow = null;
 let ws = null;
+process.on("uncaughtException", (err) => {
+    if (err.code === "EPIPE") {
+        console.warn("⚠️ Ignored EPIPE (Payload too large / broken pipe)");
+    }
+    else {
+        console.error("❌ Uncaught exception:", err);
+    }
+});
+process.on("unhandledRejection", (reason) => {
+    console.error("❌ Unhandled promise rejection:", reason);
+});
 electron_1.app.on("ready", () => {
     console.log("✅ Main process started!");
     const preloadPath = electron_1.app.isPackaged
-        // copied by extraResources above → .../Resources/preload.js
         ? path_1.default.join(process.resourcesPath, "preload.js")
-        // dev: compiled next to main.js
         : path_1.default.join(__dirname, "preload.js");
     mainWindow = new electron_1.BrowserWindow({
         webPreferences: {
@@ -40,17 +49,24 @@ electron_1.ipcMain.handle("http-request", async (_event, { url, method, headers,
             method,
             headers,
             data: body,
+            maxBodyLength: Infinity, // leisti didelį body
+            maxContentLength: Infinity,
             responseType: "arraybuffer", // gaut galim binary ar tekstą - mes konvertuosim rankomis
             validateStatus: () => true,
         });
         // Convert response data (ArrayBuffer/Buffer/JSON/etc) to displayable string
         let responseBody;
-        const contentType = (res.headers && (res.headers['content-type'] || res.headers['Content-Type'])) || "";
+        const contentType = (res.headers &&
+            (res.headers["content-type"] || res.headers["Content-Type"])) ||
+            "";
         // res.data is an ArrayBuffer (axios with responseType arraybuffer returns ArrayBuffer)
         const data = res.data;
         try {
             // If it's ArrayBuffer or Buffer -> try decode as utf-8 text
-            if (data instanceof ArrayBuffer || (data && typeof data === 'object' && typeof data.byteLength === 'number')) {
+            if (data instanceof ArrayBuffer ||
+                (data &&
+                    typeof data === "object" &&
+                    typeof data.byteLength === "number")) {
                 // convert ArrayBuffer/TypedArray/Buffer to string
                 const uint8 = new Uint8Array(data);
                 // try text decoder
@@ -71,10 +87,13 @@ electron_1.ipcMain.handle("http-request", async (_event, { url, method, headers,
             }
             else {
                 // fallback: try stringify object
-                responseBody = typeof data === "object" ? JSON.stringify(data, null, 2) : String(data);
+                responseBody =
+                    typeof data === "object"
+                        ? JSON.stringify(data, null, 2)
+                        : String(data);
             }
         }
-        catch (e) {
+        catch {
             // ultimate fallback
             try {
                 responseBody = String(data);
@@ -90,6 +109,14 @@ electron_1.ipcMain.handle("http-request", async (_event, { url, method, headers,
         };
     }
     catch (err) {
+        // 👇 tvarkingas EPIPE gaudymas
+        if (err.code === "EPIPE") {
+            return {
+                status: "413 Payload Too Large (EPIPE)",
+                headers: {},
+                body: "",
+            };
+        }
         return { status: "Error", headers: {}, body: String(err) };
     }
 });

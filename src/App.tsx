@@ -259,6 +259,26 @@ export default function App() {
       });
     }
 
+    // 4. Large body / size limit
+    const bigBody = "A".repeat(100 * 1024 * 1024); // 100 MB string
+    const tooLarge = await (window as any).electronAPI.sendHttp({
+      url,
+      method: "POST", // dažniausiai POST su body
+      headers: { ...hdrs, "Content-Type": "application/json" },
+      body: bigBody,
+    });
+
+    const codeLarge = tooLarge.status.split(" ")[0];
+    const okLarge = codeLarge === "413";
+    results.push({
+      name: "Request size limit",
+      expected: "413 Payload Too Large",
+      actual: tooLarge.status,
+      status: okLarge ? "✅ Pass" : "❌ Fail",
+      request: { url, method: "POST", headers: hdrs, body: "[100MB string]" },
+      response: tooLarge,
+    });
+
     // --- Manual checks (pilka spalva) ---
     results.push(
       {

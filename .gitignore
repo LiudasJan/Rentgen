@@ -4,6 +4,7 @@
 # Electron builder output
 /dist
 /dist_electron
+/dist-electron
 *.exe
 *.dmg
 *.AppImage
