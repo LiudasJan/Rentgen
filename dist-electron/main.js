@@ -11,9 +11,14 @@ let mainWindow = null;
 let ws = null;
 electron_1.app.on("ready", () => {
     console.log("✅ Main process started!");
+    const preloadPath = electron_1.app.isPackaged
+        // copied by extraResources above → .../Resources/preload.js
+        ? path_1.default.join(process.resourcesPath, "preload.js")
+        // dev: compiled next to main.js
+        : path_1.default.join(__dirname, "preload.js");
     mainWindow = new electron_1.BrowserWindow({
         webPreferences: {
-            preload: path_1.default.join(__dirname, "preload.js"),
+            preload: preloadPath,
             contextIsolation: true,
             nodeIntegration: false,
         },
@@ -34,7 +39,7 @@ electron_1.ipcMain.handle("http-request", async (_event, { url, method, headers,
             method,
             headers,
             data: body,
-            responseType: "arraybuffer",
+            responseType: "arraybuffer", // gaut galim binary ar tekstą - mes konvertuosim rankomis
             validateStatus: () => true,
         });
         // Convert response data (ArrayBuffer/Buffer/JSON/etc) to displayable string

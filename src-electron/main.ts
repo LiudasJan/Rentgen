@@ -9,13 +9,19 @@ let ws: WebSocket | null = null;
 app.on("ready", () => {
 console.log("✅ Main process started!");
 
-mainWindow = new BrowserWindow({
-  webPreferences: {
-    preload: path.join(__dirname, "preload.js"),
-    contextIsolation: true,
-    nodeIntegration: false,
-  },
-});
+  const preloadPath = app.isPackaged
+    // copied by extraResources above → .../Resources/preload.js
+    ? path.join(process.resourcesPath, "preload.js")
+    // dev: compiled next to main.js
+    : path.join(__dirname, "preload.js");
+
+  mainWindow = new BrowserWindow({
+    webPreferences: {
+      preload: preloadPath,
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
 
 // dev vs prod skirtingi URL
 if (process.env.ELECTRON_START_URL) {
