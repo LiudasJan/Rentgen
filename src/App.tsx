@@ -745,6 +745,7 @@ export default function App() {
                 <option value="url">URL</option>
                 <option value="number">Number</option>
                 <option value="ftp_url">FTP URL</option>
+                <option value="boolean">Boolean</option>
               </select>
             </div>
           ))}
