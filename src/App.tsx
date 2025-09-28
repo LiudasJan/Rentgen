@@ -289,20 +289,51 @@ export default function App() {
       response: tooLarge,
     });
 
+    // 5. Missing authorization cookie/token
+    try {
+      const minimalHeaders: Record<string, string> = {};
+      for (const [k, v] of Object.entries(hdrs)) {
+        const key = k.toLowerCase();
+        if (key === "accept" || key === "content-type") {
+          minimalHeaders[k] = v;
+        }
+      }
+
+      const missingAuth = await (window as any).electronAPI.sendHttp({
+        url,
+        method,
+        headers: minimalHeaders,
+        body,
+      });
+
+      const code = missingAuth.status.split(" ")[0];
+      const ok401 = code === "401";
+
+      results.push({
+        name: "Missing authorization cookie/token",
+        expected: "Should return 401 Unauthorized",
+        actual: missingAuth.status,
+        status: ok401 ? "✅ Pass" : "❌ Fail",
+        request: { url, method, headers: minimalHeaders },
+        response: missingAuth,
+      });
+    } catch (err) {
+      results.push({
+        name: "Missing authorization cookie/token",
+        expected: "Should return 401 Unauthorized",
+        actual: String(err),
+        status: "🔴 Bug",
+        request: { url, method, headers: {} },
+        response: null,
+      });
+    }
+
     // --- Manual checks (pilka spalva) ---
     results.push(
       {
         name: "Invalid authorization cookie/token",
         expected: "Should return 401 Unauthorized",
-        actual: "Not run",
-        status: "⚪ Manual",
-        request: null,
-        response: null,
-      },
-      {
-        name: "Missing authorization cookie/token",
-        expected: "Should return 401 Unauthorized",
-        actual: "Not run",
+        actual: "Not available yet",
         status: "⚪ Manual",
         request: null,
         response: null,
@@ -310,7 +341,7 @@ export default function App() {
       {
         name: "Access other user’s data",
         expected: "Should return 404 or 403",
-        actual: "Not run",
+        actual: "Not available yet",
         status: "⚪ Manual",
         request: null,
         response: null,
@@ -318,7 +349,7 @@ export default function App() {
       {
         name: "Role-based access control",
         expected: "Restricted per role",
-        actual: "Not run",
+        actual: "Not available yet",
         status: "⚪ Manual",
         request: null,
         response: null,
@@ -359,7 +390,7 @@ export default function App() {
     setLoading(false);
   }
 
-  // --- DATA DRIVEN TESTS ---
+  // --- DATA HANDLING & INPUT VALIDATION  TESTS ---
   async function runDataDrivenTests(): Promise<any[]> {
     if (!body) return [];
     setLoading(true);
@@ -573,6 +604,13 @@ export default function App() {
     results.push({
       name: "Load test",
       expected: "Run stress/load test",
+      actual: "Not available yet",
+      status: "⚪ Manual",
+    });
+
+    results.push({
+      name: "Rate limiting implementation",
+      expected: "429 Too Many Requests",
       actual: "Not available yet",
       status: "⚪ Manual",
     });
@@ -901,6 +939,7 @@ export default function App() {
                 <option value="number">Number</option>
                 <option value="ftp_url">FTP URL</option>
                 <option value="boolean">Boolean</option>
+                <option value="currency">Currency</option>
               </select>
             </div>
           ))}
@@ -959,7 +998,9 @@ export default function App() {
                             <div className="details-grid">
                               <div>
                                 <div className="details-title">Request</div>
-                                <pre>{JSON.stringify(r.request, null, 2)}</pre>
+                                <pre className="wrap">
+                                  {JSON.stringify(r.request, null, 2)}
+                                </pre>
                               </div>
                               <div>
                                 <div className="details-title">Response</div>
@@ -1026,10 +1067,10 @@ export default function App() {
         </div>
       )}
 
-      {/* Data Driven Test */}
+      {/* Data Handling & Input Validation */}
       {testsStarted && (
         <div className="response-panel">
-          <h3>Test Results</h3>
+          <h3>Data Handling & Input Validation</h3>
           <table className="results-table">
             <thead>
               <tr>
@@ -1078,7 +1119,9 @@ export default function App() {
                             <div className="details-grid">
                               <div>
                                 <div className="details-title">Request</div>
-                                <pre>{JSON.stringify(r.request, null, 2)}</pre>
+                                <pre className="wrap">
+                                  {JSON.stringify(r.request, null, 2)}
+                                </pre>
                               </div>
                               <div>
                                 <div className="details-title">Response</div>

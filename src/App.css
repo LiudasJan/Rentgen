@@ -348,3 +348,8 @@ pre.wrap {
 .editor.error {
   border: 2px solid red;
 }
+
+pre.wrap {
+  white-space: pre-wrap; /* wrapina ilgas eilutes */
+  word-break: break-word; /* jei žodis per ilgas – laužo */
+}

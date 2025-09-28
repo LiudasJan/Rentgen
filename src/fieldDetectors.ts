@@ -6,6 +6,7 @@ export const fieldDetectors: { type: string; regex: RegExp }[] = [
   { type: "number", regex: /^-?\d+(\.\d+)?$/ },
   { type: "boolean", regex: /^(true|false)$/i },
   { type: "string", regex: /.+/ },
+  { type: "currency", regex: /^[A-Z]{3}$/ },
 ];
 
 export function detectFieldType(key: string, value: any): string {
