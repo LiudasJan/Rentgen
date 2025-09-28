@@ -3,6 +3,7 @@ import axios from "axios";
 import { loadProto, encodeMessage, decodeMessage } from "./protobufHelper";
 import { detectFieldType } from "./fieldDetectors";
 import { datasets } from "./datasets";
+import parseCurl from "parse-curl";
 import "./App.css";
 
 export default function App() {
@@ -59,6 +60,10 @@ export default function App() {
   const [loadingSecurity, setLoadingSecurity] = useState(false);
   const [loadingPerf, setLoadingPerf] = useState(false);
   const [testsStarted, setTestsStarted] = useState(false);
+
+  const [showCurlModal, setShowCurlModal] = useState(false);
+  const [curlError, setCurlError] = useState(false);
+  const [curlInput, setCurlInput] = useState("");
 
   // --- HTTP SEND ---
   async function sendHttp() {
@@ -594,10 +599,64 @@ export default function App() {
       : (values[mid - 1] + values[mid]) / 2;
   }
 
+  // --- Handle Import Curl
+  function handleImportCurl(raw: string) {
+    try {
+      if (raw.length > 200_000) throw new Error("cURL too large");
+
+      const cleaned = raw.replace(/\\\n/g, " ").trim();
+      let parsed: any = parseCurl(cleaned);
+
+      // Fallback body
+      if (!parsed.body) {
+        const match =
+          cleaned.match(/--data-raw\s+(['"])(.*?)\1/) ||
+          cleaned.match(/--data\s+(['"])(.*?)\1/) ||
+          cleaned.match(/--data-binary\s+(['"])(.*?)\1/);
+        if (match) parsed.body = match[2];
+      }
+
+      // --- FIX metodui ---
+      let method = (parsed.method || "").toUpperCase();
+      if (!method) {
+        if (parsed.body || /--data-raw|--data\b|--data-binary/.test(cleaned)) {
+          method = "POST";
+        } else {
+          method = "GET";
+        }
+      }
+
+      setUrl(parsed.url || "");
+      setMethod(method);
+      setBody(parsed.body ? parsed.body : "{}");
+
+      if (parsed.header) {
+        const headerStr = Object.entries(parsed.header)
+          .map(([k, v]) => `${k}: ${v}`)
+          .join("\n");
+        setHeaders(headerStr);
+      }
+
+      setShowCurlModal(false);
+      setCurlInput("");
+      setCurlError(false);
+    } catch (err) {
+      console.error("cURL import failed", err);
+      setCurlError(true);
+    }
+  }
+
   return (
     <div className="app">
       {/* Mode selector */}
-      <div>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "10px",
+          marginBottom: "10px",
+        }}
+      >
         <label>
           Mode:
           <select value={mode} onChange={(e) => setMode(e.target.value as any)}>
@@ -605,6 +664,12 @@ export default function App() {
             <option>WSS</option>
           </select>
         </label>
+
+        {mode === "HTTP" && (
+          <button className="send-btn" onClick={() => setShowCurlModal(true)}>
+            Import cURL
+          </button>
+        )}
       </div>
 
       {/* URL + Method */}
@@ -669,6 +734,36 @@ export default function App() {
         value={body}
         onChange={(e) => setBody(e.target.value)}
       />
+
+      {/* showCurlModal */}
+      {showCurlModal && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <h3>Import cURL</h3>
+            <textarea
+              className={`editor ${curlError ? "error" : ""}`}
+              placeholder="Paste cURL here..."
+              value={curlInput}
+              onChange={(e) => setCurlInput(e.target.value)}
+              style={{ minHeight: "160px" }}
+            />
+            <div style={{ marginTop: "10px", display: "flex", gap: "10px" }}>
+              <button
+                className="send-btn"
+                onClick={() => handleImportCurl(curlInput)}
+              >
+                Import
+              </button>
+              <button
+                className="send-btn"
+                onClick={() => setShowCurlModal(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Protobuf controls */}
       <div className="protobuf-section" style={{ marginTop: "10px" }}>
