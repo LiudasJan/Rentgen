@@ -314,7 +314,7 @@ export default function App() {
         expected: "Should return 401 Unauthorized",
         actual: missingAuth.status,
         status: ok401 ? "✅ Pass" : "❌ Fail",
-        request: { url, method, headers: minimalHeaders },
+        request: { url, method, headers: minimalHeaders, body }, // ✅ pridėjau body
         response: missingAuth,
       });
     } catch (err) {
@@ -323,7 +323,7 @@ export default function App() {
         expected: "Should return 401 Unauthorized",
         actual: String(err),
         status: "🔴 Bug",
-        request: { url, method, headers: {} },
+        request: { url, method, headers: {}, body }, // ✅ pridėjau body ir į klaidos atvejį
         response: null,
       });
     }
