@@ -232,11 +232,16 @@ export default function App() {
         headers: hdrs,
         body: null,
       });
+
+      // leidžiam tiek 200, tiek 204, bet reikalaujam Allow header
+      const optionCode = opt.status.split(" ")[0];
+      const hasAllow = "allow" in (opt.headers || {});
       const okOptions =
-        opt.status.startsWith("204") && "allow" in (opt.headers || {});
+        (optionCode === "200" || optionCode === "204") && hasAllow;
+
       results.push({
         name: "OPTIONS method handling",
-        expected: "204 No Content + Allow header",
+        expected: "200 or 204 + Allow header",
         actual: opt.status,
         status: okOptions ? "✅ Pass" : "❌ Fail",
         request: { url, method: "OPTIONS", headers: hdrs },
