@@ -605,39 +605,64 @@ export default function App() {
       if (raw.length > 200_000) throw new Error("cURL too large");
 
       const cleaned = raw.replace(/\\\n/g, " ").trim();
-      let parsed: any = parseCurl(cleaned);
+      const parsed: any = parseCurl(cleaned);
 
-      // --- fallback body ---
+      // BODY fallback'ai (kad suveiktų --data*, net jei parse-curl nepagauna)
       if (!parsed.body) {
-        const match =
+        const m =
           cleaned.match(/--data-raw\s+(['"])([\s\S]*?)\1/) ||
           cleaned.match(/--data\s+(['"])([\s\S]*?)\1/) ||
           cleaned.match(/--data-binary\s+(['"])([\s\S]*?)\1/);
-        if (match) parsed.body = match[2];
+        if (m) parsed.body = m[2];
       }
 
-      // --- FIX metodui ---
+      // METHOD logika: jei yra body arba --data* flagas -> POST
       let method = parsed.method ? String(parsed.method).toUpperCase() : "";
-
-      // Jei nerasta metodo, arba yra GET su body -> perjungiam į POST
       if (!method || (method === "GET" && parsed.body)) {
-        if (parsed.body || /--data-raw|--data\b|--data-binary/.test(cleaned)) {
-          method = "POST";
-        } else {
-          method = "GET";
+        method = /--data-raw|--data\b|--data-binary|(?:\s|^)-d\b/.test(cleaned)
+          ? "POST"
+          : "GET";
+      }
+
+      // HEADERIŲ normalizavimas: visada naudoti "Cookie", niekada "Set-Cookie"
+      const headersObj: Record<string, string> = {};
+
+      if (parsed.header) {
+        for (const [k, v] of Object.entries(
+          parsed.header as Record<string, any>
+        )) {
+          const key = String(k);
+          const val = String(v ?? "");
+          if (key.toLowerCase() === "set-cookie") {
+            headersObj["Cookie"] = val; // pervadinam
+          } else {
+            headersObj[key] = val;
+          }
         }
       }
 
+      // Paimti ir -b/--cookie flag'ą (jei buvo), jis laimi prieš viską – kaip Postman
+      const cookieFlag =
+        cleaned.match(/(?:^|\s)(?:-b|--cookie)\s+(['"])([\s\S]*?)\1/) ||
+        cleaned.match(/(?:^|\s)(?:-b|--cookie)\s+([^\s'"][^\s]*)/); // be kabučių
+      if (cookieFlag) {
+        const rawVal = String(cookieFlag[2] ?? cookieFlag[1] ?? "");
+        const val = rawVal
+          .replace(/^Cookie:\s*/i, "")
+          .replace(/^Set-Cookie:\s*/i, "")
+          .trim();
+        if (val) headersObj["Cookie"] = val;
+      }
+
+      // Užpildom UI
       setUrl(parsed.url || "");
       setMethod(method);
       setBody(parsed.body ? parsed.body : "{}");
 
-      if (parsed.header) {
-        const headerStr = Object.entries(parsed.header)
-          .map(([k, v]) => `${k}: ${v}`)
-          .join("\n");
-        setHeaders(headerStr);
-      }
+      const headerStr = Object.entries(headersObj)
+        .map(([k, v]) => `${k}: ${v}`)
+        .join("\n");
+      setHeaders(headerStr);
 
       setShowCurlModal(false);
       setCurlInput("");
