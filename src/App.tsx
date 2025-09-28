@@ -607,18 +607,20 @@ export default function App() {
       const cleaned = raw.replace(/\\\n/g, " ").trim();
       let parsed: any = parseCurl(cleaned);
 
-      // Fallback body
+      // --- fallback body ---
       if (!parsed.body) {
         const match =
-          cleaned.match(/--data-raw\s+(['"])(.*?)\1/) ||
-          cleaned.match(/--data\s+(['"])(.*?)\1/) ||
-          cleaned.match(/--data-binary\s+(['"])(.*?)\1/);
+          cleaned.match(/--data-raw\s+(['"])([\s\S]*?)\1/) ||
+          cleaned.match(/--data\s+(['"])([\s\S]*?)\1/) ||
+          cleaned.match(/--data-binary\s+(['"])([\s\S]*?)\1/);
         if (match) parsed.body = match[2];
       }
 
       // --- FIX metodui ---
-      let method = (parsed.method || "").toUpperCase();
-      if (!method) {
+      let method = parsed.method ? String(parsed.method).toUpperCase() : "";
+
+      // Jei nerasta metodo, arba yra GET su body -> perjungiam į POST
+      if (!method || (method === "GET" && parsed.body)) {
         if (parsed.body || /--data-raw|--data\b|--data-binary/.test(cleaned)) {
           method = "POST";
         } else {
