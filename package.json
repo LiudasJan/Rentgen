@@ -1,7 +1,12 @@
 {
   "name": "rentgen",
   "version": "0.1.0",
-  "homepage": ".",
+  "description": "Lightweight API testing tool with cURL import and auto generated tests",
+  "author": {
+    "name": "Liudas Jankauskas",
+    "email": "liudasjan@gmail.com"
+  },
+  "homepage": "https://qaontime.com",
   "main": "dist-electron/main.js",
   "scripts": {
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
@@ -38,6 +43,7 @@
     "wait-on": "^7.2.0"
   },
   "build": {
+    "icon": "build/icon",
     "appId": "com.rentgen.app",
     "productName": "Rentgen",
     "files": [
