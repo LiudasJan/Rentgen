@@ -42,6 +42,7 @@ Fokus on what to test not how to test.
 - [ ] Response code validation (empty vs not found, list pagination)
 - [ ] Performance & abuse prevention (rate limits, stress checks, load test)
 - [ ] Tabbed requests / workspaces / save project
+- [ ] Custom data-sets, easy import/export
 - [ ] Generate full integration CRUD tests
 - [ ] Run in CI/CD
 - [ ] Export to Playwrigth, Cypress etc.
