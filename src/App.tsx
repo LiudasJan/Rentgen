@@ -210,15 +210,17 @@ export default function App() {
         headers: hdrs,
         body: null,
       });
-      const headerStr = JSON.stringify(base.headers || {}).toLowerCase();
-      const bad = /(apache|nginx|iis|express|php|jetty|tomcat|caddy)/i.test(
-        headerStr
-      );
+
+      // Tikrinam tik Server header
+      const serverHeader =
+        base.headers?.["server"] || base.headers?.["Server"] || "";
+      const hasVersionNumber = /\d/.test(serverHeader);
+
       results.push({
         name: "No sensitive server headers",
-        expected: "No Server version info",
-        actual: bad ? JSON.stringify(base.headers) : "Headers safe",
-        status: bad ? "🔴 Fail" : "✅ Pass",
+        expected: "Server header should not expose version",
+        actual: serverHeader || "No Server header",
+        status: hasVersionNumber ? "🔴 Fail" : "✅ Pass",
         request: { url, method: "GET", headers: hdrs },
         response: base,
       });
