@@ -1,23 +1,20 @@
 # 🔬 Rentgen
 
-**Rentgen** is an API testing tool that works like an X-ray: it **exposes what’s really happening inside your APIs**.  
+**Rentgen** is an API testing tool that works like an X-ray: it **exposes what’s really happening inside your APIs**.
 
 but built for:
+
+- 🚀 **Generate hundreds of tests** - from one simple request
 - 🔌 **WebSockets (WSS)** — live bi-directional testing
 - 📦 **Protobuf payloads** — load `.proto` schemas, encode requests, decode responses
 - 🛠️ **Raw testing freedom** — send malformed or ugly payloads without restrictions
-- 🏗️ Lightweight and no complex setup
+- 🏗️ **Lightweight** and no complex setup
 
 ---
 
 ## ✨ Why Rentgen?
 
-Most API clients were designed for clean JSON over HTTP.
-But real testing means more:
-- Inspecting live WebSocket streams  
-- Sending broken requests just to see what fails  
-- Debugging binary formats like Protobuf
-- Generating tests out of the box (in backlog)
+Fokus on what to test not how to test.
 
 **Rentgen** lets you do all of this in a familiar Postman-like interface.
 
@@ -26,7 +23,8 @@ But real testing means more:
 ## 🚀 Features
 
 - 🔐 **Security & Headers checks** — built-in automated tests (sensitive headers, OPTIONS, unsupported methods, etc.)
-- 📊 **Data-driven testing** — generate multiple tests from one request & dataset
+- 📊 **Data Handling & Input Validation testing** — generate multiple tests from one request & dataset
+- 🚀 **Performance Insights** — mediana and ping check out of the box
 - 🌐 **HTTP/HTTPS support** — all standard methods (GET, POST, PUT, PATCH, DELETE, OPTIONS, etc.)
 - 🔄 **WebSocket testing** — connect, send, and inspect messages
 - 🐛 **Protobuf integration** — load `.proto` schemas, encode requests, decode responses
@@ -37,24 +35,30 @@ But real testing means more:
 ---
 
 ## 🏗️ Roadmap
+
 - [ ] Extend **security test suite** (more headers, SSL configs, CORS checks)
 - [ ] Broader **data handling checks** (trimming, limits, encoding issues)
 - [ ] Authentication & authorization scenarios (401 vs 403, token expiry)
 - [ ] Response code validation (empty vs not found, list pagination)
-- [ ] Performance & abuse prevention (rate limits, stress checks)
-- [ ] Tabbed requests / workspaces  
-- [ ] gRPC support  
-- [ ] Plugins/extensions  
-- [ ] Fuzzing & SQLi/XSS payload libraries 
+- [ ] Performance & abuse prevention (rate limits, stress checks, load test)
+- [ ] Tabbed requests / workspaces / save project
+- [ ] Generate full integration CRUD tests
+- [ ] Run in CI/CD
+- [ ] Export to Playwrigth, Cypress etc.
+- [ ] gRPC support
+- [ ] Plugins/extensions
+- [ ] Fuzzing & SQLi/XSS payload libraries
 
 ---
 
 ## 🎬 Demo
+
 ![Rentgen Demo](./public/demo.gif)
 
 ## 🔧 Installation
 
 ### Dev mode
+
 ```bash
 git clone https://github.com/LiudasJan/Rentgen.git
 cd rentgen
@@ -71,3 +75,4 @@ npm run build
 
 ### 2. Package with Electron
 npm run electron:build
+```
