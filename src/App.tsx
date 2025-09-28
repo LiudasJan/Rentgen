@@ -55,6 +55,11 @@ export default function App() {
 
   const [performanceResults, setPerformanceResults] = useState<any[]>([]);
 
+  const [loadingData, setLoadingData] = useState(false);
+  const [loadingSecurity, setLoadingSecurity] = useState(false);
+  const [loadingPerf, setLoadingPerf] = useState(false);
+  const [testsStarted, setTestsStarted] = useState(false);
+
   // --- HTTP SEND ---
   async function sendHttp() {
     setHttpResponse({
@@ -320,7 +325,12 @@ export default function App() {
 
   // --- RUN ALL TESTS ---
   async function runAllTests() {
-    setLoading(true);
+    setTestsStarted(true);
+
+    setLoadingData(true);
+    setLoadingSecurity(true);
+    setLoadingPerf(true);
+
     setTestResults([]);
     setSecurityResults([]);
     setPerformanceResults([]);
@@ -329,14 +339,17 @@ export default function App() {
     // 1. Data-driven
     const dataResults = await runDataDrivenTests();
     setTestResults(dataResults);
+    setLoadingData(false);
 
     // 2. Security
     const secResults = await runSecurityTests();
     setSecurityResults(secResults);
+    setLoadingSecurity(false);
 
     // 3. Performance
     const perfResults = await runPerformanceInsights(dataResults);
     setPerformanceResults(perfResults);
+    setLoadingPerf(false);
 
     setLoading(false);
   }
@@ -778,7 +791,7 @@ export default function App() {
       )}
 
       {/* Security & Headers results */}
-      {securityResults.length > 0 && (
+      {testsStarted && (
         <div className="response-panel">
           <h3>Security & Headers Tests</h3>
           <table className="results-table">
@@ -791,58 +804,64 @@ export default function App() {
               </tr>
             </thead>
             <tbody>
-              {securityResults.map((r, i) => (
-                <React.Fragment key={i}>
-                  <tr
-                    className={
-                      r.status.includes("Pass")
-                        ? "pass"
-                        : r.status.includes("Fail")
-                          ? "fail"
-                          : r.status.includes("Manual")
-                            ? "manual"
-                            : "bug"
-                    }
-                    onClick={() => toggleSecurityRow(i)}
-                    style={{ cursor: "pointer" }}
-                  >
-                    <td>{r.name}</td>
-                    <td>{r.expected}</td>
-                    <td>{r.actual}</td>
-                    <td>{r.status}</td>
-                  </tr>
+              {loadingSecurity && securityResults.length === 0 ? (
+                <tr>
+                  <td colSpan={4}>⏳ Running security tests...</td>
+                </tr>
+              ) : (
+                securityResults.map((r, i) => (
+                  <React.Fragment key={i}>
+                    <tr
+                      className={
+                        r.status.includes("Pass")
+                          ? "pass"
+                          : r.status.includes("Fail")
+                            ? "fail"
+                            : r.status.includes("Manual")
+                              ? "manual"
+                              : "bug"
+                      }
+                      onClick={() => toggleSecurityRow(i)}
+                      style={{ cursor: "pointer" }}
+                    >
+                      <td>{r.name}</td>
+                      <td>{r.expected}</td>
+                      <td>{r.actual}</td>
+                      <td>{r.status}</td>
+                    </tr>
 
-                  {expandedSecurityRows[i] && (
-                    <tr className="details-row">
-                      <td colSpan={4}>
-                        <div className="details-panel">
-                          <div className="details-grid">
-                            <div>
-                              <div className="details-title">Request</div>
-                              <pre>{JSON.stringify(r.request, null, 2)}</pre>
-                            </div>
-                            <div>
-                              <div className="details-title">Response</div>
-                              <pre className="wrap">
-                                {typeof r.response === "string"
-                                  ? r.response
-                                  : JSON.stringify(r.response, null, 2)}
-                              </pre>
+                    {expandedSecurityRows[i] && (
+                      <tr className="details-row">
+                        <td colSpan={4}>
+                          <div className="details-panel">
+                            <div className="details-grid">
+                              <div>
+                                <div className="details-title">Request</div>
+                                <pre>{JSON.stringify(r.request, null, 2)}</pre>
+                              </div>
+                              <div>
+                                <div className="details-title">Response</div>
+                                <pre className="wrap">
+                                  {typeof r.response === "string"
+                                    ? r.response
+                                    : JSON.stringify(r.response, null, 2)}
+                                </pre>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </React.Fragment>
-              ))}
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                ))
+              )}
             </tbody>
           </table>
         </div>
       )}
 
       {/* Performance Insights */}
-      {performanceResults.length > 0 && (
+      {testsStarted && (
         <div className="response-panel">
           <h3>Performance Insights</h3>
           <table className="results-table">
@@ -855,32 +874,38 @@ export default function App() {
               </tr>
             </thead>
             <tbody>
-              {performanceResults.map((r, i) => (
-                <tr
-                  key={i}
-                  className={
-                    r.status.includes("Pass")
-                      ? "pass"
-                      : r.status.includes("Warning")
-                        ? "warn"
-                        : r.status.includes("Manual")
-                          ? "manual"
-                          : "fail"
-                  }
-                >
-                  <td>{r.name}</td>
-                  <td>{r.expected}</td>
-                  <td>{r.actual}</td>
-                  <td>{r.status}</td>
+              {loadingPerf && performanceResults.length === 0 ? (
+                <tr>
+                  <td colSpan={4}>⏳ Running performance tests...</td>
                 </tr>
-              ))}
+              ) : (
+                performanceResults.map((r, i) => (
+                  <tr
+                    key={i}
+                    className={
+                      r.status.includes("Pass")
+                        ? "pass"
+                        : r.status.includes("Warning")
+                          ? "warn"
+                          : r.status.includes("Manual")
+                            ? "manual"
+                            : "fail"
+                    }
+                  >
+                    <td>{r.name}</td>
+                    <td>{r.expected}</td>
+                    <td>{r.actual}</td>
+                    <td>{r.status}</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
       )}
 
-      {/* Test Results */}
-      {testResults.length > 0 && (
+      {/* Data Driven Test */}
+      {testsStarted && (
         <div className="response-panel">
           <h3>Test Results</h3>
           <table className="results-table">
@@ -893,70 +918,66 @@ export default function App() {
                 <th>Result</th>
               </tr>
             </thead>
-
             <tbody>
-              {testResults.map((r, i) => (
-                <React.Fragment key={i}>
-                  <tr
-                    className={`${
-                      r.status.includes("Pass")
-                        ? "pass"
-                        : r.status.includes("Fail")
-                          ? "fail"
-                          : "bug"
-                    } clickable`}
-                    onClick={() => toggleRow(i)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        toggleRow(i);
+              {loadingData && testResults.length === 0 ? (
+                <tr>
+                  <td colSpan={5}>⏳ Running data-driven tests...</td>
+                </tr>
+              ) : (
+                testResults.map((r, i) => (
+                  <React.Fragment key={i}>
+                    <tr
+                      className={
+                        r.status.includes("Pass")
+                          ? "pass"
+                          : r.status.includes("Fail")
+                            ? "fail"
+                            : "bug"
                       }
-                    }}
-                    aria-expanded={!!expandedRows[i]}
-                    title="Click to expand"
-                  >
-                    <td className="expander">
-                      <span className="chevron">
-                        {expandedRows[i] ? "▾" : "▸"}
-                      </span>
-                      {r.field}
-                    </td>
-                    <td>{JSON.stringify(r.value)}</td>
-                    <td>{r.expected}</td>
-                    <td>{r.actual}</td>
-                    <td>{r.status}</td>
-                  </tr>
+                      onClick={() => toggleRow(i)}
+                      style={{ cursor: "pointer" }}
+                    >
+                      <td className="expander">
+                        <span className="chevron">
+                          {expandedRows[i] ? "▾" : "▸"}
+                        </span>
+                        {r.field}
+                      </td>
+                      <td>{JSON.stringify(r.value)}</td>
+                      <td>{r.expected}</td>
+                      <td>{r.actual}</td>
+                      <td>{r.status}</td>
+                    </tr>
 
-                  {expandedRows[i] && (
-                    <tr className="details-row">
-                      <td colSpan={5}>
-                        <div className="details-panel">
-                          <div className="details-grid">
-                            <div>
-                              <div className="details-title">Request</div>
-                              <pre>{JSON.stringify(r.request, null, 2)}</pre>
-                            </div>
-                            <div>
-                              <div className="details-title">Response</div>
-                              <pre className="wrap">{r.response}</pre>
-                              {r.decoded && (
-                                <>
-                                  <div className="decoded-label">
-                                    Decoded Protobuf:
-                                  </div>
-                                  <pre>{r.decoded}</pre>
-                                </>
-                              )}
+                    {expandedRows[i] && (
+                      <tr className="details-row">
+                        <td colSpan={5}>
+                          <div className="details-panel">
+                            <div className="details-grid">
+                              <div>
+                                <div className="details-title">Request</div>
+                                <pre>{JSON.stringify(r.request, null, 2)}</pre>
+                              </div>
+                              <div>
+                                <div className="details-title">Response</div>
+                                <pre className="wrap">{r.response}</pre>
+                                {r.decoded && (
+                                  <>
+                                    <div className="decoded-label">
+                                      Decoded Protobuf:
+                                    </div>
+                                    <pre>{r.decoded}</pre>
+                                  </>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </React.Fragment>
-              ))}
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                ))
+              )}
             </tbody>
           </table>
         </div>
