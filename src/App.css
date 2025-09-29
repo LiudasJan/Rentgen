@@ -350,8 +350,9 @@ pre.wrap {
 }
 
 pre.wrap {
-  white-space: pre-wrap; /* wrapina ilgas eilutes */
-  word-break: break-word; /* jei žodis per ilgas – laužo */
+  white-space: pre-wrap; /* leidžia wrap’inti */
+  word-break: break-word; /* laužo ilgas eilutes */
+  overflow-wrap: anywhere; /* modernus variantas */
 }
 
 .copy-btn {

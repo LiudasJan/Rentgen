@@ -758,6 +758,22 @@ export default function App() {
       });
   }
 
+  function CopyButton({ req }: { req: any }) {
+    const [copied, setCopied] = React.useState(false);
+
+    const handleCopy = () => {
+      copyAsCurl(req);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000); // po 2s grįžta
+    };
+
+    return (
+      <button className="copy-btn" onClick={handleCopy}>
+        {copied ? "Copied ✅" : "Copy cURL"}
+      </button>
+    );
+  }
+
   return (
     <div className="app">
       {/* Mode selector */}
@@ -1051,17 +1067,14 @@ export default function App() {
                               <div className="details-title">
                                 Request / Response
                               </div>
-                              <button
-                                className="copy-btn"
-                                onClick={() => copyAsCurl(r.request)}
-                              >
-                                Copy cURL
-                              </button>
+                              <CopyButton req={r.request} />
                             </div>
                             <div className="details-grid">
                               <div>
                                 <div className="details-title">Request</div>
-                                <pre>{JSON.stringify(r.request, null, 2)}</pre>
+                                <pre className="wrap">
+                                  {JSON.stringify(r.request, null, 2)}
+                                </pre>
                               </div>
                               <div>
                                 <div className="details-title">Response</div>
@@ -1186,12 +1199,7 @@ export default function App() {
                               <div className="details-title">
                                 Request / Response
                               </div>
-                              <button
-                                className="copy-btn"
-                                onClick={() => copyAsCurl(r.request)}
-                              >
-                                Copy cURL
-                              </button>
+                              <CopyButton req={r.request} />
                             </div>
                             <div className="details-grid">
                               <div>
