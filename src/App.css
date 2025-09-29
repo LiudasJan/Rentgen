@@ -353,3 +353,15 @@ pre.wrap {
   white-space: pre-wrap; /* wrapina ilgas eilutes */
   word-break: break-word; /* jei žodis per ilgas – laužo */
 }
+
+.copy-btn {
+  font-size: 12px;
+  padding: 2px 6px;
+  background: #eee;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.copy-btn:hover {
+  background: #ddd;
+}

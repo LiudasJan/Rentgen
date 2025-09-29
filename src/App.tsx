@@ -465,7 +465,7 @@ export default function App() {
               expected: d.valid ? "2xx" : "4xx",
               actual: "Encode error",
               status: "🔴 Bug",
-              request: newBody,
+              request: { url, method, headers: hdrs, body: newBody },
               response: String(err),
               responseTime: 0,
             });
@@ -537,7 +537,7 @@ export default function App() {
             expected: d.valid ? "2xx" : "4xx",
             actual: res.status,
             status,
-            request: newBody,
+            request: { url, method, headers: hdrs, body: newBody },
             response: responseText,
             decoded,
             responseTime,
@@ -549,7 +549,7 @@ export default function App() {
             expected: d.valid ? "2xx" : "4xx",
             actual: "Error",
             status: "🔴 Bug",
-            request: newBody,
+            request: { url, method, headers: hdrs, body: newBody },
             response: String(err),
             responseTime: 0,
           });
@@ -644,7 +644,7 @@ export default function App() {
       : (values[mid - 1] + values[mid]) / 2;
   }
 
-  // --- Handle Import Curl
+  // --- Handle Import Curl ---
   function handleImportCurl(raw: string) {
     try {
       if (raw.length > 200_000) throw new Error("cURL too large");
@@ -716,6 +716,46 @@ export default function App() {
       console.error("cURL import failed", err);
       setCurlError(true);
     }
+  }
+
+  // --- To cURL + copy ---
+  function copyAsCurl(req: {
+    url: string;
+    method: string;
+    headers?: any;
+    body?: any;
+  }) {
+    let curl = `curl -X ${req.method || "GET"} '${req.url}'`;
+
+    if (req.headers) {
+      for (const [k, v] of Object.entries(req.headers)) {
+        curl += ` \\\n  -H '${k}: ${v}'`;
+      }
+    }
+
+    if (req.body && req.body !== "null" && req.body !== "{}") {
+      let bodyStr: string;
+
+      if (typeof req.body === "string") {
+        bodyStr = req.body;
+      } else {
+        bodyStr = JSON.stringify(req.body);
+      }
+
+      // 💡 escape single quote, kad curl nebūtų invalid
+      bodyStr = bodyStr.replace(/'/g, "'\\''");
+
+      curl += ` \\\n  --data '${bodyStr}'`;
+    }
+
+    navigator.clipboard
+      .writeText(curl)
+      .then(() => {
+        console.log("✅ cURL copied to clipboard");
+      })
+      .catch((err) => {
+        console.error("❌ Failed to copy cURL", err);
+      });
   }
 
   return (
@@ -1002,12 +1042,26 @@ export default function App() {
                       <tr className="details-row">
                         <td colSpan={4}>
                           <div className="details-panel">
+                            <div
+                              style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                              }}
+                            >
+                              <div className="details-title">
+                                Request / Response
+                              </div>
+                              <button
+                                className="copy-btn"
+                                onClick={() => copyAsCurl(r.request)}
+                              >
+                                Copy cURL
+                              </button>
+                            </div>
                             <div className="details-grid">
                               <div>
                                 <div className="details-title">Request</div>
-                                <pre className="wrap">
-                                  {JSON.stringify(r.request, null, 2)}
-                                </pre>
+                                <pre>{JSON.stringify(r.request, null, 2)}</pre>
                               </div>
                               <div>
                                 <div className="details-title">Response</div>
@@ -1123,6 +1177,22 @@ export default function App() {
                       <tr className="details-row">
                         <td colSpan={5}>
                           <div className="details-panel">
+                            <div
+                              style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                              }}
+                            >
+                              <div className="details-title">
+                                Request / Response
+                              </div>
+                              <button
+                                className="copy-btn"
+                                onClick={() => copyAsCurl(r.request)}
+                              >
+                                Copy cURL
+                              </button>
+                            </div>
                             <div className="details-grid">
                               <div>
                                 <div className="details-title">Request</div>
