@@ -256,6 +256,11 @@ textarea,
 .results-table tr.warn {
   background-color: #fff3cd; /* oranžinė */
 }
+
+.results-table tr.info {
+  background: #e6f0ff; /* šviesiai mėlyna */
+}
+
 .results-table th {
   background: #f0f0f0;
 }

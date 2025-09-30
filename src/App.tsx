@@ -274,6 +274,9 @@ export default function App() {
         request: { url, headers: hdrs },
         response: null,
       });
+
+      const corsResult = await runCorsTest();
+      results.push(corsResult);
     }
 
     // 4. Large body / size limit
@@ -334,6 +337,10 @@ export default function App() {
         response: null,
       });
     }
+
+    // 6. CORS check
+    const corsResult = await runCorsTest();
+    results.push(corsResult);
 
     // --- Manual checks (pilka spalva) ---
     results.push(
@@ -774,6 +781,61 @@ export default function App() {
     );
   }
 
+  // --- runCorsTest
+  async function runCorsTest(): Promise<any> {
+    try {
+      const hdrs = headers
+        ? Object.fromEntries(
+            headers.split("\n").map((h) => {
+              const [k, ...rest] = h.split(":");
+              return [k.trim(), rest.join(":").trim()];
+            })
+          )
+        : {};
+
+      const options: RequestInit = {
+        method,
+        mode: "cors",
+        headers: hdrs,
+      };
+
+      if (body && !["GET", "HEAD"].includes(method.toUpperCase())) {
+        options.body = body;
+      }
+
+      const res = await fetch(url, options);
+
+      return {
+        name: "CORS policy check",
+        expected: "Detect if API is public or private",
+        actual: "No CORS error → API is public (accessible from any domain)",
+        status: "🔵 Info",
+        request: { url, method, headers: hdrs, body },
+        response: { status: res.status },
+      };
+    } catch (err: any) {
+      const msg = String(err?.message || err);
+      if (msg.includes("CORS") || msg.includes("Failed to fetch")) {
+        return {
+          name: "CORS policy check",
+          expected: "Detect if API is public or private",
+          actual: "CORS error → API is private (restricted by origin)",
+          status: "🔵 Info",
+          request: { url, method, headers, body },
+          response: null,
+        };
+      }
+      return {
+        name: "CORS policy check",
+        expected: "Detect if API is public or private",
+        actual: "Unexpected error: " + msg,
+        status: "🔵 Info",
+        request: { url, method, headers, body },
+        response: null,
+      };
+    }
+  }
+
   return (
     <div className="app">
       {/* Mode selector */}
@@ -1043,7 +1105,9 @@ export default function App() {
                             ? "fail"
                             : r.status.includes("Manual")
                               ? "manual"
-                              : "bug"
+                              : r.status.includes("Info")
+                                ? "info"
+                                : "bug"
                       }
                       onClick={() => toggleSecurityRow(i)}
                       style={{ cursor: "pointer" }}
