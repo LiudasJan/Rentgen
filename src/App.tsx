@@ -308,6 +308,41 @@ export default function App() {
         response: base,
       });
 
+      // Cache-Control check
+      const cacheControl =
+        base.headers?.["cache-control"] || base.headers?.["Cache-Control"];
+
+      let cacheStatus = "🟠 Warning";
+      let actualCache = "Missing";
+
+      if (cacheControl) {
+        if (
+          cacheControl.includes("no-store") ||
+          cacheControl.includes("private")
+        ) {
+          cacheStatus = "✅ Pass";
+        } else {
+          cacheStatus = "❌ X-Fail";
+        }
+        actualCache = cacheControl;
+      } else {
+        const m = method.toUpperCase();
+        if (m === "GET" || m === "HEAD") {
+          cacheStatus = "❌ X-Fail"; // pavojinga
+        } else {
+          cacheStatus = "🟠 Warning"; // saugu by default, bet geriau nurodyti
+        }
+      }
+
+      results.push({
+        name: "Cache-Control for private API",
+        expected: "Cache-Control: no-store/private",
+        actual: actualCache,
+        status: cacheStatus,
+        request: { url, method, headers: hdrs },
+        response: base,
+      });
+
       // 2. OPTIONS method
       const opt = await (window as any).electronAPI.sendHttp({
         url,
