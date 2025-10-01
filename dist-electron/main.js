@@ -10,6 +10,7 @@ const path_1 = __importDefault(require("path"));
 const child_process_1 = require("child_process");
 let mainWindow = null;
 let ws = null;
+// --- SAFETY HANDLERS ---
 process.on("uncaughtException", (err) => {
     if (err.code === "EPIPE") {
         console.warn("⚠️ Ignored EPIPE (Payload too large / broken pipe)");
@@ -21,24 +22,28 @@ process.on("uncaughtException", (err) => {
 process.on("unhandledRejection", (reason) => {
     console.error("❌ Unhandled promise rejection:", reason);
 });
+// --- APP READY ---
 electron_1.app.on("ready", () => {
     console.log("✅ Main process started!");
     const preloadPath = electron_1.app.isPackaged
         ? path_1.default.join(process.resourcesPath, "preload.js")
         : path_1.default.join(__dirname, "preload.js");
     mainWindow = new electron_1.BrowserWindow({
+        width: 1200,
+        height: 800,
         webPreferences: {
             preload: preloadPath,
             contextIsolation: true,
             nodeIntegration: false,
         },
     });
-    // dev vs prod skirtingi URL
     if (process.env.ELECTRON_START_URL) {
+        // Dev režimas: React dev server
         mainWindow.loadURL(process.env.ELECTRON_START_URL);
     }
     else {
-        mainWindow.loadFile(path_1.default.join(__dirname, "../build/index.html"));
+        // Prod režimas: statinis build'as
+        mainWindow.loadFile(path_1.default.join(process.resourcesPath, "build", "index.html"));
     }
 });
 // --- HTTP HANDLER ---

@@ -7,6 +7,7 @@ import { exec } from "child_process";
 let mainWindow: BrowserWindow | null = null;
 let ws: WebSocket | null = null;
 
+// --- SAFETY HANDLERS ---
 process.on("uncaughtException", (err) => {
   if ((err as any).code === "EPIPE") {
     console.warn("⚠️ Ignored EPIPE (Payload too large / broken pipe)");
@@ -19,14 +20,17 @@ process.on("unhandledRejection", (reason) => {
   console.error("❌ Unhandled promise rejection:", reason);
 });
 
+// --- APP READY ---
 app.on("ready", () => {
   console.log("✅ Main process started!");
 
   const preloadPath = app.isPackaged
-    ? path.join(process.resourcesPath, "preload.js")
-    : path.join(__dirname, "preload.js");
+    ? path.join(process.resourcesPath, "preload.js") // prod: ieško resources/preload.js
+    : path.join(__dirname, "preload.js"); // dev: ieško dist-electron/preload.js
 
   mainWindow = new BrowserWindow({
+    width: 1200,
+    height: 800,
     webPreferences: {
       preload: preloadPath,
       contextIsolation: true,
@@ -34,11 +38,14 @@ app.on("ready", () => {
     },
   });
 
-  // dev vs prod skirtingi URL
   if (process.env.ELECTRON_START_URL) {
+    // Dev režimas: React dev server
     mainWindow.loadURL(process.env.ELECTRON_START_URL);
   } else {
-    mainWindow.loadFile(path.join(__dirname, "../build/index.html"));
+    // Prod režimas: statinis build'as
+    mainWindow.loadFile(
+      path.join(process.resourcesPath, "build", "index.html")
+    );
   }
 });
 
