@@ -259,6 +259,55 @@ export default function App() {
         response: base,
       });
 
+      // Tikrinam HSTS
+      const hsts =
+        base.headers?.["strict-transport-security"] ||
+        base.headers?.["Strict-Transport-Security"];
+
+      let hstsStatus = "🟠 Warning";
+      let actualHsts = "Missing";
+
+      if (hsts) {
+        hstsStatus = "✅ Pass";
+        actualHsts = hsts;
+      }
+
+      results.push({
+        name: "HSTS (Strict-Transport-Security)",
+        expected: "Header should be present on HTTPS endpoints",
+        actual: actualHsts,
+        status: hstsStatus,
+        request: { url, method, headers: hdrs, body },
+        response: base,
+      });
+
+      // Tikrinam MIME sniffing protection
+      const xcto =
+        base.headers?.["x-content-type-options"] ||
+        base.headers?.["X-Content-Type-Options"];
+
+      let xctoStatus = "❌ Fail";
+      let actualXcto = "Missing";
+
+      if (xcto) {
+        if (xcto.toLowerCase() === "nosniff") {
+          xctoStatus = "✅ Pass";
+          actualXcto = `X-Content-Type-Options: ${xcto}`;
+        } else {
+          xctoStatus = "❌ Fail";
+          actualXcto = `Unexpected: ${xcto}`;
+        }
+      }
+
+      results.push({
+        name: "MIME sniffing protection",
+        expected: "X-Content-Type-Options: nosniff",
+        actual: actualXcto,
+        status: xctoStatus,
+        request: { url, method, headers: hdrs, body },
+        response: base,
+      });
+
       // 2. OPTIONS method
       const opt = await (window as any).electronAPI.sendHttp({
         url,
