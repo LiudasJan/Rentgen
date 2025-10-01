@@ -202,16 +202,18 @@ export default function App() {
         )
       : {};
 
+    let base: any = null;
+
     try {
       // 1. Sensitive headers
       const base = await (window as any).electronAPI.sendHttp({
         url,
-        method: "GET",
+        method,
         headers: hdrs,
-        body: null,
+        body,
       });
 
-      // Tikrinam tik Server header
+      // Tikrinam Server header
       const serverHeader =
         base.headers?.["server"] || base.headers?.["Server"] || "";
       const hasVersionNumber = /\d/.test(serverHeader);
@@ -222,6 +224,38 @@ export default function App() {
         actual: serverHeader || "No Server header",
         status: hasVersionNumber ? "🔴 Fail" : "✅ Pass",
         request: { url, method: "GET", headers: hdrs },
+        response: base,
+      });
+
+      // Tikrinam Clickjacking protection
+      const xfo =
+        base.headers?.["x-frame-options"] || base.headers?.["X-Frame-Options"];
+      const csp =
+        base.headers?.["content-security-policy"] ||
+        base.headers?.["Content-Security-Policy"];
+
+      let clickjackingStatus = "🟠 Warning";
+      let actualClickjacking = "Missing";
+
+      if (xfo) {
+        const val = xfo.toUpperCase();
+        if (val === "DENY" || val === "SAMEORIGIN") {
+          clickjackingStatus = "✅ Pass";
+        }
+        actualClickjacking = `X-Frame-Options: ${val}`;
+      } else if (csp && csp.includes("frame-ancestors")) {
+        if (/frame-ancestors\s+('none'|'self')/i.test(csp)) {
+          clickjackingStatus = "✅ Pass";
+        }
+        actualClickjacking = `CSP: ${csp}`;
+      }
+
+      results.push({
+        name: "Clickjacking protection",
+        expected: "X-Frame-Options DENY/SAMEORIGIN or CSP frame-ancestors",
+        actual: actualClickjacking,
+        status: clickjackingStatus,
+        request: { url, method, headers: hdrs, body },
         response: base,
       });
 
@@ -280,7 +314,7 @@ export default function App() {
     }
 
     // 4. Large body / size limit
-    const bigBody = "A".repeat(100 * 1024 * 1024); // 100 MB string
+    const bigBody = "A".repeat(10 * 1024 * 1024); // 10 MB string
     const tooLarge = await (window as any).electronAPI.sendHttp({
       url,
       method: "POST", // dažniausiai POST su body
@@ -291,7 +325,7 @@ export default function App() {
     const codeLarge = tooLarge.status.split(" ")[0];
     const okLarge = codeLarge === "413";
     results.push({
-      name: "Request size limit",
+      name: "Request size limit (10 MB)",
       expected: "413 Payload Too Large",
       actual: tooLarge.status,
       status: okLarge ? "✅ Pass" : "❌ Fail",
@@ -338,7 +372,7 @@ export default function App() {
       });
     }
 
-    // 6. CORS check
+    // --- INFO CORS check
     const corsResult = await runCorsTest();
     results.push(corsResult);
 
@@ -1006,7 +1040,9 @@ export default function App() {
           <div className="status-line">{httpResponse.status}</div>
 
           <h4>Headers</h4>
-          <pre>{JSON.stringify(httpResponse.headers, null, 2)}</pre>
+          <pre className="wrap">
+            {JSON.stringify(httpResponse.headers, null, 2)}
+          </pre>
 
           <h4>Body</h4>
           <pre className="wrap">
@@ -1103,11 +1139,13 @@ export default function App() {
                           ? "pass"
                           : r.status.includes("Fail")
                             ? "fail"
-                            : r.status.includes("Manual")
-                              ? "manual"
-                              : r.status.includes("Info")
-                                ? "info"
-                                : "bug"
+                            : r.status.includes("Warning")
+                              ? "warn"
+                              : r.status.includes("Manual")
+                                ? "manual"
+                                : r.status.includes("Info")
+                                  ? "info"
+                                  : "bug"
                       }
                       onClick={() => toggleSecurityRow(i)}
                       style={{ cursor: "pointer" }}
@@ -1128,9 +1166,6 @@ export default function App() {
                                 justifyContent: "space-between",
                               }}
                             >
-                              <div className="details-title">
-                                Request / Response
-                              </div>
                               <CopyButton req={r.request} />
                             </div>
                             <div className="details-grid">
@@ -1260,9 +1295,6 @@ export default function App() {
                                 justifyContent: "space-between",
                               }}
                             >
-                              <div className="details-title">
-                                Request / Response
-                              </div>
                               <CopyButton req={r.request} />
                             </div>
                             <div className="details-grid">
