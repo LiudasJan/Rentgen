@@ -6,7 +6,7 @@
     "name": "Liudas Jankauskas",
     "email": "liudasjan@gmail.com"
   },
-  "homepage": "https://qaontime.com",
+  "homepage": "./",
   "main": "dist-electron/main.js",
   "scripts": {
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
