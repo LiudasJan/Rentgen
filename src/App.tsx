@@ -370,8 +370,8 @@ export default function App() {
       const weird = await (window as any).electronAPI.sendHttp({
         url,
         method: "FOOBAR",
-        headers: hdrs,
-        body: null,
+        headers: hdrs, // ✅ originalūs headeriai
+        body, // ✅ originalus body
       });
       const code = weird.status.split(" ")[0];
       const okWeird = code === "405" || code === "501";
@@ -380,7 +380,7 @@ export default function App() {
         expected: "405 Method Not Allowed (or 501)",
         actual: weird.status,
         status: okWeird ? "✅ Pass" : "❌ Fail",
-        request: { url, method: "FOOBAR", headers: hdrs },
+        request: { url, method: "FOOBAR", headers: hdrs, body },
         response: weird,
       });
     } catch (err) {
@@ -389,7 +389,7 @@ export default function App() {
         expected: "Should respond",
         actual: String(err),
         status: "🔴 Fail",
-        request: { url, headers: hdrs },
+        request: { url, headers: hdrs, body },
         response: null,
       });
 
@@ -561,8 +561,8 @@ export default function App() {
       if (type === "do-not-test") continue;
 
       const dataset =
-        type === "random32"
-          ? [{ value: rand32(), valid: true }]
+        type === "random32" || type === "randomInt"
+          ? [{ dynamic: true, valid: true }]
           : datasets[type] || [];
 
       for (const d of dataset) {
@@ -570,13 +570,22 @@ export default function App() {
         setCurrentTest(counter);
 
         // pradinė body kopija
-        const newBody: any = { ...parsedBody, [field]: d.value };
+        const val = (d as any).value;
 
-        // 💡 kiekvienam request’ui perrašom visus random32 laukus
+        const newBody: any = {
+          ...parsedBody,
+          [field]:
+            type === "randomInt"
+              ? randInt()
+              : type === "random32"
+                ? rand32()
+                : val,
+        };
+
+        // 💡 kiekvienam request’ui perrašom visus random32/randomInt laukus
         for (const [f, t] of Object.entries(fieldMappings)) {
-          if (t === "random32") {
-            newBody[f] = rand32();
-          }
+          if (t === "random32") newBody[f] = rand32();
+          if (t === "randomInt") newBody[f] = randInt();
         }
 
         let dataToSend: any = newBody;
@@ -584,9 +593,10 @@ export default function App() {
           try {
             dataToSend = encodeMessage(messageType, newBody);
           } catch (err) {
+            const val = "value" in d ? d.value : null;
             results.push({
               field,
-              value: d.value,
+              value: val,
               expected: d.valid ? "2xx" : "4xx",
               actual: "Encode error",
               status: "🔴 Bug",
@@ -658,7 +668,7 @@ export default function App() {
 
           results.push({
             field,
-            value: d.value,
+            value: val,
             expected: d.valid ? "2xx" : "4xx",
             actual: res.status,
             status,
@@ -670,7 +680,7 @@ export default function App() {
         } catch (err: any) {
           results.push({
             field,
-            value: d.value,
+            value: val,
             expected: d.valid ? "2xx" : "4xx",
             actual: "Error",
             status: "🔴 Bug",
@@ -757,6 +767,11 @@ export default function App() {
     for (let i = 0; i < 32; i++)
       out += chars[Math.floor(Math.random() * chars.length)];
     return out;
+  }
+
+  // --- RANDOM Integer ---
+  function randInt() {
+    return Math.floor(Math.random() * 10_000_000) + 1;
   }
 
   // --- Measure median helper ---
@@ -983,19 +998,25 @@ export default function App() {
       {/* URL + Method */}
       <div className="header">
         {mode === "HTTP" && (
-          <select
-            className={`method-select method-${method}`}
-            value={method}
-            onChange={(e) => setMethod(e.target.value)}
-          >
-            <option value="GET">GET</option>
-            <option value="POST">POST</option>
-            <option value="PUT">PUT</option>
-            <option value="PATCH">PATCH</option>
-            <option value="DELETE">DELETE</option>
-            <option value="HEAD">HEAD</option>
-            <option value="OPTIONS">OPTIONS</option>
-          </select>
+          <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+            <input
+              list="http-methods"
+              className={`method-select method-${method}`}
+              value={method}
+              onChange={(e) => setMethod(e.target.value.toUpperCase())}
+              placeholder="METHOD"
+              style={{ width: "100px", textTransform: "uppercase" }}
+            />
+            <datalist id="http-methods">
+              <option value="GET" />
+              <option value="POST" />
+              <option value="PUT" />
+              <option value="PATCH" />
+              <option value="DELETE" />
+              <option value="HEAD" />
+              <option value="OPTIONS" />
+            </datalist>
+          </div>
         )}
         <input
           className="url-input"
@@ -1175,8 +1196,9 @@ export default function App() {
               >
                 <option value="do-not-test">Do not test</option>
                 <option value="random32">
-                  Random 32 (unique each request)
+                  Random string 32 (unique each request)
                 </option>
+                <option value="randomInt">Random integer (1–10,000,000)</option>
                 <option value="string">String</option>
                 <option value="email">Email</option>
                 <option value="phone">Phone</option>
