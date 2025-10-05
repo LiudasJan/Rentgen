@@ -1004,6 +1004,8 @@ export default function App() {
               className={`method-select method-${method}`}
               value={method}
               onChange={(e) => setMethod(e.target.value.toUpperCase())}
+              onFocus={(e) => e.target.select()} // ✅ pažymi visą tekstą
+              onClick={(e) => ((e.target as HTMLInputElement).value = "")} // ✅ išvalo kad matytųsi visas sąrašas
               placeholder="METHOD"
               style={{ width: "100px", textTransform: "uppercase" }}
             />
