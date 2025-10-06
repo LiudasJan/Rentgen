@@ -114,10 +114,26 @@ export default function App() {
       }
 
       if (res.status.startsWith("2") && parsedBody) {
+        // Ištraukiam visus laukus (įskaitant nested)
+        const extracted = extractFieldsFromJson(parsedBody);
         const mappings: Record<string, string> = {};
-        Object.entries(parsedBody).forEach(([k, v]) => {
-          mappings[k] = detectFieldType(k, v);
-        });
+
+        for (const [path, type] of Object.entries(extracted)) {
+          if (type === "DO_NOT_TEST") {
+            mappings[path] = "do-not-test";
+          } else {
+            // jeigu ne objektas – aptinkam tipą kaip anksčiau
+            // paimame tikrą value iš path
+            const segments = path.replace(/\[(\d+)\]/g, ".$1").split(".");
+            let val: any = parsedBody;
+            for (const s of segments) {
+              if (val == null) break;
+              val = val[s];
+            }
+            mappings[path] = detectFieldType(path, val);
+          }
+        }
+
         setFieldMappings(mappings);
       }
     } catch (err: any) {
@@ -578,15 +594,17 @@ export default function App() {
         // pradinė body kopija
         const val = (d as any).value;
 
-        const newBody: any = {
-          ...parsedBody,
-          [field]:
-            type === "randomInt"
-              ? randInt()
-              : type === "random32"
-                ? rand32()
-                : val,
-        };
+        // pradinė body kopija (deep clone kad neišdarkytų originalo)
+        const newBody = JSON.parse(JSON.stringify(parsedBody));
+
+        const newValue =
+          type === "randomInt"
+            ? randInt()
+            : type === "random32"
+              ? rand32()
+              : val;
+
+        setDeepValue(newBody, field, newValue);
 
         // 💡 kiekvienam request’ui perrašom visus random32/randomInt laukus
         for (const [f, t] of Object.entries(fieldMappings)) {
@@ -729,13 +747,13 @@ export default function App() {
         const t = await (window as any).electronAPI.pingHost(domain);
         pings.push(t);
       }
-      const badCount = pings.filter((t) => t > 50).length;
+      const badCount = pings.filter((t) => t > 100).length;
       const avg = pings.reduce((a, b) => a + b, 0) / pings.length;
 
       let pingStatus = badCount >= 3 ? "🔴 Fail" : "✅ Pass";
       results.push({
         name: "Ping latency",
-        expected: "<= 50ms (3/5 rule)",
+        expected: "<= 100ms (3/5 rule)",
         actual: `${avg.toFixed(0)} ms (bad ${badCount}/5)`,
         status: pingStatus,
       });
@@ -973,6 +991,56 @@ export default function App() {
         response: null,
       };
     }
+  }
+
+  /// --- extractFieldsFromJson ---
+  function extractFieldsFromJson(
+    obj: any,
+    prefix = ""
+  ): Record<string, string> {
+    const fields: Record<string, string> = {};
+
+    if (obj && typeof obj === "object" && !Array.isArray(obj)) {
+      for (const [key, value] of Object.entries(obj)) {
+        const path = prefix ? `${prefix}.${key}` : key;
+
+        if (value === null) {
+          fields[path] = "null";
+        } else if (typeof value === "object") {
+          // 👇 Pridedam markerį kad šitas objektas testuojamas nebus
+          fields[path] = "DO_NOT_TEST";
+          Object.assign(fields, extractFieldsFromJson(value, path));
+        } else {
+          fields[path] = typeof value;
+        }
+      }
+    } else if (Array.isArray(obj)) {
+      obj.forEach((item, i) => {
+        const path = `${prefix}[${i}]`;
+        if (typeof item === "object") {
+          fields[path] = "DO_NOT_TEST";
+          Object.assign(fields, extractFieldsFromJson(item, path));
+        } else {
+          fields[path] = typeof item;
+        }
+      });
+    } else {
+      fields[prefix] = typeof obj;
+    }
+
+    return fields;
+  }
+
+  /// --- setDeepValue ---
+  function setDeepValue(obj: any, path: string, value: any) {
+    const parts = path.replace(/\[(\d+)\]/g, ".$1").split(".");
+    let current = obj;
+    for (let i = 0; i < parts.length - 1; i++) {
+      const key = parts[i];
+      if (!(key in current)) current[key] = {};
+      current = current[key];
+    }
+    current[parts[parts.length - 1]] = value;
   }
 
   return (
