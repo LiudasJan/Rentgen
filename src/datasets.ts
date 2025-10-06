@@ -268,4 +268,24 @@ export const datasets: Record<string, { value: any; valid: boolean }[]> = {
     { value: 0, valid: false },
     { value: [true, false], valid: false },
   ],
+
+  date_yyyy_mm_dd: [
+    { value: "1985-07-03", valid: true },
+    { value: "2000-01-01", valid: true },
+    { value: "2000-12-31", valid: true },
+    { value: "1954-06-25", valid: true },
+
+    { value: "1985-00-00", valid: false },
+    { value: "1999-13-10", valid: false },
+    { value: "1998-12-32", valid: false },
+    { value: "1986-02-31", valid: false },
+    { value: "1986 01 02", valid: false },
+    { value: "5555-01-02", valid: false },
+    { value: "true", valid: false },
+    { value: "false", valid: false },
+    { value: -1, valid: false },
+    { value: 0, valid: false },
+    { value: [true, false], valid: false },
+    { value: {}, valid: false },
+  ],
 };

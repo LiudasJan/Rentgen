@@ -1283,6 +1283,7 @@ export default function App() {
                 <option value="ftp_url">FTP URL</option>
                 <option value="boolean">Boolean</option>
                 <option value="currency">Currency</option>
+                <option value="date_yyyy_mm_dd">Date (YYYY-MM-DD)</option>
               </select>
             </div>
           ))}
