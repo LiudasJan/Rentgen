@@ -353,7 +353,13 @@ export default function App() {
 
       // leidžiam tiek 200, tiek 204, bet reikalaujam Allow header
       const optionCode = opt.status.split(" ")[0];
-      const hasAllow = "allow" in (opt.headers || {});
+      const allowHeader =
+        opt.headers?.["allow"] ||
+        opt.headers?.["Allow"] ||
+        opt.headers?.["access-control-allow-methods"] ||
+        opt.headers?.["Access-Control-Allow-Methods"];
+
+      const hasAllow = Boolean(allowHeader);
       const okOptions =
         (optionCode === "200" || optionCode === "204") && hasAllow;
 
