@@ -243,7 +243,7 @@ export default function App() {
         response: base,
       });
 
-      // Tikrinam Clickjacking protection
+      // 2. Tikrinam Clickjacking protection
       const xfo =
         base.headers?.["x-frame-options"] || base.headers?.["X-Frame-Options"];
       const csp =
@@ -275,7 +275,7 @@ export default function App() {
         response: base,
       });
 
-      // Tikrinam HSTS
+      // 3. Tikrinam HSTS
       const hsts =
         base.headers?.["strict-transport-security"] ||
         base.headers?.["Strict-Transport-Security"];
@@ -297,7 +297,7 @@ export default function App() {
         response: base,
       });
 
-      // Tikrinam MIME sniffing protection
+      // 4. Tikrinam MIME sniffing protection
       const xcto =
         base.headers?.["x-content-type-options"] ||
         base.headers?.["X-Content-Type-Options"];
@@ -324,7 +324,7 @@ export default function App() {
         response: base,
       });
 
-      // Cache-Control check
+      // 5. Cache-Control check
       const cacheControl =
         base.headers?.["cache-control"] || base.headers?.["Cache-Control"];
 
@@ -359,7 +359,7 @@ export default function App() {
         response: base,
       });
 
-      // 2. OPTIONS method
+      // 6. OPTIONS method
       const opt = await (window as any).electronAPI.sendHttp({
         url,
         method: "OPTIONS",
@@ -388,7 +388,7 @@ export default function App() {
         response: opt,
       });
 
-      // 3. Unsupported method
+      // 7. Unsupported method
       const weird = await (window as any).electronAPI.sendHttp({
         url,
         method: "FOOBAR",
@@ -419,7 +419,7 @@ export default function App() {
       results.push(corsResult);
     }
 
-    // 4. Large body / size limit
+    // 8. Large body / size limit
     const bigBody = "A".repeat(10 * 1024 * 1024); // 10 MB string
     const tooLarge = await (window as any).electronAPI.sendHttp({
       url,
@@ -439,7 +439,7 @@ export default function App() {
       response: tooLarge,
     });
 
-    // 5. Missing authorization cookie/token
+    // 9. Missing authorization cookie/token
     try {
       const minimalHeaders: Record<string, string> = {};
       for (const [k, v] of Object.entries(hdrs)) {
@@ -478,9 +478,13 @@ export default function App() {
       });
     }
 
-    // --- INFO CORS check
+    // 10. INFO CORS check
     const corsResult = await runCorsTest();
     results.push(corsResult);
+
+    // 11. 404 Not Found check
+    const notFoundTest = await runNotFoundTest(url, method, hdrs, body);
+    results.push(notFoundTest);
 
     // --- Manual checks (pilka spalva) ---
     results.push(
@@ -511,6 +515,71 @@ export default function App() {
     );
 
     return results;
+  }
+
+  // --- 404 Not Found test ---
+  async function runNotFoundTest(
+    url: string,
+    method: string,
+    headers: any,
+    body: any
+  ) {
+    const testUrl = url.endsWith("/") ? `${url}NOT_FOUND` : `${url}/NOT_FOUND`;
+    const start = performance.now();
+    try {
+      const res = await (window as any).electronAPI.sendHttp({
+        url: testUrl,
+        method,
+        headers,
+        body,
+      });
+      const end = performance.now();
+      const responseTime = end - start;
+
+      const statusCode = parseInt(res.status?.split(" ")[0] || "0", 10);
+      const statusText = res.status?.split(" ").slice(1).join(" ") || "";
+
+      const status =
+        statusCode === 404
+          ? "✅ Pass"
+          : statusCode === 0
+            ? "❌ Fail (No response)"
+            : "❌ Fail";
+
+      return {
+        name: "404 Not Found",
+        expected: "404 Not Found",
+        actual: `${statusCode} ${statusText}`,
+        status,
+        responseTime,
+        // 👇 Čia labai svarbu — kad būtų rodomi apatinėje sekcijoje:
+        request: {
+          url: testUrl,
+          method,
+          headers,
+          body,
+        },
+        response:
+          typeof res.body === "string"
+            ? res.body
+            : JSON.stringify(res.body, null, 2),
+      };
+    } catch (err: any) {
+      return {
+        name: "404 Not Found",
+        expected: "404 Not Found",
+        actual: "Request failed",
+        status: "❌ Fail",
+        responseTime: 0,
+        request: {
+          url: testUrl,
+          method,
+          headers,
+          body,
+        },
+        response: String(err),
+      };
+    }
   }
 
   // --- RUN ALL TESTS ---
