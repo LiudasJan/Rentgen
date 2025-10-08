@@ -65,6 +65,10 @@ export default function App() {
   const [curlError, setCurlError] = useState(false);
   const [curlInput, setCurlInput] = useState("");
 
+  const [queryMappings, setQueryMappings] = useState<Record<string, string>>(
+    {}
+  );
+
   // --- HTTP SEND ---
   async function sendHttp() {
     setHttpResponse({
@@ -135,6 +139,14 @@ export default function App() {
         }
 
         setFieldMappings(mappings);
+
+        // 🆕 Query param mapping
+        const queryParams = extractQueryParams(url);
+        const queryMappings: Record<string, string> = {};
+        for (const [key, val] of Object.entries(queryParams)) {
+          queryMappings[key] = detectFieldType(key, val);
+        }
+        setQueryMappings(queryMappings);
       }
     } catch (err: any) {
       setHttpResponse({
@@ -524,7 +536,20 @@ export default function App() {
     headers: any,
     body: any
   ) {
-    const testUrl = url.endsWith("/") ? `${url}NOT_FOUND` : `${url}/NOT_FOUND`;
+    let testUrl = url;
+
+    try {
+      const u = new URL(url);
+      // jei turi query, NOT_FOUND pridedam prie pathname
+      u.pathname = u.pathname.endsWith("/")
+        ? `${u.pathname}NOT_FOUND`
+        : `${u.pathname}/NOT_FOUND`;
+      testUrl = u.toString();
+    } catch {
+      // fallback, jei blogas URL
+      testUrl = url.endsWith("/") ? `${url}NOT_FOUND` : `${url}/NOT_FOUND`;
+    }
+
     const start = performance.now();
     try {
       const res = await (window as any).electronAPI.sendHttp({
@@ -552,17 +577,8 @@ export default function App() {
         actual: `${statusCode} ${statusText}`,
         status,
         responseTime,
-        // 👇 Čia labai svarbu — kad būtų rodomi apatinėje sekcijoje:
-        request: {
-          url: testUrl,
-          method,
-          headers,
-          body,
-        },
-        response:
-          typeof res.body === "string"
-            ? res.body
-            : JSON.stringify(res.body, null, 2),
+        request: { url: testUrl, method, headers, body },
+        response: res,
       };
     } catch (err: any) {
       return {
@@ -571,13 +587,8 @@ export default function App() {
         actual: "Request failed",
         status: "❌ Fail",
         responseTime: 0,
-        request: {
-          url: testUrl,
-          method,
-          headers,
-          body,
-        },
-        response: String(err),
+        request: { url: testUrl, method, headers, body },
+        response: { error: String(err) },
       };
     }
   }
@@ -637,9 +648,13 @@ export default function App() {
         )
       : {};
 
-    // paskaičiuojam kiek testų bus
+    // paskaičiuojam kiek testų bus (BODY + QUERY)
     let total = 0;
     for (const [field, type] of Object.entries(fieldMappings)) {
+      if (type === "do-not-test" || type === "random32") continue;
+      total += (datasets[type] || []).length;
+    }
+    for (const [param, type] of Object.entries(queryMappings)) {
       if (type === "do-not-test" || type === "random32") continue;
       total += (datasets[type] || []).length;
     }
@@ -782,6 +797,49 @@ export default function App() {
             responseTime: 0,
           });
         }
+      }
+    }
+
+    // 🆕 Query param testai
+    for (const [param, type] of Object.entries(queryMappings)) {
+      if (type === "do-not-test") continue;
+      const dataset = datasets[type] || [];
+
+      for (const d of dataset) {
+        counter++;
+        setCurrentTest(counter);
+
+        const val = d.value;
+        const u = new URL(url);
+        u.searchParams.set(param, String(val));
+
+        const start = performance.now();
+        const res = await (window as any).electronAPI.sendHttp({
+          url: u.toString(),
+          method,
+          headers: hdrs,
+          body: parsedBody,
+        });
+        const end = performance.now();
+        const responseTime = end - start;
+
+        const statusCode = parseInt(res.status?.split(" ")[0] || "0", 10);
+        const ok = statusCode >= 200 && statusCode < 300;
+        const status =
+          (d.valid && ok) || (!d.valid && statusCode >= 400 && statusCode < 500)
+            ? "✅ Pass"
+            : "❌ Fail";
+
+        results.push({
+          field: `query.${param}`,
+          value: val,
+          expected: d.valid ? "2xx" : "4xx",
+          actual: res.status,
+          status,
+          request: { url: u.toString(), method, headers: hdrs },
+          response: res.body,
+          responseTime,
+        });
       }
     }
 
@@ -1100,6 +1158,20 @@ export default function App() {
     return fields;
   }
 
+  /// --- extractQueryParams ---
+  function extractQueryParams(url: string): Record<string, string> {
+    try {
+      const u = new URL(url);
+      const params: Record<string, string> = {};
+      u.searchParams.forEach((v, k) => {
+        params[k] = v;
+      });
+      return params;
+    } catch {
+      return {};
+    }
+  }
+
   /// --- setDeepValue ---
   function setDeepValue(obj: any, path: string, value: any) {
     const parts = path.replace(/\[(\d+)\]/g, ".$1").split(".");
@@ -1328,41 +1400,71 @@ export default function App() {
         </div>
       )}
 
-      {/* Field Mapping + Auto Tests */}
-      {httpResponse && Object.keys(fieldMappings).length > 0 && (
-        <div>
-          <h3>Field Mapping</h3>
+      <div className="mapping-sections">
+        {/* Body mapping kairėje */}
+        <div className="mapping-column">
+          <h3>Body Parameters</h3>
           {Object.entries(fieldMappings).map(([field, type]) => (
-            <div key={field}>
-              {field}:{" "}
+            <div key={field} className="mapping-row">
+              <span className="mapping-key">{field}</span>
               <select
                 value={type}
                 onChange={(e) => updateFieldType(field, e.target.value)}
               >
                 <option value="do-not-test">Do not test</option>
-                <option value="random32">
-                  Random string 32 (unique each request)
-                </option>
-                <option value="randomInt">Random integer (1–10,000,000)</option>
+                <option value="random32">Random string 32</option>
+                <option value="randomInt">Random integer</option>
                 <option value="string">String</option>
                 <option value="email">Email</option>
                 <option value="phone">Phone</option>
                 <option value="url">URL</option>
                 <option value="number">Number</option>
-                <option value="ftp_url">FTP URL</option>
                 <option value="boolean">Boolean</option>
                 <option value="currency">Currency</option>
                 <option value="date_yyyy_mm_dd">Date (YYYY-MM-DD)</option>
               </select>
             </div>
           ))}
-          <button className="send-btn" onClick={runAllTests} disabled={loading}>
-            {loading
-              ? `Running tests... (${currentTest}/${totalTests})`
-              : "Generate & Run Tests"}
-          </button>
         </div>
-      )}
+
+        {/* Query mapping dešinėje */}
+        {Object.keys(queryMappings).length > 0 && (
+          <div className="mapping-column">
+            <h3>Query Parameters</h3>
+            {Object.entries(queryMappings).map(([param, type]) => (
+              <div key={param} className="mapping-row">
+                <span className="mapping-key">{param}</span>
+                <select
+                  value={type}
+                  onChange={(e) =>
+                    setQueryMappings((prev) => ({
+                      ...prev,
+                      [param]: e.target.value,
+                    }))
+                  }
+                >
+                  <option value="do-not-test">Do not test</option>
+                  <option value="random32">Random string 32</option>
+                  <option value="randomInt">Random integer</option>
+                  <option value="string">String</option>
+                  <option value="email">Email</option>
+                  <option value="phone">Phone</option>
+                  <option value="url">URL</option>
+                  <option value="number">Number</option>
+                  <option value="boolean">Boolean</option>
+                  <option value="currency">Currency</option>
+                  <option value="date_yyyy_mm_dd">Date (YYYY-MM-DD)</option>
+                </select>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      <button className="send-btn" onClick={runAllTests} disabled={loading}>
+        {loading
+          ? `Running tests... (${currentTest}/${totalTests})`
+          : "Generate & Run Tests"}
+      </button>
 
       {/* Security & Headers results */}
       {testsStarted && (

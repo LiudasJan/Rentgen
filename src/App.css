@@ -371,3 +371,29 @@ pre.wrap {
 .copy-btn:hover {
   background: #ddd;
 }
+
+.mapping-sections {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+.mapping-column {
+  background: #f8f8f8;
+  padding: 12px;
+  border-radius: 10px;
+}
+.mapping-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.mapping-key {
+  flex: 1;
+  font-family: monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-right: 8px;
+}
