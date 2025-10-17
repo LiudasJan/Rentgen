@@ -97,7 +97,22 @@ export default function App() {
     try {
       const hdrs = headers
         ? Object.fromEntries(
-            headers.split("\n").map((h) => h.split(":").map((s) => s.trim()))
+            headers
+              .split("\n")
+              .filter((h) => h.trim())
+              .map((h) => {
+                // jei nėra dvitaškio, tikėtina, kad tai curl -b flagas (cookies)
+                if (!h.includes(":")) {
+                  if (h.trim().startsWith("-b ")) {
+                    return ["Cookie", h.replace("-b", "").trim()];
+                  }
+                  // fallback – vis tiek įrašom kaip Cookie
+                  return ["Cookie", h.trim()];
+                }
+
+                const [k, ...rest] = h.split(":");
+                return [k.trim(), rest.join(":").trim()];
+              })
           )
         : {};
 
