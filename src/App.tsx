@@ -5,8 +5,6 @@ import { detectFieldType } from "./fieldDetectors";
 import { datasets } from "./datasets";
 import parseCurl from "parse-curl";
 import "./App.css";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
 
 export default function App() {
   console.log("✅ App.tsx");
