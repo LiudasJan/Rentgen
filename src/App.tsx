@@ -755,7 +755,9 @@ export default function App() {
             ? randInt()
             : type === "random32"
               ? rand32()
-              : val;
+              : type === "randomEmail"
+                ? randEmail()
+                : val;
 
         setDeepValue(newBody, field, newValue);
 
@@ -763,6 +765,7 @@ export default function App() {
         for (const [f, t] of Object.entries(fieldMappings)) {
           if (t === "random32") newBody[f] = rand32();
           if (t === "randomInt") newBody[f] = randInt();
+          if (t === "randomEmail") newBody[f] = randEmail();
         }
 
         let dataToSend: any = newBody;
@@ -992,6 +995,15 @@ export default function App() {
   // --- RANDOM Integer ---
   function randInt() {
     return Math.floor(Math.random() * 10_000_000) + 1;
+  }
+
+  // --- RANDOM Email ---
+  function randEmail() {
+    const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+    let name = "";
+    for (let i = 0; i < 8; i++)
+      name += chars[Math.floor(Math.random() * chars.length)];
+    return `${name}@qaontime.com`;
   }
 
   // --- Measure median helper ---
@@ -1266,6 +1278,7 @@ export default function App() {
     for (const [f, t] of Object.entries(fieldMappings)) {
       if (t === "random32") setDeepValue(newBody, f, rand32());
       if (t === "randomInt") setDeepValue(newBody, f, randInt());
+      if (t === "randomEmail") setDeepValue(newBody, f, randEmail());
     }
 
     return newBody;
@@ -1664,6 +1677,7 @@ export default function App() {
                 <option value="do-not-test">Do not test</option>
                 <option value="random32">Random string 32</option>
                 <option value="randomInt">Random integer</option>
+                <option value="randomEmail">Random email</option>
                 <option value="string">String</option>
                 <option value="email">Email</option>
                 <option value="phone">Phone</option>
@@ -1696,6 +1710,7 @@ export default function App() {
                   <option value="do-not-test">Do not test</option>
                   <option value="random32">Random string 32</option>
                   <option value="randomInt">Random integer</option>
+                  <option value="randomEmail">Random email</option>
                   <option value="string">String</option>
                   <option value="email">Email</option>
                   <option value="phone">Phone</option>
