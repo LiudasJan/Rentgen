@@ -397,3 +397,10 @@ pre.wrap {
   white-space: nowrap;
   padding-right: 8px;
 }
+
+.load-test-row.pass {
+  background-color: #e6f4ea;
+}
+.load-test-row.fail {
+  background-color: #fdecea;
+}

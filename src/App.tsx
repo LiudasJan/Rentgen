@@ -69,8 +69,10 @@ export default function App() {
     {}
   );
 
-  const [showBeautified, setShowBeautified] = useState(false);
-  const [beautifiedBody, setBeautifiedBody] = useState("");
+  // Load test UI/rezultatai
+  const [loadConcurrency, setLoadConcurrency] = useState(10); // threads
+  const [loadTotal, setLoadTotal] = useState(100); // total requests
+  const [loadRunning, setLoadRunning] = useState(false);
 
   // --- Beautify handler ---
   function beautifyBody() {
@@ -945,12 +947,12 @@ export default function App() {
       });
     }
 
-    // --- Load test (future) ---
+    // --- Load test (manual trigger, not auto run) ---
     results.push({
       name: "Load test",
-      expected: "Run stress/load test",
-      actual: "Not available yet",
-      status: "⚪ Manual",
+      expected: "10 threads, 100 total req",
+      actual: "", // tuščia, nes dar nebuvo paleista
+      status: "⚪ Manual", // paliekam pilką
     });
 
     results.push({
@@ -1234,6 +1236,167 @@ export default function App() {
       current = current[key];
     }
     current[parts[parts.length - 1]] = value;
+  }
+
+  // deep-clone helper
+  function deepClone<T>(x: T): T {
+    return JSON.parse(JSON.stringify(x));
+  }
+
+  // pritaiko random mapping'ą taip pat, kaip data-driven cikle
+  function buildRandomizedBody(baseBody: any) {
+    const newBody = deepClone(baseBody);
+
+    // perrašom visus random laukus kiekvienam request'ui
+    for (const [f, t] of Object.entries(fieldMappings)) {
+      if (t === "random32") setDeepValue(newBody, f, rand32());
+      if (t === "randomInt") setDeepValue(newBody, f, randInt());
+    }
+
+    return newBody;
+  }
+
+  // status code paėmimas
+  function codeOf(res: any): number {
+    const s = (res?.status || "").toString();
+    const n = parseInt(s.split(" ")[0] || "0", 10);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  // percentiliai
+  function percentile(values: number[], p: number) {
+    if (!values.length) return 0;
+    const arr = [...values].sort((a, b) => a - b);
+    const idx = Math.min(
+      arr.length - 1,
+      Math.max(0, Math.floor((p / 100) * arr.length))
+    );
+    return arr[idx];
+  }
+
+  // --- RUN LOAD TEST ---
+  async function runLoadTest() {
+    if (loadRunning) return;
+    setLoadRunning(true);
+
+    // limitai
+    const concurrency = Math.max(1, Math.min(100, Math.floor(loadConcurrency)));
+    const total = Math.max(1, Math.min(500, Math.floor(loadTotal)));
+
+    // headers
+    const hdrs = headers
+      ? Object.fromEntries(
+          headers.split("\n").map((h) => {
+            const [k, ...rest] = h.split(":");
+            return [k.trim(), rest.join(":").trim()];
+          })
+        )
+      : {};
+
+    // base body (iš UI)
+    let baseBody: any = null;
+    try {
+      baseBody = body ? JSON.parse(body) : null;
+    } catch {
+      // jei ne JSON – siunčiam raw (be randomizacijos)
+      baseBody = null;
+    }
+
+    let sent = 0;
+    let failures5xx = 0;
+    const times: number[] = [];
+
+    let abort = false;
+
+    async function oneRequest() {
+      if (abort) return;
+
+      // kūnas: originalus + random laukai, lygiai kaip data-driven cikle
+      let dataToSend: any = baseBody ? buildRandomizedBody(baseBody) : body;
+
+      if (protoFile && messageType && baseBody) {
+        try {
+          dataToSend = encodeMessage(messageType, dataToSend);
+        } catch (e) {
+          // jei nepavyko encodinti – skaitom kaip fail'ą
+          failures5xx++;
+          return;
+        }
+      }
+
+      const t0 = performance.now();
+      const res = await (window as any).electronAPI.sendHttp({
+        url,
+        method,
+        headers: hdrs,
+        body: dataToSend,
+      });
+      const t1 = performance.now();
+
+      const ms = t1 - t0;
+      times.push(ms);
+
+      const code = codeOf(res);
+      if (code >= 500) failures5xx++;
+
+      // ankstyvas stabdymas: >5 5xx arba mediana > 5000ms
+      if (failures5xx >= 5) abort = true;
+      if (times.length >= Math.min(10, total)) {
+        const med = percentile(times, 50);
+        if (med > 5000) abort = true;
+      }
+    }
+
+    async function worker() {
+      while (!abort) {
+        const myIdx = sent++;
+        if (myIdx >= total) break;
+        await oneRequest();
+      }
+    }
+
+    const workers = Array.from(
+      { length: Math.min(concurrency, total) },
+      worker
+    );
+    await Promise.all(workers);
+
+    // suformuojam rezultatą Performance lentelei
+    const p50 = percentile(times, 50);
+    const p90 = percentile(times, 90);
+    const p95 = percentile(times, 95);
+    const avg = times.length
+      ? times.reduce((a, b) => a + b, 0) / times.length
+      : 0;
+
+    const status =
+      failures5xx >= 5
+        ? "🔴 Fail"
+        : p50 > 5000
+          ? "🔴 Fail"
+          : p50 > 1000
+            ? "🟠 Warning"
+            : "✅ Pass";
+
+    // įrašom/atnaujinam "Load test" eilutę Performance Insights lentelėje
+    setPerformanceResults((prev) => {
+      const other = prev.filter((x) => x.name !== "Load test");
+      return [
+        ...other,
+        {
+          name: "Load test",
+          expected: `10 threads, 100 total req`,
+          actual: `${times.length} req. → p50=${p50.toFixed(
+            0
+          )}ms p90=${p90.toFixed(0)}ms p95=${p95.toFixed(
+            0
+          )}ms avg=${avg.toFixed(0)}ms. 5xx=${failures5xx}`,
+          status,
+        },
+      ];
+    });
+
+    setLoadRunning(false);
   }
 
   return (
@@ -1638,28 +1801,79 @@ export default function App() {
             <tbody>
               {loadingPerf && performanceResults.length === 0 ? (
                 <tr>
-                  <td colSpan={4}>⏳ Running performance tests...</td>
+                  <td colSpan={4}>⏳ Running Performance Insights...</td>
                 </tr>
               ) : (
-                performanceResults.map((r, i) => (
-                  <tr
-                    key={i}
-                    className={
-                      r.status.includes("Pass")
-                        ? "pass"
-                        : r.status.includes("Warning")
-                          ? "warn"
-                          : r.status.includes("Manual")
-                            ? "manual"
-                            : "fail"
+                performanceResults
+                  .sort((a, b) =>
+                    a.name === "Rate limiting implementation"
+                      ? 1
+                      : b.name === "Rate limiting implementation"
+                        ? -1
+                        : 0
+                  )
+                  .map((r, i) => {
+                    const isLoad = r.name === "Load test";
+                    const isManual =
+                      r.status === "⚪ Manual" ||
+                      r.name === "Rate limiting implementation";
+
+                    // nustatom spalvą
+                    // nustatom spalvą
+                    let rowClass = "";
+                    if (r.name === "Load test" && !r.actual)
+                      rowClass = "manual";
+                    else if (isManual) rowClass = "manual";
+                    else if (r.actual?.includes("⏳")) rowClass = "info";
+                    else if (
+                      r.actual?.includes("5xx") ||
+                      r.actual?.includes("p50")
+                    ) {
+                      if (/p50=\d+ms/.test(r.actual)) {
+                        const p50 = parseInt(
+                          r.actual.match(/p50=(\d+)/)?.[1] || "0"
+                        );
+                        rowClass =
+                          p50 < 1000 ? "pass" : p50 < 5000 ? "warn" : "fail";
+                      } else rowClass = "fail";
                     }
-                  >
-                    <td>{r.name}</td>
-                    <td>{r.expected}</td>
-                    <td>{r.actual}</td>
-                    <td>{r.status}</td>
-                  </tr>
-                ))
+                    // 🆕 naujas papildymas:
+                    else if (r.status.includes("Pass")) rowClass = "pass";
+                    else if (r.status.includes("Warning")) rowClass = "warn";
+                    else if (r.status.includes("Fail")) rowClass = "fail";
+                    else if (r.status.includes("Manual")) rowClass = "manual";
+                    else if (r.status.includes("Info")) rowClass = "info";
+                    else rowClass = "";
+
+                    return (
+                      <tr key={i} className={rowClass}>
+                        <td>{r.name}</td>
+                        <td>{r.expected}</td>
+                        <td>{r.actual}</td>
+                        <td style={{ textAlign: "center" }}>
+                          {r.name === "Load test" ? (
+                            <button
+                              onClick={runLoadTest}
+                              disabled={loadRunning}
+                              style={{
+                                background: "#007bff",
+                                color: "#fff",
+                                border: "none",
+                                borderRadius: "4px",
+                                padding: "3px 8px",
+                                fontSize: "12px",
+                                cursor: "pointer",
+                              }}
+                            >
+                              {loadRunning ? "⏳ Running..." : "Run load test"}
+                            </button>
+                          ) : (
+                            r.status // visur kitur rodom statusą (Pass/Fail/Manual)
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
               )}
             </tbody>
           </table>
