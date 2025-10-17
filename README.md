@@ -93,6 +93,7 @@ npm run electron:dev
 ### 🖥️ Building executables
 
 **You can package Rentgen into a standalone app (.exe for Windows, .dmg for macOS, .AppImage for Linux)**
+
 🚨 [Issue exists](https://github.com/LiudasJan/Rentgen/issues/3) **Please keep using Dev mode for now.**
 
 ```bash
