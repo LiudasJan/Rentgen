@@ -673,10 +673,47 @@ export default function App() {
       if (type === "do-not-test" || type === "random32") continue;
       total += (datasets[type] || []).length;
     }
-    setTotalTests(total);
+    setTotalTests(1 + total);
 
     const results: any[] = [];
     let counter = 0;
+
+    // 🟢 VISADA siunčiam originalų request pirmu numeriu
+    try {
+      const start = performance.now();
+      const res = await (window as any).electronAPI.sendHttp({
+        url,
+        method,
+        headers: hdrs,
+        body: parsedBody,
+      });
+      const end = performance.now();
+
+      results.push({
+        field: "(original request)",
+        value: parsedBody,
+        expected: "2xx",
+        actual: res.status,
+        status: res.status.startsWith("2") ? "✅ Pass" : "❌ Fail",
+        request: { url, method, headers: hdrs, body: parsedBody },
+        response:
+          typeof res.body === "string"
+            ? res.body
+            : JSON.stringify(res.body, null, 2),
+        responseTime: end - start,
+      });
+    } catch (err: any) {
+      results.push({
+        field: "(original request)",
+        value: parsedBody,
+        expected: "2xx",
+        actual: "Error",
+        status: "🔴 Bug",
+        request: { url, method, headers, body: parsedBody },
+        response: String(err),
+        responseTime: 0,
+      });
+    }
 
     for (const [field, type] of Object.entries(fieldMappings)) {
       if (type === "do-not-test") continue;
