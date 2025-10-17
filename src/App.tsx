@@ -5,6 +5,8 @@ import { detectFieldType } from "./fieldDetectors";
 import { datasets } from "./datasets";
 import parseCurl from "parse-curl";
 import "./App.css";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
 
 export default function App() {
   console.log("✅ App.tsx");
@@ -68,6 +70,21 @@ export default function App() {
   const [queryMappings, setQueryMappings] = useState<Record<string, string>>(
     {}
   );
+
+  const [showBeautified, setShowBeautified] = useState(false);
+  const [beautifiedBody, setBeautifiedBody] = useState("");
+
+  // --- Beautify handler ---
+  function beautifyBody() {
+    try {
+      // jei JSON validus — suformatuojam gražiai
+      const parsed = JSON.parse(body);
+      const pretty = JSON.stringify(parsed, null, 2);
+      setBody(pretty); // perrašom body, redaguojamas toliau
+    } catch {
+      // jei ne JSON, ignoruojam tyliai
+    }
+  }
 
   // --- HTTP SEND ---
   async function sendHttp() {
@@ -1274,12 +1291,32 @@ export default function App() {
         onChange={(e) => setHeaders(e.target.value)}
       />
 
-      <textarea
-        className="editor editor-body"
-        placeholder={mode === "HTTP" ? "Body JSON" : "Message body"}
-        value={body}
-        onChange={(e) => setBody(e.target.value)}
-      />
+      {/* Body editor + Beautify */}
+      <div style={{ position: "relative" }}>
+        <textarea
+          className="editor editor-body"
+          placeholder={mode === "HTTP" ? "Body JSON" : "Message body"}
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          style={{ fontFamily: "monospace" }}
+        />
+        <button
+          onClick={beautifyBody}
+          style={{
+            position: "absolute",
+            top: "6px",
+            right: "6px",
+            background: "#f7f7f7",
+            border: "1px solid #ccc",
+            borderRadius: "4px",
+            cursor: "pointer",
+            padding: "2px 8px",
+            fontSize: "12px",
+          }}
+        >
+          Beautify
+        </button>
+      </div>
 
       {/* showCurlModal */}
       {showCurlModal && (
