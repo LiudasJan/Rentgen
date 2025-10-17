@@ -20,17 +20,21 @@ Fokus on what to test not how to test.
 
 ---
 
-## 🚀 Features
+## 🚀 Key Features
 
-- 🔐 **Security & Headers checks** — built-in automated tests (sensitive headers, OPTIONS, unsupported methods, etc.)
-- 📊 **Data Handling & Input Validation testing** — generate multiple tests from one request & dataset
-- 🚀 **Performance Insights** — mediana and ping check out of the box
-- 🌐 **HTTP/HTTPS support** — all standard methods (GET, POST, PUT, PATCH, DELETE, OPTIONS, etc.)
-- 🔄 **WebSocket testing** — connect, send, and inspect messages
-- 🐛 **Protobuf integration** — load `.proto` schemas, encode requests, decode responses
-- 🧪 **Send malformed payloads** — because this is testing, not production
-- 🖥️ **Postman-like UI** — no learning curve, just start testing
-- 🔒 **Ignore SSL validation** (for staging/test servers)
+- 🧪 **Data-Driven Testing** — generate dozens of tests from a single request using smart datasets and field type detection - (`string`, `number`, `email`, etc.)
+- 🔒 **Security & Headers Audit** — built-in OWASP checks for headers, methods, CORS, and authorization handling
+- ⚡ **Performance Insights** — median response time, ping latency, and load test with live `p50/p90/p95` metrics
+- 📬 **HTTP & WebSocket Support** — send requests or connect to WSS endpoints, both JSON and Protobuf
+- 🐛 **Protobuf Integration** — import `.proto` schemas to encode requests and decode binary responses
+- 🧷 **Randomized Payloads** — `randomInt`, `random32`, and `randomEmail` for unique data in each request
+- 🔁 **Load & Stress Testing** — multi-threaded (up to 100 concurrent) requests with automatic abort on slowdowns
+- 🧩 **Automatic Field Mapping** — detects all body and query params with editable type selection
+- 🖥️ **Postman-like UI** — instant usability, “Import cURL” support, and “Copy as cURL” for reproducibility
+- 🌐 **CORS & SSL Controls** — detect public vs private APIs, and optionally bypass SSL for staging servers
+
+…and more.  
+Built for **QA engineers** who need _real testing_, not just “sending requests.”
 
 ---
 
