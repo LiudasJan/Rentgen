@@ -74,6 +74,17 @@ export default function App() {
   const [loadTotal, setLoadTotal] = useState(100); // total requests
   const [loadRunning, setLoadRunning] = useState(false);
 
+  // 🆕 Progress bar būsena (nebūtina, bet patogu jei norėsi rodyti dar ir kitur)
+  const [loadProgressPct, setLoadProgressPct] = useState(0);
+  const [loadProgressText, setLoadProgressText] = useState("");
+
+  // 🆕 Tekstinis bar'as: 20 char pločio: █ and ░
+  function buildTextBar(pct: number) {
+    const width = 20;
+    const filled = Math.round((pct / 100) * width);
+    return "█".repeat(filled) + "░".repeat(width - filled) + ` ${pct}%`;
+  }
+
   // --- Beautify handler ---
   function beautifyBody() {
     try {
@@ -1302,10 +1313,53 @@ export default function App() {
     return arr[idx];
   }
 
+  // --- maybeUpdateProgressUI ---
+  function maybeUpdateProgressUI(sentCount: number) {
+    const pct = Math.floor((sentCount / loadTotal) * 100);
+    if (pct !== loadProgressPct) {
+      const bar = buildTextBar(pct);
+      setLoadProgressPct(pct);
+      setLoadProgressText(`${bar} (${sentCount}/${loadTotal})`);
+
+      // atnaujinam Performance lentelės „Load test“ eilutę
+      setPerformanceResults((prev) => {
+        const other = prev.filter((x) => x.name !== "Load test");
+        return [
+          ...other,
+          {
+            name: "Load test",
+            expected: `${loadConcurrency} threads, ${loadTotal} total req`,
+            actual: `⏳ ${bar} (${sentCount}/${loadTotal})`,
+            status: "🔵 Info",
+          },
+        ];
+      });
+    }
+  }
+
   // --- RUN LOAD TEST ---
   async function runLoadTest() {
     if (loadRunning) return;
     setLoadRunning(true);
+
+    // Reset progress UI
+    setLoadProgressPct(0);
+    const initialBar = buildTextBar(0);
+    setLoadProgressText(initialBar + " (0/" + loadTotal + ")");
+
+    // 🆕 Iš karto atnaujinam Performance lentelės „Load test“ eilutę, kad matytųsi 0%
+    setPerformanceResults((prev) => {
+      const other = prev.filter((x) => x.name !== "Load test");
+      return [
+        ...other,
+        {
+          name: "Load test",
+          expected: `${loadConcurrency} threads, ${loadTotal} total req`,
+          actual: `⏳ ${initialBar} (0/${loadTotal})`,
+          status: "🔵 Info",
+        },
+      ];
+    });
 
     // limitai
     const concurrency = Math.max(1, Math.min(100, Math.floor(loadConcurrency)));
@@ -1380,6 +1434,9 @@ export default function App() {
         const myIdx = sent++;
         if (myIdx >= total) break;
         await oneRequest();
+
+        // 🆕 po kiekvieno request'o — progress
+        maybeUpdateProgressUI(myIdx + 1);
       }
     }
 
@@ -1413,12 +1470,8 @@ export default function App() {
         ...other,
         {
           name: "Load test",
-          expected: `10 threads, 100 total req`,
-          actual: `${times.length} req. → p50=${p50.toFixed(
-            0
-          )}ms p90=${p90.toFixed(0)}ms p95=${p95.toFixed(
-            0
-          )}ms avg=${avg.toFixed(0)}ms. 5xx=${failures5xx}`,
+          expected: `${concurrency} threads, ${total} total req`,
+          actual: `${times.length} req → p50=${p50.toFixed(0)}ms p90=${p90.toFixed(0)}ms p95=${p95.toFixed(0)}ms avg=${avg.toFixed(0)}ms, 5xx=${failures5xx}`,
           status,
         },
       ];
