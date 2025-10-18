@@ -26,7 +26,14 @@ electron_1.app.on("ready", () => {
     const preloadPath = electron_1.app.isPackaged
         ? path_1.default.join(process.resourcesPath, "preload.js")
         : path_1.default.join(__dirname, "preload.js");
+    // 👇 pasirenkam ikoną pagal platformą
+    const iconPath = process.platform === "win32"
+        ? path_1.default.join(__dirname, "../assets/icon.ico")
+        : process.platform === "darwin"
+            ? path_1.default.join(__dirname, "../assets/icon.icns")
+            : path_1.default.join(__dirname, "../assets/icon.png");
     mainWindow = new electron_1.BrowserWindow({
+        icon: iconPath,
         webPreferences: {
             preload: preloadPath,
             contextIsolation: true,

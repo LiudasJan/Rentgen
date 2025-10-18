@@ -26,7 +26,16 @@ app.on("ready", () => {
     ? path.join(process.resourcesPath, "preload.js")
     : path.join(__dirname, "preload.js");
 
+  // 👇 pasirenkam ikoną pagal platformą
+  const iconPath =
+    process.platform === "win32"
+      ? path.join(__dirname, "../assets/icon.ico")
+      : process.platform === "darwin"
+        ? path.join(__dirname, "../assets/icon.icns")
+        : path.join(__dirname, "../assets/icon.png");
+
   mainWindow = new BrowserWindow({
+    icon: iconPath,
     webPreferences: {
       preload: preloadPath,
       contextIsolation: true,
