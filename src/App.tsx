@@ -1386,6 +1386,7 @@ export default function App() {
 
     let sent = 0;
     let failures5xx = 0;
+    let failures4xx = 0;
     const times: number[] = [];
 
     let abort = false;
@@ -1420,6 +1421,7 @@ export default function App() {
 
       const code = codeOf(res);
       if (code >= 500) failures5xx++;
+      if (code >= 400 && code < 500) failures4xx++;
 
       // ankstyvas stabdymas: >5 5xx arba mediana > 5000ms
       if (failures5xx >= 5) abort = true;
@@ -1471,7 +1473,7 @@ export default function App() {
         {
           name: "Load test",
           expected: `${concurrency} threads, ${total} total req`,
-          actual: `${times.length} req → p50=${p50.toFixed(0)}ms p90=${p90.toFixed(0)}ms p95=${p95.toFixed(0)}ms avg=${avg.toFixed(0)}ms, 5xx=${failures5xx}`,
+          actual: `${times.length} req → p50=${p50.toFixed(0)}ms p90=${p90.toFixed(0)}ms p95=${p95.toFixed(0)}ms avg=${avg.toFixed(0)}ms, 4xx=${failures4xx}, 5xx=${failures5xx}`,
           status,
         },
       ];
