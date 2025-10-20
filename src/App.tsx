@@ -979,7 +979,7 @@ export default function App() {
     // --- Load test (manual trigger, not auto run) ---
     results.push({
       name: "Load test",
-      expected: "10 threads, 100 total req",
+      expected: "Median <500 ms (Pass), <1000 ms (Warning), ≥1000 ms (Fail)",
       actual: "", // tuščia, nes dar nebuvo paleista
       status: "⚪ Manual", // paliekam pilką
     });
@@ -1328,7 +1328,8 @@ export default function App() {
           ...other,
           {
             name: "Load test",
-            expected: `${loadConcurrency} threads, ${loadTotal} total req`,
+            expected:
+              "Median <500 ms (Pass), <1000 ms (Warning), ≥1000 ms (Fail)",
             actual: `⏳ ${bar} (${sentCount}/${loadTotal})`,
             status: "🔵 Info",
           },
@@ -1354,7 +1355,8 @@ export default function App() {
         ...other,
         {
           name: "Load test",
-          expected: `${loadConcurrency} threads, ${loadTotal} total req`,
+          expected:
+            "Median <500 ms (Pass), <1000 ms (Warning), ≥1000 ms (Fail)",
           actual: `⏳ ${initialBar} (0/${loadTotal})`,
           status: "🔵 Info",
         },
@@ -1471,9 +1473,10 @@ export default function App() {
       return [
         ...other,
         {
-          name: "Load test",
-          expected: `${concurrency} threads, ${total} total req`,
-          actual: `${times.length} req → p50=${p50.toFixed(0)}ms p90=${p90.toFixed(0)}ms p95=${p95.toFixed(0)}ms avg=${avg.toFixed(0)}ms, 4xx=${failures4xx}, 5xx=${failures5xx}`,
+          name: `Load test`,
+          expected:
+            "Median <500 ms (Pass), <1000 ms (Warning), ≥1000 ms (Fail)",
+          actual: `${concurrency} threads, ${total} total req. Executed: ${times.length} req → p50=${p50.toFixed(0)}ms p90=${p90.toFixed(0)}ms p95=${p95.toFixed(0)}ms avg=${avg.toFixed(0)}ms, 4xx=${failures4xx}, 5xx=${failures5xx}`,
           status,
         },
       ];
