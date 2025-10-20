@@ -1457,11 +1457,11 @@ export default function App() {
     const status =
       failures5xx >= 5
         ? "🔴 Fail"
-        : p50 > 5000
-          ? "🔴 Fail"
-          : p50 > 1000
+        : p50 < 500
+          ? "✅ Pass"
+          : p50 < 1000
             ? "🟠 Warning"
-            : "✅ Pass";
+            : "🔴 Fail";
 
     // įrašom/atnaujinam "Load test" eilutę Performance Insights lentelėje
     setPerformanceResults((prev) => {
