@@ -1945,9 +1945,13 @@ export default function App() {
                           r.actual.match(/p50=(\d+)/)?.[1] || "0"
                         );
                         rowClass =
-                          p50 < 1000 ? "pass" : p50 < 5000 ? "warn" : "fail";
-                      } else rowClass = "fail";
+                          p50 < 500 ? "pass" : p50 < 1000 ? "warn" : "fail";
+                      } else if (r.status.includes("Fail")) rowClass = "fail";
+                      else if (r.status.includes("Warning")) rowClass = "warn";
+                      else if (r.status.includes("Pass")) rowClass = "pass";
+                      else rowClass = "";
                     }
+
                     // 🆕 naujas papildymas:
                     else if (r.status.includes("Pass")) rowClass = "pass";
                     else if (r.status.includes("Warning")) rowClass = "warn";
