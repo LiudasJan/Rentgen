@@ -404,3 +404,7 @@ pre.wrap {
 .load-test-row.fail {
   background-color: #fdecea;
 }
+
+.bug {
+  background-color: #ffe0e0 !important;
+}

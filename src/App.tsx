@@ -1480,6 +1480,34 @@ export default function App() {
     setLoadRunning(false);
   }
 
+  function truncateValue(value: any, maxLength = 100) {
+    if (value === null) return "null";
+    if (value === undefined) return "undefined";
+
+    let str: string;
+
+    switch (typeof value) {
+      case "string":
+        str = `"${value}"`;
+        break;
+      case "number":
+      case "boolean":
+        str = String(value);
+        break;
+      case "object":
+        try {
+          str = JSON.stringify(value);
+        } catch {
+          str = "[object]";
+        }
+        break;
+      default:
+        str = String(value);
+    }
+
+    return str.length > maxLength ? str.slice(0, maxLength) + " ..." : str;
+  }
+
   return (
     <div className="app">
       {/* Mode selector */}
@@ -1987,11 +2015,13 @@ export default function App() {
                   <React.Fragment key={i}>
                     <tr
                       className={
-                        r.status.includes("Pass")
-                          ? "pass"
-                          : r.status.includes("Fail")
-                            ? "fail"
-                            : "bug"
+                        /^5\d\d/.test(r.actual)
+                          ? "bug"
+                          : r.status.includes("Pass")
+                            ? "pass"
+                            : r.status.includes("Fail")
+                              ? "fail"
+                              : "bug"
                       }
                       onClick={() => toggleRow(i)}
                       style={{ cursor: "pointer" }}
@@ -2002,7 +2032,7 @@ export default function App() {
                         </span>
                         {r.field}
                       </td>
-                      <td>{JSON.stringify(r.value)}</td>
+                      <td>{truncateValue(r.value)}</td>
                       <td>{r.expected}</td>
                       <td>{r.actual}</td>
                       <td>{r.status}</td>
