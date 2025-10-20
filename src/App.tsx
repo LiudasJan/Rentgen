@@ -1365,7 +1365,7 @@ export default function App() {
 
     // limitai
     const concurrency = Math.max(1, Math.min(100, Math.floor(loadConcurrency)));
-    const total = Math.max(1, Math.min(500, Math.floor(loadTotal)));
+    const total = Math.max(1, Math.min(10000, Math.floor(loadTotal)));
 
     // headers
     const hdrs = headers
@@ -1972,21 +1972,110 @@ export default function App() {
                         <td>{r.actual}</td>
                         <td style={{ textAlign: "center" }}>
                           {r.name === "Load test" ? (
-                            <button
-                              onClick={runLoadTest}
-                              disabled={loadRunning}
+                            <div
                               style={{
-                                background: "#007bff",
-                                color: "#fff",
-                                border: "none",
-                                borderRadius: "4px",
-                                padding: "3px 8px",
-                                fontSize: "12px",
-                                cursor: "pointer",
+                                display: "flex",
+                                flexDirection: "column",
+                                alignItems: "center",
+                                gap: "2px",
+                                justifyContent: "center",
                               }}
                             >
-                              {loadRunning ? "⏳ Running..." : "Run load test"}
-                            </button>
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "6px",
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    alignItems: "center",
+                                  }}
+                                >
+                                  <label
+                                    style={{ fontSize: "10px", color: "#666" }}
+                                  >
+                                    Threads
+                                  </label>
+                                  <input
+                                    type="number"
+                                    min={1}
+                                    max={100}
+                                    value={loadConcurrency}
+                                    onChange={(e) =>
+                                      setLoadConcurrency(
+                                        Math.min(
+                                          100,
+                                          Math.max(1, Number(e.target.value))
+                                        )
+                                      )
+                                    }
+                                    style={{
+                                      width: "50px",
+                                      fontSize: "12px",
+                                      padding: "2px",
+                                      textAlign: "center",
+                                    }}
+                                    title="Threads (max 100)"
+                                  />
+                                </div>
+
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    alignItems: "center",
+                                  }}
+                                >
+                                  <label
+                                    style={{ fontSize: "10px", color: "#666" }}
+                                  >
+                                    Requests
+                                  </label>
+                                  <input
+                                    type="number"
+                                    min={1}
+                                    max={10000}
+                                    value={loadTotal}
+                                    onChange={(e) =>
+                                      setLoadTotal(
+                                        Math.min(
+                                          10000,
+                                          Math.max(1, Number(e.target.value))
+                                        )
+                                      )
+                                    }
+                                    style={{
+                                      width: "70px",
+                                      fontSize: "12px",
+                                      padding: "2px",
+                                      textAlign: "center",
+                                    }}
+                                    title="Total requests (max 10 000)"
+                                  />
+                                </div>
+
+                                <button
+                                  onClick={runLoadTest}
+                                  disabled={loadRunning}
+                                  style={{
+                                    background: "#007bff",
+                                    color: "#fff",
+                                    border: "none",
+                                    borderRadius: "4px",
+                                    padding: "3px 8px",
+                                    fontSize: "12px",
+                                    cursor: "pointer",
+                                    marginTop: "12px",
+                                  }}
+                                >
+                                  {loadRunning ? "⏳" : "Run"}
+                                </button>
+                              </div>
+                            </div>
                           ) : (
                             r.status // visur kitur rodom statusą (Pass/Fail/Manual)
                           )}
