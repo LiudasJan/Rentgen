@@ -53,6 +53,9 @@ export default function App() {
   >({});
   const toggleSecurityRow = (idx: number) =>
     setExpandedSecurityRows((prev) => ({ ...prev, [idx]: !prev[idx] }));
+  const [expandedCrudRows, setExpandedCrudRows] = useState<
+    Record<number, boolean>
+  >({});
 
   const [performanceResults, setPerformanceResults] = useState<any[]>([]);
 
@@ -77,6 +80,10 @@ export default function App() {
   // 🆕 Progress bar būsena (nebūtina, bet patogu jei norėsi rodyti dar ir kitur)
   const [loadProgressPct, setLoadProgressPct] = useState(0);
   const [loadProgressText, setLoadProgressText] = useState("");
+
+  const [crudResults, setCrudResults] = useState<any[]>([]);
+  const [responseBody, setResponseBody] = useState<any>(null);
+  const [responseHeaders, setResponseHeaders] = useState<any>(null);
 
   // 🆕 Tekstinis bar'as: 20 char pločio: █ and ░
   function buildTextBar(pct: number) {
@@ -273,8 +280,6 @@ export default function App() {
         )
       : {};
 
-    let base: any = null;
-
     try {
       // 1. Sensitive headers
       const base = await (window as any).electronAPI.sendHttp({
@@ -283,6 +288,9 @@ export default function App() {
         headers: hdrs,
         body,
       });
+
+      setResponseBody(base.body);
+      setResponseHeaders(base.headers);
 
       // Tikrinam Server header
       const serverHeader =
@@ -443,6 +451,8 @@ export default function App() {
         response: opt,
       });
 
+      await buildCrudRowsFromOptions(allowHeader, url, hdrs, base, okOptions);
+
       // 7. Unsupported method
       const weird = await (window as any).electronAPI.sendHttp({
         url,
@@ -572,6 +582,96 @@ export default function App() {
     return results;
   }
 
+  // --- buildCrudRowsFromOptions ---
+  async function buildCrudRowsFromOptions(
+    allowHeader: string,
+    url: string,
+    hdrs: any,
+    base: any,
+    okOptions: any
+  ) {
+    try {
+      // 1️⃣ Jei OPTIONS failino – viena raudona eilutė
+      if (!okOptions) {
+        setCrudResults([
+          {
+            method: "CRUD",
+            expected: "Discover via OPTIONS",
+            actual: "CRUD not available — OPTIONS test failed",
+            status: "❌ Fail",
+            request: null,
+            response: null,
+          },
+        ]);
+        return;
+      }
+
+      // 2️⃣ OPTIONS OK – parse metodus
+      const allow = String(allowHeader || "")
+        .split(",")
+        .map((s) => s.trim().toUpperCase())
+        .filter(Boolean);
+
+      // 3️⃣ Bandome gauti pavyzdinį body iš originalaus RESPONSE
+      let sampleBody: any = {};
+      try {
+        if (typeof base?.body === "string") {
+          sampleBody = JSON.parse(base.body);
+        } else if (base?.body && typeof base.body === "object") {
+          sampleBody = base.body;
+        } else {
+          sampleBody = {};
+        }
+      } catch {
+        sampleBody = {};
+      }
+
+      // 4️⃣ Aprašymai
+      const desc: Record<string, string> = {
+        GET: "Fetch data",
+        POST: "Create resource",
+        PUT: "Update resource",
+        PATCH: "Update resource fields",
+        DELETE: "Remove resource",
+        HEAD: "Headers only",
+        OPTIONS: "Discovery",
+      };
+
+      // 5️⃣ Surenkam CRUD eilutes
+      const rows = allow.map((m) => {
+        const req: any = { url, method: m, headers: hdrs as any };
+
+        if (!["GET", "HEAD"].includes(m)) {
+          req.body =
+            sampleBody && Object.keys(sampleBody).length ? sampleBody : {};
+        }
+
+        return {
+          method: m,
+          expected: desc[m] || "Custom method",
+          actual: "Not available yet",
+          status: "⚪ Manual",
+          request: req,
+          response: null,
+        };
+      });
+
+      setCrudResults(rows);
+    } catch {
+      // Fallback
+      setCrudResults([
+        {
+          method: "CRUD",
+          expected: "Discover via OPTIONS",
+          actual: "Not available",
+          status: "⚪ Manual",
+          request: null,
+          response: null,
+        },
+      ]);
+    }
+  }
+
   // --- 404 Not Found test ---
   async function runNotFoundTest(
     url: string,
@@ -644,9 +744,11 @@ export default function App() {
     setLoadingSecurity(true);
     setLoadingPerf(true);
 
+    // 🔁 Resetinam visus rezultatus prieš naują paleidimą
     setTestResults([]);
     setSecurityResults([]);
     setPerformanceResults([]);
+    setCrudResults([]);
     setCurrentTest(0);
 
     // 1. Data-driven
@@ -2174,6 +2276,105 @@ export default function App() {
                     )}
                   </React.Fragment>
                 ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* CRUD */}
+      {testsStarted && (
+        <div className="response-panel">
+          <h3>CRUD</h3>
+          <table className="results-table">
+            <thead>
+              <tr>
+                <th>Method</th>
+                <th>Expected</th>
+                <th>Actual</th>
+                <th>Result</th>
+              </tr>
+            </thead>
+            <tbody>
+              {crudResults.length === 0 ? (
+                <tr>
+                  <td colSpan={4}>⏳ Preparing CRUD…</td>
+                </tr>
+              ) : (
+                crudResults.map((r, i) => {
+                  const rowClass = r.status.includes("Pass")
+                    ? "pass"
+                    : r.status.includes("Fail")
+                      ? "fail"
+                      : r.status.includes("Warning")
+                        ? "warn"
+                        : r.status.includes("Manual")
+                          ? "manual"
+                          : r.status.includes("Info")
+                            ? "info"
+                            : "bug";
+
+                  const isExpanded = expandedCrudRows[i];
+                  const toggleExpand = () => {
+                    setExpandedCrudRows((prev) => ({
+                      ...prev,
+                      [i]: !prev[i],
+                    }));
+                  };
+
+                  return (
+                    <React.Fragment key={i}>
+                      <tr
+                        className={rowClass}
+                        onClick={toggleExpand}
+                        style={{ cursor: r.request ? "pointer" : "default" }}
+                      >
+                        <td className="expander">
+                          <span className="chevron">
+                            {isExpanded ? "▾" : "▸"}
+                          </span>
+                          {r.method}
+                        </td>
+                        <td>{r.expected}</td>
+                        <td>{r.actual || "Not available yet"}</td>
+                        <td>{r.status}</td>
+                      </tr>
+
+                      {isExpanded && (
+                        <tr className="details-row">
+                          <td colSpan={4}>
+                            <div className="details-panel">
+                              <div
+                                style={{
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                }}
+                              >
+                                <CopyButton req={r.request} />
+                              </div>
+                              <div className="details-grid">
+                                <div>
+                                  <div className="details-title">Request</div>
+                                  <pre className="wrap">
+                                    {JSON.stringify(r.request, null, 2)}
+                                  </pre>
+                                </div>
+                                <div>
+                                  <div className="details-title">Response</div>
+                                  <pre className="wrap">
+                                    {r.response
+                                      ? JSON.stringify(r.response, null, 2)
+                                      : "null"}
+                                  </pre>
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })
               )}
             </tbody>
           </table>
