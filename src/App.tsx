@@ -500,7 +500,7 @@ export default function App() {
       expected: "413 Payload Too Large",
       actual: tooLarge.status,
       status: okLarge ? "✅ Pass" : "❌ Fail",
-      request: { url, method: "POST", headers: hdrs, body: "[100MB string]" },
+      request: { url, method: "POST", headers: hdrs, body: "[10MB string]" },
       response: tooLarge,
     });
 
