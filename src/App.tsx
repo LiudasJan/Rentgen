@@ -1,8 +1,7 @@
 import parseCurl from 'parse-curl';
 import React, { useEffect, useRef, useState } from 'react';
-import { datasets } from './datasets';
-import { detectFieldType } from './utils/field';
-import { encodeMessage, loadProto } from './utils/protobuf';
+import { datasets } from './constants/datasets';
+import { decodeMessage, detectFieldType, encodeMessage, loadProtoSchema } from './utils';
 
 export default function App() {
   console.log('✅ App.tsx');
@@ -172,7 +171,7 @@ export default function App() {
               if (val == null) break;
               val = val[s];
             }
-            mappings[path] = detectFieldType(path, val);
+            mappings[path] = detectFieldType(val);
           }
         }
 
@@ -182,7 +181,7 @@ export default function App() {
         const queryParams = extractQueryParams(url);
         const queryMappings: Record<string, string> = {};
         for (const [key, val] of Object.entries(queryParams)) {
-          queryMappings[key] = detectFieldType(key, val);
+          queryMappings[key] = detectFieldType(val);
         }
         setQueryMappings(queryMappings);
       }
@@ -883,7 +882,6 @@ export default function App() {
           let decoded: string | null = null;
           if (protoFile && messageType) {
             try {
-              const { decodeMessage } = require('./utils/protobuf');
               const obj = decodeMessage(messageType, new Uint8Array(res.body));
               decoded = JSON.stringify(obj, null, 2);
             } catch {
@@ -1003,8 +1001,8 @@ export default function App() {
       }
       const badCount = pings.filter((t) => t > 100).length;
       const avg = pings.reduce((a, b) => a + b, 0) / pings.length;
+      const pingStatus = badCount >= 3 ? '🔴 Fail' : '✅ Pass';
 
-      let pingStatus = badCount >= 3 ? '🔴 Fail' : '✅ Pass';
       results.push({
         name: 'Ping latency',
         expected: '<= 100ms (3/5 rule)',
@@ -1669,7 +1667,7 @@ export default function App() {
             onChange={async (e) => {
               if (e.target.files?.length) {
                 try {
-                  const root = await loadProto(e.target.files[0]);
+                  await loadProtoSchema(e.target.files[0]);
                   setProtoFile(e.target.files[0]);
                   setMessages((prev) => [{ direction: 'system', data: '📂 Proto schema loaded' }, ...prev]);
                 } catch (err) {

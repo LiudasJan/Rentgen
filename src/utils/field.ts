@@ -1,4 +1,20 @@
-export const fieldDetectors: { type: string; regex: RegExp }[] = [
+export type FieldType =
+  | 'email'
+  | 'url'
+  | 'ftp_url'
+  | 'phone'
+  | 'number'
+  | 'boolean'
+  | 'currency'
+  | 'date_yyyy_mm_dd'
+  | 'string';
+
+interface FieldDetector {
+  type: FieldType;
+  regex: RegExp;
+}
+
+const fieldDetectors: ReadonlyArray<FieldDetector> = [
   { type: 'email', regex: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ },
   { type: 'url', regex: /^https?:\/\/[^\s$.?#].[^\s]*$/i },
   { type: 'ftp_url', regex: /^ftp:\/\/[^\s$.?#].[^\s]*$/i },
@@ -10,17 +26,11 @@ export const fieldDetectors: { type: string; regex: RegExp }[] = [
   { type: 'string', regex: /.+/ },
 ];
 
-export function detectFieldType(key: string, value: any): string {
+export function detectFieldType(value: unknown): FieldType {
   if (typeof value === 'boolean') return 'boolean';
   if (typeof value === 'number') return 'number';
-
-  if (typeof value === 'string') {
-    for (const detector of fieldDetectors) {
-      if (detector.regex.test(value)) {
-        return detector.type;
-      }
-    }
-  }
+  if (typeof value === 'string' && value.length > 0)
+    for (const detector of fieldDetectors) if (detector.regex.test(value)) return detector.type;
 
   return 'string';
 }
