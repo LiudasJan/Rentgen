@@ -6,9 +6,11 @@
 @theme {
   /* Fonts */
   --font-segoe-ui: 'Segoe UI', Arial, sans-serif;
+  --font-monospace: monospace;
 
   /* Colors */
   --color-button-primary: #2185d0;
+  --color-button-secondary: #f7f7f7;
   --color-body: #f7f7f7;
   --color-border: #cccccc;
   --color-method-get: #21ba45;
@@ -87,22 +89,6 @@
   font-weight: 600;
 }
 
-/* Editor areas */
-.editor {
-  width: 100%;
-  min-height: 100px;
-  border: 1px solid #ccc;
-  padding: 10px;
-  font-family: monospace;
-  font-size: 14px;
-  outline: none;
-  resize: vertical;
-}
-
-.editor-body {
-  min-height: 180px;
-}
-
 /* Response panel */
 .response {
   background: #f3f3f3;
@@ -118,11 +104,6 @@
   background: #f9f9f9;
 }
 
-textarea {
-  margin-top: 8px;
-  margin-bottom: 8px;
-}
-
 .section {
   background: white;
   border: 1px solid #ddd;
@@ -131,7 +112,6 @@ textarea {
   margin-bottom: 16px;
 }
 
-textarea,
 .response {
   width: 100%;
   box-sizing: border-box;
@@ -287,9 +267,6 @@ pre.wrap {
   width: 600px;
   max-width: 90%;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
-.editor.error {
-  border: 2px solid red;
 }
 
 pre.wrap {

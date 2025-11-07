@@ -1,8 +1,10 @@
+import classNames from 'classnames';
 import parseCurl from 'parse-curl';
 import React, { useEffect, useState } from 'react';
-import Button from './components/buttons/Button';
+import Button, { ButtonType } from './components/buttons/Button';
 import Input from './components/inputs/Input';
 import Select from './components/inputs/Select';
+import Textarea from './components/inputs/Textarea';
 import { datasets } from './constants/datasets';
 import { decodeMessage, detectFieldType, encodeMessage, loadProtoSchema } from './utils';
 
@@ -14,8 +16,8 @@ export default function App() {
   const [method, setMethod] = useState<Method>('GET');
   const [url, setUrl] = useState<string>('');
   const [wssConnected, setWssConnected] = useState<boolean>(false);
-  const [headers, setHeaders] = useState('');
-  const [body, setBody] = useState('{}');
+  const [headers, setHeaders] = useState<string>('');
+  const [body, setBody] = useState<string>('{}');
 
   const [messages, setMessages] = useState<
     {
@@ -81,18 +83,6 @@ export default function App() {
     const width = 20;
     const filled = Math.round((pct / 100) * width);
     return '█'.repeat(filled) + '░'.repeat(width - filled) + ` ${pct}%`;
-  }
-
-  // --- Beautify handler ---
-  function beautifyBody() {
-    try {
-      // jei JSON validus — suformatuojam gražiai
-      const parsed = JSON.parse(body);
-      const pretty = JSON.stringify(parsed, null, 2);
-      setBody(pretty); // perrašom body, redaguojamas toliau
-    } catch {
-      // jei ne JSON, ignoruojam tyliai
-    }
   }
 
   // --- HTTP SEND ---
@@ -1576,39 +1566,33 @@ export default function App() {
         )}
       </div>
 
-      {/* Request Editors */}
-      <textarea
-        className="editor editor-headers"
+      <Textarea
+        className="mb-4 font-monospace"
         placeholder="Header-Key: value"
         value={headers}
         onChange={(e) => setHeaders(e.target.value)}
       />
 
-      {/* Body editor + Beautify */}
-      <div style={{ position: 'relative' }}>
-        <textarea
-          className="editor editor-body"
+      <div className="relative mb-4">
+        <Textarea
+          className="min-h-36 font-monospace"
           placeholder={mode === 'HTTP' ? 'Body JSON' : 'Message body'}
           value={body}
           onChange={(e) => setBody(e.target.value)}
-          style={{ fontFamily: 'monospace' }}
         />
-        <button
-          onClick={beautifyBody}
-          style={{
-            position: 'absolute',
-            top: '14px',
-            right: '6px',
-            background: '#f7f7f7',
-            border: '1px solid #ccc',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            padding: '2px 8px',
-            fontSize: '12px',
+        <Button
+          className="absolute top-1.5 right-1.5 min-w-auto! py-0.5! px-2! rounded-sm"
+          buttonType={ButtonType.SECONDARY}
+          onClick={() => {
+            try {
+              setBody(JSON.stringify(JSON.parse(body), null, 2));
+            } catch {
+              // Silently ignore JSON parse errors
+            }
           }}
         >
           Beautify
-        </button>
+        </Button>
       </div>
 
       {/* showCurlModal */}
@@ -1616,12 +1600,11 @@ export default function App() {
         <div className="modal-overlay">
           <div className="modal">
             <h3>Import cURL</h3>
-            <textarea
-              className={`editor ${curlError ? 'error' : ''}`}
+            <Textarea
+              className={classNames('min-h-40 font-monospace', { 'border-red-600': curlError })}
               placeholder="Paste cURL here..."
               value={curlInput}
               onChange={(e) => setCurlInput(e.target.value)}
-              style={{ minHeight: '160px' }}
             />
             <div style={{ marginTop: '10px', display: 'flex', gap: '10px' }}>
               <Button onClick={() => handleImportCurl(curlInput)}>Import</Button>

@@ -81,8 +81,7 @@ ipcMain.handle('http-request', async (_event, { url, method, headers, body }) =>
 
         if (contentType.includes('application/json')) {
           try {
-            const parsed = JSON.parse(responseBody);
-            responseBody = JSON.stringify(parsed, null, 2);
+            responseBody = JSON.stringify(JSON.parse(responseBody), null, 2);
           } catch {
             // Keep as plain text if JSON parsing fails
           }
