@@ -46,6 +46,7 @@
   "dependencies": {
     "@tailwindcss/postcss": "^4.1.17",
     "axios": "^1.13.2",
+    "classnames": "^2.5.1",
     "electron-squirrel-startup": "^1.0.1",
     "parse-curl": "^0.2.6",
     "postcss": "^8.5.6",

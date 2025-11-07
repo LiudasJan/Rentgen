@@ -1,12 +1,19 @@
 import parseCurl from 'parse-curl';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import Button from './components/buttons/Button';
+import Input from './components/inputs/Input';
+import Select from './components/inputs/Select';
 import { datasets } from './constants/datasets';
 import { decodeMessage, detectFieldType, encodeMessage, loadProtoSchema } from './utils';
 
+type Mode = 'HTTP' | 'WSS';
+type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS';
+
 export default function App() {
-  const [mode, setMode] = useState<'HTTP' | 'WSS'>('HTTP');
-  const [url, setUrl] = useState('');
-  const [method, setMethod] = useState('GET');
+  const [mode, setMode] = useState<Mode>('HTTP');
+  const [method, setMethod] = useState<Method>('GET');
+  const [url, setUrl] = useState<string>('');
+  const [wssConnected, setWssConnected] = useState<boolean>(false);
   const [headers, setHeaders] = useState('');
   const [body, setBody] = useState('{}');
 
@@ -19,8 +26,6 @@ export default function App() {
   >([]);
   const [protoFile, setProtoFile] = useState<File | null>(null);
   const [messageType, setMessageType] = useState('');
-  const wsRef = useRef<WebSocket | null>(null);
-  const [wsConnected, setWsConnected] = useState(false);
 
   const [httpResponse, setHttpResponse] = useState<{
     status: string;
@@ -217,8 +222,8 @@ export default function App() {
   useEffect(() => {
     if (!window.electronAPI?.onWssEvent) return; // 👈 skip browser
     const off = window.electronAPI.onWssEvent((ev: any) => {
-      if (ev.type === 'open') setWsConnected(true);
-      if (ev.type === 'close') setWsConnected(false);
+      if (ev.type === 'open') setWssConnected(true);
+      if (ev.type === 'close') setWssConnected(false);
       if (ev.type === 'message') {
         setMessages((prev) => [
           {
@@ -1117,7 +1122,7 @@ export default function App() {
 
       // Užpildom UI
       setUrl(parsed.url || '');
-      setMethod(method);
+      setMethod(method as Method);
       setBody(parsed.body ? parsed.body : '{}');
 
       const headerStr = Object.entries(headersObj)
@@ -1522,67 +1527,51 @@ export default function App() {
 
   return (
     <div className="py-5 px-7">
-      {/* Mode selector */}
-      <div className="flex items-center gap-2 mb-2">
-        <label>
-          Mode:
-          <select value={mode} onChange={(e) => setMode(e.target.value as any)}>
-            <option>HTTP</option>
-            <option>WSS</option>
-          </select>
-        </label>
-
-        {mode === 'HTTP' && (
-          <button className="send-btn" onClick={() => setShowCurlModal(true)}>
-            Import cURL
-          </button>
-        )}
+      <div className="flex items-center gap-2 mb-4">
+        <Select
+          className="font-bold"
+          value={mode}
+          options={[
+            { value: 'HTTP', label: 'HTTP' },
+            { value: 'WSS', label: 'WSS' },
+          ]}
+          onChange={(e) => setMode(e.target.value as Mode)}
+        />
+        {mode === 'HTTP' && <Button onClick={() => setShowCurlModal(true)}>Import cURL</Button>}
       </div>
 
-      {/* URL + Method */}
-      <div className="flex items-center gap-2 mb-2">
+      <div className="flex items-center gap-2 mb-4">
         {mode === 'HTTP' && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-            <input
-              list="http-methods"
-              className={`method-select method-${method}`}
-              value={method}
-              onChange={(e) => setMethod(e.target.value.toUpperCase())}
-              onFocus={(e) => e.target.select()} // ✅ pažymi visą tekstą
-              onClick={(e) => ((e.target as HTMLInputElement).value = '')} // ✅ išvalo kad matytųsi visas sąrašas
-              placeholder="METHOD"
-              style={{ width: '100px', textTransform: 'uppercase' }}
-            />
-            <datalist id="http-methods">
-              <option value="GET" />
-              <option value="POST" />
-              <option value="PUT" />
-              <option value="PATCH" />
-              <option value="DELETE" />
-              <option value="HEAD" />
-              <option value="OPTIONS" />
-            </datalist>
-          </div>
+          <Select
+            className="font-bold"
+            value={method}
+            options={[
+              { value: 'GET', label: 'GET', className: 'text-method-get' },
+              { value: 'POST', label: 'POST', className: 'text-method-post' },
+              { value: 'PUT', label: 'PUT', className: 'text-method-put' },
+              { value: 'PATCH', label: 'PATCH', className: 'text-method-patch' },
+              { value: 'DELETE', label: 'DELETE', className: 'text-method-delete' },
+              { value: 'HEAD', label: 'HEAD', className: 'text-method-head' },
+              { value: 'OPTIONS', label: 'OPTIONS', className: 'text-method-options' },
+            ]}
+            onChange={(e) => setMethod(e.target.value as Method)}
+          />
         )}
-        <input
-          className="url-input"
-          placeholder="Enter request URL"
+        <Input
+          className="flex-auto"
+          placeholder="Enter URL or paste text"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
         />
-
-        {mode === 'HTTP' ? (
-          <button className="send-btn" onClick={sendHttp}>
-            Send
-          </button>
-        ) : (
+        {mode === 'HTTP' && <Button onClick={sendHttp}>Send</Button>}
+        {mode === 'WSS' && (
           <>
-            <button className="send-btn" onClick={connectWss} disabled={wsConnected}>
+            <Button disabled={wssConnected} onClick={connectWss}>
               Connect
-            </button>
-            <button className="send-btn" onClick={sendWss} disabled={!wsConnected}>
+            </Button>
+            <Button disabled={!wssConnected} onClick={sendWss}>
               Send
-            </button>
+            </Button>
           </>
         )}
       </div>
@@ -1608,7 +1597,7 @@ export default function App() {
           onClick={beautifyBody}
           style={{
             position: 'absolute',
-            top: '6px',
+            top: '14px',
             right: '6px',
             background: '#f7f7f7',
             border: '1px solid #ccc',
@@ -1635,12 +1624,8 @@ export default function App() {
               style={{ minHeight: '160px' }}
             />
             <div style={{ marginTop: '10px', display: 'flex', gap: '10px' }}>
-              <button className="send-btn" onClick={() => handleImportCurl(curlInput)}>
-                Import
-              </button>
-              <button className="send-btn" onClick={() => setShowCurlModal(false)}>
-                Cancel
-              </button>
+              <Button onClick={() => handleImportCurl(curlInput)}>Import</Button>
+              <Button onClick={() => setShowCurlModal(false)}>Cancel</Button>
             </div>
           </div>
         </div>
@@ -1779,9 +1764,9 @@ export default function App() {
           </div>
         )}
       </div>
-      <button className="send-btn" onClick={runAllTests} disabled={loading}>
+      <Button disabled={loading} onClick={runAllTests}>
         {loading ? `Running tests... (${currentTest}/${totalTests})` : 'Generate & Run Tests'}
-      </button>
+      </Button>
 
       {/* Security & Headers results */}
       {testsStarted && (

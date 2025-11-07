@@ -9,6 +9,8 @@ import WebSocket from 'ws';
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
 declare const MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY: string;
 
+let ws: WebSocket | null = null;
+
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
   app.quit();
@@ -26,9 +28,6 @@ const createWindow = (): void => {
 
   // and load the index.html of the app.
   mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
-
-  // Open the DevTools.
-  // mainWindow.webContents.openDevTools();
 };
 
 // This method will be called when Electron has finished
@@ -53,56 +52,47 @@ app.on('activate', () => {
   }
 });
 
-let ws: WebSocket | null = null;
-
-// --- HTTP HANDLER ---
+// Handle HTTP requests
 ipcMain.handle('http-request', async (_event, { url, method, headers, body }) => {
   try {
-    const res = await axios({
+    const response = await axios({
       url,
       method,
       headers,
       data: body,
-      maxBodyLength: Infinity, // leisti didelį body
+      maxBodyLength: Infinity,
       maxContentLength: Infinity,
-      responseType: 'arraybuffer', // gaut galim binary ar tekstą - mes konvertuosim rankomis
+      responseType: 'arraybuffer',
       validateStatus: () => true,
     });
 
-    // Convert response data (ArrayBuffer/Buffer/JSON/etc) to displayable string
+    const contentType =
+      (response.headers && (response.headers['content-type'] || response.headers['Content-Type'])) || '';
+    const data = response.data;
     let responseBody: string;
-    const contentType = (res.headers && (res.headers['content-type'] || res.headers['Content-Type'])) || '';
-
-    // res.data is an ArrayBuffer (axios with responseType arraybuffer returns ArrayBuffer)
-    const data = res.data;
 
     try {
-      // If it's ArrayBuffer or Buffer -> try decode as utf-8 text
       if (
         data instanceof ArrayBuffer ||
         (data && typeof data === 'object' && typeof (data as any).byteLength === 'number')
       ) {
-        // convert ArrayBuffer/TypedArray/Buffer to string
         const uint8 = new Uint8Array(data as any);
-        // try text decoder
         responseBody = new TextDecoder().decode(uint8);
-        // if looks like JSON and content-type indicates JSON, pretty-print
+
         if (contentType.includes('application/json')) {
           try {
             const parsed = JSON.parse(responseBody);
             responseBody = JSON.stringify(parsed, null, 2);
           } catch {
-            /* keep as text */
+            // Keep as plain text if JSON parsing fails
           }
         }
       } else if (typeof data === 'string') {
         responseBody = data;
       } else {
-        // fallback: try stringify object
         responseBody = typeof data === 'object' ? JSON.stringify(data, null, 2) : String(data);
       }
     } catch {
-      // ultimate fallback
       try {
         responseBody = String(data);
       } catch {
@@ -111,12 +101,11 @@ ipcMain.handle('http-request', async (_event, { url, method, headers, body }) =>
     }
 
     return {
-      status: `${res.status} ${res.statusText}`,
-      headers: res.headers,
+      status: `${response.status} ${response.statusText}`,
+      headers: response.headers,
       body: responseBody,
     };
   } catch (err: any) {
-    // 👇 tvarkingas EPIPE gaudymas
     if (err.code === 'EPIPE') {
       return {
         status: '413 Payload Too Large (EPIPE)',
@@ -128,7 +117,7 @@ ipcMain.handle('http-request', async (_event, { url, method, headers, body }) =>
   }
 });
 
-// --- WSS HANDLERS ---
+// Handle WebSocket connections
 ipcMain.on('wss-connect', (event, { url, headers }) => {
   if (ws) {
     ws.close();
@@ -136,7 +125,6 @@ ipcMain.on('wss-connect', (event, { url, headers }) => {
   }
 
   ws = new WebSocket(url, { headers });
-
   ws.on('open', () => {
     event.sender.send('wss-event', { type: 'open' });
   });
@@ -158,15 +146,16 @@ ipcMain.on('wss-send', (_event, msg) => {
   if (ws) ws.send(msg);
 });
 
-// --- PING HANDLER ---
+// Handle ping requests
 ipcMain.handle('ping-host', async (_event, host: string) => {
   return new Promise<number>((resolve, reject) => {
     const platform = process.platform;
     const cmd = platform === 'win32' ? `ping -n 1 ${host}` : `ping -c 1 ${host}`;
-
     const start = Date.now();
+
     exec(cmd, (error) => {
       if (error) return reject(error);
+
       const time = Date.now() - start;
       resolve(time);
     });

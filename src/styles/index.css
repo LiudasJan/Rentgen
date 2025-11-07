@@ -8,23 +8,23 @@
   --font-segoe-ui: 'Segoe UI', Arial, sans-serif;
 
   /* Colors */
+  --color-button-primary: #2185d0;
   --color-body: #f7f7f7;
+  --color-border: #cccccc;
+  --color-method-get: #21ba45;
+  --color-method-post: #2185d0;
+  --color-method-put: #fbbd08;
+  --color-method-patch: #a333c8;
+  --color-method-delete: #db2828;
+  --color-method-head: #00b5ad;
+  --color-method-options: #767676;
+  --color-text: #333333;
 }
 
 @layer base {
   body {
-    @apply m-0 font-segoe-ui bg-body;
+    @apply m-0 font-segoe-ui bg-body text-text;
   }
-}
-
-/* Header bar */
-.header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: #f0f0f0;
-  border-bottom: 1px solid #ddd;
-  padding: 8px;
 }
 
 /* Method wrapper: badge + dropdown */
@@ -64,61 +64,6 @@
 }
 .method-badge.method-OPTIONS {
   background: #767676;
-}
-
-/* Neutralus select */
-.method-select {
-  font-weight: bold;
-  border: 1px solid #ccc;
-  padding: 6px 10px;
-  border-radius: 4px;
-  background: #fff;
-  color: #333;
-  min-width: 100px;
-}
-
-/* Dropdown options (tik tekstas spalvotas) */
-.method-select option[value='GET'] {
-  color: #21ba45;
-}
-.method-select option[value='POST'] {
-  color: #2185d0;
-}
-.method-select option[value='PUT'] {
-  color: #fbbd08;
-}
-.method-select option[value='PATCH'] {
-  color: #a333c8;
-}
-.method-select option[value='DELETE'] {
-  color: #db2828;
-}
-.method-select option[value='HEAD'] {
-  color: #00b5ad;
-}
-.method-select option[value='OPTIONS'] {
-  color: #767676;
-}
-
-/* URL input */
-.url-input {
-  flex: 1;
-  padding: 6px 10px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-}
-
-/* Send button */
-.send-btn {
-  background: #2185d0;
-  color: white;
-  border: none;
-  padding: 6px 16px;
-  border-radius: 4px;
-  cursor: pointer;
-}
-.send-btn:hover {
-  background: #1678c2;
 }
 
 /* Tabs */
@@ -173,16 +118,9 @@
   background: #f9f9f9;
 }
 
-textarea,
-input,
-button,
-select {
+textarea {
   margin-top: 8px;
   margin-bottom: 8px;
-}
-
-button {
-  margin-left: 4px;
 }
 
 .section {
@@ -194,7 +132,6 @@ button {
 }
 
 textarea,
-.url-input,
 .response {
   width: 100%;
   box-sizing: border-box;
