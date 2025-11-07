@@ -18,7 +18,7 @@ export default function Button({
   ...otherProps
 }: Props) {
   const buttonClassName = classNames(
-    'min-w-[110px] m-0 py-2 px-3 text-xs rounded-md',
+    'min-w-[110px] m-0 py-2 px-3 text-xs font-bold rounded-md',
     {
       'bg-button-primary border border-button-primary text-white': buttonType === ButtonType.PRIMARY,
       'hover:bg-button-primary/80': buttonType === ButtonType.PRIMARY && !disabled,
