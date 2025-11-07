@@ -3,5 +3,5 @@ import App from './App';
 
 import './styles/index.css';
 
-const root = createRoot(document.getElementById('root'));
+const root = createRoot(document.body);
 root.render(<App />);

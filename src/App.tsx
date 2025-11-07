@@ -4,7 +4,6 @@ import { datasets } from './constants/datasets';
 import { decodeMessage, detectFieldType, encodeMessage, loadProtoSchema } from './utils';
 
 export default function App() {
-  console.log('✅ App.tsx');
   const [mode, setMode] = useState<'HTTP' | 'WSS'>('HTTP');
   const [url, setUrl] = useState('');
   const [method, setMethod] = useState('GET');
@@ -137,7 +136,7 @@ export default function App() {
       }
 
       // 👇 čia vietoje axios kvietimo
-      const res = await (window as any).electronAPI.sendHttp({
+      const res = await window.electronAPI.sendHttp({
         url,
         method,
         headers: hdrs,
@@ -211,13 +210,13 @@ export default function App() {
       : {};
 
     // 👇 vietoj naršyklinio WebSocket – IPC į main
-    (window as any).electronAPI.connectWss({ url, headers: hdrs });
+    window.electronAPI.connectWss({ url, headers: hdrs });
   }
 
   // mount
   useEffect(() => {
-    if (!(window as any).electronAPI?.onWssEvent) return; // 👈 skip browser
-    const off = (window as any).electronAPI.onWssEvent((ev: any) => {
+    if (!window.electronAPI?.onWssEvent) return; // 👈 skip browser
+    const off = window.electronAPI.onWssEvent((ev: any) => {
       if (ev.type === 'open') setWsConnected(true);
       if (ev.type === 'close') setWsConnected(false);
       if (ev.type === 'message') {
@@ -240,7 +239,7 @@ export default function App() {
   // --- WSS SEND ---
   function sendWss() {
     setMessages((prev) => [{ direction: 'sent', data: body }, ...prev]);
-    (window as any).electronAPI.sendWss(body);
+    window.electronAPI.sendWss(body);
   }
 
   function updateFieldType(field: string, type: string) {
@@ -263,7 +262,7 @@ export default function App() {
 
     try {
       // 1. Sensitive headers
-      const base = await (window as any).electronAPI.sendHttp({
+      const base = await window.electronAPI.sendHttp({
         url,
         method,
         headers: hdrs,
@@ -392,7 +391,7 @@ export default function App() {
       });
 
       // 6. OPTIONS method
-      const opt = await (window as any).electronAPI.sendHttp({
+      const opt = await window.electronAPI.sendHttp({
         url,
         method: 'OPTIONS',
         headers: hdrs,
@@ -422,7 +421,7 @@ export default function App() {
       await buildCrudRowsFromOptions(allowHeader, url, hdrs, base, okOptions);
 
       // 7. Unsupported method
-      const weird = await (window as any).electronAPI.sendHttp({
+      const weird = await window.electronAPI.sendHttp({
         url,
         method: 'FOOBAR',
         headers: hdrs, // ✅ originalūs headeriai
@@ -454,7 +453,7 @@ export default function App() {
 
     // 8. Large body / size limit
     const bigBody = 'A'.repeat(10 * 1024 * 1024); // 10 MB string
-    const tooLarge = await (window as any).electronAPI.sendHttp({
+    const tooLarge = await window.electronAPI.sendHttp({
       url,
       method: 'POST', // dažniausiai POST su body
       headers: { ...hdrs, 'Content-Type': 'application/json' },
@@ -482,7 +481,7 @@ export default function App() {
         }
       }
 
-      const missingAuth = await (window as any).electronAPI.sendHttp({
+      const missingAuth = await window.electronAPI.sendHttp({
         url,
         method,
         headers: minimalHeaders,
@@ -649,7 +648,7 @@ export default function App() {
 
     const start = performance.now();
     try {
-      const res = await (window as any).electronAPI.sendHttp({
+      const res = await window.electronAPI.sendHttp({
         url: testUrl,
         method,
         headers,
@@ -760,7 +759,7 @@ export default function App() {
     // 🟢 VISADA siunčiam originalų request pirmu numeriu
     try {
       const start = performance.now();
-      const res = await (window as any).electronAPI.sendHttp({
+      const res = await window.electronAPI.sendHttp({
         url,
         method,
         headers: hdrs,
@@ -847,7 +846,7 @@ export default function App() {
 
         try {
           const start = performance.now();
-          const res = await (window as any).electronAPI.sendHttp({
+          const res = await window.electronAPI.sendHttp({
             url,
             method,
             headers: hdrs,
@@ -942,7 +941,7 @@ export default function App() {
         u.searchParams.set(param, String(val));
 
         const start = performance.now();
-        const res = await (window as any).electronAPI.sendHttp({
+        const res = await window.electronAPI.sendHttp({
           url: u.toString(),
           method,
           headers: hdrs,
@@ -996,7 +995,7 @@ export default function App() {
       const domain = new URL(url).hostname;
       const pings: number[] = [];
       for (let i = 0; i < 5; i++) {
-        const t = await (window as any).electronAPI.pingHost(domain);
+        const t = await window.electronAPI.pingHost(domain);
         pings.push(t);
       }
       const badCount = pings.filter((t) => t > 100).length;
@@ -1431,7 +1430,7 @@ export default function App() {
       }
 
       const t0 = performance.now();
-      const res = await (window as any).electronAPI.sendHttp({
+      const res = await window.electronAPI.sendHttp({
         url,
         method,
         headers: hdrs,
@@ -1522,16 +1521,9 @@ export default function App() {
   }
 
   return (
-    <div className="app">
+    <div className="py-5 px-7">
       {/* Mode selector */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px',
-          marginBottom: '10px',
-        }}
-      >
+      <div className="flex items-center gap-2 mb-2">
         <label>
           Mode:
           <select value={mode} onChange={(e) => setMode(e.target.value as any)}>
@@ -1548,7 +1540,7 @@ export default function App() {
       </div>
 
       {/* URL + Method */}
-      <div className="header">
+      <div className="flex items-center gap-2 mb-2">
         {mode === 'HTTP' && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
             <input

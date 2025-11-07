@@ -1,14 +1,23 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
-console.log('✅ Preload loaded');
+interface ElectronApi {
+  sendHttp: (payload: any) => Promise<any>;
+  connectWss: (payload: any) => void;
+  sendWss: (message: string) => void;
+  onWssEvent: (cb: (data: any) => void) => any;
+  pingHost: (host: string) => Promise<any>;
+}
 
 contextBridge.exposeInMainWorld('electronAPI', {
-  // HTTP
-  sendHttp: (payload: any) => ipcRenderer.invoke('http-request', payload),
+  sendHttp: (payload: any): Promise<any> => ipcRenderer.invoke('http-request', payload),
+  connectWss: (payload: any): void => ipcRenderer.send('wss-connect', payload),
+  sendWss: (message: string): void => ipcRenderer.send('wss-send', message),
+  onWssEvent: (cb: (data: any) => any): any => ipcRenderer.on('wss-event', (_, data) => cb(data)),
+  pingHost: (host: string): Promise<any> => ipcRenderer.invoke('ping-host', host),
+} as ElectronApi);
 
-  // WSS
-  connectWss: (payload: any) => ipcRenderer.send('wss-connect', payload),
-  sendWss: (msg: any) => ipcRenderer.send('wss-send', msg),
-  onWssEvent: (cb: (data: any) => void) => ipcRenderer.on('wss-event', (_e, data) => cb(data)),
-  pingHost: (host: string) => ipcRenderer.invoke('ping-host', host),
-});
+declare global {
+  interface Window {
+    electronAPI: ElectronApi;
+  }
+}
