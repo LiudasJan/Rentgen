@@ -1363,8 +1363,9 @@ export default function App() {
         </label>
         <div className="flex items-center gap-2">
           <Input
-            type="file"
             accept=".proto"
+            className="font-monospace"
+            type="file"
             onChange={async (e) => {
               const file = e.target.files?.[0];
               if (!file) return;
@@ -1433,7 +1434,7 @@ export default function App() {
                 <pre className="mt-0 ml-4">{message.data}</pre>
                 {message.decoded && (
                   <>
-                    <div>Decoded Protobuf:</div>
+                    <div className="font-monospace font-bold text-sm">Decoded Protobuf:</div>
                     <pre>{message.decoded}</pre>
                   </>
                 )}
@@ -2011,7 +2012,7 @@ export default function App() {
     }
   }
 
-  async function connectWss() {
+  function connectWss() {
     if (!url.startsWith('ws')) {
       setMessages((prevMessages) => [
         { direction: 'system', data: '❌ Please use ws:// or wss:// URL' },
