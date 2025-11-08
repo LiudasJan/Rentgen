@@ -94,6 +94,26 @@ export default function App() {
 
   // --- Beautify handler ---
   function beautifyBody() {
+    const hdrs = headers
+      ? Object.fromEntries(
+          headers.split("\n").map((h) => {
+            const [k, ...rest] = h.split(":");
+            return [k.trim(), rest.join(":").trim()];
+          })
+        )
+      : {};
+    const ct = (hdrs["Content-Type"] || hdrs["content-type"] || "").toString();
+    if (/application\/x-www-form-urlencoded/i.test(ct)) {
+      // tiesiog sutvarkom eilutes abėcėlės tvarka
+      const lines = body
+        .split(/\r?\n/)
+        .map((l) => l.trim())
+        .filter(Boolean)
+        .sort();
+      setBody(lines.join("\n"));
+      return;
+    }
+
     try {
       // jei JSON validus — suformatuojam gražiai
       const parsed = JSON.parse(body);
@@ -112,7 +132,27 @@ export default function App() {
       headers: {},
     });
 
+    // helperiai tik šiai funkcijai (nenaudoja išorės)
+    const parseFormBody = (raw: string): Array<[string, string]> => {
+      return (raw || "")
+        .split(/\r?\n/)
+        .map((l) => l.trim())
+        .filter(Boolean)
+        .map((l) => {
+          const i = l.indexOf("=");
+          if (i === -1) return [l, ""];
+          return [l.slice(0, i).trim(), l.slice(i + 1).trim()];
+        });
+    };
+
+    const formEntriesToUrlEncoded = (entries: Array<[string, string]>) => {
+      const usp = new URLSearchParams();
+      for (const [k, v] of entries) usp.append(k, v);
+      return usp.toString(); // pvz. "name=Jenny+Rosen&email=jenny%40example.com"
+    };
+
     try {
+      // ---- headers text -> object (paliekant tavo -b/cookie logiką) ----
       const hdrs = headers
         ? Object.fromEntries(
             headers
@@ -124,18 +164,26 @@ export default function App() {
                   if (h.trim().startsWith("-b ")) {
                     return ["Cookie", h.replace("-b", "").trim()];
                   }
-                  // fallback – vis tiek įrašom kaip Cookie
                   return ["Cookie", h.trim()];
                 }
-
                 const [k, ...rest] = h.split(":");
                 return [k.trim(), rest.join(":").trim()];
               })
           )
         : {};
 
-      let dataToSend: any = body; // raw tekstas
+      // ar Content-Type form-urlencoded?
+      const ct = (
+        hdrs["Content-Type"] ||
+        hdrs["content-type"] ||
+        ""
+      ).toString();
+      const isForm = /application\/x-www-form-urlencoded/i.test(ct);
 
+      // ---- body paruošimas siuntimui ----
+      let dataToSend: any = body; // paliekam raw tekstą kaip buvo
+
+      // protobuf prioritetas (kaip buvo iki šiol)
       if (protoFile && messageType) {
         try {
           dataToSend = encodeMessage(messageType, JSON.parse(body));
@@ -147,9 +195,20 @@ export default function App() {
           });
           return;
         }
+      } else if (isForm) {
+        // jei form-urlencoded – enkoduojam iš textarea eilučių `key=value`
+        const entries = parseFormBody(
+          typeof body === "string" ? body : String(body)
+        );
+        dataToSend = formEntriesToUrlEncoded(entries);
       }
 
-      // 👇 čia vietoje axios kvietimo
+      // Prieš siuntimą:
+      if (isForm && !("Content-Type" in hdrs)) {
+        hdrs["Content-Type"] = "application/x-www-form-urlencoded";
+      }
+
+      // ---- siuntimas per electronAPI ----
       const res = await (window as any).electronAPI.sendHttp({
         url,
         method,
@@ -159,38 +218,51 @@ export default function App() {
 
       setHttpResponse(res);
 
-      // Testų generavimą remiam į request, o ne response
-      let parsedBody: any;
+      // ---- mapping’ai remiantis REQUEST (kaip iki šiol) ----
+      let parsedBody: any = null;
       try {
         parsedBody = JSON.parse(body);
       } catch {
         parsedBody = null;
       }
 
-      if (res.status.startsWith("2") && parsedBody) {
-        // Ištraukiam visus laukus (įskaitant nested)
-        const extracted = extractFieldsFromJson(parsedBody);
-        const mappings: Record<string, string> = {};
+      if (res.status.startsWith("2")) {
+        // JSON laukų ištrauka (kaip buvo)
+        if (parsedBody) {
+          const extracted = extractFieldsFromJson(parsedBody);
+          const mappings: Record<string, string> = {};
 
-        for (const [path, type] of Object.entries(extracted)) {
-          if (type === "DO_NOT_TEST") {
-            mappings[path] = "do-not-test";
-          } else {
-            // jeigu ne objektas – aptinkam tipą kaip anksčiau
-            // paimame tikrą value iš path
-            const segments = path.replace(/\[(\d+)\]/g, ".$1").split(".");
-            let val: any = parsedBody;
-            for (const s of segments) {
-              if (val == null) break;
-              val = val[s];
+          for (const [path, type] of Object.entries(extracted)) {
+            if (type === "DO_NOT_TEST") {
+              mappings[path] = "do-not-test";
+            } else {
+              const segments = path.replace(/\[(\d+)\]/g, ".$1").split(".");
+              let val: any = parsedBody;
+              for (const s of segments) {
+                if (val == null) break;
+                val = val[s];
+              }
+              mappings[path] = detectFieldType(path, val);
             }
-            mappings[path] = detectFieldType(path, val);
           }
+          setFieldMappings(mappings);
         }
 
-        setFieldMappings(mappings);
-
-        // 🆕 Query param mapping
+        // 🆕 FORM laukų mapping’ai (prefiksuojam "form.")
+        if (isForm) {
+          const entries = parseFormBody(
+            typeof body === "string" ? body : String(body)
+          );
+          const formMappings: Record<string, string> = {};
+          for (const [k, v] of entries) {
+            formMappings[`form.${k}`] = detectFieldType(k, v);
+          }
+          // jeigu jau buvo JSON mapping’ai – sujunk
+          setFieldMappings((prev: Record<string, string> | undefined) => ({
+            ...(prev || {}),
+            ...formMappings,
+          }));
+        }
         const queryParams = extractQueryParams(url);
         const queryMappings: Record<string, string> = {};
         for (const [key, val] of Object.entries(queryParams)) {
@@ -776,14 +848,7 @@ export default function App() {
     setTestResults([]);
     setCurrentTest(0);
 
-    let parsedBody: any;
-    try {
-      parsedBody = JSON.parse(body);
-    } catch {
-      setLoading(false);
-      return [];
-    }
-
+    // ---- Headers -> object ----
     const hdrs = headers
       ? Object.fromEntries(
           headers.split("\n").map((h) => {
@@ -793,39 +858,88 @@ export default function App() {
         )
       : {};
 
-    // paskaičiuojam kiek testų bus (BODY + QUERY)
+    const ct = (hdrs["Content-Type"] || hdrs["content-type"] || "").toString();
+    const isForm = /application\/x-www-form-urlencoded/i.test(ct);
+
+    // ---- Local helpers for form branch ----
+    const parseFormBody = (raw: string): Array<[string, string]> => {
+      return (raw || "")
+        .split(/\r?\n/)
+        .map((l) => l.trim())
+        .filter(Boolean)
+        .map((l) => {
+          const i = l.indexOf("=");
+          if (i === -1) return [l, ""];
+          return [l.slice(0, i).trim(), l.slice(i + 1).trim()];
+        });
+    };
+
+    const formEntriesToUrlEncoded = (entries: Array<[string, string]>) => {
+      const usp = new URLSearchParams();
+      for (const [k, v] of entries) usp.append(k, v);
+      return usp.toString();
+    };
+
+    // ---- Parse request body according to CT ----
+    let parsedBody: any = null;
+    let formEntries: Array<[string, string]> = [];
+
+    if (isForm) {
+      formEntries = parseFormBody(
+        typeof body === "string" ? body : String(body)
+      );
+    } else {
+      try {
+        parsedBody = JSON.parse(body);
+      } catch {
+        setLoading(false);
+        return [];
+      }
+    }
+
+    // ---- Count tests (BODY + QUERY) ----
     let total = 0;
     for (const [field, type] of Object.entries(fieldMappings)) {
       if (type === "do-not-test" || type === "random32") continue;
-      total += (datasets[type] || []).length;
+      // JSON branch counts only JSON fields; FORM branch counts only form.* fields
+      if (!isForm && !field.startsWith("form.")) {
+        total += (datasets[type] || []).length;
+      }
+      if (isForm && field.startsWith("form.")) {
+        total += (datasets[type] || []).length;
+      }
     }
     for (const [param, type] of Object.entries(queryMappings)) {
       if (type === "do-not-test" || type === "random32") continue;
       total += (datasets[type] || []).length;
     }
-    setTotalTests(1 + total);
+    setTotalTests(1 + total); // +1 for original request
 
     const results: any[] = [];
     let counter = 0;
 
-    // 🟢 VISADA siunčiam originalų request pirmu numeriu
+    // ---- Always send the original request first ----
     try {
       const start = performance.now();
+      const originalBodyToSend = isForm
+        ? formEntriesToUrlEncoded(formEntries)
+        : parsedBody;
+
       const res = await (window as any).electronAPI.sendHttp({
         url,
         method,
         headers: hdrs,
-        body: parsedBody,
+        body: originalBodyToSend,
       });
       const end = performance.now();
 
       results.push({
         field: "(original request)",
-        value: parsedBody,
+        value: isForm ? Object.fromEntries(formEntries) : parsedBody,
         expected: "2xx",
         actual: res.status,
-        status: res.status.startsWith("2") ? "✅ Pass" : "❌ Fail",
-        request: { url, method, headers: hdrs, body: parsedBody },
+        status: res.status?.startsWith("2") ? "✅ Pass" : "❌ Fail",
+        request: { url, method, headers: hdrs, body: originalBodyToSend },
         response:
           typeof res.body === "string"
             ? res.body
@@ -835,16 +949,22 @@ export default function App() {
     } catch (err: any) {
       results.push({
         field: "(original request)",
-        value: parsedBody,
+        value: isForm ? Object.fromEntries(formEntries) : parsedBody,
         expected: "2xx",
         actual: "Error",
         status: "🔴 Bug",
-        request: { url, method, headers, body: parsedBody },
+        request: {
+          url,
+          method,
+          headers: hdrs,
+          body: isForm ? formEntriesToUrlEncoded(formEntries) : parsedBody,
+        },
         response: String(err),
         responseTime: 0,
       });
     }
 
+    // ---- BODY data-driven tests ----
     for (const [field, type] of Object.entries(fieldMappings)) {
       if (type === "do-not-test") continue;
 
@@ -853,14 +973,123 @@ export default function App() {
           ? [{ dynamic: true, valid: true }]
           : datasets[type] || [];
 
+      // -------- FORM branch --------
+      if (isForm) {
+        if (!field.startsWith("form.")) continue; // form branch only touches form.* keys
+        const key = field.slice("form.".length);
+
+        for (const d of dataset) {
+          counter++;
+          setCurrentTest(counter);
+
+          const val = (d as any).value;
+
+          // Base: copy original entries
+          const base: Array<[string, string]> = [...formEntries];
+
+          // New value based on type
+          const nextVal =
+            type === "randomInt"
+              ? String(randInt())
+              : type === "random32"
+                ? rand32()
+                : type === "randomEmail"
+                  ? randEmail()
+                  : String(val);
+
+          // Replace just the target key
+          let replaced = false;
+          for (let i = 0; i < base.length; i++) {
+            if (base[i][0] === key) {
+              base[i] = [key, nextVal];
+              replaced = true;
+              break;
+            }
+          }
+          if (!replaced) base.push([key, nextVal]);
+
+          // Per-request randomization for other form fields
+          for (const [f, t] of Object.entries(fieldMappings)) {
+            if (!f.startsWith("form.")) continue;
+            const k = f.slice("form.".length);
+            if (k === key) continue;
+            let maybe: string | null = null;
+            if (t === "random32") maybe = rand32();
+            if (t === "randomInt") maybe = String(randInt());
+            if (t === "randomEmail") maybe = randEmail();
+            if (maybe !== null) {
+              let done = false;
+              for (let j = 0; j < base.length; j++) {
+                if (base[j][0] === k) {
+                  base[j] = [k, maybe];
+                  done = true;
+                  break;
+                }
+              }
+              if (!done) base.push([k, maybe]);
+            }
+          }
+
+          const dataToSend = formEntriesToUrlEncoded(base);
+
+          try {
+            const start = performance.now();
+            const res = await (window as any).electronAPI.sendHttp({
+              url,
+              method,
+              headers: hdrs,
+              body: dataToSend,
+            });
+            const end = performance.now();
+            const responseTime = end - start;
+
+            const statusCode = parseInt(res.status?.split(" ")[0] || "0", 10);
+            const ok = statusCode >= 200 && statusCode < 300;
+            const status =
+              (d.valid && ok) ||
+              (!d.valid && statusCode >= 400 && statusCode < 500)
+                ? "✅ Pass"
+                : statusCode >= 500
+                  ? "🔴 Bug"
+                  : "❌ Fail";
+
+            results.push({
+              field,
+              value: val,
+              expected: d.valid ? "2xx" : "4xx",
+              actual: res.status,
+              status,
+              request: { url, method, headers: hdrs, body: dataToSend },
+              response:
+                typeof res.body === "string"
+                  ? res.body
+                  : JSON.stringify(res.body, null, 2),
+              responseTime,
+            });
+          } catch (err: any) {
+            results.push({
+              field,
+              value: val,
+              expected: d.valid ? "2xx" : "4xx",
+              actual: "Error",
+              status: "🔴 Bug",
+              request: { url, method, headers: hdrs, body: dataToSend },
+              response: String(err),
+              responseTime: 0,
+            });
+          }
+        }
+        continue; // skip JSON branch
+      }
+
+      // -------- JSON branch (original logic preserved) --------
       for (const d of dataset) {
         counter++;
         setCurrentTest(counter);
 
-        // pradinė body kopija
         const val = (d as any).value;
 
-        // pradinė body kopija (deep clone kad neišdarkytų originalo)
+        // deep clone to avoid mutating original
         const newBody = JSON.parse(JSON.stringify(parsedBody));
 
         const newValue =
@@ -874,7 +1103,7 @@ export default function App() {
 
         setDeepValue(newBody, field, newValue);
 
-        // 💡 kiekvienam request’ui perrašom visus random32/randomInt laukus
+        // Per-request randomization for random* fields
         for (const [f, t] of Object.entries(fieldMappings)) {
           if (t === "random32") newBody[f] = rand32();
           if (t === "randomInt") newBody[f] = randInt();
@@ -886,7 +1115,6 @@ export default function App() {
           try {
             dataToSend = encodeMessage(messageType, newBody);
           } catch (err) {
-            const val = "value" in d ? d.value : null;
             results.push({
               field,
               value: val,
@@ -912,18 +1140,6 @@ export default function App() {
           const end = performance.now();
           const responseTime = end - start;
 
-          // --- naujas status parsing ---
-          let statusCode = 0;
-          let statusText = "";
-          if (res.status) {
-            const parts = res.status.split(" ");
-            statusCode = parseInt(parts[0], 10);
-            statusText = parts.slice(1).join(" ");
-          }
-
-          const ok = statusCode >= 200 && statusCode < 300;
-
-          // response text
           let responseText: string;
           if (typeof res.body === "string") {
             responseText = res.body;
@@ -946,18 +1162,16 @@ export default function App() {
             }
           }
 
-          let status = "";
-          if (d.valid) {
-            // tikimės 2xx
-            if (ok) status = "✅ Pass";
-            else status = "❌ Fail";
-          } else {
-            // tikimės 4xx
-            if (statusCode >= 400 && statusCode < 500) status = "✅ Pass";
-            else if (ok) status = "❌ Fail";
-            else if (statusCode >= 500) status = "🔴 Bug";
-            else status = "❌ Fail";
-          }
+          const statusCode = parseInt(res.status?.split(" ")[0] || "0", 10);
+          const ok = statusCode >= 200 && statusCode < 300;
+
+          const status =
+            (d.valid && ok) ||
+            (!d.valid && statusCode >= 400 && statusCode < 500)
+              ? "✅ Pass"
+              : statusCode >= 500
+                ? "🔴 Bug"
+                : "❌ Fail";
 
           results.push({
             field,
@@ -985,7 +1199,7 @@ export default function App() {
       }
     }
 
-    // 🆕 Query param testai
+    // ---- Query param tests (format-agnostic) ----
     for (const [param, type] of Object.entries(queryMappings)) {
       if (type === "do-not-test") continue;
       const dataset = datasets[type] || [];
@@ -999,11 +1213,15 @@ export default function App() {
         u.searchParams.set(param, String(val));
 
         const start = performance.now();
+        const reqBody = isForm
+          ? formEntriesToUrlEncoded(formEntries)
+          : parsedBody;
+
         const res = await (window as any).electronAPI.sendHttp({
           url: u.toString(),
           method,
           headers: hdrs,
-          body: parsedBody,
+          body: reqBody,
         });
         const end = performance.now();
         const responseTime = end - start;
@@ -1021,8 +1239,16 @@ export default function App() {
           expected: d.valid ? "2xx" : "4xx",
           actual: res.status,
           status,
-          request: { url: u.toString(), method, headers: hdrs },
-          response: res.body,
+          request: {
+            url: u.toString(),
+            method,
+            headers: hdrs,
+            body: reqBody,
+          },
+          response:
+            typeof res.body === "string"
+              ? res.body
+              : JSON.stringify(res.body, null, 2),
           responseTime,
         });
       }
@@ -1137,57 +1363,118 @@ export default function App() {
       const cleaned = raw.replace(/\\\n/g, " ").trim();
       const parsed: any = parseCurl(cleaned);
 
-      // BODY fallback'ai (kad suveiktų --data*, net jei parse-curl nepagauna)
+      // --- Surenkam visus -d/--data* (įskaitant --data-urlencode) ---
+      const dataFlagRe =
+        /(?:^|\s)(?:-d|--data(?:-raw|-binary)?|--data-urlencode)\s+(?:'([^']*)'|"([^"]*)"|([^\s]+))/g;
+      const formLines: string[] = [];
+      let m: RegExpExecArray | null;
+      while ((m = dataFlagRe.exec(cleaned)) !== null) {
+        const val = (m[1] ?? m[2] ?? m[3] ?? "").trim();
+        if (val) formLines.push(val);
+      }
+
+      // --- Išskaidom key=value poras iš visų formLines ---
+      const splitFormPairs: string[] = [];
+      for (const line of formLines) {
+        const pairRe = /([\w.\-\[\]]+)=["']?([^"']+)["']?/g;
+        let pm: RegExpExecArray | null;
+        while ((pm = pairRe.exec(line)) !== null) {
+          const key = pm[1].trim();
+          const value = pm[2].trim();
+          splitFormPairs.push(`${key}=${value}`);
+        }
+      }
+
+      // Dekoduojam, jei buvo --data-urlencode
+      const decodedLines = splitFormPairs.map((l) => {
+        try {
+          return decodeURIComponent(l);
+        } catch {
+          return l;
+        }
+      });
+
+      const importingForm = decodedLines.length > 0;
+
+      // --- BODY fallback'ai (kai parse-curl nepagauna JSON ar form data) ---
       if (!parsed.body) {
         const m =
           cleaned.match(/--data-raw\s+(['"])([\s\S]*?)\1/) ||
           cleaned.match(/--data\s+(['"])([\s\S]*?)\1/) ||
-          cleaned.match(/--data-binary\s+(['"])([\s\S]*?)\1/);
+          cleaned.match(/--data-binary\s+(['"])([\s\S]*?)\1/) ||
+          cleaned.match(/--data-urlencode\s+(['"])([\s\S]*?)\1/);
         if (m) parsed.body = m[2];
       }
 
-      // METHOD logika: jei yra body arba --data* flagas -> POST
+      // --- METHOD logika ---
+      // išlaikome originalų metodą, jei parse-curl jį grąžino (pvz. PUT, PATCH, DELETE)
       let method = parsed.method ? String(parsed.method).toUpperCase() : "";
-      if (!method || (method === "GET" && parsed.body)) {
-        method = /--data-raw|--data\b|--data-binary|(?:\s|^)-d\b/.test(cleaned)
-          ? "POST"
-          : "GET";
+
+      // jei parseris metodo nerado, bet yra duomenų – nustatom POST
+      if (!method || method === "GET") {
+        const hasDataFlag =
+          /(--data|-d|--data-raw|--data-binary|--data-urlencode)/i.test(
+            cleaned
+          );
+        if (hasDataFlag || (parsed.body && parsed.body.trim() !== "")) {
+          method = "POST";
+        }
       }
 
-      // HEADERIŲ normalizavimas: visada naudoti "Cookie", niekada "Set-Cookie"
+      // --- HEADER normalizavimas ---
       const headersObj: Record<string, string> = {};
-
       if (parsed.header) {
         for (const [k, v] of Object.entries(
           parsed.header as Record<string, any>
         )) {
           const key = String(k);
           const val = String(v ?? "");
-          if (key.toLowerCase() === "set-cookie") {
-            headersObj["Cookie"] = val; // pervadinam
-          } else {
-            headersObj[key] = val;
-          }
+          if (key.toLowerCase() === "set-cookie") headersObj["Cookie"] = val;
+          else headersObj[key] = val;
         }
       }
 
-      // Paimti ir -b/--cookie flag'ą (jei buvo), jis laimi prieš viską – kaip Postman
+      // --- Cookie flag'ai ---
       const cookieFlag =
         cleaned.match(/(?:^|\s)(?:-b|--cookie)\s+(['"])([\s\S]*?)\1/) ||
-        cleaned.match(/(?:^|\s)(?:-b|--cookie)\s+([^\s'"][^\s]*)/); // be kabučių
+        cleaned.match(/(?:^|\s)(?:-b|--cookie)\s+([^\s'"][^\s]*)/);
       if (cookieFlag) {
-        const rawVal = String(cookieFlag[2] ?? cookieFlag[1] ?? "");
+        const rawVal = String(
+          cookieFlag[2] ?? cookieFlag[1] ?? cookieFlag[0] ?? ""
+        );
         const val = rawVal
+          .replace(/^['"]|['"]$/g, "")
           .replace(/^Cookie:\s*/i, "")
           .replace(/^Set-Cookie:\s*/i, "")
           .trim();
         if (val) headersObj["Cookie"] = val;
       }
 
-      // Užpildom UI
+      // --- Jei importuojam formą – pridedam CT ---
+      if (importingForm) {
+        const hasCT = Object.keys(headersObj).some(
+          (k) => k.toLowerCase() === "content-type"
+        );
+        if (!hasCT)
+          headersObj["Content-Type"] = "application/x-www-form-urlencoded";
+      }
+
+      // --- Užpildom UI ---
       setUrl(parsed.url || "");
       setMethod(method);
-      setBody(parsed.body ? parsed.body : "{}");
+
+      if (importingForm) {
+        setBody(decodedLines.join("\n"));
+        const formMap: Record<string, string> = {};
+        decodedLines.forEach((l) => {
+          const [k, v] = l.split("=");
+          if (k) formMap[`form.${k.trim()}`] = "string";
+        });
+        setFieldMappings(formMap);
+      } else {
+        const body = parsed.body ? String(parsed.body).trim() : "";
+        setBody(body !== "" ? body : "{}");
+      }
 
       const headerStr = Object.entries(headersObj)
         .map(([k, v]) => `${k}: ${v}`)
