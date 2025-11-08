@@ -3,13 +3,28 @@ import parseCurl from 'parse-curl';
 import React, { useEffect, useState } from 'react';
 import Button, { ButtonType } from './components/buttons/Button';
 import Input from './components/inputs/Input';
-import Select from './components/inputs/Select';
+import Select, { SelectOption } from './components/inputs/Select';
 import Textarea from './components/inputs/Textarea';
 import { datasets } from './constants/datasets';
 import { decodeMessage, detectFieldType, encodeMessage, loadProtoSchema } from './utils';
 
 type Mode = 'HTTP' | 'WSS';
 type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS';
+
+const modeOptions: SelectOption<Mode>[] = [
+  { value: 'HTTP', label: 'HTTP' },
+  { value: 'WSS', label: 'WSS' },
+];
+
+const methodOptions: SelectOption<Method>[] = [
+  { value: 'GET', label: 'GET', className: 'text-method-get!' },
+  { value: 'POST', label: 'POST', className: 'text-method-post!' },
+  { value: 'PUT', label: 'PUT', className: 'text-method-put!' },
+  { value: 'PATCH', label: 'PATCH', className: 'text-method-patch!' },
+  { value: 'DELETE', label: 'DELETE', className: 'text-method-delete!' },
+  { value: 'HEAD', label: 'HEAD', className: 'text-method-head!' },
+  { value: 'OPTIONS', label: 'OPTIONS', className: 'text-method-options!' },
+];
 
 export default function App() {
   const [mode, setMode] = useState<Mode>('HTTP');
@@ -1520,12 +1535,10 @@ export default function App() {
       <div className="flex items-center gap-2 mb-4">
         <Select
           className="font-bold"
-          value={mode}
-          options={[
-            { value: 'HTTP', label: 'HTTP' },
-            { value: 'WSS', label: 'WSS' },
-          ]}
-          onChange={(e) => setMode(e.target.value as Mode)}
+          isSearchable={false}
+          options={modeOptions}
+          value={modeOptions.find((option) => option.value == mode)}
+          onChange={(option: SelectOption<Mode>) => setMode(option.value)}
         />
         {mode === 'HTTP' && <Button onClick={() => setShowCurlModal(true)}>Import cURL</Button>}
       </div>
@@ -1533,18 +1546,12 @@ export default function App() {
       <div className="flex items-center gap-2 mb-4">
         {mode === 'HTTP' && (
           <Select
-            className="font-bold"
-            value={method}
-            options={[
-              { value: 'GET', label: 'GET', className: 'text-method-get' },
-              { value: 'POST', label: 'POST', className: 'text-method-post' },
-              { value: 'PUT', label: 'PUT', className: 'text-method-put' },
-              { value: 'PATCH', label: 'PATCH', className: 'text-method-patch' },
-              { value: 'DELETE', label: 'DELETE', className: 'text-method-delete' },
-              { value: 'HEAD', label: 'HEAD', className: 'text-method-head' },
-              { value: 'OPTIONS', label: 'OPTIONS', className: 'text-method-options' },
-            ]}
-            onChange={(e) => setMethod(e.target.value as Method)}
+            className="font-bold uppercase"
+            classNames={{ input: () => 'm-0! p-0! [&>:first-child]:uppercase' }}
+            isCreatable={true}
+            value={methodOptions.find((option) => option.value == method)}
+            options={methodOptions}
+            onChange={(option: SelectOption<Method>) => setMethod(option.value)}
           />
         )}
         <Input
@@ -1559,7 +1566,7 @@ export default function App() {
             <Button disabled={wssConnected} onClick={connectWss}>
               Connect
             </Button>
-            <Button disabled={!wssConnected} onClick={sendWss}>
+            <Button buttonType={ButtonType.SECONDARY} disabled={!wssConnected} onClick={sendWss}>
               Send
             </Button>
           </>
@@ -1602,13 +1609,15 @@ export default function App() {
             <h3>Import cURL</h3>
             <Textarea
               className={classNames('min-h-40 font-monospace', { 'border-red-600': curlError })}
-              placeholder="Paste cURL here..."
+              placeholder="Enter cURL or paste text"
               value={curlInput}
               onChange={(e) => setCurlInput(e.target.value)}
             />
             <div style={{ marginTop: '10px', display: 'flex', gap: '10px' }}>
               <Button onClick={() => handleImportCurl(curlInput)}>Import</Button>
-              <Button onClick={() => setShowCurlModal(false)}>Cancel</Button>
+              <Button buttonType={ButtonType.SECONDARY} onClick={() => setShowCurlModal(false)}>
+                Cancel
+              </Button>
             </div>
           </div>
         </div>
