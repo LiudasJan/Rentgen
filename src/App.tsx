@@ -6,7 +6,15 @@ import Input from './components/inputs/Input';
 import Select, { SelectOption } from './components/inputs/Select';
 import Textarea from './components/inputs/Textarea';
 import { datasets } from './constants/datasets';
-import { decodeMessage, detectFieldType, encodeMessage, loadProtoSchema } from './utils';
+import {
+  decodeMessage,
+  detectFieldType,
+  encodeMessage,
+  extractFieldsFromJson,
+  extractQueryParams,
+  loadProtoSchema,
+  parseHeaders,
+} from './utils';
 
 type Mode = 'HTTP' | 'WSS';
 type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS';
@@ -33,7 +41,13 @@ export default function App() {
   const [wssConnected, setWssConnected] = useState<boolean>(false);
   const [headers, setHeaders] = useState<string>('');
   const [body, setBody] = useState<string>('{}');
-
+  const [protoFile, setProtoFile] = useState<File | null>(null);
+  const [messageType, setMessageType] = useState<string>('');
+  const [httpResponse, setHttpResponse] = useState<{
+    status: string;
+    body: any;
+    headers: any;
+  } | null>(null);
   const [messages, setMessages] = useState<
     {
       direction: 'sent' | 'received' | 'system';
@@ -41,14 +55,6 @@ export default function App() {
       decoded?: string | null;
     }[]
   >([]);
-  const [protoFile, setProtoFile] = useState<File | null>(null);
-  const [messageType, setMessageType] = useState('');
-
-  const [httpResponse, setHttpResponse] = useState<{
-    status: string;
-    body: any;
-    headers: any;
-  } | null>(null);
 
   const [fieldMappings, setFieldMappings] = useState<Record<string, string>>({});
   const [testResults, setTestResults] = useState<any[]>([]);
@@ -100,129 +106,6 @@ export default function App() {
     return '█'.repeat(filled) + '░'.repeat(width - filled) + ` ${pct}%`;
   }
 
-  // --- HTTP SEND ---
-  async function sendHttp() {
-    setHttpResponse({
-      status: 'Sending...',
-      body: '',
-      headers: {},
-    });
-
-    try {
-      const hdrs = headers
-        ? Object.fromEntries(
-            headers
-              .split('\n')
-              .filter((h) => h.trim())
-              .map((h) => {
-                // jei nėra dvitaškio, tikėtina, kad tai curl -b flagas (cookies)
-                if (!h.includes(':')) {
-                  if (h.trim().startsWith('-b ')) {
-                    return ['Cookie', h.replace('-b', '').trim()];
-                  }
-                  // fallback – vis tiek įrašom kaip Cookie
-                  return ['Cookie', h.trim()];
-                }
-
-                const [k, ...rest] = h.split(':');
-                return [k.trim(), rest.join(':').trim()];
-              }),
-          )
-        : {};
-
-      let dataToSend: any = body; // raw tekstas
-
-      if (protoFile && messageType) {
-        try {
-          dataToSend = encodeMessage(messageType, JSON.parse(body));
-        } catch (err) {
-          setHttpResponse({
-            status: 'Encode error',
-            body: String(err),
-            headers: {},
-          });
-          return;
-        }
-      }
-
-      // 👇 čia vietoje axios kvietimo
-      const res = await window.electronAPI.sendHttp({
-        url,
-        method,
-        headers: hdrs,
-        body: dataToSend,
-      });
-
-      setHttpResponse(res);
-
-      // Testų generavimą remiam į request, o ne response
-      let parsedBody: any;
-      try {
-        parsedBody = JSON.parse(body);
-      } catch {
-        parsedBody = null;
-      }
-
-      if (res.status.startsWith('2') && parsedBody) {
-        // Ištraukiam visus laukus (įskaitant nested)
-        const extracted = extractFieldsFromJson(parsedBody);
-        const mappings: Record<string, string> = {};
-
-        for (const [path, type] of Object.entries(extracted)) {
-          if (type === 'DO_NOT_TEST') {
-            mappings[path] = 'do-not-test';
-          } else {
-            // jeigu ne objektas – aptinkam tipą kaip anksčiau
-            // paimame tikrą value iš path
-            const segments = path.replace(/\[(\d+)\]/g, '.$1').split('.');
-            let val: any = parsedBody;
-            for (const s of segments) {
-              if (val == null) break;
-              val = val[s];
-            }
-            mappings[path] = detectFieldType(val);
-          }
-        }
-
-        setFieldMappings(mappings);
-
-        // 🆕 Query param mapping
-        const queryParams = extractQueryParams(url);
-        const queryMappings: Record<string, string> = {};
-        for (const [key, val] of Object.entries(queryParams)) {
-          queryMappings[key] = detectFieldType(val);
-        }
-        setQueryMappings(queryMappings);
-      }
-    } catch (err: any) {
-      setHttpResponse({
-        status: 'Network Error',
-        body: String(err),
-        headers: {},
-      });
-    }
-  }
-
-  // --- WSS CONNECT ---
-  async function connectWss() {
-    if (!url.startsWith('ws')) {
-      setMessages((prev) => [{ direction: 'system', data: '❌ Please use ws:// or wss:// URL' }, ...prev]);
-      return;
-    }
-
-    const hdrs = headers
-      ? Object.fromEntries(
-          headers.split('\n').map((h) => {
-            const [k, ...rest] = h.split(':');
-            return [k.trim(), rest.join(':').trim()];
-          }),
-        )
-      : {};
-
-    // 👇 vietoj naršyklinio WebSocket – IPC į main
-    window.electronAPI.connectWss({ url, headers: hdrs });
-  }
-
   // mount
   useEffect(() => {
     if (!window.electronAPI?.onWssEvent) return; // 👈 skip browser
@@ -246,12 +129,6 @@ export default function App() {
     return () => off?.(); // unmount
   }, []);
 
-  // --- WSS SEND ---
-  function sendWss() {
-    setMessages((prev) => [{ direction: 'sent', data: body }, ...prev]);
-    window.electronAPI.sendWss(body);
-  }
-
   function updateFieldType(field: string, type: string) {
     setFieldMappings((prev) => ({ ...prev, [field]: type }));
   }
@@ -261,14 +138,7 @@ export default function App() {
     const results: any[] = [];
 
     // paimam user įvestus headerius (tokius pačius kaip sendHttp ir runDataDrivenTests)
-    const hdrs = headers
-      ? Object.fromEntries(
-          headers.split('\n').map((h) => {
-            const [k, ...rest] = h.split(':');
-            return [k.trim(), rest.join(':').trim()];
-          }),
-        )
-      : {};
+    const hdrs = parseHeaders(headers);
 
     try {
       // 1. Sensitive headers
@@ -742,14 +612,7 @@ export default function App() {
       return [];
     }
 
-    const hdrs = headers
-      ? Object.fromEntries(
-          headers.split('\n').map((h) => {
-            const [k, ...rest] = h.split(':');
-            return [k.trim(), rest.join(':').trim()];
-          }),
-        )
-      : {};
+    const hdrs = parseHeaders(headers);
 
     // paskaičiuojam kiek testų bus (BODY + QUERY)
     let total = 0;
@@ -1198,14 +1061,7 @@ export default function App() {
   // --- runCorsTest
   async function runCorsTest(): Promise<any> {
     try {
-      const hdrs = headers
-        ? Object.fromEntries(
-            headers.split('\n').map((h) => {
-              const [k, ...rest] = h.split(':');
-              return [k.trim(), rest.join(':').trim()];
-            }),
-          )
-        : {};
+      const hdrs = parseHeaders(headers);
 
       const options: RequestInit = {
         method,
@@ -1247,55 +1103,6 @@ export default function App() {
         request: { url, method, headers, body },
         response: null,
       };
-    }
-  }
-
-  /// --- extractFieldsFromJson ---
-  function extractFieldsFromJson(obj: any, prefix = ''): Record<string, string> {
-    const fields: Record<string, string> = {};
-
-    if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
-      for (const [key, value] of Object.entries(obj)) {
-        const path = prefix ? `${prefix}.${key}` : key;
-
-        if (value === null) {
-          fields[path] = 'null';
-        } else if (typeof value === 'object') {
-          // 👇 Pridedam markerį kad šitas objektas testuojamas nebus
-          fields[path] = 'DO_NOT_TEST';
-          Object.assign(fields, extractFieldsFromJson(value, path));
-        } else {
-          fields[path] = typeof value;
-        }
-      }
-    } else if (Array.isArray(obj)) {
-      obj.forEach((item, i) => {
-        const path = `${prefix}[${i}]`;
-        if (typeof item === 'object') {
-          fields[path] = 'DO_NOT_TEST';
-          Object.assign(fields, extractFieldsFromJson(item, path));
-        } else {
-          fields[path] = typeof item;
-        }
-      });
-    } else {
-      fields[prefix] = typeof obj;
-    }
-
-    return fields;
-  }
-
-  /// --- extractQueryParams ---
-  function extractQueryParams(url: string): Record<string, string> {
-    try {
-      const u = new URL(url);
-      const params: Record<string, string> = {};
-      u.searchParams.forEach((v, k) => {
-        params[k] = v;
-      });
-      return params;
-    } catch {
-      return {};
     }
   }
 
@@ -1398,14 +1205,7 @@ export default function App() {
     const total = Math.max(1, Math.min(10000, Math.floor(loadTotal)));
 
     // headers
-    const hdrs = headers
-      ? Object.fromEntries(
-          headers.split('\n').map((h) => {
-            const [k, ...rest] = h.split(':');
-            return [k.trim(), rest.join(':').trim()];
-          }),
-        )
-      : {};
+    const hdrs = parseHeaders(headers);
 
     // base body (iš UI)
     let baseBody: any = null;
@@ -1557,7 +1357,7 @@ export default function App() {
           />
         )}
         <Input
-          className="flex-auto"
+          className="flex-auto font-monospace"
           placeholder="Enter URL or paste text"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
@@ -2176,4 +1976,85 @@ export default function App() {
       )}
     </div>
   );
+
+  async function sendHttp() {
+    setHttpResponse({
+      status: 'Sending...',
+      body: '',
+      headers: {},
+    });
+
+    try {
+      const response = await window.electronAPI.sendHttp({
+        url,
+        method,
+        headers: parseHeaders(headers),
+        body: protoFile && messageType ? encodeMessage(messageType, JSON.parse(body)) : body,
+      });
+
+      setHttpResponse(response);
+
+      // Generate test mappings based on request body (not response)
+      let parsedBody;
+      try {
+        parsedBody = JSON.parse(body);
+      } catch {
+        return;
+      }
+
+      if (response.status.startsWith('2') && parsedBody) {
+        // Extract all fields from request body (including nested)
+        const extractedFields = extractFieldsFromJson(parsedBody);
+        const bodyMappings: Record<string, string> = {};
+
+        for (const [fieldPath, fieldType] of Object.entries(extractedFields)) {
+          if (fieldType === 'DO_NOT_TEST') bodyMappings[fieldPath] = 'do-not-test';
+          else {
+            // For non-object fields - detect the actual type from the value
+            // Get the actual value from the path
+            const pathSegments = fieldPath.replace(/\[(\d+)\]/g, '.$1').split('.');
+            let fieldValue = parsedBody;
+            for (const segment of pathSegments) {
+              if (fieldValue == null) break;
+              fieldValue = fieldValue[segment];
+            }
+            bodyMappings[fieldPath] = detectFieldType(fieldValue);
+          }
+        }
+
+        setFieldMappings(bodyMappings);
+
+        // Generate query parameter mappings
+        const queryParams = extractQueryParams(url);
+        const queryParamMappings: Record<string, string> = {};
+
+        for (const [key, value] of Object.entries(queryParams)) queryParamMappings[key] = detectFieldType(value);
+
+        setQueryMappings(queryParamMappings);
+      }
+    } catch (error) {
+      setHttpResponse({
+        status: 'Network Error',
+        body: String(error),
+        headers: {},
+      });
+    }
+  }
+
+  async function connectWss() {
+    if (!url.startsWith('ws')) {
+      setMessages((prevMessages) => [
+        { direction: 'system', data: '❌ Please use ws:// or wss:// URL' },
+        ...prevMessages,
+      ]);
+      return;
+    }
+
+    window.electronAPI.connectWss({ url, headers: parseHeaders(headers) });
+  }
+
+  function sendWss() {
+    setMessages((prevMessages) => [{ direction: 'sent', data: body }, ...prevMessages]);
+    window.electronAPI.sendWss(body);
+  }
 }

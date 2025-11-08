@@ -34,3 +34,30 @@ export function detectFieldType(value: unknown): FieldType {
 
   return 'string';
 }
+
+export function extractFieldsFromJson(obj: unknown, prefix = ''): Record<string, string> {
+  const fields: Record<string, string> = {};
+
+  if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
+    for (const [key, value] of Object.entries(obj)) {
+      const path = prefix ? `${prefix}.${key}` : key;
+
+      if (value === null) fields[path] = 'null';
+      else if (typeof value === 'object') {
+        // Mark this object field as not testable (objects are not tested directly, only their children)
+        fields[path] = 'DO_NOT_TEST';
+        Object.assign(fields, extractFieldsFromJson(value, path));
+      } else fields[path] = typeof value;
+    }
+  } else if (Array.isArray(obj)) {
+    obj.forEach((item, i) => {
+      const path = `${prefix}[${i}]`;
+      if (typeof item === 'object') {
+        fields[path] = 'DO_NOT_TEST';
+        Object.assign(fields, extractFieldsFromJson(item, path));
+      } else fields[path] = typeof item;
+    });
+  } else fields[prefix] = typeof obj;
+
+  return fields;
+}
