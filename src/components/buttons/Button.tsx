@@ -1,4 +1,4 @@
-import classNames from 'classnames';
+import cn from 'classnames';
 import { ButtonHTMLAttributes } from 'react';
 
 export enum ButtonType {
@@ -20,7 +20,7 @@ export default function Button({
 }: Props) {
   return (
     <button
-      className={classNames(
+      className={cn(
         'min-w-[110px] m-0 py-2 px-3 text-xs font-bold rounded-md',
         {
           'bg-button-primary border border-button-primary text-white': buttonType === ButtonType.PRIMARY,

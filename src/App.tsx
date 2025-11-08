@@ -1,15 +1,15 @@
-import classNames from 'classnames';
-import parseCurl from 'parse-curl';
 import React, { useEffect, useState } from 'react';
 import Button, { ButtonType } from './components/buttons/Button';
 import Input from './components/inputs/Input';
 import Select, { SelectOption } from './components/inputs/Select';
 import Textarea from './components/inputs/Textarea';
+import Modal from './components/modals/Modal';
 import { datasets } from './constants/datasets';
 import {
   decodeMessage,
   detectFieldType,
   encodeMessage,
+  extractCurl,
   extractFieldsFromJson,
   extractQueryParams,
   loadProtoSchema,
@@ -39,6 +39,9 @@ export default function App() {
   const [method, setMethod] = useState<Method>('GET');
   const [url, setUrl] = useState<string>('');
   const [wssConnected, setWssConnected] = useState<boolean>(false);
+  const [openCurlModal, setOpenCurlModal] = useState<boolean>(false);
+  const [curlError, setCurlError] = useState<string>('');
+  const [curl, setCurl] = useState<string>('');
   const [headers, setHeaders] = useState<string>('');
   const [body, setBody] = useState<string>('{}');
   const [protoFile, setProtoFile] = useState<File | null>(null);
@@ -55,8 +58,8 @@ export default function App() {
       decoded?: string | null;
     }[]
   >([]);
-
   const [fieldMappings, setFieldMappings] = useState<Record<string, string>>({});
+
   const [testResults, setTestResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -79,10 +82,6 @@ export default function App() {
   const [loadingSecurity, setLoadingSecurity] = useState(false);
   const [loadingPerf, setLoadingPerf] = useState(false);
   const [testsStarted, setTestsStarted] = useState(false);
-
-  const [showCurlModal, setShowCurlModal] = useState(false);
-  const [curlError, setCurlError] = useState(false);
-  const [curlInput, setCurlInput] = useState('');
 
   const [queryMappings, setQueryMappings] = useState<Record<string, string>>({});
 
@@ -937,76 +936,6 @@ export default function App() {
     return values.length % 2 !== 0 ? values[mid] : (values[mid - 1] + values[mid]) / 2;
   }
 
-  // --- Handle Import Curl ---
-  function handleImportCurl(raw: string) {
-    try {
-      if (raw.length > 200_000) throw new Error('cURL too large');
-
-      const cleaned = raw.replace(/\\\n/g, ' ').trim();
-      const parsed: any = parseCurl(cleaned);
-
-      // BODY fallback'ai (kad suveiktų --data*, net jei parse-curl nepagauna)
-      if (!parsed.body) {
-        const m =
-          cleaned.match(/--data-raw\s+(['"])([\s\S]*?)\1/) ||
-          cleaned.match(/--data\s+(['"])([\s\S]*?)\1/) ||
-          cleaned.match(/--data-binary\s+(['"])([\s\S]*?)\1/);
-        if (m) parsed.body = m[2];
-      }
-
-      // METHOD logika: jei yra body arba --data* flagas -> POST
-      let method = parsed.method ? String(parsed.method).toUpperCase() : '';
-      if (!method || (method === 'GET' && parsed.body)) {
-        method = /--data-raw|--data\b|--data-binary|(?:\s|^)-d\b/.test(cleaned) ? 'POST' : 'GET';
-      }
-
-      // HEADERIŲ normalizavimas: visada naudoti "Cookie", niekada "Set-Cookie"
-      const headersObj: Record<string, string> = {};
-
-      if (parsed.header) {
-        for (const [k, v] of Object.entries(parsed.header as Record<string, any>)) {
-          const key = String(k);
-          const val = String(v ?? '');
-          if (key.toLowerCase() === 'set-cookie') {
-            headersObj['Cookie'] = val; // pervadinam
-          } else {
-            headersObj[key] = val;
-          }
-        }
-      }
-
-      // Paimti ir -b/--cookie flag'ą (jei buvo), jis laimi prieš viską – kaip Postman
-      const cookieFlag =
-        cleaned.match(/(?:^|\s)(?:-b|--cookie)\s+(['"])([\s\S]*?)\1/) ||
-        cleaned.match(/(?:^|\s)(?:-b|--cookie)\s+([^\s'"][^\s]*)/); // be kabučių
-      if (cookieFlag) {
-        const rawVal = String(cookieFlag[2] ?? cookieFlag[1] ?? '');
-        const val = rawVal
-          .replace(/^Cookie:\s*/i, '')
-          .replace(/^Set-Cookie:\s*/i, '')
-          .trim();
-        if (val) headersObj['Cookie'] = val;
-      }
-
-      // Užpildom UI
-      setUrl(parsed.url || '');
-      setMethod(method as Method);
-      setBody(parsed.body ? parsed.body : '{}');
-
-      const headerStr = Object.entries(headersObj)
-        .map(([k, v]) => `${k}: ${v}`)
-        .join('\n');
-      setHeaders(headerStr);
-
-      setShowCurlModal(false);
-      setCurlInput('');
-      setCurlError(false);
-    } catch (err) {
-      console.error('cURL import failed', err);
-      setCurlError(true);
-    }
-  }
-
   // --- To cURL + copy ---
   function copyAsCurl(req: { url: string; method: string; headers?: any; body?: any }) {
     let curl = `curl -X ${req.method || 'GET'} '${req.url}'`;
@@ -1341,7 +1270,29 @@ export default function App() {
           value={modeOptions.find((option) => option.value == mode)}
           onChange={(option: SelectOption<Mode>) => setMode(option.value)}
         />
-        {mode === 'HTTP' && <Button onClick={() => setShowCurlModal(true)}>Import cURL</Button>}
+        {mode === 'HTTP' && (
+          <>
+            <Button onClick={() => setOpenCurlModal(true)}>Import cURL</Button>
+            <Modal isOpen={openCurlModal} onClose={() => setOpenCurlModal(false)}>
+              <div className="flex flex-col gap-4">
+                <h3 className="m-0">Import cURL</h3>
+                <Textarea
+                  className="min-h-40 font-monospace"
+                  placeholder="Enter cURL or paste text"
+                  value={curl}
+                  onChange={(e) => setCurl(e.target.value)}
+                />
+                {curlError && <div className="text-xs text-red-600">{curlError}</div>}
+                <div className="flex items-center justify-end gap-4">
+                  <Button onClick={importCurl}>Import</Button>
+                  <Button buttonType={ButtonType.SECONDARY} onClick={() => setOpenCurlModal(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            </Modal>
+          </>
+        )}
       </div>
 
       <div className="flex items-center gap-2 mb-4">
@@ -1403,27 +1354,6 @@ export default function App() {
           Beautify
         </Button>
       </div>
-
-      {/* showCurlModal */}
-      {showCurlModal && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <h3>Import cURL</h3>
-            <Textarea
-              className={classNames('min-h-40 font-monospace', { 'border-red-600': curlError })}
-              placeholder="Enter cURL or paste text"
-              value={curlInput}
-              onChange={(e) => setCurlInput(e.target.value)}
-            />
-            <div style={{ marginTop: '10px', display: 'flex', gap: '10px' }}>
-              <Button onClick={() => handleImportCurl(curlInput)}>Import</Button>
-              <Button buttonType={ButtonType.SECONDARY} onClick={() => setShowCurlModal(false)}>
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Protobuf controls */}
       <div className="protobuf-section" style={{ marginTop: '10px' }}>
@@ -1976,6 +1906,30 @@ export default function App() {
       )}
     </div>
   );
+
+  function importCurl() {
+    try {
+      if (curl.length > 200_000) throw new Error('cURL too large');
+
+      const { url, method, headers, body } = extractCurl(curl);
+
+      setUrl(url);
+      setMethod(method as Method);
+      setBody(body ? body : '{}');
+      setHeaders(
+        Object.entries(headers)
+          .map(([k, v]) => `${k}: ${v}`)
+          .join('\n'),
+      );
+
+      setOpenCurlModal(false);
+      setCurl('');
+      setCurlError('');
+    } catch (error) {
+      console.error('cURL import failed', error);
+      setCurlError('The cURL command you provided appears to be invalid. Please check it and try again.');
+    }
+  }
 
   async function sendHttp() {
     setHttpResponse({

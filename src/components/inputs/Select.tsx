@@ -1,5 +1,6 @@
 import ReactSelect, { ClassNamesConfig, GroupBase, Props as SelectProps } from 'react-select';
 import CreatableSelect from 'react-select/creatable';
+import cn from 'classnames';
 
 export interface SelectOption<T> {
   value: T;
@@ -21,9 +22,13 @@ export default function Select({ classNames, isCreatable, ...otherProps }: Props
     menu: () => 'm-0! rounded-md!',
     menuList: () => 'p-0!',
     option: ({ data, isSelected }) =>
-      `first:rounded-t-md! last:rounded-b-md! ${(data as SelectOption<unknown>).className ?? ''} ${isSelected ? 'text-white!' : ''}`,
+      cn(
+        'first:rounded-t-md! last:rounded-b-md!',
+        { 'text-white!': isSelected },
+        (data as SelectOption<unknown>).className,
+      ),
     placeholder: () => 'm-0!',
-    singleValue: ({ data }) => `m-0! ${(data as SelectOption<unknown>).className ?? ''}`,
+    singleValue: ({ data }) => cn('m-0!', (data as SelectOption<unknown>).className),
     valueContainer: () => 'py-2! px-3!',
     ...classNames,
   };

@@ -1,4 +1,4 @@
-import classNames from 'classnames';
+import cn from 'classnames';
 import { InputHTMLAttributes } from 'react';
 
 export default function Input({
@@ -9,7 +9,7 @@ export default function Input({
 }: InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
-      className={classNames('m-0 py-2 px-3 text-xs border border-border rounded-md', className)}
+      className={cn('m-0 py-2 px-3 text-xs border border-border rounded-md outline-none', className)}
       disabled={disabled}
       type={type}
       {...otherProps}
