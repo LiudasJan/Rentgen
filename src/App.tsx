@@ -1060,14 +1060,9 @@ export default function App() {
     current[parts[parts.length - 1]] = value;
   }
 
-  // deep-clone helper
-  function deepClone<T>(x: T): T {
-    return JSON.parse(JSON.stringify(x));
-  }
-
   // pritaiko random mapping'ą taip pat, kaip data-driven cikle
   function buildRandomizedBody(baseBody: any) {
-    const newBody = deepClone(baseBody);
+    const newBody = JSON.parse(JSON.stringify(baseBody));
 
     // perrašom visus random laukus kiekvienam request'ui
     for (const [f, t] of Object.entries(fieldMappings)) {
