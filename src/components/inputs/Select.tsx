@@ -22,6 +22,7 @@ export default function Select({ classNames, isCreatable, ...otherProps }: Props
     menuList: () => 'p-0!',
     option: ({ data, isSelected }) =>
       `first:rounded-t-md! last:rounded-b-md! ${(data as SelectOption<unknown>).className ?? ''} ${isSelected ? 'text-white!' : ''}`,
+    placeholder: () => 'm-0!',
     singleValue: ({ data }) => `m-0! ${(data as SelectOption<unknown>).className ?? ''}`,
     valueContainer: () => 'py-2! px-3!',
     ...classNames,

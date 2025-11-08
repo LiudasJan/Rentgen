@@ -1537,6 +1537,7 @@ export default function App() {
           className="font-bold"
           isSearchable={false}
           options={modeOptions}
+          placeholder="MODE"
           value={modeOptions.find((option) => option.value == mode)}
           onChange={(option: SelectOption<Mode>) => setMode(option.value)}
         />
@@ -1549,8 +1550,9 @@ export default function App() {
             className="font-bold uppercase"
             classNames={{ input: () => 'm-0! p-0! [&>:first-child]:uppercase' }}
             isCreatable={true}
-            value={methodOptions.find((option) => option.value == method)}
             options={methodOptions}
+            placeholder="METHOD"
+            value={methodOptions.find((option) => option.value == method)}
             onChange={(option: SelectOption<Method>) => setMethod(option.value)}
           />
         )}
