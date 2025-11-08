@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import Button, { ButtonType } from './components/buttons/Button';
 import Input from './components/inputs/Input';
 import Select, { SelectOption } from './components/inputs/Select';
+import SimpleSelect from './components/inputs/SimpleSelect';
 import Textarea from './components/inputs/Textarea';
 import Modal from './components/modals/Modal';
 import ResponsePanel from './components/panels/ResponsePanel';
@@ -36,6 +37,21 @@ const methodOptions: SelectOption<Method>[] = [
   { value: 'OPTIONS', label: 'OPTIONS', className: 'text-method-options!' },
 ];
 
+const parameterOptions: SelectOption<string>[] = [
+  { value: 'do-not-test', label: 'Do not test' },
+  { value: 'random32', label: 'Random string 32' },
+  { value: 'randomInt', label: 'Random integer' },
+  { value: 'randomEmail', label: 'Random email' },
+  { value: 'string', label: 'String' },
+  { value: 'email', label: 'Email' },
+  { value: 'phone', label: 'Phone' },
+  { value: 'url', label: 'URL' },
+  { value: 'number', label: 'Number' },
+  { value: 'boolean', label: 'Boolean' },
+  { value: 'currency', label: 'Currency' },
+  { value: 'date_yyyy_mm_dd', label: 'Date (YYYY-MM-DD)' },
+];
+
 export default function App() {
   const [mode, setMode] = useState<Mode>('HTTP');
   const [method, setMethod] = useState<Method>('GET');
@@ -61,6 +77,7 @@ export default function App() {
     }[]
   >([]);
   const [fieldMappings, setFieldMappings] = useState<Record<string, string>>({});
+  const [queryMappings, setQueryMappings] = useState<Record<string, string>>({});
 
   const [testResults, setTestResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -84,8 +101,6 @@ export default function App() {
   const [loadingSecurity, setLoadingSecurity] = useState(false);
   const [loadingPerf, setLoadingPerf] = useState(false);
   const [testsStarted, setTestsStarted] = useState(false);
-
-  const [queryMappings, setQueryMappings] = useState<Record<string, string>>({});
 
   // Load test UI/rezultatai
   const [loadConcurrency, setLoadConcurrency] = useState(10); // threads
@@ -129,10 +144,6 @@ export default function App() {
     });
     return () => off?.(); // unmount
   }, []);
-
-  function updateFieldType(field: string, type: string) {
-    setFieldMappings((prev) => ({ ...prev, [field]: type }));
-  }
 
   // --- SECURITY TESTS ---
   async function runSecurityTests(): Promise<any[]> {
@@ -1357,7 +1368,7 @@ export default function App() {
         </Button>
       </div>
 
-      <div>
+      <div className="mb-4">
         <label className="block mb-2 font-bold text-sm">
           Protobuf schema & message type <span className="font-normal text-gray-500/80">(optional)</span>:
         </label>
@@ -1400,7 +1411,7 @@ export default function App() {
       </div>
 
       {mode === 'HTTP' && httpResponse && (
-        <ResponsePanel className="my-4" title="Response">
+        <ResponsePanel className="mb-4" title="Response">
           <div className="py-2 px-3 font-bold bg-body border-y border-border">{httpResponse.status}</div>
           <div className="max-h-[400px] py-2 px-3 overflow-y-auto">
             <h4 className="m-0">Headers</h4>
@@ -1414,7 +1425,7 @@ export default function App() {
       )}
 
       {mode === 'WSS' && messages.length > 0 && (
-        <ResponsePanel className="my-4" title="Messages">
+        <ResponsePanel className="mb-4" title="Messages">
           <div className="max-h-[400px] py-2 px-3 border-t border-border overflow-y-auto">
             {messages.map((message, index) => (
               <div
@@ -1444,67 +1455,46 @@ export default function App() {
         </ResponsePanel>
       )}
 
-      <div className="mb-4 grid grid-cols-2 gap-6 items-start">
-        {/* Body mapping kairėje */}
-        {Object.keys(queryMappings).length > 0 && (
-          <div className="mapping-column">
-            <h3>Body Parameters</h3>
-            {Object.entries(fieldMappings).map(([field, type]) => (
-              <div key={field} className="mapping-row">
-                <span className="mapping-key">{field}</span>
-                <select value={type} onChange={(e) => updateFieldType(field, e.target.value)}>
-                  <option value="do-not-test">Do not test</option>
-                  <option value="random32">Random string 32</option>
-                  <option value="randomInt">Random integer</option>
-                  <option value="randomEmail">Random email</option>
-                  <option value="string">String</option>
-                  <option value="email">Email</option>
-                  <option value="phone">Phone</option>
-                  <option value="url">URL</option>
-                  <option value="number">Number</option>
-                  <option value="boolean">Boolean</option>
-                  <option value="currency">Currency</option>
-                  <option value="date_yyyy_mm_dd">Date (YYYY-MM-DD)</option>
-                </select>
-              </div>
-            ))}
-          </div>
-        )}
+      {(Object.keys(fieldMappings).length > 0 || Object.keys(queryMappings).length > 0) && (
+        <div className="mb-4 grid grid-cols-2 gap-4 items-stretch">
+          {Object.keys(fieldMappings).length > 0 && (
+            <ResponsePanel title="Body Parameters">
+              {Object.entries(fieldMappings).map(([field, type]) => (
+                <div key={field} className="pb-3 first-of-type:pt-3 px-3 flex items-center justify-between">
+                  <span className="font-monospace text-ellipsis text-nowrap overflow-hidden">{field}</span>
+                  <SimpleSelect
+                    className="rounded-none! p-1! outline-none"
+                    options={parameterOptions}
+                    value={type}
+                    onChange={(e) =>
+                      setFieldMappings((prevFieldMappings) => ({ ...prevFieldMappings, [field]: e.target.value }))
+                    }
+                  />
+                </div>
+              ))}
+            </ResponsePanel>
+          )}
 
-        {/* Query mapping dešinėje */}
-        {Object.keys(queryMappings).length > 0 && (
-          <div className="mapping-column">
-            <h3>Query Parameters</h3>
-            {Object.entries(queryMappings).map(([param, type]) => (
-              <div key={param} className="mapping-row">
-                <span className="mapping-key">{param}</span>
-                <select
-                  value={type}
-                  onChange={(e) =>
-                    setQueryMappings((prev) => ({
-                      ...prev,
-                      [param]: e.target.value,
-                    }))
-                  }
-                >
-                  <option value="do-not-test">Do not test</option>
-                  <option value="random32">Random string 32</option>
-                  <option value="randomInt">Random integer</option>
-                  <option value="randomEmail">Random email</option>
-                  <option value="string">String</option>
-                  <option value="email">Email</option>
-                  <option value="phone">Phone</option>
-                  <option value="url">URL</option>
-                  <option value="number">Number</option>
-                  <option value="boolean">Boolean</option>
-                  <option value="currency">Currency</option>
-                  <option value="date_yyyy_mm_dd">Date (YYYY-MM-DD)</option>
-                </select>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+          {Object.keys(queryMappings).length > 0 && (
+            <ResponsePanel title="Query Parameters">
+              {Object.entries(queryMappings).map(([param, type]) => (
+                <div key={param} className="pb-3 first-of-type:pt-3 px-3 flex items-center justify-between">
+                  <span className="font-monospace text-ellipsis text-nowrap overflow-hidden">{param}</span>
+                  <SimpleSelect
+                    className="rounded-none! p-1! outline-none"
+                    options={parameterOptions}
+                    value={type}
+                    onChange={(e) =>
+                      setQueryMappings((prevQueryMappings) => ({ ...prevQueryMappings, [param]: e.target.value }))
+                    }
+                  />
+                </div>
+              ))}
+            </ResponsePanel>
+          )}
+        </div>
+      )}
+
       <Button disabled={loading} onClick={runAllTests}>
         {loading ? `Running tests... (${currentTest}/${totalTests})` : 'Generate & Run Tests'}
       </Button>
