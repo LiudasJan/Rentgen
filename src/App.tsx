@@ -1,9 +1,11 @@
+import cn from 'classnames';
 import React, { useEffect, useState } from 'react';
 import Button, { ButtonType } from './components/buttons/Button';
 import Input from './components/inputs/Input';
 import Select, { SelectOption } from './components/inputs/Select';
 import Textarea from './components/inputs/Textarea';
 import Modal from './components/modals/Modal';
+import ResponsePanel from './components/panels/ResponsePanel';
 import { datasets } from './constants/datasets';
 import {
   decodeMessage,
@@ -1355,104 +1357,118 @@ export default function App() {
         </Button>
       </div>
 
-      {/* Protobuf controls */}
-      <div className="protobuf-section" style={{ marginTop: '10px' }}>
-        <label style={{ display: 'block', marginBottom: '6px', fontWeight: 'bold' }}>
-          Protobuf schema & message type (optional):
+      <div>
+        <label className="block mb-2 font-bold text-sm">
+          Protobuf schema & message type <span className="font-normal text-gray-500/80">(optional)</span>:
         </label>
-
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-          <input
+        <div className="flex items-center gap-2">
+          <Input
             type="file"
             accept=".proto"
             onChange={async (e) => {
-              if (e.target.files?.length) {
-                try {
-                  await loadProtoSchema(e.target.files[0]);
-                  setProtoFile(e.target.files[0]);
-                  setMessages((prev) => [{ direction: 'system', data: '📂 Proto schema loaded' }, ...prev]);
-                } catch (err) {
-                  setMessages((prev) => [
-                    {
-                      direction: 'system',
-                      data: '❌ Failed to parse proto: ' + err,
-                    },
-                    ...prev,
-                  ]);
-                }
+              const file = e.target.files?.[0];
+              if (!file) return;
+
+              try {
+                await loadProtoSchema(file);
+
+                setProtoFile(file);
+                setMessages((prevMessages) => [
+                  { direction: 'system', data: '📂 Proto schema loaded' },
+                  ...prevMessages,
+                ]);
+              } catch (error) {
+                setMessages((prevMessages) => [
+                  {
+                    direction: 'system',
+                    data: '❌ Failed to parse proto: ' + error,
+                  },
+                  ...prevMessages,
+                ]);
               }
             }}
           />
 
-          <input
-            type="text"
-            placeholder="MessageType (e.g. mypackage.MyMessage)"
+          <Input
+            className="flex-auto font-monospace"
+            placeholder="Message type (e.g. mypackage.MyMessage)"
             value={messageType}
             onChange={(e) => setMessageType(e.target.value)}
-            style={{ flex: 1, minWidth: '300px' }} // ilgesnis, kad tilptų visas pavadinimas
           />
         </div>
       </div>
 
-      {/* Response panel */}
       {mode === 'HTTP' && httpResponse && (
-        <div className="response-panel">
-          <h3>Response</h3>
-          <div className="status-line">{httpResponse.status}</div>
-
-          <h4>Headers</h4>
-          <pre className="wrap">{JSON.stringify(httpResponse.headers, null, 2)}</pre>
-
-          <h4>Body</h4>
-          <pre className="wrap">
-            {typeof httpResponse.body === 'string' ? httpResponse.body : JSON.stringify(httpResponse.body, null, 2)}
-          </pre>
-        </div>
+        <ResponsePanel className="my-4" title="Response">
+          <div className="py-2 px-3 font-bold bg-body border-y border-border">{httpResponse.status}</div>
+          <div className="max-h-[400px] py-2 px-3 overflow-y-auto">
+            <h4 className="m-0">Headers</h4>
+            <pre className="my-4 whitespace-pre-wrap">{JSON.stringify(httpResponse.headers, null, 2)}</pre>
+            <h4 className="m-0 pt-2 border-t border-border">Body</h4>
+            <pre className="my-4 whitespace-pre-wrap">
+              {typeof httpResponse.body === 'string' ? httpResponse.body : JSON.stringify(httpResponse.body, null, 2)}
+            </pre>
+          </div>
+        </ResponsePanel>
       )}
 
-      {/* WSS messages */}
-      {mode === 'WSS' && (
-        <div className="response-panel">
-          <h3>Messages</h3>
-          {messages.map((m, i) => (
-            <div key={i} className={`msg ${m.direction}`}>
-              <span className="arrow">{m.direction === 'sent' ? '➡' : m.direction === 'received' ? '⬅' : '⚠'}</span>
-              <pre>{m.data}</pre>
-              {m.decoded && (
-                <>
-                  <div className="decoded-label">Decoded Protobuf:</div>
-                  <pre>{m.decoded}</pre>
-                </>
-              )}
-            </div>
-          ))}
-        </div>
+      {mode === 'WSS' && messages.length > 0 && (
+        <ResponsePanel className="my-4" title="Messages">
+          <div className="max-h-[400px] py-2 px-3 border-t border-border overflow-y-auto">
+            {messages.map((message, index) => (
+              <div
+                key={index}
+                className={cn('pt-2 nth-[2n]:border-b last:border-none border-border', {
+                  'nth-[1n]:border-b': message.direction !== 'sent' && message.direction !== 'received',
+                })}
+              >
+                <span
+                  className={cn('font-bold', {
+                    'text-blue-500': message.direction === 'sent',
+                    'text-green-500': message.direction === 'received',
+                  })}
+                >
+                  {message.direction === 'sent' ? '➡' : message.direction === 'received' ? '⬅' : '⚠'}
+                </span>
+                <pre className="mt-0 ml-4">{message.data}</pre>
+                {message.decoded && (
+                  <>
+                    <div>Decoded Protobuf:</div>
+                    <pre>{message.decoded}</pre>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        </ResponsePanel>
       )}
 
-      <div className="mapping-sections">
+      <div className="mb-4 grid grid-cols-2 gap-6 items-start">
         {/* Body mapping kairėje */}
-        <div className="mapping-column">
-          <h3>Body Parameters</h3>
-          {Object.entries(fieldMappings).map(([field, type]) => (
-            <div key={field} className="mapping-row">
-              <span className="mapping-key">{field}</span>
-              <select value={type} onChange={(e) => updateFieldType(field, e.target.value)}>
-                <option value="do-not-test">Do not test</option>
-                <option value="random32">Random string 32</option>
-                <option value="randomInt">Random integer</option>
-                <option value="randomEmail">Random email</option>
-                <option value="string">String</option>
-                <option value="email">Email</option>
-                <option value="phone">Phone</option>
-                <option value="url">URL</option>
-                <option value="number">Number</option>
-                <option value="boolean">Boolean</option>
-                <option value="currency">Currency</option>
-                <option value="date_yyyy_mm_dd">Date (YYYY-MM-DD)</option>
-              </select>
-            </div>
-          ))}
-        </div>
+        {Object.keys(queryMappings).length > 0 && (
+          <div className="mapping-column">
+            <h3>Body Parameters</h3>
+            {Object.entries(fieldMappings).map(([field, type]) => (
+              <div key={field} className="mapping-row">
+                <span className="mapping-key">{field}</span>
+                <select value={type} onChange={(e) => updateFieldType(field, e.target.value)}>
+                  <option value="do-not-test">Do not test</option>
+                  <option value="random32">Random string 32</option>
+                  <option value="randomInt">Random integer</option>
+                  <option value="randomEmail">Random email</option>
+                  <option value="string">String</option>
+                  <option value="email">Email</option>
+                  <option value="phone">Phone</option>
+                  <option value="url">URL</option>
+                  <option value="number">Number</option>
+                  <option value="boolean">Boolean</option>
+                  <option value="currency">Currency</option>
+                  <option value="date_yyyy_mm_dd">Date (YYYY-MM-DD)</option>
+                </select>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Query mapping dešinėje */}
         {Object.keys(queryMappings).length > 0 && (

@@ -123,31 +123,6 @@
   margin-top: 10px;
 }
 
-.status-line {
-  padding: 8px 12px;
-  border-bottom: 1px solid #ddd;
-  background: #f3f3f3;
-  font-weight: bold;
-}
-
-/* Messages */
-.msg {
-  display: flex;
-  align-items: flex-start;
-  margin-bottom: 5px;
-  font-family: monospace;
-}
-.msg .arrow {
-  margin-right: 5px;
-  font-weight: bold;
-}
-.msg.sent .arrow {
-  color: blue;
-}
-.msg.received .arrow {
-  color: green;
-}
-
 /* Test results */
 .results-table {
   width: 100%;
@@ -229,13 +204,6 @@
   box-shadow: inset 0 0 0 9999px rgba(33, 133, 208, 0.06);
 }
 
-/* Universalus wrap response */
-pre.wrap {
-  white-space: pre-wrap;
-  word-break: break-word;
-  overflow-x: auto;
-}
-
 .results-table tr.manual {
   background-color: #f4f4f4;
   color: #666;
@@ -259,12 +227,6 @@ pre.wrap {
   background: #ddd;
 }
 
-.mapping-sections {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
-  align-items: start;
-}
 .mapping-column {
   background: #f8f8f8;
   padding: 12px;

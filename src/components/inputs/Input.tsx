@@ -9,7 +9,11 @@ export default function Input({
 }: InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
-      className={cn('m-0 py-2 px-3 text-xs border border-border rounded-md outline-none', className)}
+      className={cn(
+        'm-0 py-2 px-3 text-xs border border-border rounded-md outline-none',
+        { 'py-1.5!': type === 'file' },
+        className,
+      )}
       disabled={disabled}
       type={type}
       {...otherProps}
