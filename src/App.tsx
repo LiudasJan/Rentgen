@@ -1,3 +1,4 @@
+import { Method } from 'axios';
 import cn from 'classnames';
 import React, { useEffect, useState } from 'react';
 import Button, { ButtonType } from './components/buttons/Button';
@@ -8,6 +9,7 @@ import Textarea from './components/inputs/Textarea';
 import Modal from './components/modals/Modal';
 import ResponsePanel from './components/panels/ResponsePanel';
 import { datasets } from './constants/datasets';
+import { runCorsTest } from './tests';
 import {
   decodeMessage,
   detectFieldType,
@@ -20,7 +22,6 @@ import {
 } from './utils';
 
 type Mode = 'HTTP' | 'WSS';
-type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS';
 
 const modeOptions: SelectOption<Mode>[] = [
   { value: 'HTTP', label: 'HTTP' },
@@ -150,14 +151,14 @@ export default function App() {
     const results: any[] = [];
 
     // paimam user įvestus headerius (tokius pačius kaip sendHttp ir runDataDrivenTests)
-    const hdrs = parseHeaders(headers);
+    const parsedHeaders = parseHeaders(headers);
 
     try {
       // 1. Sensitive headers
       const base = await window.electronAPI.sendHttp({
         url,
         method,
-        headers: hdrs,
+        headers: parsedHeaders,
         body,
       });
 
@@ -173,7 +174,7 @@ export default function App() {
         expected: 'Server header should not expose version',
         actual: serverHeader || 'No Server header',
         status: hasVersionNumber ? '🔴 Fail' : '✅ Pass',
-        request: { url, method: 'GET', headers: hdrs },
+        request: { url, method: 'GET', headers: parsedHeaders },
         response: base,
       });
 
@@ -202,7 +203,7 @@ export default function App() {
         expected: 'X-Frame-Options DENY/SAMEORIGIN or CSP frame-ancestors',
         actual: actualClickjacking,
         status: clickjackingStatus,
-        request: { url, method, headers: hdrs, body },
+        request: { url, method, headers: parsedHeaders, body },
         response: base,
       });
 
@@ -222,7 +223,7 @@ export default function App() {
         expected: 'Header should be present on HTTPS endpoints',
         actual: actualHsts,
         status: hstsStatus,
-        request: { url, method, headers: hdrs, body },
+        request: { url, method, headers: parsedHeaders, body },
         response: base,
       });
 
@@ -247,7 +248,7 @@ export default function App() {
         expected: 'X-Content-Type-Options: nosniff',
         actual: actualXcto,
         status: xctoStatus,
-        request: { url, method, headers: hdrs, body },
+        request: { url, method, headers: parsedHeaders, body },
         response: base,
       });
 
@@ -278,7 +279,7 @@ export default function App() {
         expected: 'Cache-Control: no-store/private',
         actual: actualCache,
         status: cacheStatus,
-        request: { url, method, headers: hdrs },
+        request: { url, method, headers: parsedHeaders },
         response: base,
       });
 
@@ -286,7 +287,7 @@ export default function App() {
       const opt = await window.electronAPI.sendHttp({
         url,
         method: 'OPTIONS',
-        headers: hdrs,
+        headers: parsedHeaders,
         body: null,
       });
 
@@ -306,17 +307,17 @@ export default function App() {
         expected: '200 or 204 + Allow header',
         actual: opt.status,
         status: okOptions ? '✅ Pass' : '❌ Fail',
-        request: { url, method: 'OPTIONS', headers: hdrs },
+        request: { url, method: 'OPTIONS', headers: parsedHeaders },
         response: opt,
       });
 
-      await buildCrudRowsFromOptions(allowHeader, url, hdrs, base, okOptions);
+      await buildCrudRowsFromOptions(allowHeader, url, parsedHeaders, base, okOptions);
 
       // 7. Unsupported method
       const weird = await window.electronAPI.sendHttp({
         url,
         method: 'FOOBAR',
-        headers: hdrs, // ✅ originalūs headeriai
+        headers: parsedHeaders, // ✅ originalūs headeriai
         body, // ✅ originalus body
       });
       const code = weird.status.split(' ')[0];
@@ -326,7 +327,7 @@ export default function App() {
         expected: '405 Method Not Allowed (or 501)',
         actual: weird.status,
         status: okWeird ? '✅ Pass' : '❌ Fail',
-        request: { url, method: 'FOOBAR', headers: hdrs, body },
+        request: { url, method: 'FOOBAR', headers: parsedHeaders, body },
         response: weird,
       });
     } catch (err) {
@@ -335,11 +336,11 @@ export default function App() {
         expected: 'Should respond',
         actual: String(err),
         status: '🔴 Fail',
-        request: { url, headers: hdrs, body },
+        request: { url, headers: parsedHeaders, body },
         response: null,
       });
 
-      const corsResult = await runCorsTest();
+      const corsResult = await runCorsTest(method, url, parsedHeaders, body);
       results.push(corsResult);
     }
 
@@ -348,7 +349,7 @@ export default function App() {
     const tooLarge = await window.electronAPI.sendHttp({
       url,
       method: 'POST', // dažniausiai POST su body
-      headers: { ...hdrs, 'Content-Type': 'application/json' },
+      headers: { ...parsedHeaders, 'Content-Type': 'application/json' },
       body: bigBody,
     });
 
@@ -359,14 +360,14 @@ export default function App() {
       expected: '413 Payload Too Large',
       actual: tooLarge.status,
       status: okLarge ? '✅ Pass' : '❌ Fail',
-      request: { url, method: 'POST', headers: hdrs, body: '[10MB string]' },
+      request: { url, method: 'POST', headers: parsedHeaders, body: '[10MB string]' },
       response: tooLarge,
     });
 
     // 9. Missing authorization cookie/token
     try {
       const minimalHeaders: Record<string, string> = {};
-      for (const [k, v] of Object.entries(hdrs)) {
+      for (const [k, v] of Object.entries(parsedHeaders)) {
         const key = k.toLowerCase();
         if (key === 'accept' || key === 'content-type') {
           minimalHeaders[k] = v;
@@ -403,11 +404,11 @@ export default function App() {
     }
 
     // 10. INFO CORS check
-    const corsResult = await runCorsTest();
+    const corsResult = await runCorsTest(method, url, parsedHeaders, body);
     results.push(corsResult);
 
     // 11. 404 Not Found check
-    const notFoundTest = await runNotFoundTest(url, method, hdrs, body);
+    const notFoundTest = await runNotFoundTest(url, method, parsedHeaders, body);
     results.push(notFoundTest);
 
     // --- Manual checks (pilka spalva) ---
@@ -998,54 +999,6 @@ export default function App() {
         {copied ? 'Copied ✅' : 'Copy cURL'}
       </button>
     );
-  }
-
-  // --- runCorsTest
-  async function runCorsTest(): Promise<any> {
-    try {
-      const hdrs = parseHeaders(headers);
-
-      const options: RequestInit = {
-        method,
-        mode: 'cors',
-        headers: hdrs,
-      };
-
-      if (body && !['GET', 'HEAD'].includes(method.toUpperCase())) {
-        options.body = body;
-      }
-
-      const res = await fetch(url, options);
-
-      return {
-        name: 'CORS policy check',
-        expected: 'Detect if API is public or private',
-        actual: 'No CORS error → API is public (accessible from any domain)',
-        status: '🔵 Info',
-        request: { url, method, headers: hdrs, body },
-        response: { status: res.status },
-      };
-    } catch (err: any) {
-      const msg = String(err?.message || err);
-      if (msg.includes('CORS') || msg.includes('Failed to fetch')) {
-        return {
-          name: 'CORS policy check',
-          expected: 'Detect if API is public or private',
-          actual: 'CORS error → API is private (restricted by origin)',
-          status: '🔵 Info',
-          request: { url, method, headers, body },
-          response: null,
-        };
-      }
-      return {
-        name: 'CORS policy check',
-        expected: 'Detect if API is public or private',
-        actual: 'Unexpected error: ' + msg,
-        status: '🔵 Info',
-        request: { url, method, headers, body },
-        response: null,
-      };
-    }
   }
 
   /// --- setDeepValue ---
