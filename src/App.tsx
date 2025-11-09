@@ -1,40 +1,85 @@
-import React, { useState, useRef, useEffect } from "react";
-import axios from "axios";
-import { loadProto, encodeMessage, decodeMessage } from "./protobufHelper";
-import { detectFieldType } from "./fieldDetectors";
-import { datasets } from "./datasets";
-import parseCurl from "parse-curl";
-import "./App.css";
+import { Method } from 'axios';
+import cn from 'classnames';
+import React, { useEffect, useState } from 'react';
+import Button, { ButtonType } from './components/buttons/Button';
+import Input from './components/inputs/Input';
+import Select, { SelectOption } from './components/inputs/Select';
+import SimpleSelect from './components/inputs/SimpleSelect';
+import Textarea from './components/inputs/Textarea';
+import Modal from './components/modals/Modal';
+import ResponsePanel from './components/panels/ResponsePanel';
+import { datasets } from './constants/datasets';
+import { runCorsTest } from './tests';
+import {
+  decodeMessage,
+  detectFieldType,
+  encodeMessage,
+  extractCurl,
+  extractFieldsFromJson,
+  extractQueryParams,
+  loadProtoSchema,
+  parseHeaders,
+} from './utils';
+
+type Mode = 'HTTP' | 'WSS';
+
+const modeOptions: SelectOption<Mode>[] = [
+  { value: 'HTTP', label: 'HTTP' },
+  { value: 'WSS', label: 'WSS' },
+];
+
+const methodOptions: SelectOption<Method>[] = [
+  { value: 'GET', label: 'GET', className: 'text-method-get!' },
+  { value: 'POST', label: 'POST', className: 'text-method-post!' },
+  { value: 'PUT', label: 'PUT', className: 'text-method-put!' },
+  { value: 'PATCH', label: 'PATCH', className: 'text-method-patch!' },
+  { value: 'DELETE', label: 'DELETE', className: 'text-method-delete!' },
+  { value: 'HEAD', label: 'HEAD', className: 'text-method-head!' },
+  { value: 'OPTIONS', label: 'OPTIONS', className: 'text-method-options!' },
+];
+
+const parameterOptions: SelectOption<string>[] = [
+  { value: 'do-not-test', label: 'Do not test' },
+  { value: 'random32', label: 'Random string 32' },
+  { value: 'randomInt', label: 'Random integer' },
+  { value: 'randomEmail', label: 'Random email' },
+  { value: 'string', label: 'String' },
+  { value: 'email', label: 'Email' },
+  { value: 'phone', label: 'Phone' },
+  { value: 'url', label: 'URL' },
+  { value: 'number', label: 'Number' },
+  { value: 'boolean', label: 'Boolean' },
+  { value: 'currency', label: 'Currency' },
+  { value: 'date_yyyy_mm_dd', label: 'Date (YYYY-MM-DD)' },
+];
 
 export default function App() {
-  console.log("✅ App.tsx");
-  const [mode, setMode] = useState<"HTTP" | "WSS">("HTTP");
-  const [url, setUrl] = useState("");
-  const [method, setMethod] = useState("GET");
-  const [headers, setHeaders] = useState("");
-  const [body, setBody] = useState("{}");
-
-  const [messages, setMessages] = useState<
-    {
-      direction: "sent" | "received" | "system";
-      data: string;
-      decoded?: string | null;
-    }[]
-  >([]);
+  const [mode, setMode] = useState<Mode>('HTTP');
+  const [method, setMethod] = useState<Method>('GET');
+  const [url, setUrl] = useState<string>('');
+  const [wssConnected, setWssConnected] = useState<boolean>(false);
+  const [openCurlModal, setOpenCurlModal] = useState<boolean>(false);
+  const [curlError, setCurlError] = useState<string>('');
+  const [curl, setCurl] = useState<string>('');
+  const [headers, setHeaders] = useState<string>('');
+  const [body, setBody] = useState<string>('{}');
   const [protoFile, setProtoFile] = useState<File | null>(null);
-  const [messageType, setMessageType] = useState("");
-  const wsRef = useRef<WebSocket | null>(null);
-  const [wsConnected, setWsConnected] = useState(false);
-
+  const [messageType, setMessageType] = useState<string>('');
   const [httpResponse, setHttpResponse] = useState<{
     status: string;
     body: any;
     headers: any;
   } | null>(null);
+  const [messages, setMessages] = useState<
+    {
+      direction: 'sent' | 'received' | 'system';
+      data: string;
+      decoded?: string | null;
+    }[]
+  >([]);
+  const [fieldMappings, setFieldMappings] = useState<Record<string, string>>({});
+  const [queryMappings, setQueryMappings] = useState<Record<string, string>>({});
 
-  const [fieldMappings, setFieldMappings] = useState<Record<string, string>>(
-    {}
-  );
   const [testResults, setTestResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -43,19 +88,13 @@ export default function App() {
   const [totalTests, setTotalTests] = useState(0);
 
   const [expandedRows, setExpandedRows] = useState<Record<number, boolean>>({});
-  const toggleRow = (idx: number) =>
-    setExpandedRows((prev) => ({ ...prev, [idx]: !prev[idx] }));
+  const toggleRow = (idx: number) => setExpandedRows((prev) => ({ ...prev, [idx]: !prev[idx] }));
 
   const [securityResults, setSecurityResults] = useState<any[]>([]);
 
-  const [expandedSecurityRows, setExpandedSecurityRows] = useState<
-    Record<number, boolean>
-  >({});
-  const toggleSecurityRow = (idx: number) =>
-    setExpandedSecurityRows((prev) => ({ ...prev, [idx]: !prev[idx] }));
-  const [expandedCrudRows, setExpandedCrudRows] = useState<
-    Record<number, boolean>
-  >({});
+  const [expandedSecurityRows, setExpandedSecurityRows] = useState<Record<number, boolean>>({});
+  const toggleSecurityRow = (idx: number) => setExpandedSecurityRows((prev) => ({ ...prev, [idx]: !prev[idx] }));
+  const [expandedCrudRows, setExpandedCrudRows] = useState<Record<number, boolean>>({});
 
   const [performanceResults, setPerformanceResults] = useState<any[]>([]);
 
@@ -64,14 +103,6 @@ export default function App() {
   const [loadingPerf, setLoadingPerf] = useState(false);
   const [testsStarted, setTestsStarted] = useState(false);
 
-  const [showCurlModal, setShowCurlModal] = useState(false);
-  const [curlError, setCurlError] = useState(false);
-  const [curlInput, setCurlInput] = useState("");
-
-  const [queryMappings, setQueryMappings] = useState<Record<string, string>>(
-    {}
-  );
-
   // Load test UI/rezultatai
   const [loadConcurrency, setLoadConcurrency] = useState(10); // threads
   const [loadTotal, setLoadTotal] = useState(100); // total requests
@@ -79,7 +110,7 @@ export default function App() {
 
   // 🆕 Progress bar būsena (nebūtina, bet patogu jei norėsi rodyti dar ir kitur)
   const [loadProgressPct, setLoadProgressPct] = useState(0);
-  const [loadProgressText, setLoadProgressText] = useState("");
+  const [loadProgressText, setLoadProgressText] = useState('');
 
   const [crudResults, setCrudResults] = useState<any[]>([]);
   const [responseBody, setResponseBody] = useState<any>(null);
@@ -89,203 +120,45 @@ export default function App() {
   function buildTextBar(pct: number) {
     const width = 20;
     const filled = Math.round((pct / 100) * width);
-    return "█".repeat(filled) + "░".repeat(width - filled) + ` ${pct}%`;
-  }
-
-  // --- Beautify handler ---
-  function beautifyBody() {
-    try {
-      // jei JSON validus — suformatuojam gražiai
-      const parsed = JSON.parse(body);
-      const pretty = JSON.stringify(parsed, null, 2);
-      setBody(pretty); // perrašom body, redaguojamas toliau
-    } catch {
-      // jei ne JSON, ignoruojam tyliai
-    }
-  }
-
-  // --- HTTP SEND ---
-  async function sendHttp() {
-    setHttpResponse({
-      status: "Sending...",
-      body: "",
-      headers: {},
-    });
-
-    try {
-      const hdrs = headers
-        ? Object.fromEntries(
-            headers
-              .split("\n")
-              .filter((h) => h.trim())
-              .map((h) => {
-                // jei nėra dvitaškio, tikėtina, kad tai curl -b flagas (cookies)
-                if (!h.includes(":")) {
-                  if (h.trim().startsWith("-b ")) {
-                    return ["Cookie", h.replace("-b", "").trim()];
-                  }
-                  // fallback – vis tiek įrašom kaip Cookie
-                  return ["Cookie", h.trim()];
-                }
-
-                const [k, ...rest] = h.split(":");
-                return [k.trim(), rest.join(":").trim()];
-              })
-          )
-        : {};
-
-      let dataToSend: any = body; // raw tekstas
-
-      if (protoFile && messageType) {
-        try {
-          dataToSend = encodeMessage(messageType, JSON.parse(body));
-        } catch (err) {
-          setHttpResponse({
-            status: "Encode error",
-            body: String(err),
-            headers: {},
-          });
-          return;
-        }
-      }
-
-      // 👇 čia vietoje axios kvietimo
-      const res = await (window as any).electronAPI.sendHttp({
-        url,
-        method,
-        headers: hdrs,
-        body: dataToSend,
-      });
-
-      setHttpResponse(res);
-
-      // Testų generavimą remiam į request, o ne response
-      let parsedBody: any;
-      try {
-        parsedBody = JSON.parse(body);
-      } catch {
-        parsedBody = null;
-      }
-
-      if (res.status.startsWith("2") && parsedBody) {
-        // Ištraukiam visus laukus (įskaitant nested)
-        const extracted = extractFieldsFromJson(parsedBody);
-        const mappings: Record<string, string> = {};
-
-        for (const [path, type] of Object.entries(extracted)) {
-          if (type === "DO_NOT_TEST") {
-            mappings[path] = "do-not-test";
-          } else {
-            // jeigu ne objektas – aptinkam tipą kaip anksčiau
-            // paimame tikrą value iš path
-            const segments = path.replace(/\[(\d+)\]/g, ".$1").split(".");
-            let val: any = parsedBody;
-            for (const s of segments) {
-              if (val == null) break;
-              val = val[s];
-            }
-            mappings[path] = detectFieldType(path, val);
-          }
-        }
-
-        setFieldMappings(mappings);
-
-        // 🆕 Query param mapping
-        const queryParams = extractQueryParams(url);
-        const queryMappings: Record<string, string> = {};
-        for (const [key, val] of Object.entries(queryParams)) {
-          queryMappings[key] = detectFieldType(key, val);
-        }
-        setQueryMappings(queryMappings);
-      }
-    } catch (err: any) {
-      setHttpResponse({
-        status: "Network Error",
-        body: String(err),
-        headers: {},
-      });
-    }
-  }
-
-  // --- WSS CONNECT ---
-  async function connectWss() {
-    if (!url.startsWith("ws")) {
-      setMessages((prev) => [
-        { direction: "system", data: "❌ Please use ws:// or wss:// URL" },
-        ...prev,
-      ]);
-      return;
-    }
-
-    const hdrs = headers
-      ? Object.fromEntries(
-          headers.split("\n").map((h) => {
-            const [k, ...rest] = h.split(":");
-            return [k.trim(), rest.join(":").trim()];
-          })
-        )
-      : {};
-
-    // 👇 vietoj naršyklinio WebSocket – IPC į main
-    (window as any).electronAPI.connectWss({ url, headers: hdrs });
+    return '█'.repeat(filled) + '░'.repeat(width - filled) + ` ${pct}%`;
   }
 
   // mount
   useEffect(() => {
-    if (!(window as any).electronAPI?.onWssEvent) return; // 👈 skip browser
-    const off = (window as any).electronAPI.onWssEvent((ev: any) => {
-      if (ev.type === "open") setWsConnected(true);
-      if (ev.type === "close") setWsConnected(false);
-      if (ev.type === "message") {
+    if (!window.electronAPI?.onWssEvent) return; // 👈 skip browser
+    const off = window.electronAPI.onWssEvent((ev: any) => {
+      if (ev.type === 'open') setWssConnected(true);
+      if (ev.type === 'close') setWssConnected(false);
+      if (ev.type === 'message') {
         setMessages((prev) => [
           {
-            direction: "received",
+            direction: 'received',
             data: String(ev.data),
             decoded: ev.decoded ?? null,
           },
           ...prev,
         ]);
       }
-      if (ev.type === "error") {
-        setMessages((prev) => [
-          { direction: "system", data: "❌ " + ev.error },
-          ...prev,
-        ]);
+      if (ev.type === 'error') {
+        setMessages((prev) => [{ direction: 'system', data: '❌ ' + ev.error }, ...prev]);
       }
     });
     return () => off?.(); // unmount
   }, []);
-
-  // --- WSS SEND ---
-  function sendWss() {
-    setMessages((prev) => [{ direction: "sent", data: body }, ...prev]);
-    (window as any).electronAPI.sendWss(body);
-  }
-
-  function updateFieldType(field: string, type: string) {
-    setFieldMappings((prev) => ({ ...prev, [field]: type }));
-  }
 
   // --- SECURITY TESTS ---
   async function runSecurityTests(): Promise<any[]> {
     const results: any[] = [];
 
     // paimam user įvestus headerius (tokius pačius kaip sendHttp ir runDataDrivenTests)
-    const hdrs = headers
-      ? Object.fromEntries(
-          headers.split("\n").map((h) => {
-            const [k, ...rest] = h.split(":");
-            return [k.trim(), rest.join(":").trim()];
-          })
-        )
-      : {};
+    const parsedHeaders = parseHeaders(headers);
 
     try {
       // 1. Sensitive headers
-      const base = await (window as any).electronAPI.sendHttp({
+      const base = await window.electronAPI.sendHttp({
         url,
         method,
-        headers: hdrs,
+        headers: parsedHeaders,
         body,
       });
 
@@ -293,312 +166,293 @@ export default function App() {
       setResponseHeaders(base.headers);
 
       // Tikrinam Server header
-      const serverHeader =
-        base.headers?.["server"] || base.headers?.["Server"] || "";
+      const serverHeader = base.headers?.['server'] || base.headers?.['Server'] || '';
       const hasVersionNumber = /\d/.test(serverHeader);
 
       results.push({
-        name: "No sensitive server headers",
-        expected: "Server header should not expose version",
-        actual: serverHeader || "No Server header",
-        status: hasVersionNumber ? "🔴 Fail" : "✅ Pass",
-        request: { url, method: "GET", headers: hdrs },
+        name: 'No sensitive server headers',
+        expected: 'Server header should not expose version',
+        actual: serverHeader || 'No Server header',
+        status: hasVersionNumber ? '🔴 Fail' : '✅ Pass',
+        request: { url, method: 'GET', headers: parsedHeaders },
         response: base,
       });
 
       // 2. Tikrinam Clickjacking protection
-      const xfo =
-        base.headers?.["x-frame-options"] || base.headers?.["X-Frame-Options"];
-      const csp =
-        base.headers?.["content-security-policy"] ||
-        base.headers?.["Content-Security-Policy"];
+      const xfo = base.headers?.['x-frame-options'] || base.headers?.['X-Frame-Options'];
+      const csp = base.headers?.['content-security-policy'] || base.headers?.['Content-Security-Policy'];
 
-      let clickjackingStatus = "🟠 Warning";
-      let actualClickjacking = "Missing";
+      let clickjackingStatus = '🟠 Warning';
+      let actualClickjacking = 'Missing';
 
       if (xfo) {
         const val = xfo.toUpperCase();
-        if (val === "DENY" || val === "SAMEORIGIN") {
-          clickjackingStatus = "✅ Pass";
+        if (val === 'DENY' || val === 'SAMEORIGIN') {
+          clickjackingStatus = '✅ Pass';
         }
         actualClickjacking = `X-Frame-Options: ${val}`;
-      } else if (csp && csp.includes("frame-ancestors")) {
+      } else if (csp && csp.includes('frame-ancestors')) {
         if (/frame-ancestors\s+('none'|'self')/i.test(csp)) {
-          clickjackingStatus = "✅ Pass";
+          clickjackingStatus = '✅ Pass';
         }
         actualClickjacking = `CSP: ${csp}`;
       }
 
       results.push({
-        name: "Clickjacking protection",
-        expected: "X-Frame-Options DENY/SAMEORIGIN or CSP frame-ancestors",
+        name: 'Clickjacking protection',
+        expected: 'X-Frame-Options DENY/SAMEORIGIN or CSP frame-ancestors',
         actual: actualClickjacking,
         status: clickjackingStatus,
-        request: { url, method, headers: hdrs, body },
+        request: { url, method, headers: parsedHeaders, body },
         response: base,
       });
 
       // 3. Tikrinam HSTS
-      const hsts =
-        base.headers?.["strict-transport-security"] ||
-        base.headers?.["Strict-Transport-Security"];
+      const hsts = base.headers?.['strict-transport-security'] || base.headers?.['Strict-Transport-Security'];
 
-      let hstsStatus = "🟠 Warning";
-      let actualHsts = "Missing";
+      let hstsStatus = '🟠 Warning';
+      let actualHsts = 'Missing';
 
       if (hsts) {
-        hstsStatus = "✅ Pass";
+        hstsStatus = '✅ Pass';
         actualHsts = hsts;
       }
 
       results.push({
-        name: "HSTS (Strict-Transport-Security)",
-        expected: "Header should be present on HTTPS endpoints",
+        name: 'HSTS (Strict-Transport-Security)',
+        expected: 'Header should be present on HTTPS endpoints',
         actual: actualHsts,
         status: hstsStatus,
-        request: { url, method, headers: hdrs, body },
+        request: { url, method, headers: parsedHeaders, body },
         response: base,
       });
 
       // 4. Tikrinam MIME sniffing protection
-      const xcto =
-        base.headers?.["x-content-type-options"] ||
-        base.headers?.["X-Content-Type-Options"];
+      const xcto = base.headers?.['x-content-type-options'] || base.headers?.['X-Content-Type-Options'];
 
-      let xctoStatus = "❌ Fail";
-      let actualXcto = "Missing";
+      let xctoStatus = '❌ Fail';
+      let actualXcto = 'Missing';
 
       if (xcto) {
-        if (xcto.toLowerCase() === "nosniff") {
-          xctoStatus = "✅ Pass";
+        if (xcto.toLowerCase() === 'nosniff') {
+          xctoStatus = '✅ Pass';
           actualXcto = `X-Content-Type-Options: ${xcto}`;
         } else {
-          xctoStatus = "❌ Fail";
+          xctoStatus = '❌ Fail';
           actualXcto = `Unexpected: ${xcto}`;
         }
       }
 
       results.push({
-        name: "MIME sniffing protection",
-        expected: "X-Content-Type-Options: nosniff",
+        name: 'MIME sniffing protection',
+        expected: 'X-Content-Type-Options: nosniff',
         actual: actualXcto,
         status: xctoStatus,
-        request: { url, method, headers: hdrs, body },
+        request: { url, method, headers: parsedHeaders, body },
         response: base,
       });
 
       // 5. Cache-Control check
-      const cacheControl =
-        base.headers?.["cache-control"] || base.headers?.["Cache-Control"];
+      const cacheControl = base.headers?.['cache-control'] || base.headers?.['Cache-Control'];
 
-      let cacheStatus = "🟠 Warning";
-      let actualCache = "Missing";
+      let cacheStatus = '🟠 Warning';
+      let actualCache = 'Missing';
 
       if (cacheControl) {
-        if (
-          cacheControl.includes("no-store") ||
-          cacheControl.includes("private")
-        ) {
-          cacheStatus = "✅ Pass";
+        if (cacheControl.includes('no-store') || cacheControl.includes('private')) {
+          cacheStatus = '✅ Pass';
         } else {
-          cacheStatus = "❌ X-Fail";
+          cacheStatus = '❌ X-Fail';
         }
         actualCache = cacheControl;
       } else {
         const m = method.toUpperCase();
-        if (m === "GET" || m === "HEAD") {
-          cacheStatus = "❌ X-Fail"; // pavojinga
+        if (m === 'GET' || m === 'HEAD') {
+          cacheStatus = '❌ X-Fail'; // pavojinga
         } else {
-          cacheStatus = "🟠 Warning"; // saugu by default, bet geriau nurodyti
+          cacheStatus = '🟠 Warning'; // saugu by default, bet geriau nurodyti
         }
       }
 
       results.push({
-        name: "Cache-Control for private API",
-        expected: "Cache-Control: no-store/private",
+        name: 'Cache-Control for private API',
+        expected: 'Cache-Control: no-store/private',
         actual: actualCache,
         status: cacheStatus,
-        request: { url, method, headers: hdrs },
+        request: { url, method, headers: parsedHeaders },
         response: base,
       });
 
       // 6. OPTIONS method
-      const opt = await (window as any).electronAPI.sendHttp({
+      const opt = await window.electronAPI.sendHttp({
         url,
-        method: "OPTIONS",
-        headers: hdrs,
+        method: 'OPTIONS',
+        headers: parsedHeaders,
         body: null,
       });
 
       // leidžiam tiek 200, tiek 204, bet reikalaujam Allow header
-      const optionCode = opt.status.split(" ")[0];
+      const optionCode = opt.status.split(' ')[0];
       const allowHeader =
-        opt.headers?.["allow"] ||
-        opt.headers?.["Allow"] ||
-        opt.headers?.["access-control-allow-methods"] ||
-        opt.headers?.["Access-Control-Allow-Methods"];
+        opt.headers?.['allow'] ||
+        opt.headers?.['Allow'] ||
+        opt.headers?.['access-control-allow-methods'] ||
+        opt.headers?.['Access-Control-Allow-Methods'];
 
       const hasAllow = Boolean(allowHeader);
-      const okOptions =
-        (optionCode === "200" || optionCode === "204") && hasAllow;
+      const okOptions = (optionCode === '200' || optionCode === '204') && hasAllow;
 
       results.push({
-        name: "OPTIONS method handling",
-        expected: "200 or 204 + Allow header",
+        name: 'OPTIONS method handling',
+        expected: '200 or 204 + Allow header',
         actual: opt.status,
-        status: okOptions ? "✅ Pass" : "❌ Fail",
-        request: { url, method: "OPTIONS", headers: hdrs },
+        status: okOptions ? '✅ Pass' : '❌ Fail',
+        request: { url, method: 'OPTIONS', headers: parsedHeaders },
         response: opt,
       });
 
-      await buildCrudRowsFromOptions(allowHeader, url, hdrs, base, okOptions);
+      await buildCrudRowsFromOptions(allowHeader, url, parsedHeaders, base, okOptions);
 
       // 7. Unsupported method
-      const weird = await (window as any).electronAPI.sendHttp({
+      const weird = await window.electronAPI.sendHttp({
         url,
-        method: "FOOBAR",
-        headers: hdrs, // ✅ originalūs headeriai
+        method: 'FOOBAR',
+        headers: parsedHeaders, // ✅ originalūs headeriai
         body, // ✅ originalus body
       });
-      const code = weird.status.split(" ")[0];
-      const okWeird = code === "405" || code === "501";
+      const code = weird.status.split(' ')[0];
+      const okWeird = code === '405' || code === '501';
       results.push({
-        name: "Unsupported method handling",
-        expected: "405 Method Not Allowed (or 501)",
+        name: 'Unsupported method handling',
+        expected: '405 Method Not Allowed (or 501)',
         actual: weird.status,
-        status: okWeird ? "✅ Pass" : "❌ Fail",
-        request: { url, method: "FOOBAR", headers: hdrs, body },
+        status: okWeird ? '✅ Pass' : '❌ Fail',
+        request: { url, method: 'FOOBAR', headers: parsedHeaders, body },
         response: weird,
       });
     } catch (err) {
       results.push({
-        name: "Security test error",
-        expected: "Should respond",
+        name: 'Security test error',
+        expected: 'Should respond',
         actual: String(err),
-        status: "🔴 Fail",
-        request: { url, headers: hdrs, body },
+        status: '🔴 Fail',
+        request: { url, headers: parsedHeaders, body },
         response: null,
       });
 
-      const corsResult = await runCorsTest();
+      const corsResult = await runCorsTest(method, url, parsedHeaders, body);
       results.push(corsResult);
     }
 
     // 8. Large body / size limit
-    const bigBody = "A".repeat(10 * 1024 * 1024); // 10 MB string
-    const tooLarge = await (window as any).electronAPI.sendHttp({
+    const bigBody = 'A'.repeat(10 * 1024 * 1024); // 10 MB string
+    const tooLarge = await window.electronAPI.sendHttp({
       url,
-      method: "POST", // dažniausiai POST su body
-      headers: { ...hdrs, "Content-Type": "application/json" },
+      method: 'POST', // dažniausiai POST su body
+      headers: { ...parsedHeaders, 'Content-Type': 'application/json' },
       body: bigBody,
     });
 
-    const codeLarge = tooLarge.status.split(" ")[0];
-    const okLarge = codeLarge === "413";
+    const codeLarge = tooLarge.status.split(' ')[0];
+    const okLarge = codeLarge === '413';
     results.push({
-      name: "Request size limit (10 MB)",
-      expected: "413 Payload Too Large",
+      name: 'Request size limit (10 MB)',
+      expected: '413 Payload Too Large',
       actual: tooLarge.status,
-      status: okLarge ? "✅ Pass" : "❌ Fail",
-      request: { url, method: "POST", headers: hdrs, body: "[10MB string]" },
+      status: okLarge ? '✅ Pass' : '❌ Fail',
+      request: { url, method: 'POST', headers: parsedHeaders, body: '[10MB string]' },
       response: tooLarge,
     });
 
     // 9. Missing authorization cookie/token
     try {
       const minimalHeaders: Record<string, string> = {};
-      for (const [k, v] of Object.entries(hdrs)) {
+      for (const [k, v] of Object.entries(parsedHeaders)) {
         const key = k.toLowerCase();
-        if (key === "accept" || key === "content-type") {
+        if (key === 'accept' || key === 'content-type') {
           minimalHeaders[k] = v;
         }
       }
 
-      const missingAuth = await (window as any).electronAPI.sendHttp({
+      const missingAuth = await window.electronAPI.sendHttp({
         url,
         method,
         headers: minimalHeaders,
         body,
       });
 
-      const code = missingAuth.status.split(" ")[0];
-      const ok401 = code === "401";
+      const code = missingAuth.status.split(' ')[0];
+      const ok401 = code === '401';
 
       results.push({
-        name: "Missing authorization cookie/token",
-        expected: "Should return 401 Unauthorized",
+        name: 'Missing authorization cookie/token',
+        expected: 'Should return 401 Unauthorized',
         actual: missingAuth.status,
-        status: ok401 ? "✅ Pass" : "❌ Fail",
+        status: ok401 ? '✅ Pass' : '❌ Fail',
         request: { url, method, headers: minimalHeaders, body }, // ✅ pridėjau body
         response: missingAuth,
       });
     } catch (err) {
       results.push({
-        name: "Missing authorization cookie/token",
-        expected: "Should return 401 Unauthorized",
+        name: 'Missing authorization cookie/token',
+        expected: 'Should return 401 Unauthorized',
         actual: String(err),
-        status: "🔴 Bug",
+        status: '🔴 Bug',
         request: { url, method, headers: {}, body }, // ✅ pridėjau body ir į klaidos atvejį
         response: null,
       });
     }
 
     // 10. INFO CORS check
-    const corsResult = await runCorsTest();
+    const corsResult = await runCorsTest(method, url, parsedHeaders, body);
     results.push(corsResult);
 
     // 11. 404 Not Found check
-    const notFoundTest = await runNotFoundTest(url, method, hdrs, body);
+    const notFoundTest = await runNotFoundTest(url, method, parsedHeaders, body);
     results.push(notFoundTest);
 
     // --- Manual checks (pilka spalva) ---
     results.push(
       {
-        name: "Invalid authorization cookie/token",
-        expected: "Should return 401 Unauthorized",
-        actual: "Not available yet",
-        status: "⚪ Manual",
+        name: 'Invalid authorization cookie/token',
+        expected: 'Should return 401 Unauthorized',
+        actual: 'Not available yet',
+        status: '⚪ Manual',
         request: null,
         response: null,
       },
       {
-        name: "Access other user’s data",
-        expected: "Should return 404 or 403",
-        actual: "Not available yet",
-        status: "⚪ Manual",
+        name: 'Access other user’s data',
+        expected: 'Should return 404 or 403',
+        actual: 'Not available yet',
+        status: '⚪ Manual',
         request: null,
         response: null,
       },
       {
-        name: "Role-based access control",
-        expected: "Restricted per role",
-        actual: "Not available yet",
-        status: "⚪ Manual",
+        name: 'Role-based access control',
+        expected: 'Restricted per role',
+        actual: 'Not available yet',
+        status: '⚪ Manual',
         request: null,
         response: null,
-      }
+      },
     );
 
     return results;
   }
 
   // --- buildCrudRowsFromOptions ---
-  async function buildCrudRowsFromOptions(
-    allowHeader: string,
-    url: string,
-    hdrs: any,
-    base: any,
-    okOptions: any
-  ) {
+  async function buildCrudRowsFromOptions(allowHeader: string, url: string, hdrs: any, base: any, okOptions: any) {
     try {
       // 1️⃣ Jei OPTIONS failino – viena raudona eilutė
       if (!okOptions) {
         setCrudResults([
           {
-            method: "CRUD",
-            expected: "Discover via OPTIONS",
-            actual: "CRUD not available — OPTIONS test failed",
-            status: "❌ Fail",
+            method: 'CRUD',
+            expected: 'Discover via OPTIONS',
+            actual: 'CRUD not available — OPTIONS test failed',
+            status: '❌ Fail',
             request: null,
             response: null,
           },
@@ -607,17 +461,17 @@ export default function App() {
       }
 
       // 2️⃣ OPTIONS OK – parse metodus
-      const allow = String(allowHeader || "")
-        .split(",")
+      const allow = String(allowHeader || '')
+        .split(',')
         .map((s) => s.trim().toUpperCase())
         .filter(Boolean);
 
       // 3️⃣ Bandome gauti pavyzdinį body iš originalaus RESPONSE
       let sampleBody: any = {};
       try {
-        if (typeof base?.body === "string") {
+        if (typeof base?.body === 'string') {
           sampleBody = JSON.parse(base.body);
-        } else if (base?.body && typeof base.body === "object") {
+        } else if (base?.body && typeof base.body === 'object') {
           sampleBody = base.body;
         } else {
           sampleBody = {};
@@ -628,29 +482,28 @@ export default function App() {
 
       // 4️⃣ Aprašymai
       const desc: Record<string, string> = {
-        GET: "Fetch data",
-        POST: "Create resource",
-        PUT: "Update resource",
-        PATCH: "Update resource fields",
-        DELETE: "Remove resource",
-        HEAD: "Headers only",
-        OPTIONS: "Discovery",
+        GET: 'Fetch data',
+        POST: 'Create resource',
+        PUT: 'Update resource',
+        PATCH: 'Update resource fields',
+        DELETE: 'Remove resource',
+        HEAD: 'Headers only',
+        OPTIONS: 'Discovery',
       };
 
       // 5️⃣ Surenkam CRUD eilutes
       const rows = allow.map((m) => {
         const req: any = { url, method: m, headers: hdrs as any };
 
-        if (!["GET", "HEAD"].includes(m)) {
-          req.body =
-            sampleBody && Object.keys(sampleBody).length ? sampleBody : {};
+        if (!['GET', 'HEAD'].includes(m)) {
+          req.body = sampleBody && Object.keys(sampleBody).length ? sampleBody : {};
         }
 
         return {
           method: m,
-          expected: desc[m] || "Custom method",
-          actual: "Not available yet",
-          status: "⚪ Manual",
+          expected: desc[m] || 'Custom method',
+          actual: 'Not available yet',
+          status: '⚪ Manual',
           request: req,
           response: null,
         };
@@ -661,10 +514,10 @@ export default function App() {
       // Fallback
       setCrudResults([
         {
-          method: "CRUD",
-          expected: "Discover via OPTIONS",
-          actual: "Not available",
-          status: "⚪ Manual",
+          method: 'CRUD',
+          expected: 'Discover via OPTIONS',
+          actual: 'Not available',
+          status: '⚪ Manual',
           request: null,
           response: null,
         },
@@ -673,29 +526,22 @@ export default function App() {
   }
 
   // --- 404 Not Found test ---
-  async function runNotFoundTest(
-    url: string,
-    method: string,
-    headers: any,
-    body: any
-  ) {
+  async function runNotFoundTest(url: string, method: string, headers: any, body: any) {
     let testUrl = url;
 
     try {
       const u = new URL(url);
       // jei turi query, NOT_FOUND pridedam prie pathname
-      u.pathname = u.pathname.endsWith("/")
-        ? `${u.pathname}NOT_FOUND`
-        : `${u.pathname}/NOT_FOUND`;
+      u.pathname = u.pathname.endsWith('/') ? `${u.pathname}NOT_FOUND` : `${u.pathname}/NOT_FOUND`;
       testUrl = u.toString();
     } catch {
       // fallback, jei blogas URL
-      testUrl = url.endsWith("/") ? `${url}NOT_FOUND` : `${url}/NOT_FOUND`;
+      testUrl = url.endsWith('/') ? `${url}NOT_FOUND` : `${url}/NOT_FOUND`;
     }
 
     const start = performance.now();
     try {
-      const res = await (window as any).electronAPI.sendHttp({
+      const res = await window.electronAPI.sendHttp({
         url: testUrl,
         method,
         headers,
@@ -704,19 +550,14 @@ export default function App() {
       const end = performance.now();
       const responseTime = end - start;
 
-      const statusCode = parseInt(res.status?.split(" ")[0] || "0", 10);
-      const statusText = res.status?.split(" ").slice(1).join(" ") || "";
+      const statusCode = parseInt(res.status?.split(' ')[0] || '0', 10);
+      const statusText = res.status?.split(' ').slice(1).join(' ') || '';
 
-      const status =
-        statusCode === 404
-          ? "✅ Pass"
-          : statusCode === 0
-            ? "❌ Fail (No response)"
-            : "❌ Fail";
+      const status = statusCode === 404 ? '✅ Pass' : statusCode === 0 ? '❌ Fail (No response)' : '❌ Fail';
 
       return {
-        name: "404 Not Found",
-        expected: "404 Not Found",
+        name: '404 Not Found',
+        expected: '404 Not Found',
         actual: `${statusCode} ${statusText}`,
         status,
         responseTime,
@@ -725,10 +566,10 @@ export default function App() {
       };
     } catch (err: any) {
       return {
-        name: "404 Not Found",
-        expected: "404 Not Found",
-        actual: "Request failed",
-        status: "❌ Fail",
+        name: '404 Not Found',
+        expected: '404 Not Found',
+        actual: 'Request failed',
+        status: '❌ Fail',
         responseTime: 0,
         request: { url: testUrl, method, headers, body },
         response: { error: String(err) },
@@ -784,23 +625,16 @@ export default function App() {
       return [];
     }
 
-    const hdrs = headers
-      ? Object.fromEntries(
-          headers.split("\n").map((h) => {
-            const [k, ...rest] = h.split(":");
-            return [k.trim(), rest.join(":").trim()];
-          })
-        )
-      : {};
+    const hdrs = parseHeaders(headers);
 
     // paskaičiuojam kiek testų bus (BODY + QUERY)
     let total = 0;
     for (const [field, type] of Object.entries(fieldMappings)) {
-      if (type === "do-not-test" || type === "random32") continue;
+      if (type === 'do-not-test' || type === 'random32') continue;
       total += (datasets[type] || []).length;
     }
     for (const [param, type] of Object.entries(queryMappings)) {
-      if (type === "do-not-test" || type === "random32") continue;
+      if (type === 'do-not-test' || type === 'random32') continue;
       total += (datasets[type] || []).length;
     }
     setTotalTests(1 + total);
@@ -811,7 +645,7 @@ export default function App() {
     // 🟢 VISADA siunčiam originalų request pirmu numeriu
     try {
       const start = performance.now();
-      const res = await (window as any).electronAPI.sendHttp({
+      const res = await window.electronAPI.sendHttp({
         url,
         method,
         headers: hdrs,
@@ -820,25 +654,22 @@ export default function App() {
       const end = performance.now();
 
       results.push({
-        field: "(original request)",
+        field: '(original request)',
         value: parsedBody,
-        expected: "2xx",
+        expected: '2xx',
         actual: res.status,
-        status: res.status.startsWith("2") ? "✅ Pass" : "❌ Fail",
+        status: res.status.startsWith('2') ? '✅ Pass' : '❌ Fail',
         request: { url, method, headers: hdrs, body: parsedBody },
-        response:
-          typeof res.body === "string"
-            ? res.body
-            : JSON.stringify(res.body, null, 2),
+        response: typeof res.body === 'string' ? res.body : JSON.stringify(res.body, null, 2),
         responseTime: end - start,
       });
     } catch (err: any) {
       results.push({
-        field: "(original request)",
+        field: '(original request)',
         value: parsedBody,
-        expected: "2xx",
-        actual: "Error",
-        status: "🔴 Bug",
+        expected: '2xx',
+        actual: 'Error',
+        status: '🔴 Bug',
         request: { url, method, headers, body: parsedBody },
         response: String(err),
         responseTime: 0,
@@ -846,12 +677,10 @@ export default function App() {
     }
 
     for (const [field, type] of Object.entries(fieldMappings)) {
-      if (type === "do-not-test") continue;
+      if (type === 'do-not-test') continue;
 
       const dataset =
-        type === "random32" || type === "randomInt"
-          ? [{ dynamic: true, valid: true }]
-          : datasets[type] || [];
+        type === 'random32' || type === 'randomInt' ? [{ dynamic: true, valid: true }] : datasets[type] || [];
 
       for (const d of dataset) {
         counter++;
@@ -864,11 +693,11 @@ export default function App() {
         const newBody = JSON.parse(JSON.stringify(parsedBody));
 
         const newValue =
-          type === "randomInt"
+          type === 'randomInt'
             ? randInt()
-            : type === "random32"
+            : type === 'random32'
               ? rand32()
-              : type === "randomEmail"
+              : type === 'randomEmail'
                 ? randEmail()
                 : val;
 
@@ -876,9 +705,9 @@ export default function App() {
 
         // 💡 kiekvienam request’ui perrašom visus random32/randomInt laukus
         for (const [f, t] of Object.entries(fieldMappings)) {
-          if (t === "random32") newBody[f] = rand32();
-          if (t === "randomInt") newBody[f] = randInt();
-          if (t === "randomEmail") newBody[f] = randEmail();
+          if (t === 'random32') newBody[f] = rand32();
+          if (t === 'randomInt') newBody[f] = randInt();
+          if (t === 'randomEmail') newBody[f] = randEmail();
         }
 
         let dataToSend: any = newBody;
@@ -886,13 +715,13 @@ export default function App() {
           try {
             dataToSend = encodeMessage(messageType, newBody);
           } catch (err) {
-            const val = "value" in d ? d.value : null;
+            const val = 'value' in d ? d.value : null;
             results.push({
               field,
               value: val,
-              expected: d.valid ? "2xx" : "4xx",
-              actual: "Encode error",
-              status: "🔴 Bug",
+              expected: d.valid ? '2xx' : '4xx',
+              actual: 'Encode error',
+              status: '🔴 Bug',
               request: { url, method, headers: hdrs, body: newBody },
               response: String(err),
               responseTime: 0,
@@ -903,7 +732,7 @@ export default function App() {
 
         try {
           const start = performance.now();
-          const res = await (window as any).electronAPI.sendHttp({
+          const res = await window.electronAPI.sendHttp({
             url,
             method,
             headers: hdrs,
@@ -914,18 +743,18 @@ export default function App() {
 
           // --- naujas status parsing ---
           let statusCode = 0;
-          let statusText = "";
+          let statusText = '';
           if (res.status) {
-            const parts = res.status.split(" ");
+            const parts = res.status.split(' ');
             statusCode = parseInt(parts[0], 10);
-            statusText = parts.slice(1).join(" ");
+            statusText = parts.slice(1).join(' ');
           }
 
           const ok = statusCode >= 200 && statusCode < 300;
 
           // response text
           let responseText: string;
-          if (typeof res.body === "string") {
+          if (typeof res.body === 'string') {
             responseText = res.body;
           } else {
             try {
@@ -938,7 +767,6 @@ export default function App() {
           let decoded: string | null = null;
           if (protoFile && messageType) {
             try {
-              const { decodeMessage } = require("./protobufHelper");
               const obj = decodeMessage(messageType, new Uint8Array(res.body));
               decoded = JSON.stringify(obj, null, 2);
             } catch {
@@ -946,23 +774,23 @@ export default function App() {
             }
           }
 
-          let status = "";
+          let status = '';
           if (d.valid) {
             // tikimės 2xx
-            if (ok) status = "✅ Pass";
-            else status = "❌ Fail";
+            if (ok) status = '✅ Pass';
+            else status = '❌ Fail';
           } else {
             // tikimės 4xx
-            if (statusCode >= 400 && statusCode < 500) status = "✅ Pass";
-            else if (ok) status = "❌ Fail";
-            else if (statusCode >= 500) status = "🔴 Bug";
-            else status = "❌ Fail";
+            if (statusCode >= 400 && statusCode < 500) status = '✅ Pass';
+            else if (ok) status = '❌ Fail';
+            else if (statusCode >= 500) status = '🔴 Bug';
+            else status = '❌ Fail';
           }
 
           results.push({
             field,
             value: val,
-            expected: d.valid ? "2xx" : "4xx",
+            expected: d.valid ? '2xx' : '4xx',
             actual: res.status,
             status,
             request: { url, method, headers: hdrs, body: newBody },
@@ -974,9 +802,9 @@ export default function App() {
           results.push({
             field,
             value: val,
-            expected: d.valid ? "2xx" : "4xx",
-            actual: "Error",
-            status: "🔴 Bug",
+            expected: d.valid ? '2xx' : '4xx',
+            actual: 'Error',
+            status: '🔴 Bug',
             request: { url, method, headers: hdrs, body: newBody },
             response: String(err),
             responseTime: 0,
@@ -987,7 +815,7 @@ export default function App() {
 
     // 🆕 Query param testai
     for (const [param, type] of Object.entries(queryMappings)) {
-      if (type === "do-not-test") continue;
+      if (type === 'do-not-test') continue;
       const dataset = datasets[type] || [];
 
       for (const d of dataset) {
@@ -999,7 +827,7 @@ export default function App() {
         u.searchParams.set(param, String(val));
 
         const start = performance.now();
-        const res = await (window as any).electronAPI.sendHttp({
+        const res = await window.electronAPI.sendHttp({
           url: u.toString(),
           method,
           headers: hdrs,
@@ -1008,17 +836,14 @@ export default function App() {
         const end = performance.now();
         const responseTime = end - start;
 
-        const statusCode = parseInt(res.status?.split(" ")[0] || "0", 10);
+        const statusCode = parseInt(res.status?.split(' ')[0] || '0', 10);
         const ok = statusCode >= 200 && statusCode < 300;
-        const status =
-          (d.valid && ok) || (!d.valid && statusCode >= 400 && statusCode < 500)
-            ? "✅ Pass"
-            : "❌ Fail";
+        const status = (d.valid && ok) || (!d.valid && statusCode >= 400 && statusCode < 500) ? '✅ Pass' : '❌ Fail';
 
         results.push({
           field: `query.${param}`,
           value: val,
-          expected: d.valid ? "2xx" : "4xx",
+          expected: d.valid ? '2xx' : '4xx',
           actual: res.status,
           status,
           request: { url: u.toString(), method, headers: hdrs },
@@ -1039,14 +864,14 @@ export default function App() {
     const times = dataResults.map((r) => r.responseTime).filter(Boolean);
     const med = median(times);
 
-    let status = "";
-    if (med <= 500) status = "✅ Pass";
-    else if (med <= 1000) status = "🟠 Warning";
-    else status = "🔴 Fail";
+    let status = '';
+    if (med <= 500) status = '✅ Pass';
+    else if (med <= 1000) status = '🟠 Warning';
+    else status = '🔴 Fail';
 
     results.push({
-      name: "Median response time",
-      expected: "<= 500ms",
+      name: 'Median response time',
+      expected: '<= 500ms',
       actual: `${med.toFixed(0)} ms`,
       status,
     });
@@ -1056,41 +881,41 @@ export default function App() {
       const domain = new URL(url).hostname;
       const pings: number[] = [];
       for (let i = 0; i < 5; i++) {
-        const t = await (window as any).electronAPI.pingHost(domain);
+        const t = await window.electronAPI.pingHost(domain);
         pings.push(t);
       }
       const badCount = pings.filter((t) => t > 100).length;
       const avg = pings.reduce((a, b) => a + b, 0) / pings.length;
+      const pingStatus = badCount >= 3 ? '🔴 Fail' : '✅ Pass';
 
-      let pingStatus = badCount >= 3 ? "🔴 Fail" : "✅ Pass";
       results.push({
-        name: "Ping latency",
-        expected: "<= 100ms (3/5 rule)",
+        name: 'Ping latency',
+        expected: '<= 100ms (3/5 rule)',
         actual: `${avg.toFixed(0)} ms (bad ${badCount}/5)`,
         status: pingStatus,
       });
     } catch (err) {
       results.push({
-        name: "Ping test error",
-        expected: "Ping should succeed",
+        name: 'Ping test error',
+        expected: 'Ping should succeed',
         actual: String(err),
-        status: "🔴 Fail",
+        status: '🔴 Fail',
       });
     }
 
     // --- Load test (manual trigger, not auto run) ---
     results.push({
-      name: "Load test",
-      expected: "Median <500 ms (Pass), <1000 ms (Warning), ≥1000 ms (Fail)",
-      actual: "", // tuščia, nes dar nebuvo paleista
-      status: "⚪ Manual", // paliekam pilką
+      name: 'Load test',
+      expected: 'Median <500 ms (Pass), <1000 ms (Warning), ≥1000 ms (Fail)',
+      actual: '', // tuščia, nes dar nebuvo paleista
+      status: '⚪ Manual', // paliekam pilką
     });
 
     results.push({
-      name: "Rate limiting implementation",
-      expected: "429 Too Many Requests",
-      actual: "Not available yet",
-      status: "⚪ Manual",
+      name: 'Rate limiting implementation',
+      expected: '429 Too Many Requests',
+      actual: 'Not available yet',
+      status: '⚪ Manual',
     });
 
     return results;
@@ -1098,10 +923,9 @@ export default function App() {
 
   // --- RANDOM STRING ---
   function rand32() {
-    const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
-    let out = "";
-    for (let i = 0; i < 32; i++)
-      out += chars[Math.floor(Math.random() * chars.length)];
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    let out = '';
+    for (let i = 0; i < 32; i++) out += chars[Math.floor(Math.random() * chars.length)];
     return out;
   }
 
@@ -1112,10 +936,9 @@ export default function App() {
 
   // --- RANDOM Email ---
   function randEmail() {
-    const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
-    let name = "";
-    for (let i = 0; i < 8; i++)
-      name += chars[Math.floor(Math.random() * chars.length)];
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    let name = '';
+    for (let i = 0; i < 8; i++) name += chars[Math.floor(Math.random() * chars.length)];
     return `${name}@qaontime.com`;
   }
 
@@ -1124,93 +947,12 @@ export default function App() {
     if (values.length === 0) return 0;
     values.sort((a, b) => a - b);
     const mid = Math.floor(values.length / 2);
-    return values.length % 2 !== 0
-      ? values[mid]
-      : (values[mid - 1] + values[mid]) / 2;
-  }
-
-  // --- Handle Import Curl ---
-  function handleImportCurl(raw: string) {
-    try {
-      if (raw.length > 200_000) throw new Error("cURL too large");
-
-      const cleaned = raw.replace(/\\\n/g, " ").trim();
-      const parsed: any = parseCurl(cleaned);
-
-      // BODY fallback'ai (kad suveiktų --data*, net jei parse-curl nepagauna)
-      if (!parsed.body) {
-        const m =
-          cleaned.match(/--data-raw\s+(['"])([\s\S]*?)\1/) ||
-          cleaned.match(/--data\s+(['"])([\s\S]*?)\1/) ||
-          cleaned.match(/--data-binary\s+(['"])([\s\S]*?)\1/);
-        if (m) parsed.body = m[2];
-      }
-
-      // METHOD logika: jei yra body arba --data* flagas -> POST
-      let method = parsed.method ? String(parsed.method).toUpperCase() : "";
-      if (!method || (method === "GET" && parsed.body)) {
-        method = /--data-raw|--data\b|--data-binary|(?:\s|^)-d\b/.test(cleaned)
-          ? "POST"
-          : "GET";
-      }
-
-      // HEADERIŲ normalizavimas: visada naudoti "Cookie", niekada "Set-Cookie"
-      const headersObj: Record<string, string> = {};
-
-      if (parsed.header) {
-        for (const [k, v] of Object.entries(
-          parsed.header as Record<string, any>
-        )) {
-          const key = String(k);
-          const val = String(v ?? "");
-          if (key.toLowerCase() === "set-cookie") {
-            headersObj["Cookie"] = val; // pervadinam
-          } else {
-            headersObj[key] = val;
-          }
-        }
-      }
-
-      // Paimti ir -b/--cookie flag'ą (jei buvo), jis laimi prieš viską – kaip Postman
-      const cookieFlag =
-        cleaned.match(/(?:^|\s)(?:-b|--cookie)\s+(['"])([\s\S]*?)\1/) ||
-        cleaned.match(/(?:^|\s)(?:-b|--cookie)\s+([^\s'"][^\s]*)/); // be kabučių
-      if (cookieFlag) {
-        const rawVal = String(cookieFlag[2] ?? cookieFlag[1] ?? "");
-        const val = rawVal
-          .replace(/^Cookie:\s*/i, "")
-          .replace(/^Set-Cookie:\s*/i, "")
-          .trim();
-        if (val) headersObj["Cookie"] = val;
-      }
-
-      // Užpildom UI
-      setUrl(parsed.url || "");
-      setMethod(method);
-      setBody(parsed.body ? parsed.body : "{}");
-
-      const headerStr = Object.entries(headersObj)
-        .map(([k, v]) => `${k}: ${v}`)
-        .join("\n");
-      setHeaders(headerStr);
-
-      setShowCurlModal(false);
-      setCurlInput("");
-      setCurlError(false);
-    } catch (err) {
-      console.error("cURL import failed", err);
-      setCurlError(true);
-    }
+    return values.length % 2 !== 0 ? values[mid] : (values[mid - 1] + values[mid]) / 2;
   }
 
   // --- To cURL + copy ---
-  function copyAsCurl(req: {
-    url: string;
-    method: string;
-    headers?: any;
-    body?: any;
-  }) {
-    let curl = `curl -X ${req.method || "GET"} '${req.url}'`;
+  function copyAsCurl(req: { url: string; method: string; headers?: any; body?: any }) {
+    let curl = `curl -X ${req.method || 'GET'} '${req.url}'`;
 
     if (req.headers) {
       for (const [k, v] of Object.entries(req.headers)) {
@@ -1218,10 +960,10 @@ export default function App() {
       }
     }
 
-    if (req.body && req.body !== "null" && req.body !== "{}") {
+    if (req.body && req.body !== 'null' && req.body !== '{}') {
       let bodyStr: string;
 
-      if (typeof req.body === "string") {
+      if (typeof req.body === 'string') {
         bodyStr = req.body;
       } else {
         bodyStr = JSON.stringify(req.body);
@@ -1236,10 +978,10 @@ export default function App() {
     navigator.clipboard
       .writeText(curl)
       .then(() => {
-        console.log("✅ cURL copied to clipboard");
+        console.log('✅ cURL copied to clipboard');
       })
       .catch((err) => {
-        console.error("❌ Failed to copy cURL", err);
+        console.error('❌ Failed to copy cURL', err);
       });
   }
 
@@ -1254,121 +996,14 @@ export default function App() {
 
     return (
       <button className="copy-btn" onClick={handleCopy}>
-        {copied ? "Copied ✅" : "Copy cURL"}
+        {copied ? 'Copied ✅' : 'Copy cURL'}
       </button>
     );
   }
 
-  // --- runCorsTest
-  async function runCorsTest(): Promise<any> {
-    try {
-      const hdrs = headers
-        ? Object.fromEntries(
-            headers.split("\n").map((h) => {
-              const [k, ...rest] = h.split(":");
-              return [k.trim(), rest.join(":").trim()];
-            })
-          )
-        : {};
-
-      const options: RequestInit = {
-        method,
-        mode: "cors",
-        headers: hdrs,
-      };
-
-      if (body && !["GET", "HEAD"].includes(method.toUpperCase())) {
-        options.body = body;
-      }
-
-      const res = await fetch(url, options);
-
-      return {
-        name: "CORS policy check",
-        expected: "Detect if API is public or private",
-        actual: "No CORS error → API is public (accessible from any domain)",
-        status: "🔵 Info",
-        request: { url, method, headers: hdrs, body },
-        response: { status: res.status },
-      };
-    } catch (err: any) {
-      const msg = String(err?.message || err);
-      if (msg.includes("CORS") || msg.includes("Failed to fetch")) {
-        return {
-          name: "CORS policy check",
-          expected: "Detect if API is public or private",
-          actual: "CORS error → API is private (restricted by origin)",
-          status: "🔵 Info",
-          request: { url, method, headers, body },
-          response: null,
-        };
-      }
-      return {
-        name: "CORS policy check",
-        expected: "Detect if API is public or private",
-        actual: "Unexpected error: " + msg,
-        status: "🔵 Info",
-        request: { url, method, headers, body },
-        response: null,
-      };
-    }
-  }
-
-  /// --- extractFieldsFromJson ---
-  function extractFieldsFromJson(
-    obj: any,
-    prefix = ""
-  ): Record<string, string> {
-    const fields: Record<string, string> = {};
-
-    if (obj && typeof obj === "object" && !Array.isArray(obj)) {
-      for (const [key, value] of Object.entries(obj)) {
-        const path = prefix ? `${prefix}.${key}` : key;
-
-        if (value === null) {
-          fields[path] = "null";
-        } else if (typeof value === "object") {
-          // 👇 Pridedam markerį kad šitas objektas testuojamas nebus
-          fields[path] = "DO_NOT_TEST";
-          Object.assign(fields, extractFieldsFromJson(value, path));
-        } else {
-          fields[path] = typeof value;
-        }
-      }
-    } else if (Array.isArray(obj)) {
-      obj.forEach((item, i) => {
-        const path = `${prefix}[${i}]`;
-        if (typeof item === "object") {
-          fields[path] = "DO_NOT_TEST";
-          Object.assign(fields, extractFieldsFromJson(item, path));
-        } else {
-          fields[path] = typeof item;
-        }
-      });
-    } else {
-      fields[prefix] = typeof obj;
-    }
-
-    return fields;
-  }
-
-  /// --- extractQueryParams ---
-  function extractQueryParams(url: string): Record<string, string> {
-    try {
-      const u = new URL(url);
-      const params: Record<string, string> = {};
-      u.searchParams.forEach((v, k) => {
-        params[k] = v;
-      });
-      return params;
-    } catch {
-      return {};
-    }
-  }
-
   /// --- setDeepValue ---
   function setDeepValue(obj: any, path: string, value: any) {
-    const parts = path.replace(/\[(\d+)\]/g, ".$1").split(".");
+    const parts = path.replace(/\[(\d+)\]/g, '.$1').split('.');
     let current = obj;
     for (let i = 0; i < parts.length - 1; i++) {
       const key = parts[i];
@@ -1378,20 +1013,15 @@ export default function App() {
     current[parts[parts.length - 1]] = value;
   }
 
-  // deep-clone helper
-  function deepClone<T>(x: T): T {
-    return JSON.parse(JSON.stringify(x));
-  }
-
   // pritaiko random mapping'ą taip pat, kaip data-driven cikle
   function buildRandomizedBody(baseBody: any) {
-    const newBody = deepClone(baseBody);
+    const newBody = JSON.parse(JSON.stringify(baseBody));
 
     // perrašom visus random laukus kiekvienam request'ui
     for (const [f, t] of Object.entries(fieldMappings)) {
-      if (t === "random32") setDeepValue(newBody, f, rand32());
-      if (t === "randomInt") setDeepValue(newBody, f, randInt());
-      if (t === "randomEmail") setDeepValue(newBody, f, randEmail());
+      if (t === 'random32') setDeepValue(newBody, f, rand32());
+      if (t === 'randomInt') setDeepValue(newBody, f, randInt());
+      if (t === 'randomEmail') setDeepValue(newBody, f, randEmail());
     }
 
     return newBody;
@@ -1399,8 +1029,8 @@ export default function App() {
 
   // status code paėmimas
   function codeOf(res: any): number {
-    const s = (res?.status || "").toString();
-    const n = parseInt(s.split(" ")[0] || "0", 10);
+    const s = (res?.status || '').toString();
+    const n = parseInt(s.split(' ')[0] || '0', 10);
     return Number.isFinite(n) ? n : 0;
   }
 
@@ -1408,10 +1038,7 @@ export default function App() {
   function percentile(values: number[], p: number) {
     if (!values.length) return 0;
     const arr = [...values].sort((a, b) => a - b);
-    const idx = Math.min(
-      arr.length - 1,
-      Math.max(0, Math.floor((p / 100) * arr.length))
-    );
+    const idx = Math.min(arr.length - 1, Math.max(0, Math.floor((p / 100) * arr.length)));
     return arr[idx];
   }
 
@@ -1425,15 +1052,14 @@ export default function App() {
 
       // atnaujinam Performance lentelės „Load test“ eilutę
       setPerformanceResults((prev) => {
-        const other = prev.filter((x) => x.name !== "Load test");
+        const other = prev.filter((x) => x.name !== 'Load test');
         return [
           ...other,
           {
-            name: "Load test",
-            expected:
-              "Median <500 ms (Pass), <1000 ms (Warning), ≥1000 ms (Fail)",
+            name: 'Load test',
+            expected: 'Median <500 ms (Pass), <1000 ms (Warning), ≥1000 ms (Fail)',
             actual: `⏳ ${bar} (${sentCount}/${loadTotal})`,
-            status: "🔵 Info",
+            status: '🔵 Info',
           },
         ];
       });
@@ -1448,19 +1074,18 @@ export default function App() {
     // Reset progress UI
     setLoadProgressPct(0);
     const initialBar = buildTextBar(0);
-    setLoadProgressText(initialBar + " (0/" + loadTotal + ")");
+    setLoadProgressText(initialBar + ' (0/' + loadTotal + ')');
 
     // 🆕 Iš karto atnaujinam Performance lentelės „Load test“ eilutę, kad matytųsi 0%
     setPerformanceResults((prev) => {
-      const other = prev.filter((x) => x.name !== "Load test");
+      const other = prev.filter((x) => x.name !== 'Load test');
       return [
         ...other,
         {
-          name: "Load test",
-          expected:
-            "Median <500 ms (Pass), <1000 ms (Warning), ≥1000 ms (Fail)",
+          name: 'Load test',
+          expected: 'Median <500 ms (Pass), <1000 ms (Warning), ≥1000 ms (Fail)',
           actual: `⏳ ${initialBar} (0/${loadTotal})`,
-          status: "🔵 Info",
+          status: '🔵 Info',
         },
       ];
     });
@@ -1470,14 +1095,7 @@ export default function App() {
     const total = Math.max(1, Math.min(10000, Math.floor(loadTotal)));
 
     // headers
-    const hdrs = headers
-      ? Object.fromEntries(
-          headers.split("\n").map((h) => {
-            const [k, ...rest] = h.split(":");
-            return [k.trim(), rest.join(":").trim()];
-          })
-        )
-      : {};
+    const hdrs = parseHeaders(headers);
 
     // base body (iš UI)
     let baseBody: any = null;
@@ -1512,7 +1130,7 @@ export default function App() {
       }
 
       const t0 = performance.now();
-      const res = await (window as any).electronAPI.sendHttp({
+      const res = await window.electronAPI.sendHttp({
         url,
         method,
         headers: hdrs,
@@ -1546,38 +1164,25 @@ export default function App() {
       }
     }
 
-    const workers = Array.from(
-      { length: Math.min(concurrency, total) },
-      worker
-    );
+    const workers = Array.from({ length: Math.min(concurrency, total) }, worker);
     await Promise.all(workers);
 
     // suformuojam rezultatą Performance lentelei
     const p50 = percentile(times, 50);
     const p90 = percentile(times, 90);
     const p95 = percentile(times, 95);
-    const avg = times.length
-      ? times.reduce((a, b) => a + b, 0) / times.length
-      : 0;
+    const avg = times.length ? times.reduce((a, b) => a + b, 0) / times.length : 0;
 
-    const status =
-      failures5xx >= 5
-        ? "🔴 Fail"
-        : p50 < 500
-          ? "✅ Pass"
-          : p50 < 1000
-            ? "🟠 Warning"
-            : "🔴 Fail";
+    const status = failures5xx >= 5 ? '🔴 Fail' : p50 < 500 ? '✅ Pass' : p50 < 1000 ? '🟠 Warning' : '🔴 Fail';
 
     // įrašom/atnaujinam "Load test" eilutę Performance Insights lentelėje
     setPerformanceResults((prev) => {
-      const other = prev.filter((x) => x.name !== "Load test");
+      const other = prev.filter((x) => x.name !== 'Load test');
       return [
         ...other,
         {
           name: `Load test`,
-          expected:
-            "Median <500 ms (Pass), <1000 ms (Warning), ≥1000 ms (Fail)",
+          expected: 'Median <500 ms (Pass), <1000 ms (Warning), ≥1000 ms (Fail)',
           actual: `${concurrency} threads, ${total} total req. Executed: ${times.length} req → p50=${p50.toFixed(0)}ms p90=${p90.toFixed(0)}ms p95=${p95.toFixed(0)}ms avg=${avg.toFixed(0)}ms, 4xx=${failures4xx}, 5xx=${failures5xx}`,
           status,
         },
@@ -1588,336 +1193,259 @@ export default function App() {
   }
 
   function truncateValue(value: any, maxLength = 100) {
-    if (value === null) return "null";
-    if (value === undefined) return "undefined";
+    if (value === null) return 'null';
+    if (value === undefined) return 'undefined';
 
     let str: string;
 
     switch (typeof value) {
-      case "string":
+      case 'string':
         str = `"${value}"`;
         break;
-      case "number":
-      case "boolean":
+      case 'number':
+      case 'boolean':
         str = String(value);
         break;
-      case "object":
+      case 'object':
         try {
           str = JSON.stringify(value);
         } catch {
-          str = "[object]";
+          str = '[object]';
         }
         break;
       default:
         str = String(value);
     }
 
-    return str.length > maxLength ? str.slice(0, maxLength) + " ..." : str;
+    return str.length > maxLength ? str.slice(0, maxLength) + ' ...' : str;
   }
 
   return (
-    <div className="app">
-      {/* Mode selector */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "10px",
-          marginBottom: "10px",
-        }}
-      >
-        <label>
-          Mode:
-          <select value={mode} onChange={(e) => setMode(e.target.value as any)}>
-            <option>HTTP</option>
-            <option>WSS</option>
-          </select>
-        </label>
-
-        {mode === "HTTP" && (
-          <button className="send-btn" onClick={() => setShowCurlModal(true)}>
-            Import cURL
-          </button>
-        )}
-      </div>
-
-      {/* URL + Method */}
-      <div className="header">
-        {mode === "HTTP" && (
-          <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-            <input
-              list="http-methods"
-              className={`method-select method-${method}`}
-              value={method}
-              onChange={(e) => setMethod(e.target.value.toUpperCase())}
-              onFocus={(e) => e.target.select()} // ✅ pažymi visą tekstą
-              onClick={(e) => ((e.target as HTMLInputElement).value = "")} // ✅ išvalo kad matytųsi visas sąrašas
-              placeholder="METHOD"
-              style={{ width: "100px", textTransform: "uppercase" }}
-            />
-            <datalist id="http-methods">
-              <option value="GET" />
-              <option value="POST" />
-              <option value="PUT" />
-              <option value="PATCH" />
-              <option value="DELETE" />
-              <option value="HEAD" />
-              <option value="OPTIONS" />
-            </datalist>
-          </div>
-        )}
-        <input
-          className="url-input"
-          placeholder="Enter request URL"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
+    <div className="py-5 px-7">
+      <div className="flex items-center gap-2 mb-4">
+        <Select
+          className="font-bold"
+          isSearchable={false}
+          options={modeOptions}
+          placeholder="MODE"
+          value={modeOptions.find((option) => option.value == mode)}
+          onChange={(option: SelectOption<Mode>) => setMode(option.value)}
         />
-
-        {mode === "HTTP" ? (
-          <button className="send-btn" onClick={sendHttp}>
-            Send
-          </button>
-        ) : (
+        {mode === 'HTTP' && (
           <>
-            <button
-              className="send-btn"
-              onClick={connectWss}
-              disabled={wsConnected}
-            >
-              Connect
-            </button>
-            <button
-              className="send-btn"
-              onClick={sendWss}
-              disabled={!wsConnected}
-            >
-              Send
-            </button>
+            <Button onClick={() => setOpenCurlModal(true)}>Import cURL</Button>
+            <Modal isOpen={openCurlModal} onClose={() => setOpenCurlModal(false)}>
+              <div className="flex flex-col gap-4">
+                <h3 className="m-0">Import cURL</h3>
+                <Textarea
+                  className="min-h-40 font-monospace"
+                  placeholder="Enter cURL or paste text"
+                  value={curl}
+                  onChange={(e) => setCurl(e.target.value)}
+                />
+                {curlError && <div className="text-xs text-red-600">{curlError}</div>}
+                <div className="flex items-center justify-end gap-4">
+                  <Button onClick={importCurl}>Import</Button>
+                  <Button buttonType={ButtonType.SECONDARY} onClick={() => setOpenCurlModal(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            </Modal>
           </>
         )}
       </div>
 
-      {/* Request Editors */}
-      <textarea
-        className="editor editor-headers"
+      <div className="flex items-center gap-2 mb-4">
+        {mode === 'HTTP' && (
+          <Select
+            className="font-bold uppercase"
+            classNames={{ input: () => 'm-0! p-0! [&>:first-child]:uppercase' }}
+            isCreatable={true}
+            options={methodOptions}
+            placeholder="METHOD"
+            value={methodOptions.find((option) => option.value == method)}
+            onChange={(option: SelectOption<Method>) => setMethod(option.value)}
+          />
+        )}
+        <Input
+          className="flex-auto font-monospace"
+          placeholder="Enter URL or paste text"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+        />
+        {mode === 'HTTP' && <Button onClick={sendHttp}>Send</Button>}
+        {mode === 'WSS' && (
+          <>
+            <Button disabled={wssConnected} onClick={connectWss}>
+              Connect
+            </Button>
+            <Button buttonType={ButtonType.SECONDARY} disabled={!wssConnected} onClick={sendWss}>
+              Send
+            </Button>
+          </>
+        )}
+      </div>
+
+      <Textarea
+        className="mb-4 font-monospace"
         placeholder="Header-Key: value"
         value={headers}
         onChange={(e) => setHeaders(e.target.value)}
       />
 
-      {/* Body editor + Beautify */}
-      <div style={{ position: "relative" }}>
-        <textarea
-          className="editor editor-body"
-          placeholder={mode === "HTTP" ? "Body JSON" : "Message body"}
+      <div className="relative mb-4">
+        <Textarea
+          className="min-h-36 font-monospace"
+          placeholder={mode === 'HTTP' ? 'Body JSON' : 'Message body'}
           value={body}
           onChange={(e) => setBody(e.target.value)}
-          style={{ fontFamily: "monospace" }}
         />
-        <button
-          onClick={beautifyBody}
-          style={{
-            position: "absolute",
-            top: "6px",
-            right: "6px",
-            background: "#f7f7f7",
-            border: "1px solid #ccc",
-            borderRadius: "4px",
-            cursor: "pointer",
-            padding: "2px 8px",
-            fontSize: "12px",
+        <Button
+          className="absolute top-1.5 right-1.5 min-w-auto! py-0.5! px-2! rounded-sm"
+          buttonType={ButtonType.SECONDARY}
+          onClick={() => {
+            try {
+              setBody(JSON.stringify(JSON.parse(body), null, 2));
+            } catch {
+              // Silently ignore JSON parse errors
+            }
           }}
         >
           Beautify
-        </button>
+        </Button>
       </div>
 
-      {/* showCurlModal */}
-      {showCurlModal && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <h3>Import cURL</h3>
-            <textarea
-              className={`editor ${curlError ? "error" : ""}`}
-              placeholder="Paste cURL here..."
-              value={curlInput}
-              onChange={(e) => setCurlInput(e.target.value)}
-              style={{ minHeight: "160px" }}
-            />
-            <div style={{ marginTop: "10px", display: "flex", gap: "10px" }}>
-              <button
-                className="send-btn"
-                onClick={() => handleImportCurl(curlInput)}
-              >
-                Import
-              </button>
-              <button
-                className="send-btn"
-                onClick={() => setShowCurlModal(false)}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Protobuf controls */}
-      <div className="protobuf-section" style={{ marginTop: "10px" }}>
-        <label
-          style={{ display: "block", marginBottom: "6px", fontWeight: "bold" }}
-        >
-          Protobuf schema & message type (optional):
+      <div className="mb-4">
+        <label className="block mb-2 font-bold text-sm">
+          Protobuf schema & message type <span className="font-normal text-gray-500/80">(optional)</span>:
         </label>
-
-        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-          <input
-            type="file"
+        <div className="flex items-center gap-2">
+          <Input
             accept=".proto"
+            className="font-monospace"
+            type="file"
             onChange={async (e) => {
-              if (e.target.files?.length) {
-                try {
-                  const root = await loadProto(e.target.files[0]);
-                  setProtoFile(e.target.files[0]);
-                  setMessages((prev) => [
-                    { direction: "system", data: "📂 Proto schema loaded" },
-                    ...prev,
-                  ]);
-                } catch (err) {
-                  setMessages((prev) => [
-                    {
-                      direction: "system",
-                      data: "❌ Failed to parse proto: " + err,
-                    },
-                    ...prev,
-                  ]);
-                }
+              const file = e.target.files?.[0];
+              if (!file) return;
+
+              try {
+                await loadProtoSchema(file);
+
+                setProtoFile(file);
+                setMessages((prevMessages) => [
+                  { direction: 'system', data: '📂 Proto schema loaded' },
+                  ...prevMessages,
+                ]);
+              } catch (error) {
+                setMessages((prevMessages) => [
+                  {
+                    direction: 'system',
+                    data: '❌ Failed to parse proto: ' + error,
+                  },
+                  ...prevMessages,
+                ]);
               }
             }}
           />
 
-          <input
-            type="text"
-            placeholder="MessageType (e.g. mypackage.MyMessage)"
+          <Input
+            className="flex-auto font-monospace"
+            placeholder="Message type (e.g. mypackage.MyMessage)"
             value={messageType}
             onChange={(e) => setMessageType(e.target.value)}
-            style={{ flex: 1, minWidth: "300px" }} // ilgesnis, kad tilptų visas pavadinimas
           />
         </div>
       </div>
 
-      {/* Response panel */}
-      {mode === "HTTP" && httpResponse && (
-        <div className="response-panel">
-          <h3>Response</h3>
-          <div className="status-line">{httpResponse.status}</div>
-
-          <h4>Headers</h4>
-          <pre className="wrap">
-            {JSON.stringify(httpResponse.headers, null, 2)}
-          </pre>
-
-          <h4>Body</h4>
-          <pre className="wrap">
-            {typeof httpResponse.body === "string"
-              ? httpResponse.body
-              : JSON.stringify(httpResponse.body, null, 2)}
-          </pre>
-        </div>
+      {mode === 'HTTP' && httpResponse && (
+        <ResponsePanel className="mb-4" title="Response">
+          <div className="py-2 px-3 font-bold bg-body border-y border-border">{httpResponse.status}</div>
+          <div className="max-h-[400px] py-2 px-3 overflow-y-auto">
+            <h4 className="m-0">Headers</h4>
+            <pre className="my-4 whitespace-pre-wrap">{JSON.stringify(httpResponse.headers, null, 2)}</pre>
+            <h4 className="m-0 pt-2 border-t border-border">Body</h4>
+            <pre className="my-4 whitespace-pre-wrap">
+              {typeof httpResponse.body === 'string' ? httpResponse.body : JSON.stringify(httpResponse.body, null, 2)}
+            </pre>
+          </div>
+        </ResponsePanel>
       )}
 
-      {/* WSS messages */}
-      {mode === "WSS" && (
-        <div className="response-panel">
-          <h3>Messages</h3>
-          {messages.map((m, i) => (
-            <div key={i} className={`msg ${m.direction}`}>
-              <span className="arrow">
-                {m.direction === "sent"
-                  ? "➡"
-                  : m.direction === "received"
-                    ? "⬅"
-                    : "⚠"}
-              </span>
-              <pre>{m.data}</pre>
-              {m.decoded && (
-                <>
-                  <div className="decoded-label">Decoded Protobuf:</div>
-                  <pre>{m.decoded}</pre>
-                </>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div className="mapping-sections">
-        {/* Body mapping kairėje */}
-        <div className="mapping-column">
-          <h3>Body Parameters</h3>
-          {Object.entries(fieldMappings).map(([field, type]) => (
-            <div key={field} className="mapping-row">
-              <span className="mapping-key">{field}</span>
-              <select
-                value={type}
-                onChange={(e) => updateFieldType(field, e.target.value)}
+      {mode === 'WSS' && messages.length > 0 && (
+        <ResponsePanel className="mb-4" title="Messages">
+          <div className="max-h-[400px] py-2 px-3 border-t border-border overflow-y-auto">
+            {messages.map((message, index) => (
+              <div
+                key={index}
+                className={cn('pt-2 nth-[2n]:border-b last:border-none border-border', {
+                  'nth-[1n]:border-b': message.direction !== 'sent' && message.direction !== 'received',
+                })}
               >
-                <option value="do-not-test">Do not test</option>
-                <option value="random32">Random string 32</option>
-                <option value="randomInt">Random integer</option>
-                <option value="randomEmail">Random email</option>
-                <option value="string">String</option>
-                <option value="email">Email</option>
-                <option value="phone">Phone</option>
-                <option value="url">URL</option>
-                <option value="number">Number</option>
-                <option value="boolean">Boolean</option>
-                <option value="currency">Currency</option>
-                <option value="date_yyyy_mm_dd">Date (YYYY-MM-DD)</option>
-              </select>
-            </div>
-          ))}
-        </div>
-
-        {/* Query mapping dešinėje */}
-        {Object.keys(queryMappings).length > 0 && (
-          <div className="mapping-column">
-            <h3>Query Parameters</h3>
-            {Object.entries(queryMappings).map(([param, type]) => (
-              <div key={param} className="mapping-row">
-                <span className="mapping-key">{param}</span>
-                <select
-                  value={type}
-                  onChange={(e) =>
-                    setQueryMappings((prev) => ({
-                      ...prev,
-                      [param]: e.target.value,
-                    }))
-                  }
+                <span
+                  className={cn('font-bold', {
+                    'text-blue-500': message.direction === 'sent',
+                    'text-green-500': message.direction === 'received',
+                  })}
                 >
-                  <option value="do-not-test">Do not test</option>
-                  <option value="random32">Random string 32</option>
-                  <option value="randomInt">Random integer</option>
-                  <option value="randomEmail">Random email</option>
-                  <option value="string">String</option>
-                  <option value="email">Email</option>
-                  <option value="phone">Phone</option>
-                  <option value="url">URL</option>
-                  <option value="number">Number</option>
-                  <option value="boolean">Boolean</option>
-                  <option value="currency">Currency</option>
-                  <option value="date_yyyy_mm_dd">Date (YYYY-MM-DD)</option>
-                </select>
+                  {message.direction === 'sent' ? '➡' : message.direction === 'received' ? '⬅' : '⚠'}
+                </span>
+                <pre className="mt-0 ml-4">{message.data}</pre>
+                {message.decoded && (
+                  <>
+                    <div className="font-monospace font-bold text-sm">Decoded Protobuf:</div>
+                    <pre>{message.decoded}</pre>
+                  </>
+                )}
               </div>
             ))}
           </div>
-        )}
-      </div>
-      <button className="send-btn" onClick={runAllTests} disabled={loading}>
-        {loading
-          ? `Running tests... (${currentTest}/${totalTests})`
-          : "Generate & Run Tests"}
-      </button>
+        </ResponsePanel>
+      )}
+
+      {(Object.keys(fieldMappings).length > 0 || Object.keys(queryMappings).length > 0) && (
+        <div className="mb-4 grid grid-cols-2 gap-4 items-stretch">
+          {Object.keys(fieldMappings).length > 0 && (
+            <ResponsePanel title="Body Parameters">
+              {Object.entries(fieldMappings).map(([field, type]) => (
+                <div key={field} className="pb-3 first-of-type:pt-3 px-3 flex items-center justify-between">
+                  <span className="font-monospace text-ellipsis text-nowrap overflow-hidden">{field}</span>
+                  <SimpleSelect
+                    className="rounded-none! p-1! outline-none"
+                    options={parameterOptions}
+                    value={type}
+                    onChange={(e) =>
+                      setFieldMappings((prevFieldMappings) => ({ ...prevFieldMappings, [field]: e.target.value }))
+                    }
+                  />
+                </div>
+              ))}
+            </ResponsePanel>
+          )}
+
+          {Object.keys(queryMappings).length > 0 && (
+            <ResponsePanel title="Query Parameters">
+              {Object.entries(queryMappings).map(([param, type]) => (
+                <div key={param} className="pb-3 first-of-type:pt-3 px-3 flex items-center justify-between">
+                  <span className="font-monospace text-ellipsis text-nowrap overflow-hidden">{param}</span>
+                  <SimpleSelect
+                    className="rounded-none! p-1! outline-none"
+                    options={parameterOptions}
+                    value={type}
+                    onChange={(e) =>
+                      setQueryMappings((prevQueryMappings) => ({ ...prevQueryMappings, [param]: e.target.value }))
+                    }
+                  />
+                </div>
+              ))}
+            </ResponsePanel>
+          )}
+        </div>
+      )}
+
+      <Button disabled={loading} onClick={runAllTests}>
+        {loading ? `Running tests... (${currentTest}/${totalTests})` : 'Generate & Run Tests'}
+      </Button>
 
       {/* Security & Headers results */}
       {testsStarted && (
@@ -1942,20 +1470,20 @@ export default function App() {
                   <React.Fragment key={i}>
                     <tr
                       className={
-                        r.status.includes("Pass")
-                          ? "pass"
-                          : r.status.includes("Fail")
-                            ? "fail"
-                            : r.status.includes("Warning")
-                              ? "warn"
-                              : r.status.includes("Manual")
-                                ? "manual"
-                                : r.status.includes("Info")
-                                  ? "info"
-                                  : "bug"
+                        r.status.includes('Pass')
+                          ? 'pass'
+                          : r.status.includes('Fail')
+                            ? 'fail'
+                            : r.status.includes('Warning')
+                              ? 'warn'
+                              : r.status.includes('Manual')
+                                ? 'manual'
+                                : r.status.includes('Info')
+                                  ? 'info'
+                                  : 'bug'
                       }
                       onClick={() => toggleSecurityRow(i)}
-                      style={{ cursor: "pointer" }}
+                      style={{ cursor: 'pointer' }}
                     >
                       <td>{r.name}</td>
                       <td>{r.expected}</td>
@@ -1969,8 +1497,8 @@ export default function App() {
                           <div className="details-panel">
                             <div
                               style={{
-                                display: "flex",
-                                justifyContent: "space-between",
+                                display: 'flex',
+                                justifyContent: 'space-between',
                               }}
                             >
                               <CopyButton req={r.request} />
@@ -1978,16 +1506,12 @@ export default function App() {
                             <div className="details-grid">
                               <div>
                                 <div className="details-title">Request</div>
-                                <pre className="wrap">
-                                  {JSON.stringify(r.request, null, 2)}
-                                </pre>
+                                <pre className="wrap">{JSON.stringify(r.request, null, 2)}</pre>
                               </div>
                               <div>
                                 <div className="details-title">Response</div>
                                 <pre className="wrap">
-                                  {typeof r.response === "string"
-                                    ? r.response
-                                    : JSON.stringify(r.response, null, 2)}
+                                  {typeof r.response === 'string' ? r.response : JSON.stringify(r.response, null, 2)}
                                 </pre>
                               </div>
                             </div>
@@ -2024,102 +1548,80 @@ export default function App() {
               ) : (
                 performanceResults
                   .sort((a, b) =>
-                    a.name === "Rate limiting implementation"
-                      ? 1
-                      : b.name === "Rate limiting implementation"
-                        ? -1
-                        : 0
+                    a.name === 'Rate limiting implementation' ? 1 : b.name === 'Rate limiting implementation' ? -1 : 0,
                   )
                   .map((r, i) => {
-                    const isLoad = r.name === "Load test";
-                    const isManual =
-                      r.status === "⚪ Manual" ||
-                      r.name === "Rate limiting implementation";
+                    const isLoad = r.name === 'Load test';
+                    const isManual = r.status === '⚪ Manual' || r.name === 'Rate limiting implementation';
 
                     // nustatom spalvą
                     // nustatom spalvą
-                    let rowClass = "";
-                    if (r.name === "Load test" && !r.actual)
-                      rowClass = "manual";
-                    else if (isManual) rowClass = "manual";
-                    else if (r.actual?.includes("⏳")) rowClass = "info";
-                    else if (
-                      r.actual?.includes("5xx") ||
-                      r.actual?.includes("p50")
-                    ) {
+                    let rowClass = '';
+                    if (r.name === 'Load test' && !r.actual) rowClass = 'manual';
+                    else if (isManual) rowClass = 'manual';
+                    else if (r.actual?.includes('⏳')) rowClass = 'info';
+                    else if (r.actual?.includes('5xx') || r.actual?.includes('p50')) {
                       if (/p50=\d+ms/.test(r.actual)) {
-                        const p50 = parseInt(
-                          r.actual.match(/p50=(\d+)/)?.[1] || "0"
-                        );
-                        rowClass =
-                          p50 < 500 ? "pass" : p50 < 1000 ? "warn" : "fail";
-                      } else if (r.status.includes("Fail")) rowClass = "fail";
-                      else if (r.status.includes("Warning")) rowClass = "warn";
-                      else if (r.status.includes("Pass")) rowClass = "pass";
-                      else rowClass = "";
+                        const p50 = parseInt(r.actual.match(/p50=(\d+)/)?.[1] || '0');
+                        rowClass = p50 < 500 ? 'pass' : p50 < 1000 ? 'warn' : 'fail';
+                      } else if (r.status.includes('Fail')) rowClass = 'fail';
+                      else if (r.status.includes('Warning')) rowClass = 'warn';
+                      else if (r.status.includes('Pass')) rowClass = 'pass';
+                      else rowClass = '';
                     }
 
                     // 🆕 naujas papildymas:
-                    else if (r.status.includes("Pass")) rowClass = "pass";
-                    else if (r.status.includes("Warning")) rowClass = "warn";
-                    else if (r.status.includes("Fail")) rowClass = "fail";
-                    else if (r.status.includes("Manual")) rowClass = "manual";
-                    else if (r.status.includes("Info")) rowClass = "info";
-                    else rowClass = "";
+                    else if (r.status.includes('Pass')) rowClass = 'pass';
+                    else if (r.status.includes('Warning')) rowClass = 'warn';
+                    else if (r.status.includes('Fail')) rowClass = 'fail';
+                    else if (r.status.includes('Manual')) rowClass = 'manual';
+                    else if (r.status.includes('Info')) rowClass = 'info';
+                    else rowClass = '';
 
                     return (
                       <tr key={i} className={rowClass}>
                         <td>{r.name}</td>
                         <td>{r.expected}</td>
                         <td>{r.actual}</td>
-                        <td style={{ textAlign: "center" }}>
-                          {r.name === "Load test" ? (
+                        <td style={{ textAlign: 'center' }}>
+                          {r.name === 'Load test' ? (
                             <div
                               style={{
-                                display: "flex",
-                                flexDirection: "column",
-                                alignItems: "center",
-                                gap: "2px",
-                                justifyContent: "center",
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                gap: '2px',
+                                justifyContent: 'center',
                               }}
                             >
                               <div
                                 style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: "6px",
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
                                 }}
                               >
                                 <div
                                   style={{
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    alignItems: "center",
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
                                   }}
                                 >
-                                  <label
-                                    style={{ fontSize: "10px", color: "#666" }}
-                                  >
-                                    Threads
-                                  </label>
+                                  <label style={{ fontSize: '10px', color: '#666' }}>Threads</label>
                                   <input
                                     type="number"
                                     min={1}
                                     max={100}
                                     value={loadConcurrency}
                                     onChange={(e) =>
-                                      setLoadConcurrency(
-                                        Math.min(
-                                          100,
-                                          Math.max(1, Number(e.target.value))
-                                        )
-                                      )
+                                      setLoadConcurrency(Math.min(100, Math.max(1, Number(e.target.value))))
                                     }
                                     style={{
-                                      width: "50px",
-                                      fontSize: "12px",
-                                      padding: "2px",
-                                      textAlign: "center",
+                                      width: '50px',
+                                      fontSize: '12px',
+                                      padding: '2px',
+                                      textAlign: 'center',
                                     }}
                                     title="Threads (max 100)"
                                   />
@@ -2127,34 +1629,23 @@ export default function App() {
 
                                 <div
                                   style={{
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    alignItems: "center",
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
                                   }}
                                 >
-                                  <label
-                                    style={{ fontSize: "10px", color: "#666" }}
-                                  >
-                                    Requests
-                                  </label>
+                                  <label style={{ fontSize: '10px', color: '#666' }}>Requests</label>
                                   <input
                                     type="number"
                                     min={1}
                                     max={10000}
                                     value={loadTotal}
-                                    onChange={(e) =>
-                                      setLoadTotal(
-                                        Math.min(
-                                          10000,
-                                          Math.max(1, Number(e.target.value))
-                                        )
-                                      )
-                                    }
+                                    onChange={(e) => setLoadTotal(Math.min(10000, Math.max(1, Number(e.target.value))))}
                                     style={{
-                                      width: "70px",
-                                      fontSize: "12px",
-                                      padding: "2px",
-                                      textAlign: "center",
+                                      width: '70px',
+                                      fontSize: '12px',
+                                      padding: '2px',
+                                      textAlign: 'center',
                                     }}
                                     title="Total requests (max 10 000)"
                                   />
@@ -2164,17 +1655,17 @@ export default function App() {
                                   onClick={runLoadTest}
                                   disabled={loadRunning}
                                   style={{
-                                    background: "#007bff",
-                                    color: "#fff",
-                                    border: "none",
-                                    borderRadius: "4px",
-                                    padding: "3px 8px",
-                                    fontSize: "12px",
-                                    cursor: "pointer",
-                                    marginTop: "12px",
+                                    background: '#007bff',
+                                    color: '#fff',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    padding: '3px 8px',
+                                    fontSize: '12px',
+                                    cursor: 'pointer',
+                                    marginTop: '12px',
                                   }}
                                 >
-                                  {loadRunning ? "⏳" : "Run"}
+                                  {loadRunning ? '⏳' : 'Run'}
                                 </button>
                               </div>
                             </div>
@@ -2216,20 +1707,18 @@ export default function App() {
                     <tr
                       className={
                         /^5\d\d/.test(r.actual)
-                          ? "bug"
-                          : r.status.includes("Pass")
-                            ? "pass"
-                            : r.status.includes("Fail")
-                              ? "fail"
-                              : "bug"
+                          ? 'bug'
+                          : r.status.includes('Pass')
+                            ? 'pass'
+                            : r.status.includes('Fail')
+                              ? 'fail'
+                              : 'bug'
                       }
                       onClick={() => toggleRow(i)}
-                      style={{ cursor: "pointer" }}
+                      style={{ cursor: 'pointer' }}
                     >
                       <td className="expander">
-                        <span className="chevron">
-                          {expandedRows[i] ? "▾" : "▸"}
-                        </span>
+                        <span className="chevron">{expandedRows[i] ? '▾' : '▸'}</span>
                         {r.field}
                       </td>
                       <td>{truncateValue(r.value)}</td>
@@ -2244,8 +1733,8 @@ export default function App() {
                           <div className="details-panel">
                             <div
                               style={{
-                                display: "flex",
-                                justifyContent: "space-between",
+                                display: 'flex',
+                                justifyContent: 'space-between',
                               }}
                             >
                               <CopyButton req={r.request} />
@@ -2253,18 +1742,14 @@ export default function App() {
                             <div className="details-grid">
                               <div>
                                 <div className="details-title">Request</div>
-                                <pre className="wrap">
-                                  {JSON.stringify(r.request, null, 2)}
-                                </pre>
+                                <pre className="wrap">{JSON.stringify(r.request, null, 2)}</pre>
                               </div>
                               <div>
                                 <div className="details-title">Response</div>
                                 <pre className="wrap">{r.response}</pre>
                                 {r.decoded && (
                                   <>
-                                    <div className="decoded-label">
-                                      Decoded Protobuf:
-                                    </div>
+                                    <div className="decoded-label">Decoded Protobuf:</div>
                                     <pre>{r.decoded}</pre>
                                   </>
                                 )}
@@ -2302,17 +1787,17 @@ export default function App() {
                 </tr>
               ) : (
                 crudResults.map((r, i) => {
-                  const rowClass = r.status.includes("Pass")
-                    ? "pass"
-                    : r.status.includes("Fail")
-                      ? "fail"
-                      : r.status.includes("Warning")
-                        ? "warn"
-                        : r.status.includes("Manual")
-                          ? "manual"
-                          : r.status.includes("Info")
-                            ? "info"
-                            : "bug";
+                  const rowClass = r.status.includes('Pass')
+                    ? 'pass'
+                    : r.status.includes('Fail')
+                      ? 'fail'
+                      : r.status.includes('Warning')
+                        ? 'warn'
+                        : r.status.includes('Manual')
+                          ? 'manual'
+                          : r.status.includes('Info')
+                            ? 'info'
+                            : 'bug';
 
                   const isExpanded = expandedCrudRows[i];
                   const toggleExpand = () => {
@@ -2327,16 +1812,14 @@ export default function App() {
                       <tr
                         className={rowClass}
                         onClick={toggleExpand}
-                        style={{ cursor: r.request ? "pointer" : "default" }}
+                        style={{ cursor: r.request ? 'pointer' : 'default' }}
                       >
                         <td className="expander">
-                          <span className="chevron">
-                            {isExpanded ? "▾" : "▸"}
-                          </span>
+                          <span className="chevron">{isExpanded ? '▾' : '▸'}</span>
                           {r.method}
                         </td>
                         <td>{r.expected}</td>
-                        <td>{r.actual || "Not available yet"}</td>
+                        <td>{r.actual || 'Not available yet'}</td>
                         <td>{r.status}</td>
                       </tr>
 
@@ -2346,8 +1829,8 @@ export default function App() {
                             <div className="details-panel">
                               <div
                                 style={{
-                                  display: "flex",
-                                  justifyContent: "space-between",
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
                                 }}
                               >
                                 <CopyButton req={r.request} />
@@ -2355,16 +1838,12 @@ export default function App() {
                               <div className="details-grid">
                                 <div>
                                   <div className="details-title">Request</div>
-                                  <pre className="wrap">
-                                    {JSON.stringify(r.request, null, 2)}
-                                  </pre>
+                                  <pre className="wrap">{JSON.stringify(r.request, null, 2)}</pre>
                                 </div>
                                 <div>
                                   <div className="details-title">Response</div>
                                   <pre className="wrap">
-                                    {r.response
-                                      ? JSON.stringify(r.response, null, 2)
-                                      : "null"}
+                                    {r.response ? JSON.stringify(r.response, null, 2) : 'null'}
                                   </pre>
                                 </div>
                               </div>
@@ -2382,4 +1861,109 @@ export default function App() {
       )}
     </div>
   );
+
+  function importCurl() {
+    try {
+      if (curl.length > 200_000) throw new Error('cURL too large');
+
+      const { url, method, headers, body } = extractCurl(curl);
+
+      setUrl(url);
+      setMethod(method as Method);
+      setBody(body ? body : '{}');
+      setHeaders(
+        Object.entries(headers)
+          .map(([k, v]) => `${k}: ${v}`)
+          .join('\n'),
+      );
+
+      setOpenCurlModal(false);
+      setCurl('');
+      setCurlError('');
+    } catch (error) {
+      console.error('cURL import failed', error);
+      setCurlError('The cURL command you provided appears to be invalid. Please check it and try again.');
+    }
+  }
+
+  async function sendHttp() {
+    setHttpResponse({
+      status: 'Sending...',
+      body: '',
+      headers: {},
+    });
+
+    try {
+      const response = await window.electronAPI.sendHttp({
+        url,
+        method,
+        headers: parseHeaders(headers),
+        body: protoFile && messageType ? encodeMessage(messageType, JSON.parse(body)) : body,
+      });
+
+      setHttpResponse(response);
+
+      // Generate test mappings based on request body (not response)
+      let parsedBody;
+      try {
+        parsedBody = JSON.parse(body);
+      } catch {
+        return;
+      }
+
+      if (response.status.startsWith('2') && parsedBody) {
+        // Extract all fields from request body (including nested)
+        const extractedFields = extractFieldsFromJson(parsedBody);
+        const bodyMappings: Record<string, string> = {};
+
+        for (const [fieldPath, fieldType] of Object.entries(extractedFields)) {
+          if (fieldType === 'DO_NOT_TEST') bodyMappings[fieldPath] = 'do-not-test';
+          else {
+            // For non-object fields - detect the actual type from the value
+            // Get the actual value from the path
+            const pathSegments = fieldPath.replace(/\[(\d+)\]/g, '.$1').split('.');
+            let fieldValue = parsedBody;
+            for (const segment of pathSegments) {
+              if (fieldValue == null) break;
+              fieldValue = fieldValue[segment];
+            }
+            bodyMappings[fieldPath] = detectFieldType(fieldValue);
+          }
+        }
+
+        setFieldMappings(bodyMappings);
+
+        // Generate query parameter mappings
+        const queryParams = extractQueryParams(url);
+        const queryParamMappings: Record<string, string> = {};
+
+        for (const [key, value] of Object.entries(queryParams)) queryParamMappings[key] = detectFieldType(value);
+
+        setQueryMappings(queryParamMappings);
+      }
+    } catch (error) {
+      setHttpResponse({
+        status: 'Network Error',
+        body: String(error),
+        headers: {},
+      });
+    }
+  }
+
+  function connectWss() {
+    if (!url.startsWith('ws')) {
+      setMessages((prevMessages) => [
+        { direction: 'system', data: '❌ Please use ws:// or wss:// URL' },
+        ...prevMessages,
+      ]);
+      return;
+    }
+
+    window.electronAPI.connectWss({ url, headers: parseHeaders(headers) });
+  }
+
+  function sendWss() {
+    setMessages((prevMessages) => [{ direction: 'sent', data: body }, ...prevMessages]);
+    window.electronAPI.sendWss(body);
+  }
 }
