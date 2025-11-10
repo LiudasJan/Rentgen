@@ -126,27 +126,31 @@ export default function App() {
     return '█'.repeat(filled) + '░'.repeat(width - filled) + ` ${pct}%`;
   }
 
-  // mount
   useEffect(() => {
-    if (!window.electronAPI?.onWssEvent) return; // 👈 skip browser
-    const off = window.electronAPI.onWssEvent((ev: any) => {
-      if (ev.type === 'open') setWssConnected(true);
-      if (ev.type === 'close') setWssConnected(false);
-      if (ev.type === 'message') {
-        setMessages((prev) => [
+    if (!window.electronAPI?.onWssEvent) return;
+
+    const messagesListener = (event: any) => {
+      if (event.type === 'open') setWssConnected(true);
+      if (event.type === 'close') setWssConnected(false);
+      if (event.type === 'message') {
+        setMessages((prevMessages) => [
           {
             direction: 'received',
-            data: String(ev.data),
-            decoded: ev.decoded ?? null,
+            data: String(event.data),
+            decoded: event.decoded ?? null,
           },
-          ...prev,
+          ...prevMessages,
         ]);
       }
-      if (ev.type === 'error') {
-        setMessages((prev) => [{ direction: 'system', data: '❌ ' + ev.error }, ...prev]);
-      }
-    });
-    return () => off?.(); // unmount
+
+      if (event.type === 'error') setMessages((prev) => [{ direction: 'system', data: '❌ ' + event.error }, ...prev]);
+    };
+
+    const ipcRenderer = window.electronAPI.onWssEvent(messagesListener);
+
+    return () => {
+      ipcRenderer?.off('wss-event', messagesListener);
+    };
   }, []);
 
   // --- To cURL + copy ---
