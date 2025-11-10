@@ -253,7 +253,7 @@ export async function runDataDrivenTests(
         actual: queryResponse.status,
         expected: queryTestData.valid ? EXPECTED_SUCCESS_RESPONSE : EXPECTED_CLIENT_ERROR_RESPONSE,
         field: `query.${queryParam}`,
-        request: { url: urlWithQueryParam.toString(), method, headers },
+        request: { url: urlWithQueryParam.toString(), method, headers, body },
         response: queryResponse.body,
         responseTime: queryResponseTime,
         status: queryTestStatus,

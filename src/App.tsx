@@ -22,6 +22,7 @@ import {
   loadProtoSchema,
   parseHeaders,
   setDeepObjectProperty,
+  truncateValue,
 } from './utils';
 
 type Mode = 'HTTP' | 'WSS';
@@ -110,9 +111,8 @@ export default function App() {
   const [loadTotal, setLoadTotal] = useState(100); // total requests
   const [loadRunning, setLoadRunning] = useState(false);
 
-  // 🆕 Progress bar būsena (nebūtina, bet patogu jei norėsi rodyti dar ir kitur)
+  // Progress bar state for load testing
   const [loadProgressPct, setLoadProgressPct] = useState(0);
-  const [loadProgressText, setLoadProgressText] = useState('');
 
   // 🆕 Tekstinis bar'as: 20 char pločio: █ and ░
   function buildTextBar(pct: number) {
@@ -230,7 +230,6 @@ export default function App() {
     if (pct !== loadProgressPct) {
       const bar = buildTextBar(pct);
       setLoadProgressPct(pct);
-      setLoadProgressText(`${bar} (${sentCount}/${loadTotal})`);
 
       // atnaujinam Performance lentelės „Load test“ eilutę
       setPerformanceTests((prev) => {
@@ -256,7 +255,6 @@ export default function App() {
     // Reset progress UI
     setLoadProgressPct(0);
     const initialBar = buildTextBar(0);
-    setLoadProgressText(initialBar + ' (0/' + loadTotal + ')');
 
     // 🆕 Iš karto atnaujinam Performance lentelės „Load test“ eilutę, kad matytųsi 0%
     setPerformanceTests((prev) => {
@@ -379,34 +377,6 @@ export default function App() {
     });
 
     setLoadRunning(false);
-  }
-
-  function truncateValue(value: any, maxLength = 100) {
-    if (value === null) return 'null';
-    if (value === undefined) return 'undefined';
-
-    let str: string;
-
-    switch (typeof value) {
-      case 'string':
-        str = `"${value}"`;
-        break;
-      case 'number':
-      case 'boolean':
-        str = String(value);
-        break;
-      case 'object':
-        try {
-          str = JSON.stringify(value);
-        } catch {
-          str = '[object]';
-        }
-        break;
-      default:
-        str = String(value);
-    }
-
-    return str.length > maxLength ? str.slice(0, maxLength) + ' ...' : str;
   }
 
   return (
@@ -743,7 +713,6 @@ export default function App() {
                           : 0,
                     )
                     .map((r, i) => {
-                      const isLoad = r.name === 'Load test';
                       const isManual = r.status === '⚪ Manual' || r.name === 'Rate limiting implementation';
 
                       // nustatom spalvą
