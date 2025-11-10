@@ -464,10 +464,24 @@ export default function App() {
           className="absolute top-1.5 right-1.5 min-w-auto! py-0.5! px-2! rounded-sm"
           buttonType={ButtonType.SECONDARY}
           onClick={() => {
-            try {
-              setBody(JSON.stringify(JSON.parse(body), null, 2));
-            } catch {
-              // Silently ignore JSON parse errors
+            const parsedHeaders = parseHeaders(headers);
+            const contentType = (parsedHeaders['Content-Type'] || parsedHeaders['content-type'] || '').toString();
+
+            if (/application\/x-www-form-urlencoded/i.test(contentType))
+              setBody((prevBody) =>
+                prevBody
+                  .split(/\r?\n/)
+                  .map((l) => l.trim())
+                  .filter(Boolean)
+                  .sort()
+                  .join('\n'),
+              );
+            else {
+              try {
+                setBody((prevBody) => JSON.stringify(JSON.parse(prevBody), null, 2));
+              } catch {
+                // Silently ignore JSON parse errors
+              }
             }
           }}
         >
