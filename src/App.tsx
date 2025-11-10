@@ -568,8 +568,8 @@ export default function App() {
           {Object.keys(fieldMappings).length > 0 && (
             <ResponsePanel title="Body Parameters">
               {Object.entries(fieldMappings).map(([field, type]) => (
-                <div key={field} className="pb-3 first-of-type:pt-3 px-3 flex items-center justify-between">
-                  <span className="font-monospace text-ellipsis text-nowrap overflow-hidden">{field}</span>
+                <div key={field} className="pb-3 first-of-type:pt-3 px-3 flex items-center justify-between gap-3">
+                  <span className="flex-1 font-monospace text-ellipsis text-nowrap overflow-hidden">{field}</span>
                   <SimpleSelect
                     className="rounded-none! p-1! outline-none"
                     options={parameterOptions}
@@ -586,8 +586,8 @@ export default function App() {
           {Object.keys(queryMappings).length > 0 && (
             <ResponsePanel title="Query Parameters">
               {Object.entries(queryMappings).map(([param, type]) => (
-                <div key={param} className="pb-3 first-of-type:pt-3 px-3 flex items-center justify-between">
-                  <span className="font-monospace text-ellipsis text-nowrap overflow-hidden">{param}</span>
+                <div key={param} className="pb-3 first-of-type:pt-3 px-3 flex items-center justify-between gap-3">
+                  <span className="flex-1 font-monospace text-ellipsis text-nowrap overflow-hidden">{param}</span>
                   <SimpleSelect
                     className="rounded-none! p-1! outline-none"
                     options={parameterOptions}
