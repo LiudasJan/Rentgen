@@ -80,3 +80,38 @@ export function truncateValue(value: any, maxLength = 100): string {
 
   return formattedString;
 }
+
+/**
+ * Formats and beautifies request body content based on Content-Type header
+ *
+ * This utility function automatically detects the content type from headers
+ * and applies appropriate formatting:
+ * - For 'application/x-www-form-urlencoded': sorts and normalizes form data
+ * - For JSON content: pretty-prints with proper indentation
+ * - Gracefully handles malformed JSON without throwing errors
+ *
+ * @param body - The raw body content to format
+ * @param headers - Parsed headers object for Content-Type detection
+ * @returns Formatted body content string
+ */
+export function formatRequestBody(body: string, headers: Record<string, string>): string {
+  const contentType = (headers['Content-Type'] || headers['content-type'] || '').toString();
+
+  // Handle form URL-encoded content
+  if (/application\/x-www-form-urlencoded/i.test(contentType)) {
+    return body
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .sort()
+      .join('\n');
+  }
+
+  // Handle JSON content (default case)
+  try {
+    return JSON.stringify(JSON.parse(body), null, 2);
+  } catch {
+    // Return original content if JSON parsing fails
+    return body;
+  }
+}
