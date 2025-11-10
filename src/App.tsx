@@ -82,7 +82,7 @@ export default function App() {
   >([]);
   const [fieldMappings, setFieldMappings] = useState<Record<string, string>>({});
   const [queryMappings, setQueryMappings] = useState<Record<string, string>>({});
-
+  const [testsRun, setTestsRun] = useState(false);
   const {
     crudTests,
     currentTest,
@@ -96,9 +96,6 @@ export default function App() {
     executeAllTests,
     setPerformanceTests,
   } = useTests(method, url, parseHeaders(headers), body, fieldMappings, queryMappings, messageType, protoFile);
-
-  const [loading, setLoading] = useState(false);
-  const [testsStarted, setTestsStarted] = useState(false);
 
   // --- State ---
   const [expandedRows, setExpandedRows] = useState<Record<number, boolean>>({});
@@ -146,17 +143,6 @@ export default function App() {
     });
     return () => off?.(); // unmount
   }, []);
-
-  // --- RUN ALL TESTS ---
-  async function runAllTests() {
-    setTestsStarted(true);
-
-    setLoading(true);
-
-    await executeAllTests();
-
-    setLoading(false);
-  }
 
   // --- To cURL + copy ---
   function copyAsCurl(req: { url: string; method: string; headers?: any; body?: any }) {
@@ -424,8 +410,8 @@ export default function App() {
   }
 
   return (
-    <div className="py-5 px-7">
-      <div className="flex items-center gap-2 mb-4">
+    <div className="flex flex-col gap-4 py-5 px-7">
+      <div className="flex items-center gap-2">
         <Select
           className="font-bold"
           isSearchable={false}
@@ -459,7 +445,7 @@ export default function App() {
         )}
       </div>
 
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center gap-2">
         {mode === 'HTTP' && (
           <Select
             className="font-bold uppercase"
@@ -491,13 +477,13 @@ export default function App() {
       </div>
 
       <Textarea
-        className="mb-4 font-monospace"
+        className="font-monospace"
         placeholder="Header-Key: value"
         value={headers}
         onChange={(e) => setHeaders(e.target.value)}
       />
 
-      <div className="relative mb-4">
+      <div className="relative">
         <Textarea
           className="min-h-36 font-monospace"
           placeholder={mode === 'HTTP' ? 'Body JSON' : 'Message body'}
@@ -519,7 +505,7 @@ export default function App() {
         </Button>
       </div>
 
-      <div className="mb-4">
+      <div>
         <label className="block mb-2 font-bold text-sm">
           Protobuf schema & message type <span className="font-normal text-gray-500/80">(optional)</span>:
         </label>
@@ -562,7 +548,7 @@ export default function App() {
       </div>
 
       {mode === 'HTTP' && httpResponse && (
-        <ResponsePanel className="mb-4" title="Response">
+        <ResponsePanel title="Response">
           <div className="py-2 px-3 font-bold bg-body border-y border-border">{httpResponse.status}</div>
           <div className="max-h-[400px] py-2 px-3 overflow-y-auto">
             <h4 className="m-0">Headers</h4>
@@ -576,7 +562,7 @@ export default function App() {
       )}
 
       {mode === 'WSS' && messages.length > 0 && (
-        <ResponsePanel className="mb-4" title="Messages">
+        <ResponsePanel title="Messages">
           <div className="max-h-[400px] py-2 px-3 border-t border-border overflow-y-auto">
             {messages.map((message, index) => (
               <div
@@ -607,7 +593,7 @@ export default function App() {
       )}
 
       {(Object.keys(fieldMappings).length > 0 || Object.keys(queryMappings).length > 0) && (
-        <div className="mb-4 grid grid-cols-2 gap-4 items-stretch">
+        <div className="grid grid-cols-2 gap-4 items-stretch">
           {Object.keys(fieldMappings).length > 0 && (
             <ResponsePanel title="Body Parameters">
               {Object.entries(fieldMappings).map(([field, type]) => (
@@ -646,387 +632,57 @@ export default function App() {
         </div>
       )}
 
-      <Button disabled={loading} onClick={runAllTests}>
-        {loading ? `Running tests... (${currentTest}/${testCount})` : 'Generate & Run Tests'}
-      </Button>
+      <div>
+        <Button disabled={isRunningTests()} onClick={runAllTests}>
+          {isRunningTests() ? `Running tests... (${currentTest}/${testCount})` : 'Generate & Run Tests'}
+        </Button>
+      </div>
 
-      {/* Security & Headers results */}
-      {testsStarted && (
-        <div className="response-panel">
-          <h3>Security & Headers Tests</h3>
-          <table className="results-table">
-            <thead>
-              <tr>
-                <th>Check</th>
-                <th>Expected</th>
-                <th>Actual</th>
-                <th>Result</th>
-              </tr>
-            </thead>
-            <tbody>
-              {isSecurityRunning && securityTests.length === 0 ? (
+      {testsRun && (
+        <>
+          <div className="response-panel">
+            <h3>Security & Headers Tests</h3>
+            <table className="results-table">
+              <thead>
                 <tr>
-                  <td colSpan={4}>⏳ Running security tests...</td>
+                  <th>Check</th>
+                  <th>Expected</th>
+                  <th>Actual</th>
+                  <th>Result</th>
                 </tr>
-              ) : (
-                securityTests.map((r, i) => (
-                  <React.Fragment key={i}>
-                    <tr
-                      className={
-                        r.status.includes('Pass')
-                          ? 'pass'
-                          : r.status.includes('Fail')
-                            ? 'fail'
-                            : r.status.includes('Warning')
-                              ? 'warn'
-                              : r.status.includes('Manual')
-                                ? 'manual'
-                                : r.status.includes('Info')
-                                  ? 'info'
-                                  : 'bug'
-                      }
-                      onClick={() => toggleSecurityRow(i)}
-                      style={{ cursor: 'pointer' }}
-                    >
-                      <td>{r.name}</td>
-                      <td>{r.expected}</td>
-                      <td>{r.actual}</td>
-                      <td>{r.status}</td>
-                    </tr>
-
-                    {expandedSecurityRows[i] && (
-                      <tr className="details-row">
-                        <td colSpan={4}>
-                          <div className="details-panel">
-                            <div
-                              style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                              }}
-                            >
-                              <CopyButton req={r.request} />
-                            </div>
-                            <div className="details-grid">
-                              <div>
-                                <div className="details-title">Request</div>
-                                <pre className="wrap">{JSON.stringify(r.request, null, 2)}</pre>
-                              </div>
-                              <div>
-                                <div className="details-title">Response</div>
-                                <pre className="wrap">
-                                  {typeof r.response === 'string' ? r.response : JSON.stringify(r.response, null, 2)}
-                                </pre>
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </React.Fragment>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* Performance Insights */}
-      {testsStarted && (
-        <div className="response-panel">
-          <h3>Performance Insights</h3>
-          <table className="results-table">
-            <thead>
-              <tr>
-                <th>Check</th>
-                <th>Expected</th>
-                <th>Actual</th>
-                <th>Result</th>
-              </tr>
-            </thead>
-            <tbody>
-              {isPerformanceRunning && performanceTests.length === 0 ? (
-                <tr>
-                  <td colSpan={4}>⏳ Running Performance Insights...</td>
-                </tr>
-              ) : (
-                performanceTests
-                  .sort((a, b) =>
-                    a.name === 'Rate limiting implementation' ? 1 : b.name === 'Rate limiting implementation' ? -1 : 0,
-                  )
-                  .map((r, i) => {
-                    const isLoad = r.name === 'Load test';
-                    const isManual = r.status === '⚪ Manual' || r.name === 'Rate limiting implementation';
-
-                    // nustatom spalvą
-                    // nustatom spalvą
-                    let rowClass = '';
-                    if (r.name === 'Load test' && !r.actual) rowClass = 'manual';
-                    else if (isManual) rowClass = 'manual';
-                    else if (r.actual?.includes('⏳')) rowClass = 'info';
-                    else if (r.actual?.includes('5xx') || r.actual?.includes('p50')) {
-                      if (/p50=\d+ms/.test(r.actual)) {
-                        const p50 = parseInt(r.actual.match(/p50=(\d+)/)?.[1] || '0');
-                        rowClass = p50 < 500 ? 'pass' : p50 < 1000 ? 'warn' : 'fail';
-                      } else if (r.status.includes('Fail')) rowClass = 'fail';
-                      else if (r.status.includes('Warning')) rowClass = 'warn';
-                      else if (r.status.includes('Pass')) rowClass = 'pass';
-                      else rowClass = '';
-                    }
-
-                    // 🆕 naujas papildymas:
-                    else if (r.status.includes('Pass')) rowClass = 'pass';
-                    else if (r.status.includes('Warning')) rowClass = 'warn';
-                    else if (r.status.includes('Fail')) rowClass = 'fail';
-                    else if (r.status.includes('Manual')) rowClass = 'manual';
-                    else if (r.status.includes('Info')) rowClass = 'info';
-                    else rowClass = '';
-
-                    return (
-                      <tr key={i} className={rowClass}>
-                        <td>{r.name}</td>
-                        <td>{r.expected}</td>
-                        <td>{r.actual}</td>
-                        <td style={{ textAlign: 'center' }}>
-                          {r.name === 'Load test' ? (
-                            <div
-                              style={{
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                gap: '2px',
-                                justifyContent: 'center',
-                              }}
-                            >
-                              <div
-                                style={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '6px',
-                                }}
-                              >
-                                <div
-                                  style={{
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    alignItems: 'center',
-                                  }}
-                                >
-                                  <label style={{ fontSize: '10px', color: '#666' }}>Threads</label>
-                                  <input
-                                    type="number"
-                                    min={1}
-                                    max={100}
-                                    value={loadConcurrency}
-                                    onChange={(e) =>
-                                      setLoadConcurrency(Math.min(100, Math.max(1, Number(e.target.value))))
-                                    }
-                                    style={{
-                                      width: '50px',
-                                      fontSize: '12px',
-                                      padding: '2px',
-                                      textAlign: 'center',
-                                    }}
-                                    title="Threads (max 100)"
-                                  />
-                                </div>
-
-                                <div
-                                  style={{
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    alignItems: 'center',
-                                  }}
-                                >
-                                  <label style={{ fontSize: '10px', color: '#666' }}>Requests</label>
-                                  <input
-                                    type="number"
-                                    min={1}
-                                    max={10000}
-                                    value={loadTotal}
-                                    onChange={(e) => setLoadTotal(Math.min(10000, Math.max(1, Number(e.target.value))))}
-                                    style={{
-                                      width: '70px',
-                                      fontSize: '12px',
-                                      padding: '2px',
-                                      textAlign: 'center',
-                                    }}
-                                    title="Total requests (max 10 000)"
-                                  />
-                                </div>
-
-                                <button
-                                  onClick={runLoadTest}
-                                  disabled={loadRunning}
-                                  style={{
-                                    background: '#007bff',
-                                    color: '#fff',
-                                    border: 'none',
-                                    borderRadius: '4px',
-                                    padding: '3px 8px',
-                                    fontSize: '12px',
-                                    cursor: 'pointer',
-                                    marginTop: '12px',
-                                  }}
-                                >
-                                  {loadRunning ? '⏳' : 'Run'}
-                                </button>
-                              </div>
-                            </div>
-                          ) : (
-                            r.status // visur kitur rodom statusą (Pass/Fail/Manual)
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* Data Handling & Input Validation */}
-      {testsStarted && (
-        <div className="response-panel">
-          <h3>Data Handling & Input Validation</h3>
-          <table className="results-table">
-            <thead>
-              <tr>
-                <th>Field</th>
-                <th>Value</th>
-                <th>Expected</th>
-                <th>Actual</th>
-                <th>Result</th>
-              </tr>
-            </thead>
-            <tbody>
-              {isDataDrivenRunning && dataDrivenTests.length === 0 ? (
-                <tr>
-                  <td colSpan={5}>⏳ Running data-driven tests...</td>
-                </tr>
-              ) : (
-                dataDrivenTests.map((r, i) => (
-                  <React.Fragment key={i}>
-                    <tr
-                      className={
-                        /^5\d\d/.test(r.actual)
-                          ? 'bug'
-                          : r.status.includes('Pass')
+              </thead>
+              <tbody>
+                {isSecurityRunning && securityTests.length === 0 ? (
+                  <tr>
+                    <td colSpan={4}>⏳ Running security tests...</td>
+                  </tr>
+                ) : (
+                  securityTests.map((r, i) => (
+                    <React.Fragment key={i}>
+                      <tr
+                        className={
+                          r.status.includes('Pass')
                             ? 'pass'
                             : r.status.includes('Fail')
                               ? 'fail'
-                              : 'bug'
-                      }
-                      onClick={() => toggleRow(i)}
-                      style={{ cursor: 'pointer' }}
-                    >
-                      <td className="expander">
-                        <span className="chevron">{expandedRows[i] ? '▾' : '▸'}</span>
-                        {r.field}
-                      </td>
-                      <td>{truncateValue(r.value)}</td>
-                      <td>{r.expected}</td>
-                      <td>{r.actual}</td>
-                      <td>{r.status}</td>
-                    </tr>
-
-                    {expandedRows[i] && (
-                      <tr className="details-row">
-                        <td colSpan={5}>
-                          <div className="details-panel">
-                            <div
-                              style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                              }}
-                            >
-                              <CopyButton req={r.request} />
-                            </div>
-                            <div className="details-grid">
-                              <div>
-                                <div className="details-title">Request</div>
-                                <pre className="wrap">{JSON.stringify(r.request, null, 2)}</pre>
-                              </div>
-                              <div>
-                                <div className="details-title">Response</div>
-                                <pre className="wrap">{r.response}</pre>
-                                {r.decoded && (
-                                  <>
-                                    <div className="decoded-label">Decoded Protobuf:</div>
-                                    <pre>{r.decoded}</pre>
-                                  </>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </React.Fragment>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* CRUD */}
-      {testsStarted && (
-        <div className="response-panel">
-          <h3>CRUD</h3>
-          <table className="results-table">
-            <thead>
-              <tr>
-                <th>Method</th>
-                <th>Expected</th>
-                <th>Actual</th>
-                <th>Result</th>
-              </tr>
-            </thead>
-            <tbody>
-              {crudTests.length === 0 ? (
-                <tr>
-                  <td colSpan={4}>⏳ Preparing CRUD…</td>
-                </tr>
-              ) : (
-                crudTests.map((r, i) => {
-                  const rowClass = r.status.includes('Pass')
-                    ? 'pass'
-                    : r.status.includes('Fail')
-                      ? 'fail'
-                      : r.status.includes('Warning')
-                        ? 'warn'
-                        : r.status.includes('Manual')
-                          ? 'manual'
-                          : r.status.includes('Info')
-                            ? 'info'
-                            : 'bug';
-
-                  const isExpanded = expandedCrudRows[i];
-                  const toggleExpand = () => {
-                    setExpandedCrudRows((prev) => ({
-                      ...prev,
-                      [i]: !prev[i],
-                    }));
-                  };
-
-                  return (
-                    <React.Fragment key={i}>
-                      <tr
-                        className={rowClass}
-                        onClick={toggleExpand}
-                        style={{ cursor: r.request ? 'pointer' : 'default' }}
+                              : r.status.includes('Warning')
+                                ? 'warn'
+                                : r.status.includes('Manual')
+                                  ? 'manual'
+                                  : r.status.includes('Info')
+                                    ? 'info'
+                                    : 'bug'
+                        }
+                        onClick={() => toggleSecurityRow(i)}
+                        style={{ cursor: 'pointer' }}
                       >
-                        <td className="expander">
-                          <span className="chevron">{isExpanded ? '▾' : '▸'}</span>
-                          {r.method}
-                        </td>
+                        <td>{r.name}</td>
                         <td>{r.expected}</td>
-                        <td>{r.actual || 'Not available yet'}</td>
+                        <td>{r.actual}</td>
                         <td>{r.status}</td>
                       </tr>
 
-                      {isExpanded && (
+                      {expandedSecurityRows[i] && (
                         <tr className="details-row">
                           <td colSpan={4}>
                             <div className="details-panel">
@@ -1046,7 +702,7 @@ export default function App() {
                                 <div>
                                   <div className="details-title">Response</div>
                                   <pre className="wrap">
-                                    {r.response ? JSON.stringify(r.response, null, 2) : 'null'}
+                                    {typeof r.response === 'string' ? r.response : JSON.stringify(r.response, null, 2)}
                                   </pre>
                                 </div>
                               </div>
@@ -1055,15 +711,355 @@ export default function App() {
                         </tr>
                       )}
                     </React.Fragment>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="response-panel">
+            <h3>Performance Insights</h3>
+            <table className="results-table">
+              <thead>
+                <tr>
+                  <th>Check</th>
+                  <th>Expected</th>
+                  <th>Actual</th>
+                  <th>Result</th>
+                </tr>
+              </thead>
+              <tbody>
+                {isPerformanceRunning && performanceTests.length === 0 ? (
+                  <tr>
+                    <td colSpan={4}>⏳ Running Performance Insights...</td>
+                  </tr>
+                ) : (
+                  performanceTests
+                    .sort((a, b) =>
+                      a.name === 'Rate limiting implementation'
+                        ? 1
+                        : b.name === 'Rate limiting implementation'
+                          ? -1
+                          : 0,
+                    )
+                    .map((r, i) => {
+                      const isLoad = r.name === 'Load test';
+                      const isManual = r.status === '⚪ Manual' || r.name === 'Rate limiting implementation';
+
+                      // nustatom spalvą
+                      // nustatom spalvą
+                      let rowClass = '';
+                      if (r.name === 'Load test' && !r.actual) rowClass = 'manual';
+                      else if (isManual) rowClass = 'manual';
+                      else if (r.actual?.includes('⏳')) rowClass = 'info';
+                      else if (r.actual?.includes('5xx') || r.actual?.includes('p50')) {
+                        if (/p50=\d+ms/.test(r.actual)) {
+                          const p50 = parseInt(r.actual.match(/p50=(\d+)/)?.[1] || '0');
+                          rowClass = p50 < 500 ? 'pass' : p50 < 1000 ? 'warn' : 'fail';
+                        } else if (r.status.includes('Fail')) rowClass = 'fail';
+                        else if (r.status.includes('Warning')) rowClass = 'warn';
+                        else if (r.status.includes('Pass')) rowClass = 'pass';
+                        else rowClass = '';
+                      }
+
+                      // 🆕 naujas papildymas:
+                      else if (r.status.includes('Pass')) rowClass = 'pass';
+                      else if (r.status.includes('Warning')) rowClass = 'warn';
+                      else if (r.status.includes('Fail')) rowClass = 'fail';
+                      else if (r.status.includes('Manual')) rowClass = 'manual';
+                      else if (r.status.includes('Info')) rowClass = 'info';
+                      else rowClass = '';
+
+                      return (
+                        <tr key={i} className={rowClass}>
+                          <td>{r.name}</td>
+                          <td>{r.expected}</td>
+                          <td>{r.actual}</td>
+                          <td style={{ textAlign: 'center' }}>
+                            {r.name === 'Load test' ? (
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  alignItems: 'center',
+                                  gap: '2px',
+                                  justifyContent: 'center',
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                  }}
+                                >
+                                  <div
+                                    style={{
+                                      display: 'flex',
+                                      flexDirection: 'column',
+                                      alignItems: 'center',
+                                    }}
+                                  >
+                                    <label style={{ fontSize: '10px', color: '#666' }}>Threads</label>
+                                    <input
+                                      type="number"
+                                      min={1}
+                                      max={100}
+                                      value={loadConcurrency}
+                                      onChange={(e) =>
+                                        setLoadConcurrency(Math.min(100, Math.max(1, Number(e.target.value))))
+                                      }
+                                      style={{
+                                        width: '50px',
+                                        fontSize: '12px',
+                                        padding: '2px',
+                                        textAlign: 'center',
+                                      }}
+                                      title="Threads (max 100)"
+                                    />
+                                  </div>
+
+                                  <div
+                                    style={{
+                                      display: 'flex',
+                                      flexDirection: 'column',
+                                      alignItems: 'center',
+                                    }}
+                                  >
+                                    <label style={{ fontSize: '10px', color: '#666' }}>Requests</label>
+                                    <input
+                                      type="number"
+                                      min={1}
+                                      max={10000}
+                                      value={loadTotal}
+                                      onChange={(e) =>
+                                        setLoadTotal(Math.min(10000, Math.max(1, Number(e.target.value))))
+                                      }
+                                      style={{
+                                        width: '70px',
+                                        fontSize: '12px',
+                                        padding: '2px',
+                                        textAlign: 'center',
+                                      }}
+                                      title="Total requests (max 10 000)"
+                                    />
+                                  </div>
+
+                                  <button
+                                    onClick={runLoadTest}
+                                    disabled={loadRunning}
+                                    style={{
+                                      background: '#007bff',
+                                      color: '#fff',
+                                      border: 'none',
+                                      borderRadius: '4px',
+                                      padding: '3px 8px',
+                                      fontSize: '12px',
+                                      cursor: 'pointer',
+                                      marginTop: '12px',
+                                    }}
+                                  >
+                                    {loadRunning ? '⏳' : 'Run'}
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              r.status // visur kitur rodom statusą (Pass/Fail/Manual)
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="response-panel">
+            <h3>Data Handling & Input Validation</h3>
+            <table className="results-table">
+              <thead>
+                <tr>
+                  <th>Field</th>
+                  <th>Value</th>
+                  <th>Expected</th>
+                  <th>Actual</th>
+                  <th>Result</th>
+                </tr>
+              </thead>
+              <tbody>
+                {isDataDrivenRunning && dataDrivenTests.length === 0 ? (
+                  <tr>
+                    <td colSpan={5}>⏳ Running data-driven tests...</td>
+                  </tr>
+                ) : (
+                  dataDrivenTests.map((r, i) => (
+                    <React.Fragment key={i}>
+                      <tr
+                        className={
+                          /^5\d\d/.test(r.actual)
+                            ? 'bug'
+                            : r.status.includes('Pass')
+                              ? 'pass'
+                              : r.status.includes('Fail')
+                                ? 'fail'
+                                : 'bug'
+                        }
+                        onClick={() => toggleRow(i)}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <td className="expander">
+                          <span className="chevron">{expandedRows[i] ? '▾' : '▸'}</span>
+                          {r.field}
+                        </td>
+                        <td>{truncateValue(r.value)}</td>
+                        <td>{r.expected}</td>
+                        <td>{r.actual}</td>
+                        <td>{r.status}</td>
+                      </tr>
+
+                      {expandedRows[i] && (
+                        <tr className="details-row">
+                          <td colSpan={5}>
+                            <div className="details-panel">
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                }}
+                              >
+                                <CopyButton req={r.request} />
+                              </div>
+                              <div className="details-grid">
+                                <div>
+                                  <div className="details-title">Request</div>
+                                  <pre className="wrap">{JSON.stringify(r.request, null, 2)}</pre>
+                                </div>
+                                <div>
+                                  <div className="details-title">Response</div>
+                                  <pre className="wrap">{r.response}</pre>
+                                  {r.decoded && (
+                                    <>
+                                      <div className="decoded-label">Decoded Protobuf:</div>
+                                      <pre>{r.decoded}</pre>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="response-panel">
+            <h3>CRUD</h3>
+            <table className="results-table">
+              <thead>
+                <tr>
+                  <th>Method</th>
+                  <th>Expected</th>
+                  <th>Actual</th>
+                  <th>Result</th>
+                </tr>
+              </thead>
+              <tbody>
+                {crudTests.length === 0 ? (
+                  <tr>
+                    <td colSpan={4}>⏳ Preparing CRUD…</td>
+                  </tr>
+                ) : (
+                  crudTests.map((r, i) => {
+                    const rowClass = r.status.includes('Pass')
+                      ? 'pass'
+                      : r.status.includes('Fail')
+                        ? 'fail'
+                        : r.status.includes('Warning')
+                          ? 'warn'
+                          : r.status.includes('Manual')
+                            ? 'manual'
+                            : r.status.includes('Info')
+                              ? 'info'
+                              : 'bug';
+
+                    const isExpanded = expandedCrudRows[i];
+                    const toggleExpand = () => {
+                      setExpandedCrudRows((prev) => ({
+                        ...prev,
+                        [i]: !prev[i],
+                      }));
+                    };
+
+                    return (
+                      <React.Fragment key={i}>
+                        <tr
+                          className={rowClass}
+                          onClick={toggleExpand}
+                          style={{ cursor: r.request ? 'pointer' : 'default' }}
+                        >
+                          <td className="expander">
+                            <span className="chevron">{isExpanded ? '▾' : '▸'}</span>
+                            {r.method}
+                          </td>
+                          <td>{r.expected}</td>
+                          <td>{r.actual || 'Not available yet'}</td>
+                          <td>{r.status}</td>
+                        </tr>
+
+                        {isExpanded && (
+                          <tr className="details-row">
+                            <td colSpan={4}>
+                              <div className="details-panel">
+                                <div
+                                  style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                  }}
+                                >
+                                  <CopyButton req={r.request} />
+                                </div>
+                                <div className="details-grid">
+                                  <div>
+                                    <div className="details-title">Request</div>
+                                    <pre className="wrap">{JSON.stringify(r.request, null, 2)}</pre>
+                                  </div>
+                                  <div>
+                                    <div className="details-title">Response</div>
+                                    <pre className="wrap">
+                                      {r.response ? JSON.stringify(r.response, null, 2) : 'null'}
+                                    </pre>
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );
+
+  async function runAllTests() {
+    setTestsRun(true);
+
+    await executeAllTests();
+  }
+
+  function isRunningTests() {
+    return isSecurityRunning || isPerformanceRunning || isDataDrivenRunning;
+  }
 
   function importCurl() {
     try {
