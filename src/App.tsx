@@ -610,8 +610,7 @@ export default function App() {
 
       {testsRun && (
         <>
-          <div className="response-panel">
-            <h3>Security & Headers Tests</h3>
+          <ResponsePanel title="Security & Headers Tests">
             <table className="results-table">
               <thead>
                 <tr>
@@ -685,10 +684,9 @@ export default function App() {
                 )}
               </tbody>
             </table>
-          </div>
+          </ResponsePanel>
 
-          <div className="response-panel">
-            <h3>Performance Insights</h3>
+          <ResponsePanel title="Performance Insights">
             <table className="results-table">
               <thead>
                 <tr>
@@ -842,10 +840,9 @@ export default function App() {
                 )}
               </tbody>
             </table>
-          </div>
+          </ResponsePanel>
 
-          <div className="response-panel">
-            <h3>Data Handling & Input Validation</h3>
+          <ResponsePanel title="Data Handling & Input Validation">
             <table className="results-table">
               <thead>
                 <tr>
@@ -924,10 +921,9 @@ export default function App() {
                 )}
               </tbody>
             </table>
-          </div>
+          </ResponsePanel>
 
-          <div className="response-panel">
-            <h3>CRUD</h3>
+          <ResponsePanel title="CRUD">
             <table className="results-table">
               <thead>
                 <tr>
@@ -1014,7 +1010,7 @@ export default function App() {
                 )}
               </tbody>
             </table>
-          </div>
+          </ResponsePanel>
         </>
       )}
     </div>
