@@ -44,26 +44,21 @@ const useTests = (
     setDataDrivenTests([]);
     setCurrentTest(0);
 
-    try {
-      const parsedBody = JSON.parse(body);
-      const dataDrivenTestResults = await runDataDrivenTests(
-        method,
-        url,
-        headers,
-        parsedBody,
-        fieldMappings,
-        queryMappings,
-        messageType,
-        protoFile,
-        setCurrentTest,
-        setTestCount,
-      );
-      setDataDrivenTests(dataDrivenTestResults);
-    } catch {
-      setDataDrivenTests([]);
-    } finally {
-      setIsDataDrivenRunning(false);
-    }
+    const dataDrivenTestResults = await runDataDrivenTests(
+      method,
+      url,
+      headers,
+      body,
+      fieldMappings,
+      queryMappings,
+      messageType,
+      protoFile,
+      setCurrentTest,
+      setTestCount,
+    );
+    setDataDrivenTests(dataDrivenTestResults);
+
+    setIsDataDrivenRunning(false);
   }
 
   async function executePerformanceTests() {

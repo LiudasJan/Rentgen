@@ -11,6 +11,7 @@ import ResponsePanel from './components/panels/ResponsePanel';
 import useTests from './hooks/useTests';
 import { TestStatus } from './types';
 import {
+  convertFormEntriesToUrlEncoded,
   detectFieldType,
   encodeMessage,
   extractCurl,
@@ -20,7 +21,9 @@ import {
   generateRandomEmail,
   generateRandomInteger,
   generateRandomString,
+  getHeaderValue,
   loadProtoSchema,
+  parseFormData,
   parseHeaders,
   setDeepObjectProperty,
   truncateValue,
@@ -99,6 +102,7 @@ export default function App() {
     setPerformanceTests,
   } = useTests(method, url, parseHeaders(headers), body, fieldMappings, queryMappings, messageType, protoFile);
 
+  const isRunningTests = isSecurityRunning || isPerformanceRunning || isDataDrivenRunning;
   // --- State ---
   const [expandedRows, setExpandedRows] = useState<Record<number, boolean>>({});
   const toggleRow = (idx: number) => setExpandedRows((prev) => ({ ...prev, [idx]: !prev[idx] }));
@@ -600,8 +604,8 @@ export default function App() {
       )}
 
       <div>
-        <Button disabled={isRunningTests()} onClick={runAllTests}>
-          {isRunningTests() ? `Running tests... (${currentTest}/${testCount})` : 'Generate & Run Tests'}
+        <Button disabled={isRunningTests} onClick={!isRunningTests ? runAllTests : undefined}>
+          {isRunningTests ? `Running tests... (${currentTest}/${testCount})` : 'Generate & Run Tests'}
         </Button>
       </div>
 
@@ -1019,19 +1023,30 @@ export default function App() {
     await executeAllTests();
   }
 
-  function isRunningTests() {
-    return isSecurityRunning || isPerformanceRunning || isDataDrivenRunning;
-  }
-
   function importCurl() {
     try {
       if (curl.length > 200_000) throw new Error('cURL too large');
 
-      const { url, method, headers, body } = extractCurl(curl);
+      const { body, decodedLines, headers, method, url } = extractCurl(curl);
 
       setUrl(url);
       setMethod(method as Method);
-      setBody(body ? body : '{}');
+
+      if (decodedLines.length > 0) {
+        setBody(decodedLines.join('\n'));
+
+        const formMappings: Record<string, string> = {};
+        decodedLines.forEach((decodedLine) => {
+          const [key] = decodedLine.split('=');
+          if (key) formMappings[`form.${key.trim()}`] = 'string';
+        });
+
+        setFieldMappings(formMappings);
+      } else {
+        const trimmedBody = body ? String(body).trim() : '';
+        setBody(trimmedBody !== '' ? trimmedBody : '{}');
+      }
+
       setHeaders(
         Object.entries(headers)
           .map(([k, v]) => `${k}: ${v}`)
@@ -1055,11 +1070,23 @@ export default function App() {
     });
 
     try {
+      const parsedHeaders = parseHeaders(headers);
+      const contentType = getHeaderValue(parsedHeaders, 'content-type');
+      const isForm = /application\/x-www-form-urlencoded/i.test(contentType);
+
+      let data: string | Uint8Array | undefined = body;
+      if (protoFile && messageType) data = encodeMessage(messageType, JSON.parse(body));
+      else if (isForm) data = convertFormEntriesToUrlEncoded(parseFormData(String(body)));
+
+      // Ensure proper Content-Type header for form data
+      if (isForm && !getHeaderValue(parsedHeaders, 'content-type'))
+        parsedHeaders['Content-Type'] = 'application/x-www-form-urlencoded';
+
       const response = await window.electronAPI.sendHttp({
         url,
         method,
-        headers: parseHeaders(headers),
-        body: protoFile && messageType ? encodeMessage(messageType, JSON.parse(body)) : body,
+        headers: parsedHeaders,
+        body: data,
       });
 
       setHttpResponse(response);
@@ -1072,29 +1099,41 @@ export default function App() {
         return;
       }
 
-      if (response.status.startsWith('2') && parsedBody) {
-        // Extract all fields from request body (including nested)
-        const extractedFields = extractFieldsFromJson(parsedBody);
-        const bodyMappings: Record<string, string> = {};
+      if (response.status.startsWith('2')) {
+        if (parsedBody) {
+          // Extract all fields from request body (including nested)
+          const extractedFields = extractFieldsFromJson(parsedBody);
+          const bodyMappings: Record<string, string> = {};
 
-        for (const [fieldPath, fieldType] of Object.entries(extractedFields)) {
-          if (fieldType === 'DO_NOT_TEST') bodyMappings[fieldPath] = 'do-not-test';
-          else {
-            // For non-object fields - detect the actual type from the value
-            // Get the actual value from the path
-            const pathSegments = fieldPath.replace(/\[(\d+)\]/g, '.$1').split('.');
-            let fieldValue = parsedBody;
-            for (const segment of pathSegments) {
-              if (fieldValue == null) break;
-              fieldValue = fieldValue[segment];
+          for (const [fieldPath, fieldType] of Object.entries(extractedFields)) {
+            if (fieldType === 'DO_NOT_TEST') bodyMappings[fieldPath] = 'do-not-test';
+            else {
+              const pathSegments = fieldPath.replace(/\[(\d+)\]/g, '.$1').split('.');
+              let fieldValue = parsedBody;
+              for (const segment of pathSegments) {
+                if (fieldValue == null) break;
+                fieldValue = fieldValue[segment];
+              }
+
+              bodyMappings[fieldPath] = detectFieldType(fieldValue);
             }
-            bodyMappings[fieldPath] = detectFieldType(fieldValue);
           }
+
+          setFieldMappings(bodyMappings);
         }
 
-        setFieldMappings(bodyMappings);
+        if (isForm) {
+          const formEntries = parseFormData(String(body));
+          const formMappings: Record<string, string> = {};
 
-        // Generate query parameter mappings
+          for (const [key, value] of formEntries) formMappings[`form.${key}`] = detectFieldType(value);
+
+          setFieldMappings((prevFieldMappings) => ({
+            ...(prevFieldMappings || {}),
+            ...formMappings,
+          }));
+        }
+
         const queryParams = extractQueryParams(url);
         const queryParamMappings: Record<string, string> = {};
 

@@ -2,11 +2,14 @@ import { Method } from 'axios';
 import { datasets } from '../constants/datasets';
 import { Test, TestStatus } from '../types';
 import {
+  convertFormEntriesToUrlEncoded,
   decodeMessage,
   encodeMessage,
   generateRandomEmail,
   generateRandomInteger,
   generateRandomString,
+  getHeaderValue,
+  parseFormData,
   setDeepObjectProperty,
 } from '../utils';
 
@@ -22,7 +25,7 @@ export async function runDataDrivenTests(
   method: Method,
   url: string,
   headers: Record<string, string>,
-  body: any,
+  body: string,
   fieldMappings: Record<string, string>,
   queryMappings: Record<string, string>,
   messageType: string,
@@ -30,11 +33,26 @@ export async function runDataDrivenTests(
   setCurrentTest: (value: number) => void,
   setTestCount: (count: number) => void,
 ): Promise<Test[]> {
+  const contentType = getHeaderValue(headers, 'content-type');
+  const isForm = /application\/x-www-form-urlencoded/i.test(contentType);
+
+  let parsedBody = null;
+  let formEntries: Array<[string, string]> = [];
+
+  if (isForm) formEntries = parseFormData(String(body));
+  else
+    try {
+      parsedBody = JSON.parse(body);
+    } catch {
+      return [];
+    }
+
   // Calculate total number of tests (BODY + QUERY parameters)
   let testCount = 0;
-  for (const [, dataType] of Object.entries(fieldMappings)) {
+  for (const [fieldName, dataType] of Object.entries(fieldMappings)) {
     if (dataType === 'do-not-test' || dataType === 'random32') continue;
-    testCount += (datasets[dataType] || []).length;
+    if (!isForm && !fieldName.startsWith('form.')) testCount += (datasets[dataType] || []).length;
+    if (isForm && fieldName.startsWith('form.')) testCount += (datasets[dataType] || []).length;
   }
 
   for (const [, dataType] of Object.entries(queryMappings)) {
@@ -45,6 +63,7 @@ export async function runDataDrivenTests(
   setTestCount(1 + testCount);
 
   const results: Test[] = [];
+  const data = isForm ? convertFormEntriesToUrlEncoded(formEntries) : parsedBody;
 
   // Always send the original request first as baseline test
   try {
@@ -53,7 +72,7 @@ export async function runDataDrivenTests(
       url,
       method,
       headers,
-      body,
+      body: data,
     });
     const requestEndTime = performance.now();
 
@@ -61,25 +80,25 @@ export async function runDataDrivenTests(
       actual: originalResponse.status,
       expected: EXPECTED_SUCCESS_RESPONSE,
       field: '(original request)',
-      request: { url, method, headers, body },
+      request: { url, method, headers, body: data },
       response:
         typeof originalResponse.body === 'string'
           ? originalResponse.body
           : JSON.stringify(originalResponse.body, null, 2),
       responseTime: requestEndTime - requestStartTime,
-      status: originalResponse.status.startsWith('2') ? TestStatus.Pass : TestStatus.Fail,
-      value: body,
+      status: originalResponse.status?.startsWith('2') ? TestStatus.Pass : TestStatus.Fail,
+      value: isForm ? Object.fromEntries(formEntries) : parsedBody,
     });
   } catch (error) {
     results.push({
       actual: 'Error',
       expected: EXPECTED_SUCCESS_RESPONSE,
       field: '(original request)',
-      request: { url, method, headers, body },
+      request: { url, method, headers, body: data },
       response: String(error),
       responseTime: 0,
       status: TestStatus.Bug,
-      value: body,
+      value: isForm ? Object.fromEntries(formEntries) : parsedBody,
     });
   }
 
@@ -89,6 +108,109 @@ export async function runDataDrivenTests(
 
     const testDataset =
       dataType === 'random32' || dataType === 'randomInt' ? [{ dynamic: true, valid: true }] : datasets[dataType] || [];
+
+    if (isForm) {
+      if (!fieldName.startsWith('form.')) continue;
+
+      const fieldKey = fieldName.slice('form.'.length);
+      for (const testData of testDataset) {
+        currentTestCounter++;
+        setCurrentTest(currentTestCounter);
+
+        const testValue = (testData as any).value;
+        const modifiedFormEntries = [...formEntries];
+        const generatedTestValue =
+          dataType === 'randomInt'
+            ? String(generateRandomInteger())
+            : dataType === 'random32'
+              ? generateRandomString()
+              : dataType === 'randomEmail'
+                ? generateRandomEmail()
+                : String(testValue);
+
+        // Update the target form field with test value
+        let replaced = false;
+        for (let i = 0; i < modifiedFormEntries.length; i++)
+          if (modifiedFormEntries[i][0] === fieldKey) {
+            modifiedFormEntries[i] = [fieldKey, generatedTestValue];
+            replaced = true;
+            break;
+          }
+        if (!replaced) modifiedFormEntries.push([fieldKey, generatedTestValue]);
+
+        // Apply per-request randomization for other form fields
+        for (const [mappedFieldName, mappedFieldType] of Object.entries(fieldMappings)) {
+          if (!mappedFieldName.startsWith('form.')) continue;
+          const mappedFieldKey = mappedFieldName.slice('form.'.length);
+          if (mappedFieldKey === fieldKey) continue;
+
+          let randomizedValue: string | null = null;
+          if (mappedFieldType === 'random32') randomizedValue = generateRandomString();
+          if (mappedFieldType === 'randomInt') randomizedValue = String(generateRandomInteger());
+          if (mappedFieldType === 'randomEmail') randomizedValue = generateRandomEmail();
+
+          if (randomizedValue !== null) {
+            let updated = false;
+            for (let i = 0; i < modifiedFormEntries.length; i++)
+              if (modifiedFormEntries[i][0] === mappedFieldKey) {
+                modifiedFormEntries[i] = [mappedFieldKey, randomizedValue];
+                updated = true;
+                break;
+              }
+
+            if (!updated) modifiedFormEntries.push([mappedFieldKey, randomizedValue]);
+          }
+        }
+
+        const encodedFormData = convertFormEntriesToUrlEncoded(modifiedFormEntries);
+
+        try {
+          const requestStart = performance.now();
+          const httpResponse = await window.electronAPI.sendHttp({
+            url,
+            method,
+            headers,
+            body: encodedFormData,
+          });
+          const requestEnd = performance.now();
+          const responseTime = requestEnd - requestStart;
+
+          const httpStatusCode = parseInt(httpResponse.status?.split(' ')[0] || '0', 10);
+          const isSuccessfulResponse = httpStatusCode >= SUCCESS_STATUS_MIN && httpStatusCode <= SUCCESS_STATUS_MAX;
+          const testStatus =
+            (testData.valid && isSuccessfulResponse) ||
+            (!testData.valid && httpStatusCode >= CLIENT_ERROR_STATUS_MIN && httpStatusCode <= CLIENT_ERROR_STATUS_MAX)
+              ? TestStatus.Pass
+              : httpStatusCode >= SERVER_ERROR_STATUS_MIN
+                ? TestStatus.Bug
+                : TestStatus.Fail;
+
+          results.push({
+            actual: httpResponse.status,
+            expected: testData.valid ? EXPECTED_SUCCESS_RESPONSE : EXPECTED_CLIENT_ERROR_RESPONSE,
+            field: fieldName,
+            request: { url, method, headers, body: encodedFormData },
+            response:
+              typeof httpResponse.body === 'string' ? httpResponse.body : JSON.stringify(httpResponse.body, null, 2),
+            responseTime,
+            status: testStatus,
+            value: testValue,
+          });
+        } catch (error) {
+          results.push({
+            actual: 'Error',
+            expected: testData.valid ? EXPECTED_SUCCESS_RESPONSE : EXPECTED_CLIENT_ERROR_RESPONSE,
+            field: fieldName,
+            request: { url, method, headers, body: encodedFormData },
+            response: String(error),
+            responseTime: 0,
+            status: TestStatus.Bug,
+            value: testValue,
+          });
+        }
+      }
+      continue;
+    }
 
     for (const testData of testDataset) {
       currentTestCounter++;
@@ -121,17 +243,16 @@ export async function runDataDrivenTests(
       if (protoFile && messageType) {
         try {
           requestPayload = encodeMessage(messageType, modifiedRequestBody);
-        } catch (err) {
-          const currentTestValue = 'value' in testData ? testData.value : null;
+        } catch (error) {
           results.push({
             actual: 'Encode error',
             expected: testData.valid ? EXPECTED_SUCCESS_RESPONSE : EXPECTED_CLIENT_ERROR_RESPONSE,
             field: fieldName,
             request: { url, method, headers, body: modifiedRequestBody },
-            response: String(err),
+            response: String(error),
             responseTime: 0,
             status: TestStatus.Bug,
-            value: currentTestValue,
+            value: testValue,
           });
           continue;
         }
@@ -147,15 +268,6 @@ export async function runDataDrivenTests(
         });
         const requestEnd = performance.now();
         const responseTime = requestEnd - requestStart;
-
-        // Parse HTTP status code from response
-        let httpStatusCode = 0;
-        if (httpResponse.status) {
-          const statusParts = httpResponse.status.split(' ');
-          httpStatusCode = parseInt(statusParts[0], 10);
-        }
-
-        const isSuccessfulResponse = httpStatusCode >= SUCCESS_STATUS_MIN && httpStatusCode <= SUCCESS_STATUS_MAX;
 
         // Format response text for display
         let formattedResponseText: string;
@@ -178,17 +290,16 @@ export async function runDataDrivenTests(
           }
         }
 
-        let testStatus = TestStatus.Fail;
-        if (testData.valid) {
-          // Expecting successful response (2xx)
-          if (isSuccessfulResponse) testStatus = TestStatus.Pass;
-        } else {
-          // Expecting client error response (4xx)
-          if (httpStatusCode >= CLIENT_ERROR_STATUS_MIN && httpStatusCode <= CLIENT_ERROR_STATUS_MAX)
-            testStatus = TestStatus.Pass;
-          else if (isSuccessfulResponse) testStatus = TestStatus.Fail;
-          else if (httpStatusCode >= SERVER_ERROR_STATUS_MIN) testStatus = TestStatus.Bug;
-        }
+        // Parse HTTP status code from response
+        const httpStatusCode = parseInt(httpResponse.status?.split(' ')[0] || '0', 10);
+        const isSuccessfulResponse = httpStatusCode >= SUCCESS_STATUS_MIN && httpStatusCode <= SUCCESS_STATUS_MAX;
+        const testStatus =
+          (testData.valid && isSuccessfulResponse) ||
+          (!testData.valid && httpStatusCode >= CLIENT_ERROR_STATUS_MIN && httpStatusCode <= CLIENT_ERROR_STATUS_MAX)
+            ? TestStatus.Pass
+            : httpStatusCode >= SERVER_ERROR_STATUS_MIN
+              ? TestStatus.Bug
+              : TestStatus.Fail;
 
         results.push({
           actual: httpResponse.status,
@@ -230,11 +341,12 @@ export async function runDataDrivenTests(
       urlWithQueryParam.searchParams.set(queryParam, String(queryTestValue));
 
       const queryRequestStart = performance.now();
+      const queryRequestBody = isForm ? convertFormEntriesToUrlEncoded(formEntries) : parsedBody;
       const queryResponse = await window.electronAPI.sendHttp({
         url: urlWithQueryParam.toString(),
         method,
         headers,
-        body,
+        body: queryRequestBody,
       });
       const queryRequestEnd = performance.now();
       const queryResponseTime = queryRequestEnd - queryRequestStart;
@@ -253,8 +365,9 @@ export async function runDataDrivenTests(
         actual: queryResponse.status,
         expected: queryTestData.valid ? EXPECTED_SUCCESS_RESPONSE : EXPECTED_CLIENT_ERROR_RESPONSE,
         field: `query.${queryParam}`,
-        request: { url: urlWithQueryParam.toString(), method, headers, body },
-        response: queryResponse.body,
+        request: { url: urlWithQueryParam.toString(), method, headers, body: queryRequestBody },
+        response:
+          typeof queryResponse.body === 'string' ? queryResponse.body : JSON.stringify(queryResponse.body, null, 2),
         responseTime: queryResponseTime,
         status: queryTestStatus,
         value: queryTestValue,
