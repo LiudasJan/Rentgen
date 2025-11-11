@@ -487,7 +487,7 @@ export default function App() {
                 },
               ]}
               data={performanceTests}
-              progressComponent={<TestRunningLoader text="Running Performance Insights..." />}
+              progressComponent={<TestRunningLoader text="Running performance insights..." />}
               progressPending={isPerformanceRunning}
             />
           </ResponsePanel>
