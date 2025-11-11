@@ -94,13 +94,14 @@ export default function App() {
     currentTest,
     dataDrivenTests,
     isDataDrivenRunning,
+    isLoadTestRunning,
     isSecurityRunning,
     isPerformanceRunning,
     performanceTests,
     securityTests,
     testCount,
     executeAllTests,
-    setPerformanceTests,
+    executeLoadTest,
   } = useTests(method, url, parseHeaders(headers), body, fieldMappings, queryMappings, messageType, protoFile);
 
   const isRunningTests = isSecurityRunning || isPerformanceRunning || isDataDrivenRunning;
@@ -108,17 +109,6 @@ export default function App() {
   // Load test UI/rezultatai
   const [loadConcurrency, setLoadConcurrency] = useState(10); // threads
   const [loadTotal, setLoadTotal] = useState(100); // total requests
-  const [loadRunning, setLoadRunning] = useState(false);
-
-  // Progress bar state for load testing
-  const [loadProgressPct, setLoadProgressPct] = useState(0);
-
-  // 🆕 Tekstinis bar'as: 20 char pločio: █ and ░
-  function buildTextBar(pct: number) {
-    const width = 20;
-    const filled = Math.round((pct / 100) * width);
-    return '█'.repeat(filled) + '░'.repeat(width - filled) + ` ${pct}%`;
-  }
 
   useEffect(() => {
     if (!window.electronAPI?.onWssEvent) return;
@@ -146,190 +136,6 @@ export default function App() {
       ipcRenderer?.off('wss-event', messagesListener);
     };
   }, []);
-
-  // pritaiko random mapping'ą taip pat, kaip data-driven cikle
-  function buildRandomizedBody(baseBody: any) {
-    const newBody = JSON.parse(JSON.stringify(baseBody));
-
-    // perrašom visus random laukus kiekvienam request'ui
-    for (const [f, t] of Object.entries(fieldMappings)) {
-      if (t === 'random32') setDeepObjectProperty(newBody, f, generateRandomString());
-      if (t === 'randomInt') setDeepObjectProperty(newBody, f, generateRandomInteger());
-      if (t === 'randomEmail') setDeepObjectProperty(newBody, f, generateRandomEmail());
-    }
-
-    return newBody;
-  }
-
-  // status code paėmimas
-  function codeOf(res: any): number {
-    const s = (res?.status || '').toString();
-    const n = parseInt(s.split(' ')[0] || '0', 10);
-    return Number.isFinite(n) ? n : 0;
-  }
-
-  // percentiliai
-  function percentile(values: number[], p: number) {
-    if (!values.length) return 0;
-    const arr = [...values].sort((a, b) => a - b);
-    const idx = Math.min(arr.length - 1, Math.max(0, Math.floor((p / 100) * arr.length)));
-    return arr[idx];
-  }
-
-  // --- maybeUpdateProgressUI ---
-  function maybeUpdateProgressUI(sentCount: number) {
-    const pct = Math.floor((sentCount / loadTotal) * 100);
-    if (pct !== loadProgressPct) {
-      const bar = buildTextBar(pct);
-      setLoadProgressPct(pct);
-
-      // atnaujinam Performance lentelės „Load test“ eilutę
-      setPerformanceTests((prev) => {
-        const other = prev.filter((x) => x.name !== 'Load test');
-        return [
-          ...other,
-          {
-            name: 'Load test',
-            expected: 'Median <500 ms (Pass), <1000 ms (Warning), ≥1000 ms (Fail)',
-            actual: `⏳ ${bar} (${sentCount}/${loadTotal})`,
-            status: TestStatus.Info,
-          },
-        ];
-      });
-    }
-  }
-
-  // --- RUN LOAD TEST ---
-  async function runLoadTest() {
-    if (loadRunning) return;
-    setLoadRunning(true);
-
-    // Reset progress UI
-    setLoadProgressPct(0);
-    const initialBar = buildTextBar(0);
-
-    // 🆕 Iš karto atnaujinam Performance lentelės „Load test“ eilutę, kad matytųsi 0%
-    setPerformanceTests((prev) => {
-      const other = prev.filter((x) => x.name !== 'Load test');
-      return [
-        ...other,
-        {
-          name: 'Load test',
-          expected: 'Median <500 ms (Pass), <1000 ms (Warning), ≥1000 ms (Fail)',
-          actual: `⏳ ${initialBar} (0/${loadTotal})`,
-          status: TestStatus.Info,
-        },
-      ];
-    });
-
-    // limitai
-    const concurrency = Math.max(1, Math.min(100, Math.floor(loadConcurrency)));
-    const total = Math.max(1, Math.min(10000, Math.floor(loadTotal)));
-
-    // headers
-    const hdrs = parseHeaders(headers);
-
-    // base body (iš UI)
-    let baseBody: any = null;
-    try {
-      baseBody = body ? JSON.parse(body) : null;
-    } catch {
-      // jei ne JSON – siunčiam raw (be randomizacijos)
-      baseBody = null;
-    }
-
-    let sent = 0;
-    let failures5xx = 0;
-    let failures4xx = 0;
-    const times: number[] = [];
-
-    let abort = false;
-
-    async function oneRequest() {
-      if (abort) return;
-
-      // kūnas: originalus + random laukai, lygiai kaip data-driven cikle
-      let dataToSend: any = baseBody ? buildRandomizedBody(baseBody) : body;
-
-      if (protoFile && messageType && baseBody) {
-        try {
-          dataToSend = encodeMessage(messageType, dataToSend);
-        } catch (e) {
-          // jei nepavyko encodinti – skaitom kaip fail'ą
-          failures5xx++;
-          return;
-        }
-      }
-
-      const t0 = performance.now();
-      const res = await window.electronAPI.sendHttp({
-        url,
-        method,
-        headers: hdrs,
-        body: dataToSend,
-      });
-      const t1 = performance.now();
-
-      const ms = t1 - t0;
-      times.push(ms);
-
-      const code = codeOf(res);
-      if (code >= 500) failures5xx++;
-      if (code >= 400 && code < 500) failures4xx++;
-
-      // ankstyvas stabdymas: >5 5xx arba mediana > 5000ms
-      if (failures5xx >= 5) abort = true;
-      if (times.length >= Math.min(10, total)) {
-        const med = percentile(times, 50);
-        if (med > 5000) abort = true;
-      }
-    }
-
-    async function worker() {
-      while (!abort) {
-        const myIdx = sent++;
-        if (myIdx >= total) break;
-        await oneRequest();
-
-        // 🆕 po kiekvieno request'o — progress
-        maybeUpdateProgressUI(myIdx + 1);
-      }
-    }
-
-    const workers = Array.from({ length: Math.min(concurrency, total) }, worker);
-    await Promise.all(workers);
-
-    // suformuojam rezultatą Performance lentelei
-    const p50 = percentile(times, 50);
-    const p90 = percentile(times, 90);
-    const p95 = percentile(times, 95);
-    const avg = times.length ? times.reduce((a, b) => a + b, 0) / times.length : 0;
-
-    const status =
-      failures5xx >= 5
-        ? TestStatus.Fail
-        : p50 < 500
-          ? TestStatus.Pass
-          : p50 < 1000
-            ? TestStatus.Warning
-            : TestStatus.Fail;
-
-    // įrašom/atnaujinam "Load test" eilutę Performance Insights lentelėje
-    setPerformanceTests((prev) => {
-      const other = prev.filter((x) => x.name !== 'Load test');
-      return [
-        ...other,
-        {
-          name: `Load test`,
-          expected: 'Median <500 ms (Pass), <1000 ms (Warning), ≥1000 ms (Fail)',
-          actual: `${concurrency} threads, ${total} total req. Executed: ${times.length} req → p50=${p50.toFixed(0)}ms p90=${p90.toFixed(0)}ms p95=${p95.toFixed(0)}ms avg=${avg.toFixed(0)}ms, 4xx=${failures4xx}, 5xx=${failures5xx}`,
-          status,
-        },
-      ];
-    });
-
-    setLoadRunning(false);
-  }
 
   return (
     <div className="flex flex-col gap-4 py-5 px-7">
@@ -563,7 +369,6 @@ export default function App() {
               columns={getTestsTableColumns(['Check', 'Expected', 'Actual', 'Result'])}
               expandableRows
               expandableRowsComponent={ExpandedTestComponent}
-              expandableRowsHideExpander
               expandOnRowClicked
               data={securityTests}
               progressComponent={<TestRunningLoader text="Running security tests..." />}
@@ -572,159 +377,119 @@ export default function App() {
           </ResponsePanel>
 
           <ResponsePanel title="Performance Insights">
-            <table className="results-table">
-              <thead>
-                <tr>
-                  <th>Check</th>
-                  <th>Expected</th>
-                  <th>Actual</th>
-                  <th>Result</th>
-                </tr>
-              </thead>
-              <tbody>
-                {isPerformanceRunning && performanceTests.length === 0 ? (
-                  <tr>
-                    <td colSpan={4}>⏳ Running Performance Insights...</td>
-                  </tr>
-                ) : (
-                  performanceTests
-                    .sort((a, b) =>
-                      a.name === 'Rate limiting implementation'
-                        ? 1
-                        : b.name === 'Rate limiting implementation'
-                          ? -1
-                          : 0,
-                    )
-                    .map((r, i) => {
-                      const isManual = r.status === '⚪ Manual' || r.name === 'Rate limiting implementation';
-
-                      // nustatom spalvą
-                      // nustatom spalvą
-                      let rowClass = '';
-                      if (r.name === 'Load test' && !r.actual) rowClass = 'manual';
-                      else if (isManual) rowClass = 'manual';
-                      else if (r.actual?.includes('⏳')) rowClass = 'info';
-                      else if (r.actual?.includes('5xx') || r.actual?.includes('p50')) {
-                        if (/p50=\d+ms/.test(r.actual)) {
-                          const p50 = parseInt(r.actual.match(/p50=(\d+)/)?.[1] || '0');
-                          rowClass = p50 < 500 ? 'pass' : p50 < 1000 ? 'warn' : 'fail';
-                        } else if (r.status.includes('Fail')) rowClass = 'fail';
-                        else if (r.status.includes('Warning')) rowClass = 'warn';
-                        else if (r.status.includes('Pass')) rowClass = 'pass';
-                        else rowClass = '';
-                      }
-
-                      // 🆕 naujas papildymas:
-                      else if (r.status.includes('Pass')) rowClass = 'pass';
-                      else if (r.status.includes('Warning')) rowClass = 'warn';
-                      else if (r.status.includes('Fail')) rowClass = 'fail';
-                      else if (r.status.includes('Manual')) rowClass = 'manual';
-                      else if (r.status.includes('Info')) rowClass = 'info';
-                      else rowClass = '';
-
+            <TestsTable
+              columns={[
+                {
+                  name: 'Check',
+                  selector: (row) => row.name,
+                },
+                {
+                  name: 'Expected',
+                  selector: (row) => row.expected,
+                },
+                {
+                  name: 'Actual',
+                  selector: (row) => row.actual,
+                },
+                {
+                  name: 'Result',
+                  selector: (row) => row.status,
+                  width: '220px',
+                  cell: (row) => {
+                    if (row.name === 'Load test')
                       return (
-                        <tr key={i} className={rowClass}>
-                          <td>{r.name}</td>
-                          <td>{r.expected}</td>
-                          <td>{r.actual}</td>
-                          <td style={{ textAlign: 'center' }}>
-                            {r.name === 'Load test' ? (
-                              <div
+                        <div
+                          style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '2px',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                              }}
+                            >
+                              <label style={{ fontSize: '10px', color: '#666' }}>Threads</label>
+                              <input
+                                type="number"
+                                min={1}
+                                max={100}
+                                value={loadConcurrency}
+                                onChange={(e) => setLoadConcurrency(Math.min(100, Math.max(1, Number(e.target.value))))}
                                 style={{
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  alignItems: 'center',
-                                  gap: '2px',
-                                  justifyContent: 'center',
+                                  width: '50px',
+                                  fontSize: '12px',
+                                  padding: '2px',
+                                  textAlign: 'center',
                                 }}
-                              >
-                                <div
-                                  style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '6px',
-                                  }}
-                                >
-                                  <div
-                                    style={{
-                                      display: 'flex',
-                                      flexDirection: 'column',
-                                      alignItems: 'center',
-                                    }}
-                                  >
-                                    <label style={{ fontSize: '10px', color: '#666' }}>Threads</label>
-                                    <input
-                                      type="number"
-                                      min={1}
-                                      max={100}
-                                      value={loadConcurrency}
-                                      onChange={(e) =>
-                                        setLoadConcurrency(Math.min(100, Math.max(1, Number(e.target.value))))
-                                      }
-                                      style={{
-                                        width: '50px',
-                                        fontSize: '12px',
-                                        padding: '2px',
-                                        textAlign: 'center',
-                                      }}
-                                      title="Threads (max 100)"
-                                    />
-                                  </div>
+                                title="Threads (max 100)"
+                              />
+                            </div>
 
-                                  <div
-                                    style={{
-                                      display: 'flex',
-                                      flexDirection: 'column',
-                                      alignItems: 'center',
-                                    }}
-                                  >
-                                    <label style={{ fontSize: '10px', color: '#666' }}>Requests</label>
-                                    <input
-                                      type="number"
-                                      min={1}
-                                      max={10000}
-                                      value={loadTotal}
-                                      onChange={(e) =>
-                                        setLoadTotal(Math.min(10000, Math.max(1, Number(e.target.value))))
-                                      }
-                                      style={{
-                                        width: '70px',
-                                        fontSize: '12px',
-                                        padding: '2px',
-                                        textAlign: 'center',
-                                      }}
-                                      title="Total requests (max 10 000)"
-                                    />
-                                  </div>
+                            <div
+                              style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                              }}
+                            >
+                              <label style={{ fontSize: '10px', color: '#666' }}>Requests</label>
+                              <input
+                                type="number"
+                                min={1}
+                                max={10000}
+                                value={loadTotal}
+                                onChange={(e) => setLoadTotal(Math.min(10000, Math.max(1, Number(e.target.value))))}
+                                style={{
+                                  width: '70px',
+                                  fontSize: '12px',
+                                  padding: '2px',
+                                  textAlign: 'center',
+                                }}
+                                title="Total requests (max 10 000)"
+                              />
+                            </div>
 
-                                  <button
-                                    onClick={runLoadTest}
-                                    disabled={loadRunning}
-                                    style={{
-                                      background: '#007bff',
-                                      color: '#fff',
-                                      border: 'none',
-                                      borderRadius: '4px',
-                                      padding: '3px 8px',
-                                      fontSize: '12px',
-                                      cursor: 'pointer',
-                                      marginTop: '12px',
-                                    }}
-                                  >
-                                    {loadRunning ? '⏳' : 'Run'}
-                                  </button>
-                                </div>
-                              </div>
-                            ) : (
-                              r.status // visur kitur rodom statusą (Pass/Fail/Manual)
-                            )}
-                          </td>
-                        </tr>
+                            <button
+                              onClick={() => executeLoadTest(loadConcurrency, loadTotal)}
+                              disabled={isLoadTestRunning}
+                              style={{
+                                background: '#007bff',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: '4px',
+                                padding: '3px 8px',
+                                fontSize: '12px',
+                                cursor: 'pointer',
+                                marginTop: '12px',
+                              }}
+                            >
+                              {isLoadTestRunning ? '⏳' : 'Run'}
+                            </button>
+                          </div>
+                        </div>
                       );
-                    })
-                )}
-              </tbody>
-            </table>
+
+                    return row.status;
+                  },
+                },
+              ]}
+              data={performanceTests}
+              progressComponent={<TestRunningLoader text="Running Performance Insights..." />}
+              progressPending={isPerformanceRunning}
+            />
           </ResponsePanel>
 
           <ResponsePanel title="Data Handling & Input Validation">
@@ -732,7 +497,6 @@ export default function App() {
               columns={getTestsTableColumns(['Field', 'Value', 'Expected', 'Actual', 'Result'])}
               expandableRows
               expandableRowsComponent={ExpandedTestComponent}
-              expandableRowsHideExpander
               expandOnRowClicked
               data={dataDrivenTests}
               progressComponent={<TestRunningLoader text="Running data-driven tests..." />}
@@ -745,7 +509,6 @@ export default function App() {
               columns={getTestsTableColumns(['Method', 'Expected', 'Actual', 'Result'])}
               expandableRows
               expandableRowsComponent={ExpandedTestComponent}
-              expandableRowsHideExpander
               expandOnRowClicked
               data={crudTests}
               progressComponent={<TestRunningLoader text="Preparing CRUD…" />}

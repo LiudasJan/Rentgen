@@ -32,6 +32,13 @@ export default function TestsTable({ columns, data, className, ...otherProps }: 
         },
       ]}
       customStyles={{
+        cells: {
+          style: {
+            paddingTop: '8px',
+            paddingBottom: '8px',
+            'div:first-child': { whiteSpace: 'normal !important' },
+          },
+        },
         expanderCell: {
           style: { minWidth: '28px', width: '28px', flex: '0 0 28px' },
         },

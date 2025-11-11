@@ -1,6 +1,6 @@
 import { Method } from 'axios';
 import { useState } from 'react';
-import { runDataDrivenTests, runPerformanceInsights, runSecurityTests } from '../tests';
+import { runDataDrivenTests, runLoadTest, runPerformanceInsights, runSecurityTests } from '../tests';
 import { Test } from '../types';
 
 const useTests = (
@@ -20,6 +20,9 @@ const useTests = (
 
   const [dataDrivenTests, setDataDrivenTests] = useState<Test[]>([]);
   const [isDataDrivenRunning, setIsDataDrivenRunning] = useState<boolean>(false);
+
+  const [isLoadTestRunning, setIsLoadTestRunning] = useState<boolean>(false);
+  const [loadProgress, setLoadProgress] = useState<number>(0);
 
   const [performanceTests, setPerformanceTests] = useState<Test[]>([]);
   const [isPerformanceRunning, setIsPerformanceRunning] = useState<boolean>(false);
@@ -61,6 +64,47 @@ const useTests = (
     setIsDataDrivenRunning(false);
   }
 
+  async function executeLoadTest(loadThreadCount: number, loadRequestCount: number) {
+    setIsLoadTestRunning(true);
+    setLoadProgress(0);
+
+    const initialLoadBar = generateLoadBarProgress(0);
+
+    setPerformanceTests((prevPerformanceTests) => {
+      return prevPerformanceTests.map((performanceTest) => {
+        if (performanceTest.name === 'Load test')
+          return {
+            ...performanceTest,
+            actual: `⏳ ${initialLoadBar} (0/${loadRequestCount})`,
+          };
+
+        return performanceTest;
+      });
+    });
+
+    const loadTestResult = await runLoadTest(
+      method,
+      url,
+      headers,
+      body,
+      fieldMappings,
+      messageType,
+      protoFile,
+      loadThreadCount,
+      loadRequestCount,
+      maybeUpdateProgressUI,
+    );
+    setPerformanceTests((prevPerformanceTests) => {
+      return prevPerformanceTests.map((performanceTest) => {
+        if (performanceTest.name === 'Load test') return loadTestResult;
+
+        return performanceTest;
+      });
+    });
+
+    setIsLoadTestRunning(false);
+  }
+
   async function executePerformanceTests() {
     setIsPerformanceRunning(true);
     setPerformanceTests([]);
@@ -92,17 +136,46 @@ const useTests = (
     setTestCount(0);
   }
 
+  function generateLoadBarProgress(percent: number) {
+    const width = 20;
+    const filled = Math.round((percent / 100) * width);
+
+    return '█'.repeat(filled) + '░'.repeat(width - filled) + ` ${percent}%`;
+  }
+
+  function maybeUpdateProgressUI(sentCount: number, loadRequestCount: number) {
+    const pct = Math.floor((sentCount / loadRequestCount) * 100);
+    if (pct !== loadProgress) {
+      const bar = generateLoadBarProgress(pct);
+      setLoadProgress(pct);
+
+      setPerformanceTests((prevPerformanceTests) => {
+        return prevPerformanceTests.map((performanceTest) => {
+          if (performanceTest.name === 'Load test')
+            return {
+              ...performanceTest,
+              actual: `⏳ ${bar} (${sentCount}/${loadRequestCount})`,
+            };
+
+          return performanceTest;
+        });
+      });
+    }
+  }
+
   return {
     crudTests,
     currentTest,
     dataDrivenTests,
     isDataDrivenRunning,
+    isLoadTestRunning,
     isPerformanceRunning,
     isSecurityRunning,
     performanceTests,
     securityTests,
     testCount,
     executeAllTests,
+    executeLoadTest,
     executeDataDrivenTests,
     executeSecurityTests,
     executePerformanceTests,
