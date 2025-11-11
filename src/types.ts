@@ -25,8 +25,8 @@ export interface Test {
 }
 
 export interface TestRequest {
+  body?: string;
+  headers: any;
   method?: Method | string;
   url: string;
-  headers: any;
-  body?: string;
 }

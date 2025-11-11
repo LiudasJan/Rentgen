@@ -1,3 +1,4 @@
+import { Method } from 'axios';
 import parseCurl from 'parse-curl';
 
 /**
@@ -158,4 +159,44 @@ export function extractCurl(curl: string): ParsedCurlResult {
     method,
     url: parsedCurl.url || '',
   };
+}
+
+/**
+ * Generates a formatted cURL command string from HTTP request parameters
+ *
+ * This function converts HTTP request data into a properly formatted cURL command
+ * that can be executed in a terminal or shared with others. It handles various
+ * data types, escapes special characters, and formats the output for readability.
+ *
+ * Features:
+ * - Automatic HTTP method handling with GET fallback
+ * - Header formatting with proper escaping
+ * - Body serialization for objects and strings
+ * - Shell-safe single quote escaping
+ * - Multi-line formatting for readability
+ * - Empty body filtering (ignores 'null', '{}', empty strings)
+ *
+ * @param requestData - HTTP request configuration object
+ * @returns Formatted cURL command string ready for execution
+ */
+export function generateCurl(body: any, headers: any, method: Method | string, url: string): string {
+  let curl = `curl -X ${method || 'GET'} '${url}'`;
+
+  if (headers)
+    for (const [headerName, headerValue] of Object.entries(headers))
+      curl += ` \\\n  -H '${headerName}: ${headerValue}'`;
+
+  if (body && body !== 'null' && body !== '{}') {
+    let serializedBody: string;
+
+    if (typeof body === 'string') serializedBody = body;
+    else serializedBody = JSON.stringify(body);
+
+    // Escape single quotes for shell safety
+    serializedBody = serializedBody.replace(/'/g, "'\\''");
+
+    curl += ` \\\n  --data '${serializedBody}'`;
+  }
+
+  return curl;
 }

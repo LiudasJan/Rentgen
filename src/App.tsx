@@ -1,15 +1,18 @@
 import { Method } from 'axios';
 import cn from 'classnames';
 import React, { useEffect, useState } from 'react';
+import DataTable, { ExpanderComponentProps, TableColumn } from 'react-data-table-component';
 import Button, { ButtonType } from './components/buttons/Button';
+import { CopyButton } from './components/buttons/CopyButton';
 import Input from './components/inputs/Input';
 import Select, { SelectOption } from './components/inputs/Select';
 import SimpleSelect from './components/inputs/SimpleSelect';
 import Textarea from './components/inputs/Textarea';
+import TestRunningLoader from './components/loaders/TestRunningLoader';
 import Modal from './components/modals/Modal';
 import ResponsePanel from './components/panels/ResponsePanel';
 import useTests from './hooks/useTests';
-import { TestStatus } from './types';
+import { Test, TestStatus } from './types';
 import {
   convertFormEntriesToUrlEncoded,
   detectFieldType,
@@ -18,6 +21,7 @@ import {
   extractFieldsFromJson,
   extractQueryParams,
   formatRequestBody,
+  generateCurl,
   generateRandomEmail,
   generateRandomInteger,
   generateRandomString,
@@ -59,6 +63,26 @@ const parameterOptions: SelectOption<string>[] = [
   { value: 'boolean', label: 'Boolean' },
   { value: 'currency', label: 'Currency' },
   { value: 'date_yyyy_mm_dd', label: 'Date (YYYY-MM-DD)' },
+];
+
+const columns: TableColumn<Test>[] = [
+  {
+    name: 'Check',
+    selector: (row) => row.name,
+  },
+  {
+    name: 'Expected',
+    selector: (row) => row.expected,
+  },
+  {
+    name: 'Actual',
+    selector: (row) => row.actual,
+  },
+  {
+    name: 'Result',
+    selector: (row) => row.status,
+    maxWidth: '150px',
+  },
 ];
 
 export default function App() {
@@ -107,8 +131,6 @@ export default function App() {
   const [expandedRows, setExpandedRows] = useState<Record<number, boolean>>({});
   const toggleRow = (idx: number) => setExpandedRows((prev) => ({ ...prev, [idx]: !prev[idx] }));
 
-  const [expandedSecurityRows, setExpandedSecurityRows] = useState<Record<number, boolean>>({});
-  const toggleSecurityRow = (idx: number) => setExpandedSecurityRows((prev) => ({ ...prev, [idx]: !prev[idx] }));
   const [expandedCrudRows, setExpandedCrudRows] = useState<Record<number, boolean>>({});
 
   // Load test UI/rezultatai
@@ -152,57 +174,6 @@ export default function App() {
       ipcRenderer?.off('wss-event', messagesListener);
     };
   }, []);
-
-  // --- To cURL + copy ---
-  function copyAsCurl(req: { url: string; method: string; headers?: any; body?: any }) {
-    let curl = `curl -X ${req.method || 'GET'} '${req.url}'`;
-
-    if (req.headers) {
-      for (const [k, v] of Object.entries(req.headers)) {
-        curl += ` \\\n  -H '${k}: ${v}'`;
-      }
-    }
-
-    if (req.body && req.body !== 'null' && req.body !== '{}') {
-      let bodyStr: string;
-
-      if (typeof req.body === 'string') {
-        bodyStr = req.body;
-      } else {
-        bodyStr = JSON.stringify(req.body);
-      }
-
-      // 💡 escape single quote, kad curl nebūtų invalid
-      bodyStr = bodyStr.replace(/'/g, "'\\''");
-
-      curl += ` \\\n  --data '${bodyStr}'`;
-    }
-
-    navigator.clipboard
-      .writeText(curl)
-      .then(() => {
-        console.log('✅ cURL copied to clipboard');
-      })
-      .catch((err) => {
-        console.error('❌ Failed to copy cURL', err);
-      });
-  }
-
-  function CopyButton({ req }: { req: any }) {
-    const [copied, setCopied] = React.useState(false);
-
-    const handleCopy = () => {
-      copyAsCurl(req);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000); // po 2s grįžta
-    };
-
-    return (
-      <button className="copy-btn" onClick={handleCopy}>
-        {copied ? 'Copied ✅' : 'Copy cURL'}
-      </button>
-    );
-  }
 
   // pritaiko random mapping'ą taip pat, kaip data-driven cikle
   function buildRandomizedBody(baseBody: any) {
@@ -524,8 +495,8 @@ export default function App() {
 
       {mode === 'HTTP' && httpResponse && (
         <ResponsePanel title="Response">
-          <div className="py-2 px-3 font-bold bg-body border-y border-border">{httpResponse.status}</div>
-          <div className="max-h-[400px] py-2 px-3 overflow-y-auto">
+          <div className="p-4 font-bold bg-body border-y border-border">{httpResponse.status}</div>
+          <div className="max-h-[400px] p-4 overflow-y-auto">
             <h4 className="m-0">Headers</h4>
             <pre className="my-4 whitespace-pre-wrap">{JSON.stringify(httpResponse.headers, null, 2)}</pre>
             <h4 className="m-0 pt-2 border-t border-border">Body</h4>
@@ -538,7 +509,7 @@ export default function App() {
 
       {mode === 'WSS' && messages.length > 0 && (
         <ResponsePanel title="Messages">
-          <div className="max-h-[400px] py-2 px-3 border-t border-border overflow-y-auto">
+          <div className="max-h-[400px] p-4 border-t border-border overflow-y-auto">
             {messages.map((message, index) => (
               <div
                 key={index}
@@ -572,7 +543,7 @@ export default function App() {
           {Object.keys(fieldMappings).length > 0 && (
             <ResponsePanel title="Body Parameters">
               {Object.entries(fieldMappings).map(([field, type]) => (
-                <div key={field} className="pb-3 first-of-type:pt-3 px-3 flex items-center justify-between gap-3">
+                <div key={field} className="pb-4 first-of-type:pt-4 px-4 flex items-center justify-between gap-4">
                   <span className="flex-1 font-monospace text-ellipsis text-nowrap overflow-hidden">{field}</span>
                   <SimpleSelect
                     className="rounded-none! p-1! outline-none"
@@ -590,7 +561,7 @@ export default function App() {
           {Object.keys(queryMappings).length > 0 && (
             <ResponsePanel title="Query Parameters">
               {Object.entries(queryMappings).map(([param, type]) => (
-                <div key={param} className="pb-3 first-of-type:pt-3 px-3 flex items-center justify-between gap-3">
+                <div key={param} className="pb-4 first-of-type:pt-4 px-4 flex items-center justify-between gap-4">
                   <span className="flex-1 font-monospace text-ellipsis text-nowrap overflow-hidden">{param}</span>
                   <SimpleSelect
                     className="rounded-none! p-1! outline-none"
@@ -616,79 +587,39 @@ export default function App() {
       {testsRun && (
         <>
           <ResponsePanel title="Security & Headers Tests">
-            <table className="results-table">
-              <thead>
-                <tr>
-                  <th>Check</th>
-                  <th>Expected</th>
-                  <th>Actual</th>
-                  <th>Result</th>
-                </tr>
-              </thead>
-              <tbody>
-                {isSecurityRunning && securityTests.length === 0 ? (
-                  <tr>
-                    <td colSpan={4}>⏳ Running security tests...</td>
-                  </tr>
-                ) : (
-                  securityTests.map((r, i) => (
-                    <React.Fragment key={i}>
-                      <tr
-                        className={
-                          r.status.includes('Pass')
-                            ? 'pass'
-                            : r.status.includes('Fail')
-                              ? 'fail'
-                              : r.status.includes('Warning')
-                                ? 'warn'
-                                : r.status.includes('Manual')
-                                  ? 'manual'
-                                  : r.status.includes('Info')
-                                    ? 'info'
-                                    : 'bug'
-                        }
-                        onClick={() => toggleSecurityRow(i)}
-                        style={{ cursor: 'pointer' }}
-                      >
-                        <td>{r.name}</td>
-                        <td>{r.expected}</td>
-                        <td>{r.actual}</td>
-                        <td>{r.status}</td>
-                      </tr>
-
-                      {expandedSecurityRows[i] && (
-                        <tr className="details-row">
-                          <td colSpan={4}>
-                            <div className="details-panel">
-                              <div
-                                style={{
-                                  display: 'flex',
-                                  justifyContent: 'space-between',
-                                }}
-                              >
-                                <CopyButton req={r.request} />
-                              </div>
-                              <div className="details-grid">
-                                <div>
-                                  <div className="details-title">Request</div>
-                                  <pre className="wrap">{JSON.stringify(r.request, null, 2)}</pre>
-                                </div>
-                                <div>
-                                  <div className="details-title">Response</div>
-                                  <pre className="wrap">
-                                    {typeof r.response === 'string' ? r.response : JSON.stringify(r.response, null, 2)}
-                                  </pre>
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </React.Fragment>
-                  ))
-                )}
-              </tbody>
-            </table>
+            <DataTable
+              className="border-t border-border rounded-t-none!"
+              columns={columns}
+              conditionalRowStyles={[
+                {
+                  when: (row) => row.status === TestStatus.Pass,
+                  style: { backgroundColor: '#d4edda' },
+                },
+                {
+                  when: (row) => row.status === TestStatus.Fail,
+                  style: { backgroundColor: '#f8d7da' },
+                },
+                {
+                  when: (row) => row.status === TestStatus.Manual,
+                  style: { backgroundColor: '#e2e3e5' },
+                },
+                {
+                  when: (row) => row.status === TestStatus.Warning,
+                  style: { backgroundColor: '#fff3cd' },
+                },
+                {
+                  when: (row) => row.status === TestStatus.Info,
+                  style: { backgroundColor: '#e6f0ff' },
+                },
+              ]}
+              expandableRows
+              expandableRowsComponent={ExpandedComponent}
+              expandableRowsHideExpander
+              expandOnRowClicked
+              data={securityTests}
+              progressComponent={<TestRunningLoader text="Running security tests..." />}
+              progressPending={isSecurityRunning}
+            />
           </ResponsePanel>
 
           <ResponsePanel title="Performance Insights">
@@ -899,7 +830,17 @@ export default function App() {
                                   justifyContent: 'space-between',
                                 }}
                               >
-                                <CopyButton req={r.request} />
+                                <CopyButton
+                                  className="mb-4"
+                                  textToCopy={generateCurl(
+                                    r.request.body,
+                                    r.request.headers,
+                                    r.request.method,
+                                    r.request.url,
+                                  )}
+                                >
+                                  Copy cURL
+                                </CopyButton>
                               </div>
                               <div className="details-grid">
                                 <div>
@@ -991,7 +932,17 @@ export default function App() {
                                     justifyContent: 'space-between',
                                   }}
                                 >
-                                  <CopyButton req={r.request} />
+                                  <CopyButton
+                                    className="mb-4"
+                                    textToCopy={generateCurl(
+                                      r.request.body,
+                                      r.request.headers,
+                                      r.request.method,
+                                      r.request.url,
+                                    )}
+                                  >
+                                    Copy cURL
+                                  </CopyButton>
                                 </div>
                                 <div className="details-grid">
                                   <div>
@@ -1170,4 +1121,32 @@ export default function App() {
     setMessages((prevMessages) => [{ direction: 'sent', data: body }, ...prevMessages]);
     window.electronAPI.sendWss(body);
   }
+}
+
+function ExpandedComponent({ data }: ExpanderComponentProps<Test>) {
+  const {
+    request: { body, headers, method, url },
+  } = data;
+
+  return (
+    <div className="p-4 bg-table-data">
+      <CopyButton className="mb-4" textToCopy={generateCurl(body, headers, method, url)}>
+        Copy cURL
+      </CopyButton>
+      <div className="grid grid-cols-2 gap-4 items-stretch">
+        <div className="flex flex-col gap-2.5">
+          <h4 className="m-0">Request</h4>
+          <pre className="flex-auto m-0 p-2.5 bg-white border border-border rounded whitespace-pre-wrap">
+            {JSON.stringify(data.request.headers, null, 2)}
+          </pre>
+        </div>
+        <div className="flex flex-col gap-2.5">
+          <h4 className="m-0">Response</h4>
+          <pre className="flex-auto m-0 p-2.5 bg-white border border-border rounded whitespace-pre-wrap">
+            {typeof data.response === 'string' ? data.response : JSON.stringify(data.response, null, 2)}
+          </pre>
+        </div>
+      </div>
+    </div>
+  );
 }

@@ -12,6 +12,7 @@
   --color-button-primary: #2185d0;
   --color-button-secondary: #f7f7f7;
   --color-body: #f7f7f7;
+  --color-table-data: #f9fbff;
   --color-border: #cccccc;
   --color-method-get: #21ba45;
   --color-method-post: #2185d0;
@@ -21,6 +22,9 @@
   --color-method-head: #00b5ad;
   --color-method-options: #767676;
   --color-text: #333333;
+
+  /* Animation */
+  --animate-spin: spin 3s linear infinite;
 }
 
 @layer base {
@@ -179,18 +183,6 @@ pre.wrap {
   white-space: pre-wrap; /* leidžia wrap’inti */
   word-break: break-word; /* laužo ilgas eilutes */
   overflow-wrap: anywhere; /* modernus variantas */
-}
-
-.copy-btn {
-  font-size: 12px;
-  padding: 2px 6px;
-  background: #eee;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  cursor: pointer;
-}
-.copy-btn:hover {
-  background: #ddd;
 }
 
 .load-test-row.pass {
