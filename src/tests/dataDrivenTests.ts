@@ -220,7 +220,12 @@ export async function runDataDrivenTests(
       const testValue = (testData as any).value;
 
       // Create deep copy of original body to avoid mutation
-      const modifiedRequestBody = JSON.parse(JSON.stringify(body));
+      const modifiedRequestBody =
+        parsedBody && typeof parsedBody === 'object'
+          ? JSON.parse(JSON.stringify(parsedBody))
+          : (() => {
+              throw new Error('Parsed body is not an object');
+            })();
       const finalTestValue =
         dataType === 'randomInt'
           ? generateRandomInteger()
