@@ -1124,20 +1124,23 @@ export default function App() {
 }
 
 function ExpandedComponent({ data }: ExpanderComponentProps<Test>) {
-  const {
-    request: { body, headers, method, url },
-  } = data;
+  const { request } = data;
 
   return (
     <div className="p-4 bg-table-data">
-      <CopyButton className="mb-4" textToCopy={generateCurl(body, headers, method, url)}>
-        Copy cURL
-      </CopyButton>
+      {request && (
+        <CopyButton
+          className="mb-4"
+          textToCopy={generateCurl(request.body, request.headers, request.method, request.url)}
+        >
+          Copy cURL
+        </CopyButton>
+      )}
       <div className="grid grid-cols-2 gap-4 items-stretch">
         <div className="flex flex-col gap-2.5">
           <h4 className="m-0">Request</h4>
           <pre className="flex-auto m-0 p-2.5 bg-white border border-border rounded whitespace-pre-wrap">
-            {JSON.stringify(data.request.headers, null, 2)}
+            {JSON.stringify(data.request, null, 2)}
           </pre>
         </div>
         <div className="flex flex-col gap-2.5">
