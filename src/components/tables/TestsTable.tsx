@@ -31,6 +31,17 @@ export default function TestsTable({ columns, data, className, ...otherProps }: 
           style: { backgroundColor: '#e6f0ff' },
         },
       ]}
+      customStyles={{
+        expanderCell: {
+          style: { minWidth: '28px', width: '28px', flex: '0 0 28px' },
+        },
+        expanderButton: {
+          style: {
+            '&:hover': { backgroundColor: 'transparent !important' },
+            '&:focus': { backgroundColor: 'transparent !important' },
+          },
+        },
+      }}
       data={data}
       {...otherProps}
     />
@@ -111,6 +122,11 @@ export function getTestsTableColumns(visibleColumns: string[] = []): TableColumn
       selector: (row) => row.status,
       width: '150px',
       omit: true,
+      cell: (row) => {
+        if (row.name === 'Load test') return <div></div>;
+
+        return row.status;
+      },
     },
   ];
 
