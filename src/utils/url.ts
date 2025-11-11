@@ -146,11 +146,6 @@ export function extractCurl(curl: string): ParsedCurlResult {
     if (value) headers['Cookie'] = value;
   }
 
-  if (decodedLines.length > 0) {
-    const hasContentType = Object.keys(headers).some((headerKey) => headerKey.toLowerCase() === 'content-type');
-    if (!hasContentType) headers['Content-Type'] = 'application/x-www-form-urlencoded';
-  }
-
   return {
     body: parsedCurl.body || null,
     decodedLines,
