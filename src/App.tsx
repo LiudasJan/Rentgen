@@ -1,9 +1,7 @@
 import { Method } from 'axios';
 import cn from 'classnames';
-import React, { useEffect, useState } from 'react';
-import DataTable, { ExpanderComponentProps, TableColumn } from 'react-data-table-component';
+import { useEffect, useState } from 'react';
 import Button, { ButtonType } from './components/buttons/Button';
-import { CopyButton } from './components/buttons/CopyButton';
 import Input from './components/inputs/Input';
 import Select, { SelectOption } from './components/inputs/Select';
 import SimpleSelect from './components/inputs/SimpleSelect';
@@ -11,8 +9,9 @@ import Textarea from './components/inputs/Textarea';
 import TestRunningLoader from './components/loaders/TestRunningLoader';
 import Modal from './components/modals/Modal';
 import ResponsePanel from './components/panels/ResponsePanel';
+import TestsTable, { ExpandedTestComponent, getTestsTableColumns } from './components/tables/TestsTable';
 import useTests from './hooks/useTests';
-import { Test, TestStatus } from './types';
+import { TestStatus } from './types';
 import {
   convertFormEntriesToUrlEncoded,
   detectFieldType,
@@ -21,7 +20,6 @@ import {
   extractFieldsFromJson,
   extractQueryParams,
   formatRequestBody,
-  generateCurl,
   generateRandomEmail,
   generateRandomInteger,
   generateRandomString,
@@ -30,7 +28,6 @@ import {
   parseFormData,
   parseHeaders,
   setDeepObjectProperty,
-  truncateValue,
 } from './utils';
 
 type Mode = 'HTTP' | 'WSS';
@@ -63,26 +60,6 @@ const parameterOptions: SelectOption<string>[] = [
   { value: 'boolean', label: 'Boolean' },
   { value: 'currency', label: 'Currency' },
   { value: 'date_yyyy_mm_dd', label: 'Date (YYYY-MM-DD)' },
-];
-
-const columns: TableColumn<Test>[] = [
-  {
-    name: 'Check',
-    selector: (row) => row.name,
-  },
-  {
-    name: 'Expected',
-    selector: (row) => row.expected,
-  },
-  {
-    name: 'Actual',
-    selector: (row) => row.actual,
-  },
-  {
-    name: 'Result',
-    selector: (row) => row.status,
-    maxWidth: '150px',
-  },
 ];
 
 export default function App() {
@@ -127,11 +104,6 @@ export default function App() {
   } = useTests(method, url, parseHeaders(headers), body, fieldMappings, queryMappings, messageType, protoFile);
 
   const isRunningTests = isSecurityRunning || isPerformanceRunning || isDataDrivenRunning;
-  // --- State ---
-  const [expandedRows, setExpandedRows] = useState<Record<number, boolean>>({});
-  const toggleRow = (idx: number) => setExpandedRows((prev) => ({ ...prev, [idx]: !prev[idx] }));
-
-  const [expandedCrudRows, setExpandedCrudRows] = useState<Record<number, boolean>>({});
 
   // Load test UI/rezultatai
   const [loadConcurrency, setLoadConcurrency] = useState(10); // threads
@@ -587,33 +559,10 @@ export default function App() {
       {testsRun && (
         <>
           <ResponsePanel title="Security & Headers Tests">
-            <DataTable
-              className="border-t border-border rounded-t-none!"
-              columns={columns}
-              conditionalRowStyles={[
-                {
-                  when: (row) => row.status === TestStatus.Pass,
-                  style: { backgroundColor: '#d4edda' },
-                },
-                {
-                  when: (row) => row.status === TestStatus.Fail,
-                  style: { backgroundColor: '#f8d7da' },
-                },
-                {
-                  when: (row) => row.status === TestStatus.Manual,
-                  style: { backgroundColor: '#e2e3e5' },
-                },
-                {
-                  when: (row) => row.status === TestStatus.Warning,
-                  style: { backgroundColor: '#fff3cd' },
-                },
-                {
-                  when: (row) => row.status === TestStatus.Info,
-                  style: { backgroundColor: '#e6f0ff' },
-                },
-              ]}
+            <TestsTable
+              columns={getTestsTableColumns(['Check', 'Expected', 'Actual', 'Result'])}
               expandableRows
-              expandableRowsComponent={ExpandedComponent}
+              expandableRowsComponent={ExpandedTestComponent}
               expandableRowsHideExpander
               expandOnRowClicked
               data={securityTests}
@@ -779,197 +728,29 @@ export default function App() {
           </ResponsePanel>
 
           <ResponsePanel title="Data Handling & Input Validation">
-            <table className="results-table">
-              <thead>
-                <tr>
-                  <th>Field</th>
-                  <th>Value</th>
-                  <th>Expected</th>
-                  <th>Actual</th>
-                  <th>Result</th>
-                </tr>
-              </thead>
-              <tbody>
-                {isDataDrivenRunning && dataDrivenTests.length === 0 ? (
-                  <tr>
-                    <td colSpan={5}>⏳ Running data-driven tests...</td>
-                  </tr>
-                ) : (
-                  dataDrivenTests.map((r, i) => (
-                    <React.Fragment key={i}>
-                      <tr
-                        className={
-                          /^5\d\d/.test(r.actual)
-                            ? 'bug'
-                            : r.status.includes('Pass')
-                              ? 'pass'
-                              : r.status.includes('Fail')
-                                ? 'fail'
-                                : 'bug'
-                        }
-                        onClick={() => toggleRow(i)}
-                        style={{ cursor: 'pointer' }}
-                      >
-                        <td className="expander">
-                          <span className="chevron">{expandedRows[i] ? '▾' : '▸'}</span>
-                          {r.field}
-                        </td>
-                        <td>{truncateValue(r.value)}</td>
-                        <td>{r.expected}</td>
-                        <td>{r.actual}</td>
-                        <td>{r.status}</td>
-                      </tr>
-
-                      {expandedRows[i] && (
-                        <tr className="details-row">
-                          <td colSpan={5}>
-                            <div className="details-panel">
-                              <div
-                                style={{
-                                  display: 'flex',
-                                  justifyContent: 'space-between',
-                                }}
-                              >
-                                {r.request && (
-                                  <CopyButton
-                                    className="mb-4"
-                                    textToCopy={generateCurl(
-                                      r.request.body,
-                                      r.request.headers,
-                                      r.request.method,
-                                      r.request.url,
-                                    )}
-                                  >
-                                    Copy cURL
-                                  </CopyButton>
-                                )}
-                              </div>
-                              <div className="details-grid">
-                                <div>
-                                  <div className="details-title">Request</div>
-                                  <pre className="wrap">{JSON.stringify(r.request, null, 2)}</pre>
-                                </div>
-                                <div>
-                                  <div className="details-title">Response</div>
-                                  <pre className="wrap">{r.response}</pre>
-                                  {r.decoded && (
-                                    <>
-                                      <div className="decoded-label">Decoded Protobuf:</div>
-                                      <pre>{r.decoded}</pre>
-                                    </>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </React.Fragment>
-                  ))
-                )}
-              </tbody>
-            </table>
+            <TestsTable
+              columns={getTestsTableColumns(['Field', 'Value', 'Expected', 'Actual', 'Result'])}
+              expandableRows
+              expandableRowsComponent={ExpandedTestComponent}
+              expandableRowsHideExpander
+              expandOnRowClicked
+              data={dataDrivenTests}
+              progressComponent={<TestRunningLoader text="Running data-driven tests..." />}
+              progressPending={isDataDrivenRunning}
+            />
           </ResponsePanel>
 
           <ResponsePanel title="CRUD">
-            <table className="results-table">
-              <thead>
-                <tr>
-                  <th>Method</th>
-                  <th>Expected</th>
-                  <th>Actual</th>
-                  <th>Result</th>
-                </tr>
-              </thead>
-              <tbody>
-                {crudTests.length === 0 ? (
-                  <tr>
-                    <td colSpan={4}>⏳ Preparing CRUD…</td>
-                  </tr>
-                ) : (
-                  crudTests.map((r, i) => {
-                    const rowClass = r.status.includes('Pass')
-                      ? 'pass'
-                      : r.status.includes('Fail')
-                        ? 'fail'
-                        : r.status.includes('Warning')
-                          ? 'warn'
-                          : r.status.includes('Manual')
-                            ? 'manual'
-                            : r.status.includes('Info')
-                              ? 'info'
-                              : 'bug';
-
-                    const isExpanded = expandedCrudRows[i];
-                    const toggleExpand = () => {
-                      setExpandedCrudRows((prev) => ({
-                        ...prev,
-                        [i]: !prev[i],
-                      }));
-                    };
-
-                    return (
-                      <React.Fragment key={i}>
-                        <tr
-                          className={rowClass}
-                          onClick={toggleExpand}
-                          style={{ cursor: r.request ? 'pointer' : 'default' }}
-                        >
-                          <td className="expander">
-                            <span className="chevron">{isExpanded ? '▾' : '▸'}</span>
-                            {r.method}
-                          </td>
-                          <td>{r.expected}</td>
-                          <td>{r.actual || 'Not available yet'}</td>
-                          <td>{r.status}</td>
-                        </tr>
-
-                        {isExpanded && (
-                          <tr className="details-row">
-                            <td colSpan={4}>
-                              <div className="details-panel">
-                                <div
-                                  style={{
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                  }}
-                                >
-                                  {r.request && (
-                                    <CopyButton
-                                      className="mb-4"
-                                      textToCopy={generateCurl(
-                                        r.request.body,
-                                        r.request.headers,
-                                        r.request.method,
-                                        r.request.url,
-                                      )}
-                                    >
-                                      Copy cURL
-                                    </CopyButton>
-                                  )}
-                                </div>
-                                <div className="details-grid">
-                                  <div>
-                                    <div className="details-title">Request</div>
-                                    <pre className="wrap">{JSON.stringify(r.request, null, 2)}</pre>
-                                  </div>
-                                  <div>
-                                    <div className="details-title">Response</div>
-                                    <pre className="wrap">
-                                      {r.response ? JSON.stringify(r.response, null, 2) : 'null'}
-                                    </pre>
-                                  </div>
-                                </div>
-                              </div>
-                            </td>
-                          </tr>
-                        )}
-                      </React.Fragment>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
+            <TestsTable
+              columns={getTestsTableColumns(['Method', 'Expected', 'Actual', 'Result'])}
+              expandableRows
+              expandableRowsComponent={ExpandedTestComponent}
+              expandableRowsHideExpander
+              expandOnRowClicked
+              data={crudTests}
+              progressComponent={<TestRunningLoader text="Preparing CRUD…" />}
+              progressPending={crudTests.length === 0}
+            />
           </ResponsePanel>
         </>
       )}
@@ -1125,35 +906,4 @@ export default function App() {
     setMessages((prevMessages) => [{ direction: 'sent', data: body }, ...prevMessages]);
     window.electronAPI.sendWss(body);
   }
-}
-
-function ExpandedComponent({ data }: ExpanderComponentProps<Test>) {
-  const { request } = data;
-
-  return (
-    <div className="p-4 bg-table-data">
-      {request && (
-        <CopyButton
-          className="mb-4"
-          textToCopy={generateCurl(request.body, request.headers, request.method, request.url)}
-        >
-          Copy cURL
-        </CopyButton>
-      )}
-      <div className="grid grid-cols-2 gap-4 items-stretch">
-        <div className="flex flex-col gap-2.5">
-          <h4 className="m-0">Request</h4>
-          <pre className="flex-auto m-0 p-2.5 bg-white border border-border rounded whitespace-pre-wrap">
-            {JSON.stringify(data.request, null, 2)}
-          </pre>
-        </div>
-        <div className="flex flex-col gap-2.5">
-          <h4 className="m-0">Response</h4>
-          <pre className="flex-auto m-0 p-2.5 bg-white border border-border rounded whitespace-pre-wrap">
-            {typeof data.response === 'string' ? data.response : JSON.stringify(data.response, null, 2)}
-          </pre>
-        </div>
-      </div>
-    </div>
-  );
 }
