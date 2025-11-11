@@ -1,3 +1,4 @@
+export * from './error';
 export * from './field';
 export * from './header';
 export * from './objectManipulation';

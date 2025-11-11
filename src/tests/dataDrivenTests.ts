@@ -11,6 +11,7 @@ import {
   getHeaderValue,
   parseFormData,
   setDeepObjectProperty,
+  throwError,
 } from '../utils';
 
 const SUCCESS_STATUS_MIN = 200;
@@ -220,7 +221,10 @@ export async function runDataDrivenTests(
       const testValue = (testData as any).value;
 
       // Create deep copy of original body to avoid mutation
-      const modifiedRequestBody = JSON.parse(JSON.stringify(body));
+      const modifiedRequestBody =
+        parsedBody && typeof parsedBody === 'object'
+          ? JSON.parse(JSON.stringify(parsedBody))
+          : throwError('Parsed body is not an object');
       const finalTestValue =
         dataType === 'randomInt'
           ? generateRandomInteger()
