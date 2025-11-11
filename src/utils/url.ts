@@ -146,6 +146,13 @@ export function extractCurl(curl: string): ParsedCurlResult {
     if (value) headers['Cookie'] = value;
   }
 
+  const ctExplicitInCurl = /(?:^|\s)-H\s+(['"])?[^'"]*content-type\s*:/i.test(trimmedCurl);
+  if (!ctExplicitInCurl) {
+    for (const k of Object.keys(headers)) {
+      if (k.toLowerCase() === 'content-type') delete headers[k];
+    }
+  }
+
   return {
     body: parsedCurl.body || null,
     decodedLines,
