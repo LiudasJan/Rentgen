@@ -830,17 +830,19 @@ export default function App() {
                                   justifyContent: 'space-between',
                                 }}
                               >
-                                <CopyButton
-                                  className="mb-4"
-                                  textToCopy={generateCurl(
-                                    r.request.body,
-                                    r.request.headers,
-                                    r.request.method,
-                                    r.request.url,
-                                  )}
-                                >
-                                  Copy cURL
-                                </CopyButton>
+                                {r.request && (
+                                  <CopyButton
+                                    className="mb-4"
+                                    textToCopy={generateCurl(
+                                      r.request.body,
+                                      r.request.headers,
+                                      r.request.method,
+                                      r.request.url,
+                                    )}
+                                  >
+                                    Copy cURL
+                                  </CopyButton>
+                                )}
                               </div>
                               <div className="details-grid">
                                 <div>
@@ -932,17 +934,19 @@ export default function App() {
                                     justifyContent: 'space-between',
                                   }}
                                 >
-                                  <CopyButton
-                                    className="mb-4"
-                                    textToCopy={generateCurl(
-                                      r.request.body,
-                                      r.request.headers,
-                                      r.request.method,
-                                      r.request.url,
-                                    )}
-                                  >
-                                    Copy cURL
-                                  </CopyButton>
+                                  {r.request && (
+                                    <CopyButton
+                                      className="mb-4"
+                                      textToCopy={generateCurl(
+                                        r.request.body,
+                                        r.request.headers,
+                                        r.request.method,
+                                        r.request.url,
+                                      )}
+                                    >
+                                      Copy cURL
+                                    </CopyButton>
+                                  )}
                                 </div>
                                 <div className="details-grid">
                                   <div>
