@@ -68,19 +68,21 @@ export function ExpandedTestComponent({ data }: ExpanderComponentProps<Test>) {
       <div className="grid grid-cols-2 gap-4 items-stretch">
         <div className="flex flex-col gap-2.5">
           <h4 className="m-0">Request</h4>
-          <pre className="flex-auto m-0 p-2.5 bg-white border border-border rounded whitespace-pre-wrap">
+          <pre className="flex-auto m-0 p-2.5 bg-white border border-border rounded whitespace-pre-wrap break-all">
             {JSON.stringify(data.request, null, 2)}
           </pre>
         </div>
         <div className="flex flex-col gap-2.5">
           <h4 className="m-0">Response</h4>
-          <pre className="flex-auto m-0 p-2.5 bg-white border border-border rounded whitespace-pre-wrap">
+          <pre className="flex-auto m-0 p-2.5 bg-white border border-border rounded whitespace-pre-wrap break-all">
             {typeof data.response === 'string' ? data.response : JSON.stringify(data.response, null, 2)}
           </pre>
           {decoded && (
             <>
               <h5 className="m-0">Decoded Protobuf</h5>
-              <pre className="flex-auto m-0 p-2.5 bg-white border border-border rounded whitespace-pre-wrap">test</pre>
+              <pre className="flex-auto m-0 p-2.5 bg-white border border-border rounded whitespace-pre-wrap break-all">
+                {decoded}
+              </pre>
             </>
           )}
         </div>

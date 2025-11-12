@@ -279,9 +279,11 @@ export default function App() {
           {httpResponse.status !== 'Sending...' && (
             <div className="max-h-[400px] p-4 border-t border-border overflow-y-auto">
               <h4 className="m-0">Headers</h4>
-              <pre className="m-0! mt-4! whitespace-pre-wrap">{JSON.stringify(httpResponse.headers, null, 2)}</pre>
+              <pre className="m-0! mt-4! whitespace-pre-wrap break-all">
+                {JSON.stringify(httpResponse.headers, null, 2)}
+              </pre>
               <h4 className="m-0 mt-4 pt-4 border-t border-border">Body</h4>
-              <pre className="m-0! mt-4! whitespace-pre-wrap">
+              <pre className="m-0! mt-4! whitespace-pre-wrap break-all">
                 {typeof httpResponse.body === 'string' ? httpResponse.body : JSON.stringify(httpResponse.body, null, 2)}
               </pre>
             </div>
@@ -307,11 +309,11 @@ export default function App() {
                 >
                   {message.direction === 'sent' ? '➡' : message.direction === 'received' ? '⬅' : '⚠'}
                 </span>
-                <pre className="mt-0 ml-4">{message.data}</pre>
+                <pre className="mt-0 ml-4 break-all">{message.data}</pre>
                 {message.decoded && (
                   <>
                     <div className="font-monospace font-bold text-sm">Decoded Protobuf:</div>
-                    <pre>{message.decoded}</pre>
+                    <pre className="break-all">{message.decoded}</pre>
                   </>
                 )}
               </div>
@@ -390,6 +392,7 @@ export default function App() {
                 {
                   name: 'Expected',
                   selector: (row) => row.expected,
+                  cell: (row) => <div className="py-1">{row.expected}</div>,
                 },
                 {
                   name: 'Actual',
