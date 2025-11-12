@@ -309,11 +309,11 @@ export default function App() {
                 >
                   {message.direction === 'sent' ? '➡' : message.direction === 'received' ? '⬅' : '⚠'}
                 </span>
-                <pre className="mt-0 ml-4 break-all">{message.data}</pre>
+                <pre className="mt-0 ml-4 whitespace-pre-wrap break-all">{message.data}</pre>
                 {message.decoded && (
                   <>
                     <div className="font-monospace font-bold text-sm">Decoded Protobuf:</div>
-                    <pre className="break-all">{message.decoded}</pre>
+                    <pre className="whitespace-pre-wrap break-all">{message.decoded}</pre>
                   </>
                 )}
               </div>
