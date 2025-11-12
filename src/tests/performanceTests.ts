@@ -18,6 +18,12 @@ const PING_TEST_COUNT = 5;
 const MAX_ACCEPTABLE_BAD_PINGS = 3;
 const EXPECTED_RATE_LIMIT_STATUS = '429 Too Many Requests';
 
+const MAX_CONCURRENCY = 100;
+const MAX_TOTAL_REQUESTS = 10000;
+const MAX_EARLY_ABORT_FAILURES = 5;
+const EARLY_ABORT_RESPONSE_TIME_MS = 5000;
+const MIN_REQUESTS_FOR_ABORT_CHECK = 10;
+
 export async function runPerformanceInsights(url: string, testResults: Test[]): Promise<Test[]> {
   const results: Test[] = [];
 
@@ -95,110 +101,109 @@ export async function runLoadTest(
   requestCount: number,
   updateProgress?: (sentRequestCount: number, requestCount: number) => void,
 ): Promise<Test> {
-  const concurrency = Math.max(1, Math.min(100, Math.floor(threadCount)));
-  const total = Math.max(1, Math.min(10000, Math.floor(requestCount)));
+  const concurrency = Math.max(1, Math.min(MAX_CONCURRENCY, Math.floor(threadCount)));
+  const totalRequests = Math.max(1, Math.min(MAX_TOTAL_REQUESTS, Math.floor(requestCount)));
 
-  let parsedBody: any = null;
+  let parsedBody: any | null = null;
   try {
     parsedBody = body ? JSON.parse(body) : null;
   } catch {
-    // jei ne JSON – siunčiam raw (be randomizacijos)
+    // If not JSON, send raw data without randomization
     parsedBody = null;
   }
 
-  let sent = 0;
-  let failures5xx = 0;
-  let failures4xx = 0;
-  const times: number[] = [];
+  let requestsSent = 0,
+    server5xxFailures = 0,
+    client4xxFailures = 0,
+    isAborted = false;
 
-  let abort = false;
+  const responseTimes: number[] = [];
 
-  async function oneRequest() {
-    if (abort) return;
+  async function executeSingleRequest(): Promise<void> {
+    if (isAborted) return;
 
-    // kūnas: originalus + random laukai, lygiai kaip data-driven cikle
-    let dataToSend: any = parsedBody ? buildRandomizedBody(parsedBody, fieldMappings) : body;
+    let data: any = body;
+    if (parsedBody) {
+      const dynamicBody = JSON.parse(JSON.stringify(parsedBody));
+
+      for (const [fieldKey, fieldType] of Object.entries(fieldMappings)) {
+        if (fieldType === 'random32') setDeepObjectProperty(dynamicBody, fieldKey, generateRandomString());
+        if (fieldType === 'randomInt') setDeepObjectProperty(dynamicBody, fieldKey, generateRandomInteger());
+        if (fieldType === 'randomEmail') setDeepObjectProperty(dynamicBody, fieldKey, generateRandomEmail());
+      }
+
+      data = dynamicBody;
+    }
 
     if (protoFile && messageType && parsedBody) {
       try {
-        dataToSend = encodeMessage(messageType, dataToSend);
-      } catch (e) {
-        // jei nepavyko encodinti – skaitom kaip fail'ą
-        failures5xx++;
+        data = encodeMessage(messageType, data);
+      } catch (error) {
+        // Treat encoding as failure
+        server5xxFailures++;
         return;
       }
     }
 
-    const t0 = performance.now();
-    const res = await window.electronAPI.sendHttp({
+    const startTime = performance.now();
+    const response = await window.electronAPI.sendHttp({
       url,
       method,
       headers,
-      body: dataToSend,
+      body: data,
     });
-    const t1 = performance.now();
+    const endTime = performance.now();
 
-    const ms = t1 - t0;
-    times.push(ms);
+    const responseTime = endTime - startTime;
+    responseTimes.push(responseTime);
 
-    const code = extractStatusCode(res);
-    if (code >= 500) failures5xx++;
-    if (code >= 400 && code < 500) failures4xx++;
+    const statusCode = extractStatusCode(response);
+    if (statusCode >= 500) server5xxFailures++;
+    if (statusCode >= 400 && statusCode < 500) client4xxFailures++;
 
-    // ankstyvas stabdymas: >5 5xx arba mediana > 5000ms
-    if (failures5xx >= 5) abort = true;
-    if (times.length >= Math.min(10, total)) {
-      const med = calculatePercentile(times, 50);
-      if (med > 5000) abort = true;
+    // Check early abort conditions
+    if (server5xxFailures >= MAX_EARLY_ABORT_FAILURES) isAborted = true;
+    if (responseTimes.length >= Math.min(MIN_REQUESTS_FOR_ABORT_CHECK, totalRequests)) {
+      const medianResponseTime = calculatePercentile(responseTimes, 50);
+      if (medianResponseTime > EARLY_ABORT_RESPONSE_TIME_MS) isAborted = true;
     }
   }
 
-  async function worker() {
-    while (!abort) {
-      const myIdx = sent++;
-      if (myIdx >= total) break;
-      await oneRequest();
+  async function workerThread(): Promise<void> {
+    while (!isAborted) {
+      const currentRequestIndex = requestsSent++;
+      if (currentRequestIndex >= totalRequests) break;
 
-      // 🆕 po kiekvieno request'o — progress
-      updateProgress && updateProgress(myIdx + 1, requestCount);
+      await executeSingleRequest();
+
+      // Report progress after each request
+      updateProgress?.(currentRequestIndex + 1, requestCount);
     }
   }
 
-  const workers = Array.from({ length: Math.min(concurrency, total) }, worker);
+  // Execute concurrent worker threads
+  const workers = Array.from({ length: Math.min(concurrency, totalRequests) }, workerThread);
   await Promise.all(workers);
 
-  // suformuojam rezultatą Performance lentelei
-  const p50 = calculatePercentile(times, 50);
-  const p90 = calculatePercentile(times, 90);
-  const p95 = calculatePercentile(times, 95);
-  const avg = times.length ? times.reduce((a, b) => a + b, 0) / times.length : 0;
-
-  const status =
-    failures5xx >= 5
+  // Calculate performance percentiles
+  const p50 = calculatePercentile(responseTimes, 50);
+  const p90 = calculatePercentile(responseTimes, 90);
+  const p95 = calculatePercentile(responseTimes, 95);
+  const averageResponseTime =
+    responseTimes.length > 0 ? responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length : 0;
+  const testStatus =
+    server5xxFailures >= MAX_EARLY_ABORT_FAILURES
       ? TestStatus.Fail
-      : p50 < 500
+      : p50 < EXCELLENT_RESPONSE_TIME_MS
         ? TestStatus.Pass
-        : p50 < 1000
+        : p50 < ACCEPTABLE_RESPONSE_TIME_MS
           ? TestStatus.Warning
           : TestStatus.Fail;
 
   return {
-    actual: `${concurrency} threads, ${total} total req. Executed: ${times.length} req → p50=${p50.toFixed(0)}ms p90=${p90.toFixed(0)}ms p95=${p95.toFixed(0)}ms avg=${avg.toFixed(0)}ms, 4xx=${failures4xx}, 5xx=${failures5xx}`,
+    actual: `${concurrency} threads, ${totalRequests} total req. Executed: ${responseTimes.length} req → p50=${p50.toFixed(0)}ms p90=${p90.toFixed(0)}ms p95=${p95.toFixed(0)}ms avg=${averageResponseTime.toFixed(0)}ms, 4xx=${client4xxFailures}, 5xx=${server5xxFailures}`,
     expected: `Median <${EXCELLENT_RESPONSE_TIME_MS} ms (Pass), <${ACCEPTABLE_RESPONSE_TIME_MS} ms (Warning), ≥${ACCEPTABLE_RESPONSE_TIME_MS} ms (Fail)`,
     name: 'Load test',
-    status,
+    status: testStatus,
   };
-}
-
-function buildRandomizedBody(baseBody: any, fieldMappings: Record<string, string>) {
-  const newBody = JSON.parse(JSON.stringify(baseBody));
-
-  // perrašom visus random laukus kiekvienam request'ui
-  for (const [f, t] of Object.entries(fieldMappings)) {
-    if (t === 'random32') setDeepObjectProperty(newBody, f, generateRandomString());
-    if (t === 'randomInt') setDeepObjectProperty(newBody, f, generateRandomInteger());
-    if (t === 'randomEmail') setDeepObjectProperty(newBody, f, generateRandomEmail());
-  }
-
-  return newBody;
 }

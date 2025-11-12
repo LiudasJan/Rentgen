@@ -62,7 +62,7 @@ export async function runDataDrivenTests(
     testCount += (datasets[dataType] || []).length;
   }
 
-  setTestCount && setTestCount(1 + testCount);
+  setTestCount?.(1 + testCount);
 
   const results: Test[] = [];
   const data = isForm ? convertFormEntriesToUrlEncoded(formEntries) : parsedBody;
@@ -117,7 +117,7 @@ export async function runDataDrivenTests(
       const fieldKey = fieldName.slice('form.'.length);
       for (const testData of testDataset) {
         currentTestCounter++;
-        setCurrentTest && setCurrentTest(currentTestCounter);
+        setCurrentTest?.(currentTestCounter);
 
         const testValue = (testData as any).value;
         const modifiedFormEntries = [...formEntries];
@@ -216,7 +216,7 @@ export async function runDataDrivenTests(
 
     for (const testData of testDataset) {
       currentTestCounter++;
-      setCurrentTest && setCurrentTest(currentTestCounter);
+      setCurrentTest?.(currentTestCounter);
 
       // Extract test value from dataset
       const testValue = (testData as any).value;
@@ -339,7 +339,7 @@ export async function runDataDrivenTests(
 
     for (const queryTestData of queryTestDataset) {
       currentTestCounter++;
-      setCurrentTest && setCurrentTest(currentTestCounter);
+      setCurrentTest?.(currentTestCounter);
 
       const queryTestValue = queryTestData.value;
       const urlWithQueryParam = new URL(url);
