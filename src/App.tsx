@@ -185,7 +185,13 @@ export default function App() {
           onChange={(e) => setUrl(e.target.value)}
         />
         {mode === 'HTTP' && (
-          <Button disabled={!url} onClick={sendHttp}>
+          <Button
+            disabled={!url || isRunningTests}
+            onClick={() => {
+              sendHttp();
+              setTestsRun(false);
+            }}
+          >
             Send
           </Button>
         )}
