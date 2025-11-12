@@ -64,7 +64,7 @@ const useTests = (
     setIsDataDrivenRunning(false);
   }
 
-  async function executeLoadTest(loadThreadCount: number, loadRequestCount: number) {
+  async function executeLoadTest(threadCount: number, requestCount: number) {
     setIsLoadTestRunning(true);
     setLoadProgress(0);
 
@@ -75,7 +75,7 @@ const useTests = (
         if (performanceTest.name === 'Load test')
           return {
             ...performanceTest,
-            actual: `⏳ ${initialLoadBar} (0/${loadRequestCount})`,
+            actual: `⏳ ${initialLoadBar} (0/${requestCount})`,
           };
 
         return performanceTest;
@@ -90,8 +90,8 @@ const useTests = (
       fieldMappings,
       messageType,
       protoFile,
-      loadThreadCount,
-      loadRequestCount,
+      threadCount,
+      requestCount,
       maybeUpdateProgressUI,
     );
     setPerformanceTests((prevPerformanceTests) => {

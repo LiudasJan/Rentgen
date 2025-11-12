@@ -7,11 +7,11 @@ import Select, { SelectOption } from './components/inputs/Select';
 import SimpleSelect from './components/inputs/SimpleSelect';
 import Textarea from './components/inputs/Textarea';
 import TestRunningLoader from './components/loaders/TestRunningLoader';
+import { LoadTestControls } from './components/LoadTestControls';
 import Modal from './components/modals/Modal';
 import ResponsePanel from './components/panels/ResponsePanel';
 import TestsTable, { ExpandedTestComponent, getTestsTableColumns } from './components/tables/TestsTable';
 import useTests from './hooks/useTests';
-import { TestStatus } from './types';
 import {
   convertFormEntriesToUrlEncoded,
   detectFieldType,
@@ -20,14 +20,10 @@ import {
   extractFieldsFromJson,
   extractQueryParams,
   formatRequestBody,
-  generateRandomEmail,
-  generateRandomInteger,
-  generateRandomString,
   getHeaderValue,
   loadProtoSchema,
   parseFormData,
   parseHeaders,
-  setDeepObjectProperty,
 } from './utils';
 
 type Mode = 'HTTP' | 'WSS';
@@ -105,10 +101,6 @@ export default function App() {
   } = useTests(method, url, parseHeaders(headers), body, fieldMappings, queryMappings, messageType, protoFile);
 
   const isRunningTests = isSecurityRunning || isPerformanceRunning || isDataDrivenRunning;
-
-  // Load test UI/rezultatai
-  const [loadConcurrency, setLoadConcurrency] = useState(10); // threads
-  const [loadTotal, setLoadTotal] = useState(100); // total requests
 
   useEffect(() => {
     if (!window.electronAPI?.onWssEvent) return;
@@ -397,90 +389,7 @@ export default function App() {
                   width: '220px',
                   cell: (row) => {
                     if (row.name === 'Load test')
-                      return (
-                        <div
-                          style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            gap: '2px',
-                            justifyContent: 'center',
-                          }}
-                        >
-                          <div
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '6px',
-                            }}
-                          >
-                            <div
-                              style={{
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                              }}
-                            >
-                              <label style={{ fontSize: '10px', color: '#666' }}>Threads</label>
-                              <input
-                                type="number"
-                                min={1}
-                                max={100}
-                                value={loadConcurrency}
-                                onChange={(e) => setLoadConcurrency(Math.min(100, Math.max(1, Number(e.target.value))))}
-                                style={{
-                                  width: '50px',
-                                  fontSize: '12px',
-                                  padding: '2px',
-                                  textAlign: 'center',
-                                }}
-                                title="Threads (max 100)"
-                              />
-                            </div>
-
-                            <div
-                              style={{
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                              }}
-                            >
-                              <label style={{ fontSize: '10px', color: '#666' }}>Requests</label>
-                              <input
-                                type="number"
-                                min={1}
-                                max={10000}
-                                value={loadTotal}
-                                onChange={(e) => setLoadTotal(Math.min(10000, Math.max(1, Number(e.target.value))))}
-                                style={{
-                                  width: '70px',
-                                  fontSize: '12px',
-                                  padding: '2px',
-                                  textAlign: 'center',
-                                }}
-                                title="Total requests (max 10 000)"
-                              />
-                            </div>
-
-                            <button
-                              onClick={() => executeLoadTest(loadConcurrency, loadTotal)}
-                              disabled={isLoadTestRunning}
-                              style={{
-                                background: '#007bff',
-                                color: '#fff',
-                                border: 'none',
-                                borderRadius: '4px',
-                                padding: '3px 8px',
-                                fontSize: '12px',
-                                cursor: 'pointer',
-                                marginTop: '12px',
-                              }}
-                            >
-                              {isLoadTestRunning ? '⏳' : 'Run'}
-                            </button>
-                          </div>
-                        </div>
-                      );
+                      return <LoadTestControls isRunning={isLoadTestRunning} executeTest={executeLoadTest} />;
 
                     return row.status;
                   },

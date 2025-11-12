@@ -99,12 +99,12 @@ export async function runLoadTest(
   fieldMappings: Record<string, string>,
   messageType: string,
   protoFile: File | null,
-  loadThreadCount: number,
-  loadRequestCount: number,
+  threadCount: number,
+  requestCount: number,
   maybeUpdateProgressUI: (sentCount: number, loadRequestCount: number) => void,
 ): Promise<Test> {
-  const concurrency = Math.max(1, Math.min(100, Math.floor(loadThreadCount)));
-  const total = Math.max(1, Math.min(10000, Math.floor(loadRequestCount)));
+  const concurrency = Math.max(1, Math.min(100, Math.floor(threadCount)));
+  const total = Math.max(1, Math.min(10000, Math.floor(requestCount)));
 
   let parsedBody: any = null;
   try {
@@ -168,7 +168,7 @@ export async function runLoadTest(
       await oneRequest();
 
       // 🆕 po kiekvieno request'o — progress
-      maybeUpdateProgressUI(myIdx + 1, loadRequestCount);
+      maybeUpdateProgressUI(myIdx + 1, requestCount);
     }
   }
 

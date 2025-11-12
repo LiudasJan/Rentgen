@@ -15,7 +15,7 @@ export default function TestsTable({ columns, data, className, ...otherProps }: 
           style: { backgroundColor: '#d4edda' },
         },
         {
-          when: (row) => row.status === TestStatus.Fail,
+          when: (row) => row.status === TestStatus.Fail || row.status === TestStatus.FailNoResponse,
           style: { backgroundColor: '#f8d7da' },
         },
         {
@@ -29,6 +29,10 @@ export default function TestsTable({ columns, data, className, ...otherProps }: 
         {
           when: (row) => row.status === TestStatus.Info,
           style: { backgroundColor: '#e6f0ff' },
+        },
+        {
+          when: (row) => row.status === TestStatus.Bug,
+          style: { backgroundColor: '#ffe0e0' },
         },
       ]}
       customStyles={{
