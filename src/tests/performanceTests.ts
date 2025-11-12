@@ -62,7 +62,7 @@ export async function runPerformanceInsights(url: string, testResults: Test[]): 
     });
   }
 
-  // --- Manual performance tests (require human verification) ---
+  // Manual performance tests (require human verification) ---
   results.push({
     actual: '', // Empty until test is executed
     expected: `Median <${EXCELLENT_RESPONSE_TIME_MS} ms (Pass), <${ACCEPTABLE_RESPONSE_TIME_MS} ms (Warning), ≥${ACCEPTABLE_RESPONSE_TIME_MS} ms (Fail)`,

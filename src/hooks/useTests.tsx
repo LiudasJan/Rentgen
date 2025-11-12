@@ -68,14 +68,12 @@ const useTests = (
     setIsLoadTestRunning(true);
     setLoadProgress(0);
 
-    const initialLoadBar = generateLoadBarProgress(0);
-
     setPerformanceTests((prevPerformanceTests) => {
       return prevPerformanceTests.map((performanceTest) => {
         if (performanceTest.name === 'Load test')
           return {
             ...performanceTest,
-            actual: `⏳ ${initialLoadBar} (0/${requestCount})`,
+            actual: formatLoadTestProgress(generateLoadBarProgress(0), 0, requestCount),
           };
 
         return performanceTest;
@@ -92,7 +90,7 @@ const useTests = (
       protoFile,
       threadCount,
       requestCount,
-      maybeUpdateProgressUI,
+      updateLoadProgress,
     );
     setPerformanceTests((prevPerformanceTests) => {
       return prevPerformanceTests.map((performanceTest) => {
@@ -136,6 +134,24 @@ const useTests = (
     setTestCount(0);
   }
 
+  function updateLoadProgress(setRequestCount: number, requestCount: number) {
+    const percent = Math.floor((setRequestCount / requestCount) * 100);
+    if (percent !== loadProgress) {
+      setLoadProgress(percent);
+      setPerformanceTests((prevPerformanceTests) => {
+        return prevPerformanceTests.map((performanceTest) => {
+          if (performanceTest.name === 'Load test')
+            return {
+              ...performanceTest,
+              actual: formatLoadTestProgress(generateLoadBarProgress(percent), setRequestCount, requestCount),
+            };
+
+          return performanceTest;
+        });
+      });
+    }
+  }
+
   function generateLoadBarProgress(percent: number) {
     const width = 20;
     const filled = Math.round((percent / 100) * width);
@@ -143,24 +159,8 @@ const useTests = (
     return '█'.repeat(filled) + '░'.repeat(width - filled) + ` ${percent}%`;
   }
 
-  function maybeUpdateProgressUI(sentCount: number, loadRequestCount: number) {
-    const pct = Math.floor((sentCount / loadRequestCount) * 100);
-    if (pct !== loadProgress) {
-      const bar = generateLoadBarProgress(pct);
-      setLoadProgress(pct);
-
-      setPerformanceTests((prevPerformanceTests) => {
-        return prevPerformanceTests.map((performanceTest) => {
-          if (performanceTest.name === 'Load test')
-            return {
-              ...performanceTest,
-              actual: `⏳ ${bar} (${sentCount}/${loadRequestCount})`,
-            };
-
-          return performanceTest;
-        });
-      });
-    }
+  function formatLoadTestProgress(loadBar: string, setRequestCount: number, requestCount: number): string {
+    return `${loadBar} (${setRequestCount}/${requestCount})`;
   }
 
   return {

@@ -269,7 +269,7 @@ export async function runSecurityTests(
   const notFoundTest = await runNotFoundTest(method, url, headers, body);
   securityTestResults.push(notFoundTest);
 
-  // --- Manual tests (requires human verification) ---
+  // 12. Manual tests (requires human verification) ---
   securityTestResults.push(
     {
       name: 'Invalid authorization cookie/token',
