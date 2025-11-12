@@ -1,9 +1,4 @@
 /**
- * HTTP header parsing utilities for processing raw header strings and extracting header values.
- * Provides robust parsing for various header formats including cURL command integration.
- */
-
-/**
  * Parses a raw header string into a structured key-value object
  *
  * This function processes multi-line header strings and converts them into a Record
@@ -63,4 +58,26 @@ export function parseHeaders(headers: string): Record<string, string> {
 export function getHeaderValue(headers: Record<string, any>, headerName: string): string {
   const matchingKey = Object.keys(headers).find((key) => key.toLowerCase() === headerName.toLowerCase());
   return matchingKey ? String(headers[matchingKey]) : '';
+}
+
+/**
+ * Extracts the numeric HTTP status code from a response object
+ *
+ * This function safely extracts HTTP status codes from response objects that may contain
+ * status information in various formats. It handles common response formats where the
+ * status might be a string like "200 OK", "404 Not Found", or just a number.
+ *
+ * The function provides robust parsing with fallbacks for edge cases:
+ * - Handles null/undefined response objects
+ * - Parses status strings that include reason phrases
+ * - Returns 0 for invalid or missing status information
+ * - Validates that the extracted number is finite
+ *
+ * @param response - HTTP response object that may contain a status property
+ * @returns Numeric HTTP status code (200, 404, 500, etc.) or 0 if parsing fails
+ */
+export function extractStatusCode(response: any): number {
+  const status = (response?.status || '').toString();
+  const parsedStatus = parseInt(status.split(' ')[0] || '0', 10);
+  return Number.isFinite(parsedStatus) ? parsedStatus : 0;
 }

@@ -1,7 +1,10 @@
 import { Method } from 'axios';
 import { Test, TestStatus } from '../types';
 import {
+  calculateMedian,
+  calculatePercentile,
   encodeMessage,
+  extractStatusCode,
   generateRandomEmail,
   generateRandomInteger,
   generateRandomString,
@@ -20,7 +23,7 @@ export async function runPerformanceInsights(url: string, testResults: Test[]): 
 
   // Calculate response time median from test results
   const responseTimes = testResults.map((result: Test) => result.responseTime).filter(Boolean);
-  const medianResponseTime = median(responseTimes);
+  const medianResponseTime = calculateMedian(responseTimes);
 
   let responseTimeStatus = TestStatus.Fail;
   if (medianResponseTime <= EXCELLENT_RESPONSE_TIME_MS) responseTimeStatus = TestStatus.Pass;
@@ -80,17 +83,6 @@ export async function runPerformanceInsights(url: string, testResults: Test[]): 
   return results;
 }
 
-function median(values: number[]): number {
-  if (values.length === 0) return 0;
-
-  const sortedValues = [...values].sort((a, b) => a - b);
-  const middleIndex = Math.floor(sortedValues.length / 2);
-
-  return sortedValues.length % 2 !== 0
-    ? sortedValues[middleIndex]
-    : (sortedValues[middleIndex - 1] + sortedValues[middleIndex]) / 2;
-}
-
 export async function runLoadTest(
   method: Method,
   url: string,
@@ -101,7 +93,7 @@ export async function runLoadTest(
   protoFile: File | null,
   threadCount: number,
   requestCount: number,
-  maybeUpdateProgressUI: (sentCount: number, loadRequestCount: number) => void,
+  updateProgress?: (sentRequestCount: number, requestCount: number) => void,
 ): Promise<Test> {
   const concurrency = Math.max(1, Math.min(100, Math.floor(threadCount)));
   const total = Math.max(1, Math.min(10000, Math.floor(requestCount)));
@@ -149,14 +141,14 @@ export async function runLoadTest(
     const ms = t1 - t0;
     times.push(ms);
 
-    const code = codeOf(res);
+    const code = extractStatusCode(res);
     if (code >= 500) failures5xx++;
     if (code >= 400 && code < 500) failures4xx++;
 
     // ankstyvas stabdymas: >5 5xx arba mediana > 5000ms
     if (failures5xx >= 5) abort = true;
     if (times.length >= Math.min(10, total)) {
-      const med = percentile(times, 50);
+      const med = calculatePercentile(times, 50);
       if (med > 5000) abort = true;
     }
   }
@@ -168,7 +160,7 @@ export async function runLoadTest(
       await oneRequest();
 
       // 🆕 po kiekvieno request'o — progress
-      maybeUpdateProgressUI(myIdx + 1, requestCount);
+      updateProgress && updateProgress(myIdx + 1, requestCount);
     }
   }
 
@@ -176,9 +168,9 @@ export async function runLoadTest(
   await Promise.all(workers);
 
   // suformuojam rezultatą Performance lentelei
-  const p50 = percentile(times, 50);
-  const p90 = percentile(times, 90);
-  const p95 = percentile(times, 95);
+  const p50 = calculatePercentile(times, 50);
+  const p90 = calculatePercentile(times, 90);
+  const p95 = calculatePercentile(times, 95);
   const avg = times.length ? times.reduce((a, b) => a + b, 0) / times.length : 0;
 
   const status =
@@ -209,19 +201,4 @@ function buildRandomizedBody(baseBody: any, fieldMappings: Record<string, string
   }
 
   return newBody;
-}
-
-// status code paėmimas
-function codeOf(res: any): number {
-  const s = (res?.status || '').toString();
-  const n = parseInt(s.split(' ')[0] || '0', 10);
-  return Number.isFinite(n) ? n : 0;
-}
-
-// percentiliai
-function percentile(values: number[], p: number) {
-  if (!values.length) return 0;
-  const arr = [...values].sort((a, b) => a - b);
-  const idx = Math.min(arr.length - 1, Math.max(0, Math.floor((p / 100) * arr.length)));
-  return arr[idx];
 }

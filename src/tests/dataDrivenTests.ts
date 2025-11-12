@@ -5,6 +5,7 @@ import {
   convertFormEntriesToUrlEncoded,
   decodeMessage,
   encodeMessage,
+  extractStatusCode,
   generateRandomEmail,
   generateRandomInteger,
   generateRandomString,
@@ -31,8 +32,8 @@ export async function runDataDrivenTests(
   queryMappings: Record<string, string>,
   messageType: string,
   protoFile: File | null,
-  setCurrentTest: (value: number) => void,
-  setTestCount: (count: number) => void,
+  setCurrentTest?: (value: number) => void,
+  setTestCount?: (count: number) => void,
 ): Promise<Test[]> {
   const contentType = getHeaderValue(headers, 'content-type');
   const isForm = /application\/x-www-form-urlencoded/i.test(contentType);
@@ -61,7 +62,7 @@ export async function runDataDrivenTests(
     testCount += (datasets[dataType] || []).length;
   }
 
-  setTestCount(1 + testCount);
+  setTestCount && setTestCount(1 + testCount);
 
   const results: Test[] = [];
   const data = isForm ? convertFormEntriesToUrlEncoded(formEntries) : parsedBody;
@@ -116,7 +117,7 @@ export async function runDataDrivenTests(
       const fieldKey = fieldName.slice('form.'.length);
       for (const testData of testDataset) {
         currentTestCounter++;
-        setCurrentTest(currentTestCounter);
+        setCurrentTest && setCurrentTest(currentTestCounter);
 
         const testValue = (testData as any).value;
         const modifiedFormEntries = [...formEntries];
@@ -176,7 +177,7 @@ export async function runDataDrivenTests(
           const requestEnd = performance.now();
           const responseTime = requestEnd - requestStart;
 
-          const httpStatusCode = parseInt(httpResponse.status?.split(' ')[0] || '0', 10);
+          const httpStatusCode = extractStatusCode(httpResponse);
           const isSuccessfulResponse = httpStatusCode >= SUCCESS_STATUS_MIN && httpStatusCode <= SUCCESS_STATUS_MAX;
           const testStatus =
             (testData.valid && isSuccessfulResponse) ||
@@ -215,7 +216,7 @@ export async function runDataDrivenTests(
 
     for (const testData of testDataset) {
       currentTestCounter++;
-      setCurrentTest(currentTestCounter);
+      setCurrentTest && setCurrentTest(currentTestCounter);
 
       // Extract test value from dataset
       const testValue = (testData as any).value;
@@ -295,7 +296,7 @@ export async function runDataDrivenTests(
         }
 
         // Parse HTTP status code from response
-        const httpStatusCode = parseInt(httpResponse.status?.split(' ')[0] || '0', 10);
+        const httpStatusCode = extractStatusCode(httpResponse);
         const isSuccessfulResponse = httpStatusCode >= SUCCESS_STATUS_MIN && httpStatusCode <= SUCCESS_STATUS_MAX;
         const testStatus =
           (testData.valid && isSuccessfulResponse) ||
@@ -338,7 +339,7 @@ export async function runDataDrivenTests(
 
     for (const queryTestData of queryTestDataset) {
       currentTestCounter++;
-      setCurrentTest(currentTestCounter);
+      setCurrentTest && setCurrentTest(currentTestCounter);
 
       const queryTestValue = queryTestData.value;
       const urlWithQueryParam = new URL(url);
@@ -355,7 +356,7 @@ export async function runDataDrivenTests(
       const queryRequestEnd = performance.now();
       const queryResponseTime = queryRequestEnd - queryRequestStart;
 
-      const queryStatusCode = parseInt(queryResponse.status?.split(' ')[0] || '0', 10);
+      const queryStatusCode = extractStatusCode(queryResponse);
       const isQueryResponseSuccessful = queryStatusCode >= SUCCESS_STATUS_MIN && queryStatusCode <= SUCCESS_STATUS_MAX;
       const queryTestStatus =
         (queryTestData.valid && isQueryResponseSuccessful) ||

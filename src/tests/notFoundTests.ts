@@ -1,5 +1,6 @@
 import { Method } from 'axios';
 import { Test, TestStatus } from '../types';
+import { extractStatusCode } from '../utils';
 
 export async function runNotFoundTest(
   method: Method,
@@ -31,7 +32,7 @@ export async function runNotFoundTest(
       body,
     });
     const responseTime = performance.now() - startTime;
-    const statusCode = parseInt(response.status?.split(' ')[0] || '0', 10);
+    const statusCode = extractStatusCode(response);
     const statusText = response.status?.split(' ').slice(1).join(' ') || '';
     const status =
       statusCode === 404 ? TestStatus.Pass : statusCode === 0 ? TestStatus.FailNoResponse : TestStatus.Fail;
