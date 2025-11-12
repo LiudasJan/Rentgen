@@ -101,6 +101,7 @@ export default function App() {
   } = useTests(method, url, parseHeaders(headers), body, fieldMappings, queryMappings, messageType, protoFile);
 
   const isRunningTests = isSecurityRunning || isPerformanceRunning || isDataDrivenRunning;
+  const disabledRunTests = isRunningTests || !httpResponse || !httpResponse.status.includes('200');
 
   useEffect(() => {
     if (!window.electronAPI?.onWssEvent) return;
@@ -347,7 +348,7 @@ export default function App() {
       )}
 
       <div>
-        <Button disabled={isRunningTests} onClick={!isRunningTests ? runAllTests : undefined}>
+        <Button disabled={disabledRunTests} onClick={disabledRunTests ? undefined : runAllTests}>
           {isRunningTests ? `Running tests... (${currentTest}/${testCount})` : 'Generate & Run Tests'}
         </Button>
       </div>
