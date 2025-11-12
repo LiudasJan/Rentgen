@@ -268,15 +268,17 @@ export default function App() {
 
       {mode === 'HTTP' && httpResponse && (
         <ResponsePanel title="Response">
-          <div className="p-4 font-bold bg-body border-y border-border">{httpResponse.status}</div>
-          <div className="max-h-[400px] p-4 overflow-y-auto">
-            <h4 className="m-0">Headers</h4>
-            <pre className="my-4 whitespace-pre-wrap">{JSON.stringify(httpResponse.headers, null, 2)}</pre>
-            <h4 className="m-0 pt-2 border-t border-border">Body</h4>
-            <pre className="my-4 whitespace-pre-wrap">
-              {typeof httpResponse.body === 'string' ? httpResponse.body : JSON.stringify(httpResponse.body, null, 2)}
-            </pre>
-          </div>
+          <div className="p-4 font-bold bg-body border-t border-border">{httpResponse.status}</div>
+          {httpResponse.status !== 'Sending...' && (
+            <div className="max-h-[400px] p-4 border-t border-border overflow-y-auto">
+              <h4 className="m-0">Headers</h4>
+              <pre className="m-0! mt-4! whitespace-pre-wrap">{JSON.stringify(httpResponse.headers, null, 2)}</pre>
+              <h4 className="m-0 mt-4 pt-2 border-t border-border">Body</h4>
+              <pre className="m-0! mt-4! whitespace-pre-wrap">
+                {typeof httpResponse.body === 'string' ? httpResponse.body : JSON.stringify(httpResponse.body, null, 2)}
+              </pre>
+            </div>
+          )}
         </ResponsePanel>
       )}
 
