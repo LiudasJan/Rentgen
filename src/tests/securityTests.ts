@@ -33,7 +33,7 @@ export async function runSecurityTests(
       actual: serverHeader || 'No Server header',
       expected: 'Server header should not expose version',
       name: 'No sensitive server headers',
-      request: { url, method: 'GET', headers },
+      request: { url, method, headers, body },
       response: response,
       status: /\d/.test(serverHeader) ? TestStatus.Fail : TestStatus.Pass,
     });
@@ -127,7 +127,7 @@ export async function runSecurityTests(
       actual: actualCacheControl,
       expected: 'Cache-Control: no-store/private',
       name: 'Cache-Control for private API',
-      request: { url, method, headers },
+      request: { url, method, headers, body },
       response,
       status: cacheControlStatus,
     });
