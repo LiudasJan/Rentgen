@@ -116,9 +116,7 @@ export function extractCurl(curl: string): ParsedCurlResult {
   let method = parsedCurl.method ? String(parsedCurl.method).toUpperCase() : '';
   if (!method || method === 'GET') {
     const hasDataFlags = /(--data|-d|--data-raw|--data-binary|--data-urlencode)/i.test(trimmedCurl);
-    if (hasDataFlags || (parsedCurl.body && parsedCurl.body.trim() !== '')) {
-      method = 'POST';
-    }
+    if (hasDataFlags || (parsedCurl.body && parsedCurl.body.trim() !== '')) method = 'POST';
   }
 
   // Normalize headers: always use "Cookie", never "Set-Cookie"
