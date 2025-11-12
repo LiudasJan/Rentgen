@@ -211,11 +211,9 @@ export default function App() {
           onChange={(e) => setBody(e.target.value)}
         />
         <Button
-          className="absolute top-1.5 right-1.5 min-w-auto! py-0.5! px-2! rounded-sm"
+          className="absolute top-3 right-4 min-w-auto! py-0.5! px-2! rounded-sm"
           buttonType={ButtonType.SECONDARY}
-          onClick={() => {
-            setBody((prevBody) => formatRequestBody(prevBody, parseHeaders(headers)));
-          }}
+          onClick={() => setBody((prevBody) => formatRequestBody(prevBody, parseHeaders(headers)))}
         >
           Beautify
         </Button>
