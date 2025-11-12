@@ -6,6 +6,7 @@ import Input from './components/inputs/Input';
 import Select, { SelectOption } from './components/inputs/Select';
 import SimpleSelect from './components/inputs/SimpleSelect';
 import Textarea from './components/inputs/Textarea';
+import TextareaAutosize from './components/inputs/TextareaAutosize';
 import TestRunningLoader from './components/loaders/TestRunningLoader';
 import { LoadTestControls } from './components/LoadTestControls';
 import Modal from './components/modals/Modal';
@@ -207,7 +208,7 @@ export default function App() {
         )}
       </div>
 
-      <Textarea
+      <TextareaAutosize
         className="font-monospace"
         placeholder="Header-Key: value"
         value={headers}
@@ -215,8 +216,8 @@ export default function App() {
       />
 
       <div className="relative">
-        <Textarea
-          className="min-h-36 font-monospace"
+        <TextareaAutosize
+          className="font-monospace"
           placeholder={mode === 'HTTP' ? 'Body JSON' : 'Message body'}
           value={body}
           onChange={(e) => setBody(e.target.value)}
