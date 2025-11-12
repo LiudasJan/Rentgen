@@ -184,10 +184,14 @@ export default function App() {
           value={url}
           onChange={(e) => setUrl(e.target.value)}
         />
-        {mode === 'HTTP' && <Button onClick={sendHttp}>Send</Button>}
+        {mode === 'HTTP' && (
+          <Button disabled={!url} onClick={sendHttp}>
+            Send
+          </Button>
+        )}
         {mode === 'WSS' && (
           <>
-            <Button disabled={wssConnected} onClick={connectWss}>
+            <Button disabled={wssConnected || !url} onClick={connectWss}>
               Connect
             </Button>
             <Button buttonType={ButtonType.SECONDARY} disabled={!wssConnected} onClick={sendWss}>
