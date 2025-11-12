@@ -1,6 +1,12 @@
 import { Method } from 'axios';
+import { Test, TestStatus } from '../types';
 
-export async function runCorsTest(method: Method, url: string, headers: any, body: string): Promise<any> {
+export async function runCorsTest(
+  method: Method,
+  url: string,
+  headers: Record<string, string>,
+  body: string,
+): Promise<Test> {
   try {
     const options: RequestInit = {
       method,
@@ -12,32 +18,26 @@ export async function runCorsTest(method: Method, url: string, headers: any, bod
     const { status } = await fetch(url, options);
 
     return {
-      name: 'CORS policy check',
-      expected: 'Detect if API is public or private',
       actual: 'No CORS error → API is public (accessible from any domain)',
-      status: '🔵 Info',
+      expected: 'Detect if API is public or private',
+      name: 'CORS policy check',
       request: { url, method, headers, body },
       response: { status },
+      status: TestStatus.Info,
     };
   } catch (error) {
     const message = String(error?.message || error);
-    if (message.includes('CORS') || message.includes('Failed to fetch'))
-      return {
-        name: 'CORS policy check',
-        expected: 'Detect if API is public or private',
-        actual: 'CORS error → API is private (restricted by origin)',
-        status: '🔵 Info',
-        request: { url, method, headers, body },
-        response: null,
-      };
 
     return {
-      name: 'CORS policy check',
+      actual:
+        message.includes('CORS') || message.includes('Failed to fetch')
+          ? 'CORS error → API is private (restricted by origin)'
+          : 'Unexpected error: ' + message,
       expected: 'Detect if API is public or private',
-      actual: 'Unexpected error: ' + message,
-      status: '🔵 Info',
+      name: 'CORS policy check',
       request: { url, method, headers, body },
       response: null,
+      status: TestStatus.Info,
     };
   }
 }

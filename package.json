@@ -1,7 +1,7 @@
 {
   "name": "rentgen",
   "productName": "Rentgen",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Lightweight API testing tool with cURL import and auto generated tests",
   "main": ".webpack/main",
   "scripts": {
@@ -52,8 +52,11 @@
     "postcss": "^8.5.6",
     "protobufjs": "^7.5.4",
     "react": "^19.2.0",
+    "react-data-table-component": "^7.7.0",
     "react-dom": "^19.2.0",
     "react-select": "^5.10.2",
+    "react-textarea-autosize": "^8.5.9",
+    "styled-components": "^6.1.19",
     "tailwindcss": "^4.1.17"
   }
 }
