@@ -279,7 +279,7 @@ export default function App() {
             <div className="max-h-[400px] p-4 border-t border-border overflow-y-auto">
               <h4 className="m-0">Headers</h4>
               <pre className="m-0! mt-4! whitespace-pre-wrap">{JSON.stringify(httpResponse.headers, null, 2)}</pre>
-              <h4 className="m-0 mt-4 pt-2 border-t border-border">Body</h4>
+              <h4 className="m-0 mt-4 pt-4 border-t border-border">Body</h4>
               <pre className="m-0! mt-4! whitespace-pre-wrap">
                 {typeof httpResponse.body === 'string' ? httpResponse.body : JSON.stringify(httpResponse.body, null, 2)}
               </pre>
@@ -393,6 +393,7 @@ export default function App() {
                 {
                   name: 'Actual',
                   selector: (row) => row.actual,
+                  cell: (row) => <div className="py-1">{row.actual}</div>,
                 },
                 {
                   name: 'Result',
