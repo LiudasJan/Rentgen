@@ -113,11 +113,13 @@ export function extractCurl(curl: string): ParsedCurlResult {
   }
 
   // Smart HTTP method detection: if there's a body or --data* flag, default to POST
-  let method = parsedCurl.method ? String(parsedCurl.method).toUpperCase() : '';
-  if (!method || method === 'GET') {
-    const hasDataFlags = /(--data|-d|--data-raw|--data-binary|--data-urlencode)/i.test(trimmedCurl);
-    if (hasDataFlags || (parsedCurl.body && parsedCurl.body.trim() !== '')) method = 'POST';
-  }
+  let method = (parsedCurl.method || '').toString().toUpperCase();
+  if (
+    (!method || method === 'GET') &&
+    /--data(?:-raw|-binary|-urlencode)?|-d/i.test(trimmedCurl) &&
+    parsedCurl.body?.trim()
+  )
+    method = 'POST';
 
   // Normalize headers: always use "Cookie", never "Set-Cookie"
   const headers: Record<string, string> = {};
