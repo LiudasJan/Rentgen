@@ -1,6 +1,7 @@
 import { Method } from 'axios';
 import cn from 'classnames';
 import { useEffect, useState } from 'react';
+import { sendHttpRequest } from './api';
 import Button, { ButtonType } from './components/buttons/Button';
 import Input from './components/inputs/Input';
 import Select, { SelectOption } from './components/inputs/Select';
@@ -13,19 +14,7 @@ import Modal from './components/modals/Modal';
 import ResponsePanel from './components/panels/ResponsePanel';
 import TestsTable, { ExpandedTestComponent, getTestsTableColumns } from './components/tables/TestsTable';
 import useTests from './hooks/useTests';
-import {
-  convertFormEntriesToUrlEncoded,
-  detectFieldType,
-  encodeMessage,
-  extractCurl,
-  extractFieldsFromJson,
-  extractQueryParams,
-  formatRequestBody,
-  getHeaderValue,
-  loadProtoSchema,
-  parseFormData,
-  parseHeaders,
-} from './utils';
+import { extractCurl, formatRequestBody, loadProtoSchema, parseHeaders } from './utils';
 
 type Mode = 'HTTP' | 'WSS';
 
@@ -102,7 +91,7 @@ export default function App() {
   } = useTests(method, url, parseHeaders(headers), body, fieldMappings, queryMappings, messageType, protoFile);
 
   const isRunningTests = isSecurityRunning || isPerformanceRunning || isDataDrivenRunning;
-  const disabledRunTests = isRunningTests || !httpResponse || !httpResponse.status.includes('200');
+  const disabledRunTests = isRunningTests || !httpResponse || !httpResponse.status.startsWith('2');
 
   useEffect(() => {
     if (!window.electronAPI?.onWssEvent) return;
@@ -459,27 +448,17 @@ export default function App() {
 
       setUrl(url);
       setMethod(method as Method);
-
-      if (decodedLines.length > 0) {
-        setBody(decodedLines.join('\n'));
-
-        const formMappings: Record<string, string> = {};
-        decodedLines.forEach((decodedLine) => {
-          const [key] = decodedLine.split('=');
-          if (key) formMappings[`form.${key.trim()}`] = 'string';
-        });
-
-        setFieldMappings(formMappings);
-      } else {
-        const trimmedBody = body ? String(body).trim() : '';
-        setBody(trimmedBody !== '' ? trimmedBody : '{}');
-      }
-
       setHeaders(
         Object.entries(headers)
           .map(([k, v]) => `${k}: ${v}`)
           .join('\n'),
       );
+
+      if (decodedLines.length > 0) setBody(decodedLines.join('\n'));
+      else {
+        const trimmedBody = body ? String(body).trim() : '';
+        setBody(trimmedBody !== '' ? trimmedBody : '{}');
+      }
 
       setOpenCurlModal(false);
       setCurl('');
@@ -496,86 +475,21 @@ export default function App() {
       body: '',
       headers: {},
     });
+    setFieldMappings({});
+    setQueryMappings({});
 
-    try {
-      const parsedHeaders = parseHeaders(headers);
-      const contentType = getHeaderValue(parsedHeaders, 'content-type');
-      const isForm = /application\/x-www-form-urlencoded/i.test(contentType);
+    const { response, fieldMappings, queryMappings } = await sendHttpRequest(
+      method,
+      url,
+      parseHeaders(headers),
+      body,
+      messageType,
+      protoFile,
+    );
 
-      let data: string | Uint8Array | undefined = body;
-      if (protoFile && messageType) data = encodeMessage(messageType, JSON.parse(body));
-      else if (isForm) data = convertFormEntriesToUrlEncoded(parseFormData(String(body)));
-
-      // Ensure proper Content-Type header for form data
-      if (isForm && !getHeaderValue(parsedHeaders, 'content-type'))
-        parsedHeaders['Content-Type'] = 'application/x-www-form-urlencoded';
-
-      const response = await window.electronAPI.sendHttp({
-        url,
-        method,
-        headers: parsedHeaders,
-        body: data,
-      });
-
-      setHttpResponse(response);
-
-      // Generate test mappings based on request body (not response)
-      let parsedBody;
-      try {
-        parsedBody = JSON.parse(body);
-      } catch {
-        return;
-      }
-
-      if (response.status.startsWith('2')) {
-        if (parsedBody) {
-          // Extract all fields from request body (including nested)
-          const extractedFields = extractFieldsFromJson(parsedBody);
-          const bodyMappings: Record<string, string> = {};
-
-          for (const [fieldPath, fieldType] of Object.entries(extractedFields)) {
-            if (fieldType === 'DO_NOT_TEST') bodyMappings[fieldPath] = 'do-not-test';
-            else {
-              const pathSegments = fieldPath.replace(/\[(\d+)\]/g, '.$1').split('.');
-              let fieldValue = parsedBody;
-              for (const segment of pathSegments) {
-                if (fieldValue == null) break;
-                fieldValue = fieldValue[segment];
-              }
-
-              bodyMappings[fieldPath] = detectFieldType(fieldValue);
-            }
-          }
-
-          setFieldMappings(bodyMappings);
-        }
-
-        if (isForm) {
-          const formEntries = parseFormData(String(body));
-          const formMappings: Record<string, string> = {};
-
-          for (const [key, value] of formEntries) formMappings[`form.${key}`] = detectFieldType(value);
-
-          setFieldMappings((prevFieldMappings) => ({
-            ...(prevFieldMappings || {}),
-            ...formMappings,
-          }));
-        }
-
-        const queryParams = extractQueryParams(url);
-        const queryParamMappings: Record<string, string> = {};
-
-        for (const [key, value] of Object.entries(queryParams)) queryParamMappings[key] = detectFieldType(value);
-
-        setQueryMappings(queryParamMappings);
-      }
-    } catch (error) {
-      setHttpResponse({
-        status: 'Network Error',
-        body: String(error),
-        headers: {},
-      });
-    }
+    setHttpResponse(response);
+    setFieldMappings(fieldMappings);
+    setQueryMappings(queryMappings);
   }
 
   function connectWss() {
