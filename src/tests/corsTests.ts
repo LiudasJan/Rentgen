@@ -31,7 +31,7 @@ export async function runCorsTest(
         expected: CORS_TEST_EXPECTED,
         name: CORS_TEST_NAME,
         request,
-        response,
+        response: null,
         status: TestStatus.Info,
       };
 
