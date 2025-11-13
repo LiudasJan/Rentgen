@@ -1,6 +1,9 @@
 import { Method } from 'axios';
 import { Test, TestStatus } from '../types';
-import { extractStatusCode } from '../utils';
+import { extractStatusCode, tryParseJsonObject } from '../utils';
+
+const NOT_FOUND_TEST_NAME = '404 Not Found';
+const NOT_FOUND_TEST_EXPECTED = '404 Not Found';
 
 export async function runNotFoundTest(
   method: Method,
@@ -23,14 +26,10 @@ export async function runNotFoundTest(
   }
 
   const startTime = performance.now();
+  const request = { url: testUrl, method, headers, body: tryParseJsonObject(body) };
 
   try {
-    const response = await window.electronAPI.sendHttp({
-      url: testUrl,
-      method,
-      headers,
-      body,
-    });
+    const response = await window.electronAPI.sendHttp(request);
     const responseTime = performance.now() - startTime;
     const statusCode = extractStatusCode(response);
     const statusText = response.status?.split(' ').slice(1).join(' ') || '';
@@ -38,10 +37,10 @@ export async function runNotFoundTest(
       statusCode === 404 ? TestStatus.Pass : statusCode === 0 ? TestStatus.FailNoResponse : TestStatus.Fail;
 
     return {
-      expected: '404 Not Found',
       actual: `${statusCode} ${statusText}`,
-      name: '404 Not Found',
-      request: { url: testUrl, method, headers, body },
+      expected: NOT_FOUND_TEST_EXPECTED,
+      name: NOT_FOUND_TEST_NAME,
+      request,
       response,
       responseTime,
       status,
@@ -50,11 +49,11 @@ export async function runNotFoundTest(
     const responseTime = performance.now() - startTime;
 
     return {
-      actual: 'Request failed',
-      expected: '404 Not Found',
-      name: '404 Not Found',
-      request: { url: testUrl, method, headers, body },
-      response: { error: String(error) },
+      actual: `Unexpected error: ${String(error)}`,
+      expected: NOT_FOUND_TEST_EXPECTED,
+      name: NOT_FOUND_TEST_NAME,
+      request,
+      response: null,
       responseTime,
       status: TestStatus.Fail,
     };

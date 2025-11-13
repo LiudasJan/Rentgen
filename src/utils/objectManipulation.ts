@@ -1,9 +1,4 @@
 /**
- * Object manipulation utility functions for handling nested objects,
- * deep property access, value formatting, and object transformations.
- */
-
-/**
  * Sets a value at a deep path within an object, creating nested objects as needed
  *
  * This function supports both dot notation and array bracket notation for paths.
@@ -113,5 +108,36 @@ export function formatRequestBody(body: string, headers: Record<string, string>)
   } catch {
     // Return original content if JSON parsing fails
     return body;
+  }
+}
+
+/**
+ * Attempts to parse a value as JSON, returning the parsed object/array if successful
+ *
+ * This utility safely parses JSON strings into JavaScript objects or arrays.
+ * It returns the original value if:
+ * - The value is already an object or array
+ * - The value is not a string
+ * - The string is not valid JSON
+ * - The parsed JSON is a primitive (number, boolean, string) rather than object/array
+ *
+ * This selective parsing is useful for handling API responses that may contain
+ * stringified JSON objects while preserving other primitive values.
+ *
+ * @param value - The value to potentially parse as JSON
+ * @returns Parsed object/array if the string contains valid JSON object/array, otherwise returns original value
+ */
+export function tryParseJsonObject(value: any): any {
+  if (typeof value === 'object' && value !== null) return value;
+
+  if (typeof value !== 'string') return value;
+
+  try {
+    const parsed = JSON.parse(value);
+    if (typeof parsed === 'object' && parsed !== null) return parsed;
+
+    return value;
+  } catch {
+    return value;
   }
 }

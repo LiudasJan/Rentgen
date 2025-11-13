@@ -1,6 +1,7 @@
 import { Method } from 'axios';
 import { runCorsTest, runNotFoundTest } from '.';
 import { Test, TestStatus } from '../types';
+import { tryParseJsonObject } from '../utils';
 
 const LARGE_PAYLOAD_SIZE_MB = 10;
 const LARGE_PAYLOAD_SIZE_BYTES = LARGE_PAYLOAD_SIZE_MB * 1024 * 1024;
@@ -20,12 +21,13 @@ export async function runSecurityTests(
   const crudTestResults: Test[] = [];
 
   try {
-    const response = await window.electronAPI.sendHttp({
+    const request: any = {
       url,
       method,
       headers,
-      body,
-    });
+      body: tryParseJsonObject(body),
+    };
+    const response = await window.electronAPI.sendHttp(request);
 
     // 1. Check Server header for version information exposure
     const serverHeader = response.headers?.['server'] || response.headers?.['Server'] || '';
@@ -33,8 +35,8 @@ export async function runSecurityTests(
       actual: serverHeader || 'No Server header',
       expected: 'Server header should not expose version',
       name: 'No sensitive server headers',
-      request: { url, method, headers, body },
-      response: response,
+      request,
+      response,
       status: /\d/.test(serverHeader) ? TestStatus.Fail : TestStatus.Pass,
     });
 
@@ -61,7 +63,7 @@ export async function runSecurityTests(
       actual: actualClickjacking,
       expected: 'X-Frame-Options DENY/SAMEORIGIN or CSP frame-ancestors',
       name: 'Clickjacking protection',
-      request: { url, method, headers, body },
+      request,
       response,
       status: clickjackingStatus,
     });
@@ -73,7 +75,7 @@ export async function runSecurityTests(
       actual: hstsHeader ? hstsHeader : 'Missing',
       expected: 'Header should be present on HTTPS endpoints',
       name: 'HSTS (Strict-Transport-Security)',
-      request: { url, method, headers, body },
+      request,
       response,
       status: hstsHeader ? TestStatus.Pass : TestStatus.Warning,
     });
@@ -99,7 +101,7 @@ export async function runSecurityTests(
       actual: actualMimeSniffing,
       expected: 'X-Content-Type-Options: nosniff',
       name: 'MIME sniffing protection',
-      request: { url, method, headers, body },
+      request,
       response,
       status: mimeSniffingStatus,
     });
@@ -127,36 +129,35 @@ export async function runSecurityTests(
       actual: actualCacheControl,
       expected: 'Cache-Control: no-store/private',
       name: 'Cache-Control for private API',
-      request: { url, method, headers, body },
+      request,
       response,
       status: cacheControlStatus,
     });
 
     // 6. OPTIONS method
-    const options = await window.electronAPI.sendHttp({
+    const optionsRequest: any = {
       url,
-      method: 'OPTIONS',
+      method,
       headers,
       body: null,
-    });
+    };
+    const optionsResponse = await window.electronAPI.sendHttp(optionsRequest);
 
     // Accept both 200 and 204 status codes, but require Allow header
-    const optionsStatusCode = options.status.split(' ')[0];
+    const optionsStatusCode = optionsResponse.status.split(' ')[0];
     const allowHeader =
-      options.headers?.['allow'] ||
-      options.headers?.['Allow'] ||
-      options.headers?.['access-control-allow-methods'] ||
-      options.headers?.['Access-Control-Allow-Methods'];
-
-    const hasAllowHeader = Boolean(allowHeader);
-    const isOptionsValid = ACCEPTABLE_OPTIONS_STATUS_CODES.includes(optionsStatusCode) && hasAllowHeader;
+      optionsResponse.headers?.['allow'] ||
+      optionsResponse.headers?.['Allow'] ||
+      optionsResponse.headers?.['access-control-allow-methods'] ||
+      optionsResponse.headers?.['Access-Control-Allow-Methods'];
+    const isOptionsValid = ACCEPTABLE_OPTIONS_STATUS_CODES.includes(optionsStatusCode) && Boolean(allowHeader);
 
     securityTestResults.push({
-      actual: options.status,
+      actual: optionsResponse.status,
       expected: '200 or 204 + Allow header',
       name: 'OPTIONS method handling',
-      request: { url, method: 'OPTIONS', headers },
-      response: options,
+      request: optionsRequest,
+      response: optionsResponse,
       status: isOptionsValid ? TestStatus.Pass : TestStatus.Fail,
     });
 
@@ -172,12 +173,13 @@ export async function runSecurityTests(
       });
 
     // 7. Unsupported method
-    const invalidMethodResponse = await window.electronAPI.sendHttp({
+    const invalidMethodRequest: any = {
       url,
       method: 'FOOBAR',
-      headers, // Use original headers
-      body, // Use original body
-    });
+      headers,
+      body: tryParseJsonObject(body),
+    };
+    const invalidMethodResponse = await window.electronAPI.sendHttp(invalidMethodRequest);
     const invalidMethodStatusCode = invalidMethodResponse.status.split(' ')[0];
     const isValidResponse =
       invalidMethodStatusCode === EXPECTED_METHOD_NOT_ALLOWED_STATUS ||
@@ -187,22 +189,19 @@ export async function runSecurityTests(
       actual: invalidMethodResponse.status,
       expected: '405 Method Not Allowed (or 501)',
       name: 'Unsupported method handling',
-      request: { url, method: 'FOOBAR', headers, body },
+      request: invalidMethodRequest,
       response: invalidMethodResponse,
       status: isValidResponse ? TestStatus.Pass : TestStatus.Fail,
     });
   } catch (error) {
     securityTestResults.push({
-      actual: String(error),
+      actual: `Unexpected error: ${String(error)}`,
       expected: 'Should respond',
       name: 'Security test error',
       request: { url, headers, body },
       response: null,
       status: TestStatus.Fail,
     });
-
-    const corsResult = await runCorsTest(method, url, headers, body);
-    securityTestResults.push(corsResult);
   }
 
   // 8. Test request size limit with large payload
@@ -221,7 +220,12 @@ export async function runSecurityTests(
     actual: largePayloadResponse.status,
     expected: '413 Payload Too Large',
     name: `Request size limit (${LARGE_PAYLOAD_SIZE_MB} MB)`,
-    request: { url, method: 'POST', headers, body: `[${LARGE_PAYLOAD_SIZE_MB}MB string]` },
+    request: {
+      url,
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: `[${LARGE_PAYLOAD_SIZE_MB}MB string]`,
+    },
     response: largePayloadResponse,
     status: isPayloadTooLarge ? TestStatus.Pass : TestStatus.Fail,
   });
@@ -232,13 +236,13 @@ export async function runSecurityTests(
     for (const [key, value] of Object.entries(headers))
       if (key.toLowerCase() === 'accept' || key.toLowerCase() === 'content-type') minimalHeaders[key] = value;
 
-    const unauthorizedResponse = await window.electronAPI.sendHttp({
+    const unauthorizedRequest: any = {
       url,
       method,
       headers: minimalHeaders,
-      body,
-    });
-
+      body: tryParseJsonObject(body),
+    };
+    const unauthorizedResponse = await window.electronAPI.sendHttp(unauthorizedRequest);
     const unauthorizedStatusCode = unauthorizedResponse.status.split(' ')[0];
     const isUnauthorized = unauthorizedStatusCode === EXPECTED_UNAUTHORIZED_STATUS;
 
@@ -246,13 +250,13 @@ export async function runSecurityTests(
       actual: unauthorizedResponse.status,
       expected: 'Should return 401 Unauthorized',
       name: 'Missing authorization cookie/token',
-      request: { url, method, headers: minimalHeaders, body },
+      request: unauthorizedRequest,
       response: unauthorizedResponse,
       status: isUnauthorized ? TestStatus.Pass : TestStatus.Fail,
     });
   } catch (error) {
     securityTestResults.push({
-      actual: String(error),
+      actual: `Unexpected error: ${String(error)}`,
       expected: 'Should return 401 Unauthorized',
       name: 'Missing authorization cookie/token',
       request: { url, method, headers: {}, body },

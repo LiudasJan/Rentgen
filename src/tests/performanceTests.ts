@@ -64,7 +64,7 @@ export async function runPerformanceInsights(url: string, testResults: Test[]): 
     });
   } catch (error) {
     results.push({
-      actual: String(error),
+      actual: `Unexpected error: ${String(error)}`,
       expected: 'Ping should succeed',
       name: 'Ping test error',
       status: TestStatus.Fail,
