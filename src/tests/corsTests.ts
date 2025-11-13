@@ -1,16 +1,15 @@
-import { Test, TestRequest, TestStatus } from '../types';
+import { HttpRequest, Test, TestStatus } from '../types';
 
 const CORS_TEST_NAME = 'CORS policy check';
 const CORS_TEST_EXPECTED = 'Detect if API is public or private';
 
-export async function runCorsTest(request: TestRequest): Promise<Test> {
+export async function runCorsTest(request: HttpRequest): Promise<Test> {
   const { url, method, headers, body } = request;
   const modifiedHeaders = { ...headers, Origin: 'https://www.qaontime.com/' };
-  const modifiedRequest: TestRequest = { ...request, url, method, headers: modifiedHeaders };
+  const modifiedRequest: HttpRequest = { url, method, headers: modifiedHeaders };
 
   try {
     if (body && !['GET', 'HEAD'].includes(method.toUpperCase())) modifiedRequest.body = body;
-    else delete modifiedRequest.body;
 
     const requestStartTime = performance.now();
     const response = await window.electronAPI.sendHttp(modifiedRequest);

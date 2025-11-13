@@ -1,5 +1,5 @@
 import { runCorsTest, runNotFoundTest } from '.';
-import { Test, TestRequest, TestStatus } from '../types';
+import { HttpRequest, Test, TestStatus } from '../types';
 import { extractStatusCode } from '../utils';
 
 const LARGE_PAYLOAD_SIZE_MB = 10;
@@ -11,7 +11,7 @@ const EXPECTED_NOT_IMPLEMENTED_STATUS = 501;
 const ACCEPTABLE_OPTIONS_STATUS_CODES = [200, 204];
 
 export async function runSecurityTests(
-  request: TestRequest,
+  request: HttpRequest,
 ): Promise<{ securityTestResults: Test[]; crudTestResults: Test[] }> {
   const { url, method, headers, body } = request;
   const securityTestResults: Test[] = [];
@@ -125,8 +125,7 @@ export async function runSecurityTests(
     });
 
     // 6. OPTIONS method
-    const optionsRequest: TestRequest = { ...request, method: 'OPTIONS' };
-    delete optionsRequest.body;
+    const optionsRequest: HttpRequest = { url, method: 'OPTIONS', headers };
     const optionsResponse = await window.electronAPI.sendHttp(optionsRequest);
 
     // Accept both 200 and 204 status codes, but require Allow header
@@ -159,7 +158,7 @@ export async function runSecurityTests(
       });
 
     // 7. Unsupported method
-    const invalidMethodRequest: TestRequest = { ...request, method: 'FOOBAR' };
+    const invalidMethodRequest: HttpRequest = { ...request, method: 'FOOBAR' };
     const invalidMethodResponse = await window.electronAPI.sendHttp(invalidMethodRequest);
     const invalidMethodStatusCode = extractStatusCode(invalidMethodResponse);
 
@@ -187,7 +186,7 @@ export async function runSecurityTests(
   }
 
   // 8. Test request size limit with large payload
-  const largePayloadRequest: TestRequest = {
+  const largePayloadRequest: HttpRequest = {
     ...request,
     method: 'POST',
     headers: { ...headers, 'Content-Type': 'application/json' },
@@ -216,7 +215,7 @@ export async function runSecurityTests(
     for (const [key, value] of Object.entries(headers))
       if (key.toLowerCase() === 'accept' || key.toLowerCase() === 'content-type') minimalHeaders[key] = value;
 
-    const unauthorizedRequest: TestRequest = {
+    const unauthorizedRequest: HttpRequest = {
       ...request,
       headers: minimalHeaders,
     };
@@ -316,8 +315,7 @@ function getCrudTestResults(
 
     // Build CRUD test rows from allowed methods
     const rows: Test[] = allowedMethods.map((method: string) => {
-      const request: TestRequest = { url, method, headers, body: null };
-      delete request.body;
+      const request: HttpRequest = { url, method, headers };
 
       if (!['GET', 'HEAD'].includes(method)) request.body = body && Object.keys(body).length ? body : {};
 

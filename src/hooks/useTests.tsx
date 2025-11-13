@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { runDataDrivenTests, runLoadTest, runPerformanceInsights, runSecurityTests } from '../tests';
-import { Test, TestRequest } from '../types';
+import { HttpRequest, Test } from '../types';
 
 const useTests = (
-  request: TestRequest,
+  request: HttpRequest,
   fieldMappings: Record<string, string>,
   queryMappings: Record<string, string>,
   messageType: string,

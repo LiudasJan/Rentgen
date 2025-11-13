@@ -1,7 +1,7 @@
 import cn from 'classnames';
 import DataTable, { ExpanderComponentProps, TableColumn, TableProps } from 'react-data-table-component';
 import { Test, TestStatus } from '../../types';
-import { generateCurl, truncateValue } from '../../utils';
+import { generateCurl, truncateValue, tryParseJsonObject } from '../../utils';
 import { CopyButton } from '../buttons/CopyButton';
 
 export default function TestsTable({ columns, data, className, ...otherProps }: TableProps<Test>) {
@@ -53,7 +53,11 @@ export default function TestsTable({ columns, data, className, ...otherProps }: 
 }
 
 export function ExpandedTestComponent({ data }: ExpanderComponentProps<Test>) {
-  const { request, decoded } = data;
+  const { decoded, request, response } = data;
+
+  let modifiedResponse = response;
+  if (modifiedResponse && modifiedResponse.body && typeof modifiedResponse.body === 'string')
+    modifiedResponse = { ...modifiedResponse, body: tryParseJsonObject(modifiedResponse.body) };
 
   return (
     <div className="p-4 bg-table-data">
@@ -68,14 +72,14 @@ export function ExpandedTestComponent({ data }: ExpanderComponentProps<Test>) {
       <div className="grid grid-cols-2 gap-4 items-stretch">
         <div className="flex flex-col gap-2.5">
           <h4 className="m-0">Request</h4>
-          <pre className="flex-auto m-0 p-2.5 bg-white border border-border rounded whitespace-pre-wrap break-all">
-            {JSON.stringify(data.request, null, 2)}
+          <pre className="max-h-80 flex-auto m-0 p-2.5 bg-white border border-border rounded whitespace-pre-wrap break-all overflow-y-auto">
+            {JSON.stringify(request, null, 2)}
           </pre>
         </div>
         <div className="flex flex-col gap-2.5">
           <h4 className="m-0">Response</h4>
-          <pre className="flex-auto m-0 p-2.5 bg-white border border-border rounded whitespace-pre-wrap break-all">
-            {typeof data.response === 'string' ? data.response : JSON.stringify(data.response, null, 2)}
+          <pre className="max-h-80 flex-auto m-0 p-2.5 bg-white border border-border rounded whitespace-pre-wrap break-all overflow-y-auto">
+            {typeof modifiedResponse === 'string' ? modifiedResponse : JSON.stringify(modifiedResponse, null, 2)}
           </pre>
           {decoded && (
             <>

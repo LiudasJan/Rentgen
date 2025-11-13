@@ -501,10 +501,7 @@ export default function App() {
     setQueryMappings({});
 
     const { response, fieldMappings, queryMappings } = await sendHttpRequest(
-      method,
-      url,
-      parseHeaders(headers),
-      body,
+      { url, method, headers: parseHeaders(headers), body: parseBodyByContentType(body, parseHeaders(headers)) },
       messageType,
       protoFile,
     );

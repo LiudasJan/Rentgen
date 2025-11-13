@@ -1,5 +1,5 @@
 import { datasets } from '../constants/datasets';
-import { Test, TestRequest, TestStatus } from '../types';
+import { HttpRequest, Test, TestStatus } from '../types';
 import {
   convertFormEntriesToUrlEncoded,
   decodeMessage,
@@ -23,7 +23,7 @@ const EXPECTED_CLIENT_ERROR_RESPONSE = '4xx';
 const ORIGINAL_REQUEST_TEST_FIELD_NAME = '[original request]';
 
 export async function runDataDrivenTests(
-  request: TestRequest,
+  request: HttpRequest,
   fieldMappings: Record<string, string>,
   queryMappings: Record<string, string>,
   messageType: string,
@@ -34,13 +34,11 @@ export async function runDataDrivenTests(
   const { body, headers, url } = request;
   const contentType = getHeaderValue(headers, 'content-type');
   const isForm = /application\/x-www-form-urlencoded/i.test(contentType);
-  let formEntries: Array<[string, string]> = [];
-
-  if (isForm) formEntries = parseFormData(String(body));
-  else if (body === null) return [];
+  const formEntries = isForm ? parseFormData(String(body)) : [];
 
   // Calculate total number of tests (BODY + QUERY parameters)
   let testCount = 0;
+
   for (const [fieldName, dataType] of Object.entries(fieldMappings)) {
     if (dataType === 'do-not-test' || dataType === 'random32') continue;
     if (!isForm && !fieldName.startsWith('form.')) testCount += (datasets[dataType] || []).length;
@@ -67,7 +65,7 @@ export async function runDataDrivenTests(
       expected: EXPECTED_SUCCESS_RESPONSE,
       field: ORIGINAL_REQUEST_TEST_FIELD_NAME,
       request,
-      response: typeof response.body === 'string' ? response.body : JSON.stringify(response.body, null, 2),
+      response,
       responseTime,
       status: response.status?.startsWith('2') ? TestStatus.Pass : TestStatus.Fail,
       value: isForm ? Object.fromEntries(formEntries) : body,
@@ -147,7 +145,7 @@ export async function runDataDrivenTests(
         }
 
         const data = convertFormEntriesToUrlEncoded(modifiedFormEntries);
-        const modifiedRequest: TestRequest = { ...request, body: data };
+        const modifiedRequest: HttpRequest = { ...request, body: data };
 
         try {
           const requestStartTime = performance.now();
@@ -168,7 +166,7 @@ export async function runDataDrivenTests(
             expected: testData.valid ? EXPECTED_SUCCESS_RESPONSE : EXPECTED_CLIENT_ERROR_RESPONSE,
             field: fieldName,
             request: modifiedRequest,
-            response: typeof response.body === 'string' ? response.body : JSON.stringify(response.body, null, 2),
+            response,
             responseTime,
             status: testStatus,
             value: testValue,
@@ -233,7 +231,7 @@ export async function runDataDrivenTests(
           }
         }
 
-        const modifiedRequest: TestRequest = { ...request, body: data };
+        const modifiedRequest: HttpRequest = { ...request, body: data };
 
         try {
           const requestStartTime = performance.now();
@@ -267,7 +265,7 @@ export async function runDataDrivenTests(
             decoded: decodedResponse,
             field: fieldName,
             request: modifiedRequest,
-            response: typeof response.body === 'string' ? response.body : JSON.stringify(response.body, null, 2),
+            response,
             responseTime,
             status: testStatus,
             value: testValue,
@@ -302,7 +300,7 @@ export async function runDataDrivenTests(
       const urlWithQueryParam = new URL(url);
       urlWithQueryParam.searchParams.set(queryParam, String(testValue));
 
-      const modifiedRequest: TestRequest = { ...request, url: urlWithQueryParam.toString() };
+      const modifiedRequest: HttpRequest = { ...request, url: urlWithQueryParam.toString() };
       const requestStartTime = performance.now();
       const response = await window.electronAPI.sendHttp(modifiedRequest);
       const responseTime = performance.now() - requestStartTime;
@@ -319,7 +317,7 @@ export async function runDataDrivenTests(
         expected: testData.valid ? EXPECTED_SUCCESS_RESPONSE : EXPECTED_CLIENT_ERROR_RESPONSE,
         field: `query.${queryParam}`,
         request: modifiedRequest,
-        response: typeof response.body === 'string' ? response.body : JSON.stringify(response.body, null, 2),
+        response,
         responseTime,
         status: testStatus,
         value: testValue,

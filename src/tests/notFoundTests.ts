@@ -1,10 +1,10 @@
-import { Test, TestRequest, TestStatus } from '../types';
+import { HttpRequest, Test, TestStatus } from '../types';
 import { extractStatusCode } from '../utils';
 
 const NOT_FOUND_TEST_NAME = '404 Not Found';
 const NOT_FOUND_TEST_EXPECTED = '404 Not Found';
 
-export async function runNotFoundTest(request: TestRequest): Promise<Test> {
+export async function runNotFoundTest(request: HttpRequest): Promise<Test> {
   const { url } = request;
   let testUrl = url;
 
@@ -20,7 +20,7 @@ export async function runNotFoundTest(request: TestRequest): Promise<Test> {
     testUrl = url.endsWith('/') ? `${url}NOT_FOUND` : `${url}/NOT_FOUND`;
   }
 
-  const modifiedRequest: TestRequest = { ...request, url: testUrl };
+  const modifiedRequest: HttpRequest = { ...request, url: testUrl };
 
   try {
     const startTime = performance.now();

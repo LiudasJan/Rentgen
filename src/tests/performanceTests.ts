@@ -1,4 +1,4 @@
-import { Test, TestRequest, TestStatus } from '../types';
+import { HttpRequest, Test, TestStatus } from '../types';
 import {
   calculateMedian,
   calculatePercentile,
@@ -90,7 +90,7 @@ export async function runPerformanceInsights(url: string, testResults: Test[]): 
 }
 
 export async function runLoadTest(
-  request: TestRequest,
+  request: HttpRequest,
   fieldMappings: Record<string, string>,
   messageType: string,
   protoFile: File | null,
