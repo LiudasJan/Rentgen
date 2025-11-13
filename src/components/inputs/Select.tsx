@@ -16,7 +16,7 @@ export default function Select({ classNames, isCreatable, ...otherProps }: Props
   const selectClassNames: ClassNamesConfig<unknown, boolean, GroupBase<unknown>> = {
     container: () => 'min-w-[110px] text-xs',
     control: () => 'min-h-auto! border! border-border! rounded-md! shadow-none!',
-    dropdownIndicator: () => 'p-1.5! text-text!',
+    dropdownIndicator: () => 'w-7! p-1.5! text-black/40!',
     indicatorSeparator: () => 'hidden',
     input: () => 'm-0! p-0!',
     menu: () => 'm-0! rounded-md!',

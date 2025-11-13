@@ -166,23 +166,28 @@ export default function App() {
       </div>
 
       <div className="flex items-center gap-2">
-        {mode === 'HTTP' && (
-          <Select
-            className="font-bold uppercase"
-            classNames={{ input: () => 'm-0! p-0! [&>:first-child]:uppercase' }}
-            isCreatable={true}
-            options={methodOptions}
-            placeholder="METHOD"
-            value={methodOptions.find((option) => option.value == method)}
-            onChange={(option: SelectOption<Method>) => setMethod(option.value)}
+        <div className="flex-auto flex items-center">
+          {mode === 'HTTP' && (
+            <Select
+              className="font-bold uppercase"
+              classNames={{
+                control: () => 'min-h-auto! border! border-border! rounded-none! rounded-l! shadow-none!',
+                input: () => 'm-0! p-0! [&>:first-child]:uppercase',
+              }}
+              isCreatable={true}
+              options={methodOptions}
+              placeholder="METHOD"
+              value={methodOptions.find((option) => option.value == method)}
+              onChange={(option: SelectOption<Method>) => setMethod(option.value)}
+            />
+          )}
+          <Input
+            className={cn('flex-auto font-monospace', { 'border-l-0! rounded-l-none!': mode === 'HTTP' })}
+            placeholder="Enter URL or paste text"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
           />
-        )}
-        <Input
-          className="flex-auto font-monospace"
-          placeholder="Enter URL or paste text"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-        />
+        </div>
         {mode === 'HTTP' && (
           <Button disabled={!url || isRunningTests} onClick={sendHttp}>
             Send
@@ -229,10 +234,10 @@ export default function App() {
         <label className="block mb-2 font-bold text-sm">
           Protobuf schema & message type <span className="font-normal text-gray-500/80">(optional)</span>:
         </label>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center">
           <Input
             accept=".proto"
-            className="font-monospace"
+            className="font-monospace rounded-r-none!"
             type="file"
             onChange={async (e) => {
               const file = e.target.files?.[0];
@@ -259,7 +264,7 @@ export default function App() {
           />
 
           <Input
-            className="flex-auto font-monospace"
+            className="flex-auto font-monospace border-l-0! rounded-l-none!"
             placeholder="Message type (e.g. mypackage.MyMessage)"
             value={messageType}
             onChange={(e) => setMessageType(e.target.value)}
