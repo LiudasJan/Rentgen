@@ -1,6 +1,7 @@
 import { Method } from 'axios';
 import cn from 'classnames';
 import { useEffect, useState } from 'react';
+import { sendHttpRequest } from './api';
 import Button, { ButtonType } from './components/buttons/Button';
 import Input from './components/inputs/Input';
 import Select, { SelectOption } from './components/inputs/Select';
@@ -13,19 +14,8 @@ import Modal from './components/modals/Modal';
 import ResponsePanel from './components/panels/ResponsePanel';
 import TestsTable, { ExpandedTestComponent, getTestsTableColumns } from './components/tables/TestsTable';
 import useTests from './hooks/useTests';
-import {
-  convertFormEntriesToUrlEncoded,
-  detectFieldType,
-  encodeMessage,
-  extractCurl,
-  extractFieldsFromJson,
-  extractQueryParams,
-  formatRequestBody,
-  getHeaderValue,
-  loadProtoSchema,
-  parseFormData,
-  parseHeaders,
-} from './utils';
+import { LOAD_TEST_NAME } from './tests';
+import { extractCurl, formatBodyByContentType, loadProtoSchema, parseBodyByContentType, parseHeaders } from './utils';
 
 type Mode = 'HTTP' | 'WSS';
 
@@ -85,7 +75,7 @@ export default function App() {
   >([]);
   const [fieldMappings, setFieldMappings] = useState<Record<string, string>>({});
   const [queryMappings, setQueryMappings] = useState<Record<string, string>>({});
-  const [testsRun, setTestsRun] = useState(false);
+  const [testsRun, setTestsRun] = useState<boolean>(false);
   const {
     crudTests,
     currentTest,
@@ -99,10 +89,16 @@ export default function App() {
     testCount,
     executeAllTests,
     executeLoadTest,
-  } = useTests(method, url, parseHeaders(headers), body, fieldMappings, queryMappings, messageType, protoFile);
+  } = useTests(
+    { url, method, headers: parseHeaders(headers), body: parseBodyByContentType(body, parseHeaders(headers)) },
+    fieldMappings,
+    queryMappings,
+    messageType,
+    protoFile,
+  );
 
   const isRunningTests = isSecurityRunning || isPerformanceRunning || isDataDrivenRunning;
-  const disabledRunTests = isRunningTests || !httpResponse || !httpResponse.status.includes('200');
+  const disabledRunTests = isRunningTests || !httpResponse || !httpResponse.status.startsWith('2');
 
   useEffect(() => {
     if (!window.electronAPI?.onWssEvent) return;
@@ -140,7 +136,10 @@ export default function App() {
           options={modeOptions}
           placeholder="MODE"
           value={modeOptions.find((option) => option.value == mode)}
-          onChange={(option: SelectOption<Mode>) => setMode(option.value)}
+          onChange={(option: SelectOption<Mode>) => {
+            setMode(option.value);
+            reset();
+          }}
         />
         {mode === 'HTTP' && (
           <>
@@ -168,31 +167,30 @@ export default function App() {
       </div>
 
       <div className="flex items-center gap-2">
-        {mode === 'HTTP' && (
-          <Select
-            className="font-bold uppercase"
-            classNames={{ input: () => 'm-0! p-0! [&>:first-child]:uppercase' }}
-            isCreatable={true}
-            options={methodOptions}
-            placeholder="METHOD"
-            value={methodOptions.find((option) => option.value == method)}
-            onChange={(option: SelectOption<Method>) => setMethod(option.value)}
+        <div className="flex-auto flex items-center">
+          {mode === 'HTTP' && (
+            <Select
+              className="font-bold uppercase"
+              classNames={{
+                control: () => 'min-h-auto! border! border-border! rounded-none! rounded-l-md! shadow-none!',
+                input: () => 'm-0! p-0! [&>:first-child]:uppercase',
+              }}
+              isCreatable={true}
+              options={methodOptions}
+              placeholder="METHOD"
+              value={methodOptions.find((option) => option.value == method)}
+              onChange={(option: SelectOption<Method>) => setMethod(option.value)}
+            />
+          )}
+          <Input
+            className={cn('flex-auto font-monospace', { 'border-l-0! rounded-l-none!': mode === 'HTTP' })}
+            placeholder="Enter URL or paste text"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
           />
-        )}
-        <Input
-          className="flex-auto font-monospace"
-          placeholder="Enter URL or paste text"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-        />
+        </div>
         {mode === 'HTTP' && (
-          <Button
-            disabled={!url || isRunningTests}
-            onClick={() => {
-              sendHttp();
-              setTestsRun(false);
-            }}
-          >
+          <Button disabled={!url || isRunningTests} onClick={sendHttp}>
             Send
           </Button>
         )}
@@ -210,6 +208,7 @@ export default function App() {
 
       <TextareaAutosize
         className="font-monospace"
+        maxRows={10}
         placeholder="Header-Key: value"
         value={headers}
         onChange={(e) => setHeaders(e.target.value)}
@@ -218,6 +217,7 @@ export default function App() {
       <div className="relative">
         <TextareaAutosize
           className="font-monospace"
+          maxRows={15}
           placeholder={mode === 'HTTP' ? 'Body JSON' : 'Message body'}
           value={body}
           onChange={(e) => setBody(e.target.value)}
@@ -225,7 +225,7 @@ export default function App() {
         <Button
           className="absolute top-3 right-4 min-w-auto! py-0.5! px-2! rounded-sm"
           buttonType={ButtonType.SECONDARY}
-          onClick={() => setBody((prevBody) => formatRequestBody(prevBody, parseHeaders(headers)))}
+          onClick={() => setBody((prevBody) => formatBodyByContentType(prevBody, parseHeaders(headers)))}
         >
           Beautify
         </Button>
@@ -235,10 +235,10 @@ export default function App() {
         <label className="block mb-2 font-bold text-sm">
           Protobuf schema & message type <span className="font-normal text-gray-500/80">(optional)</span>:
         </label>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center">
           <Input
             accept=".proto"
-            className="font-monospace"
+            className="font-monospace rounded-r-none!"
             type="file"
             onChange={async (e) => {
               const file = e.target.files?.[0];
@@ -265,7 +265,7 @@ export default function App() {
           />
 
           <Input
-            className="flex-auto font-monospace"
+            className="flex-auto font-monospace border-l-0! rounded-l-none!"
             placeholder="Message type (e.g. mypackage.MyMessage)"
             value={messageType}
             onChange={(e) => setMessageType(e.target.value)}
@@ -362,11 +362,13 @@ export default function App() {
         </div>
       )}
 
-      <div>
-        <Button disabled={disabledRunTests} onClick={disabledRunTests ? undefined : runAllTests}>
-          {isRunningTests ? `Running tests... (${currentTest}/${testCount})` : 'Generate & Run Tests'}
-        </Button>
-      </div>
+      {mode === 'HTTP' && (
+        <div>
+          <Button disabled={disabledRunTests} onClick={disabledRunTests ? undefined : runAllTests}>
+            {isRunningTests ? `Running tests... (${currentTest}/${testCount})` : 'Generate & Run Tests'}
+          </Button>
+        </div>
+      )}
 
       {testsRun && (
         <>
@@ -404,7 +406,7 @@ export default function App() {
                   selector: (row) => row.status,
                   width: '220px',
                   cell: (row) => {
-                    if (row.name === 'Load test')
+                    if (row.name === LOAD_TEST_NAME)
                       return <LoadTestControls isRunning={isLoadTestRunning} executeTest={executeLoadTest} />;
 
                     return row.status;
@@ -445,6 +447,21 @@ export default function App() {
     </div>
   );
 
+  function reset() {
+    setMethod('GET');
+    setUrl('');
+    setWssConnected(false);
+    setHeaders('');
+    setBody('{}');
+    setProtoFile(null);
+    setMessageType('');
+    setHttpResponse(null);
+    setMessages([]);
+    setFieldMappings({});
+    setQueryMappings({});
+    setTestsRun(false);
+  }
+
   async function runAllTests() {
     setTestsRun(true);
 
@@ -459,27 +476,17 @@ export default function App() {
 
       setUrl(url);
       setMethod(method as Method);
-
-      if (decodedLines.length > 0) {
-        setBody(decodedLines.join('\n'));
-
-        const formMappings: Record<string, string> = {};
-        decodedLines.forEach((decodedLine) => {
-          const [key] = decodedLine.split('=');
-          if (key) formMappings[`form.${key.trim()}`] = 'string';
-        });
-
-        setFieldMappings(formMappings);
-      } else {
-        const trimmedBody = body ? String(body).trim() : '';
-        setBody(trimmedBody !== '' ? trimmedBody : '{}');
-      }
-
       setHeaders(
         Object.entries(headers)
           .map(([k, v]) => `${k}: ${v}`)
           .join('\n'),
       );
+
+      if (decodedLines.length > 0) setBody(decodedLines.join('\n'));
+      else {
+        const trimmedBody = body ? String(body).trim() : '';
+        setBody(trimmedBody !== '' ? trimmedBody : '{}');
+      }
 
       setOpenCurlModal(false);
       setCurl('');
@@ -496,86 +503,18 @@ export default function App() {
       body: '',
       headers: {},
     });
+    setFieldMappings({});
+    setQueryMappings({});
 
-    try {
-      const parsedHeaders = parseHeaders(headers);
-      const contentType = getHeaderValue(parsedHeaders, 'content-type');
-      const isForm = /application\/x-www-form-urlencoded/i.test(contentType);
+    const { response, fieldMappings, queryMappings } = await sendHttpRequest(
+      { url, method, headers: parseHeaders(headers), body: parseBodyByContentType(body, parseHeaders(headers)) },
+      messageType,
+      protoFile,
+    );
 
-      let data: string | Uint8Array | undefined = body;
-      if (protoFile && messageType) data = encodeMessage(messageType, JSON.parse(body));
-      else if (isForm) data = convertFormEntriesToUrlEncoded(parseFormData(String(body)));
-
-      // Ensure proper Content-Type header for form data
-      if (isForm && !getHeaderValue(parsedHeaders, 'content-type'))
-        parsedHeaders['Content-Type'] = 'application/x-www-form-urlencoded';
-
-      const response = await window.electronAPI.sendHttp({
-        url,
-        method,
-        headers: parsedHeaders,
-        body: data,
-      });
-
-      setHttpResponse(response);
-
-      // Generate test mappings based on request body (not response)
-      let parsedBody;
-      try {
-        parsedBody = JSON.parse(body);
-      } catch {
-        return;
-      }
-
-      if (response.status.startsWith('2')) {
-        if (parsedBody) {
-          // Extract all fields from request body (including nested)
-          const extractedFields = extractFieldsFromJson(parsedBody);
-          const bodyMappings: Record<string, string> = {};
-
-          for (const [fieldPath, fieldType] of Object.entries(extractedFields)) {
-            if (fieldType === 'DO_NOT_TEST') bodyMappings[fieldPath] = 'do-not-test';
-            else {
-              const pathSegments = fieldPath.replace(/\[(\d+)\]/g, '.$1').split('.');
-              let fieldValue = parsedBody;
-              for (const segment of pathSegments) {
-                if (fieldValue == null) break;
-                fieldValue = fieldValue[segment];
-              }
-
-              bodyMappings[fieldPath] = detectFieldType(fieldValue);
-            }
-          }
-
-          setFieldMappings(bodyMappings);
-        }
-
-        if (isForm) {
-          const formEntries = parseFormData(String(body));
-          const formMappings: Record<string, string> = {};
-
-          for (const [key, value] of formEntries) formMappings[`form.${key}`] = detectFieldType(value);
-
-          setFieldMappings((prevFieldMappings) => ({
-            ...(prevFieldMappings || {}),
-            ...formMappings,
-          }));
-        }
-
-        const queryParams = extractQueryParams(url);
-        const queryParamMappings: Record<string, string> = {};
-
-        for (const [key, value] of Object.entries(queryParams)) queryParamMappings[key] = detectFieldType(value);
-
-        setQueryMappings(queryParamMappings);
-      }
-    } catch (error) {
-      setHttpResponse({
-        status: 'Network Error',
-        body: String(error),
-        headers: {},
-      });
-    }
+    setHttpResponse(response);
+    setFieldMappings(fieldMappings);
+    setQueryMappings(queryMappings);
   }
 
   function connectWss() {

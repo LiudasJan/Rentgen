@@ -1,42 +1,50 @@
-import { Method } from 'axios';
-import { Test, TestStatus } from '../types';
+import { HttpRequest, Test, TestStatus } from '../types';
 
-export async function runCorsTest(
-  method: Method,
-  url: string,
-  headers: Record<string, string>,
-  body: string,
-): Promise<Test> {
+const CORS_TEST_NAME = 'CORS policy check';
+const CORS_TEST_EXPECTED = 'Detect if API is public or private';
+
+export async function runCorsTest(request: HttpRequest): Promise<Test> {
+  const { url, method, headers, body } = request;
+  const modifiedHeaders = { ...headers, Origin: 'https://www.qaontime.com/' };
+  const modifiedRequest: HttpRequest = { url, method, headers: modifiedHeaders };
+
   try {
-    const options: RequestInit = {
-      method,
-      mode: 'cors',
-      headers,
-    };
-    if (body && !['GET', 'HEAD'].includes(method.toUpperCase())) options.body = body;
+    if (body && !['GET', 'HEAD'].includes(method.toUpperCase())) modifiedRequest.body = body;
 
-    const { status } = await fetch(url, options);
+    const requestStartTime = performance.now();
+    const response = await window.electronAPI.sendHttp(modifiedRequest);
+    const responseTime = performance.now() - requestStartTime;
+    const acaoHeader =
+      response.headers?.['access-control-allow-origin'] || response.headers?.['Access-Control-Allow-Origin'];
+
+    if (!acaoHeader)
+      return {
+        actual: 'CORS error → API is private (restricted by origin)',
+        expected: CORS_TEST_EXPECTED,
+        name: CORS_TEST_NAME,
+        request: modifiedRequest,
+        response: null,
+        responseTime,
+        status: TestStatus.Info,
+      };
 
     return {
       actual: 'No CORS error → API is public (accessible from any domain)',
-      expected: 'Detect if API is public or private',
-      name: 'CORS policy check',
-      request: { url, method, headers, body },
-      response: { status },
+      expected: CORS_TEST_EXPECTED,
+      name: CORS_TEST_NAME,
+      request: modifiedRequest,
+      response,
+      responseTime,
       status: TestStatus.Info,
     };
   } catch (error) {
-    const message = String(error?.message || error);
-
     return {
-      actual:
-        message.includes('CORS') || message.includes('Failed to fetch')
-          ? 'CORS error → API is private (restricted by origin)'
-          : 'Unexpected error: ' + message,
-      expected: 'Detect if API is public or private',
-      name: 'CORS policy check',
-      request: { url, method, headers, body },
+      actual: `Unexpected error: ${String(error)}`,
+      expected: CORS_TEST_EXPECTED,
+      name: CORS_TEST_NAME,
+      request: modifiedRequest,
       response: null,
+      responseTime: 0,
       status: TestStatus.Info,
     };
   }

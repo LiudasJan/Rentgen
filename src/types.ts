@@ -17,16 +17,16 @@ export interface Test {
   field?: string;
   method?: Method | string;
   name?: string;
-  request?: TestRequest | null;
+  request?: HttpRequest | null;
   response?: any | null;
   responseTime?: number;
   status: TestStatus;
   value?: any;
 }
 
-export interface TestRequest {
-  body?: string;
-  headers: any;
-  method?: Method | string;
+export interface HttpRequest {
+  body?: Record<string, unknown> | string | Uint8Array | null;
+  headers: Record<string, string>;
+  method: Method | string;
   url: string;
 }

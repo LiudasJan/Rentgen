@@ -1,7 +1,7 @@
 {
   "name": "rentgen",
   "productName": "Rentgen",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Lightweight API testing tool with cURL import and auto generated tests",
   "main": ".webpack/main",
   "scripts": {
