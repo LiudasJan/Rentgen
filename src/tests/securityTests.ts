@@ -137,7 +137,7 @@ export async function runSecurityTests(
     // 6. OPTIONS method
     const optionsRequest: any = {
       url,
-      method,
+      method: 'OPTIONS',
       headers,
       body: null,
     };
