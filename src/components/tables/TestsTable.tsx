@@ -116,11 +116,13 @@ export function getTestsTableColumns(visibleColumns: string[] = []): TableColumn
     {
       name: 'Expected',
       selector: (row) => row.expected,
+      cell: (row) => <div className="py-1">{row.expected}</div>,
       omit: true,
     },
     {
       name: 'Actual',
       selector: (row) => row.actual,
+      cell: (row) => <div className="py-1">{row.actual}</div>,
       omit: true,
     },
     {

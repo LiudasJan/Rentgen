@@ -197,7 +197,7 @@ export default function App() {
         )}
       </div>
 
-      <TextareaAutosize
+      <Textarea
         className="font-monospace"
         placeholder="Header-Key: value"
         value={headers}
