@@ -171,7 +171,7 @@ export default function App() {
             <Select
               className="font-bold uppercase"
               classNames={{
-                control: () => 'min-h-auto! border! border-border! rounded-none! rounded-l! shadow-none!',
+                control: () => 'min-h-auto! border! border-border! rounded-none! rounded-l-md! shadow-none!',
                 input: () => 'm-0! p-0! [&>:first-child]:uppercase',
               }}
               isCreatable={true}
