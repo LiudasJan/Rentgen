@@ -1,6 +1,6 @@
 import { runCorsTest, runNotFoundTest } from '.';
 import { Test, TestRequest, TestStatus } from '../types';
-import { extractStatusCode, tryParseJsonObject } from '../utils';
+import { extractStatusCode } from '../utils';
 
 const LARGE_PAYLOAD_SIZE_MB = 10;
 const LARGE_PAYLOAD_SIZE_BYTES = LARGE_PAYLOAD_SIZE_MB * 1024 * 1024;
@@ -216,11 +216,9 @@ export async function runSecurityTests(
     for (const [key, value] of Object.entries(headers))
       if (key.toLowerCase() === 'accept' || key.toLowerCase() === 'content-type') minimalHeaders[key] = value;
 
-    const unauthorizedRequest: any = {
-      url,
-      method,
+    const unauthorizedRequest: TestRequest = {
+      ...request,
       headers: minimalHeaders,
-      body: tryParseJsonObject(body),
     };
     const unauthorizedResponse = await window.electronAPI.sendHttp(unauthorizedRequest);
     const unauthorizedStatusCode = extractStatusCode(unauthorizedResponse);
