@@ -1,3 +1,5 @@
+import { convertFormEntriesToUrlEncoded, isObject, parseFormData, tryParseJsonObject } from '.';
+
 /**
  * Parses a raw header string into a structured key-value object
  *
@@ -80,4 +82,65 @@ export function extractStatusCode(response: any): number {
   const status = (response?.status || '').toString();
   const parsedStatus = parseInt(status.split(' ')[0] || '0', 10);
   return Number.isFinite(parsedStatus) ? parsedStatus : 0;
+}
+
+/**
+ * Parses and normalizes request body based on Content-Type header
+ *
+ * This function intelligently processes request bodies based on their Content-Type:
+ * - For 'application/x-www-form-urlencoded': parses form data and converts to URL-encoded format
+ * - For other types (typically JSON): attempts to parse as JSON object/array
+ *
+ * The normalization ensures consistent handling of different body formats across the application,
+ * particularly useful when working with API requests that may use various content types.
+ *
+ * @param body - Raw request body string to parse
+ * @param headers - Request headers containing Content-Type information
+ * @returns Normalized body as URL-encoded string (for forms) or parsed object (for JSON), or null if parsing fails
+ */
+export function parseBodyByContentType(body: string, headers: Record<string, any>): any {
+  const contentType = getHeaderValue(headers, 'content-type');
+
+  if (/application\/x-www-form-urlencoded/i.test(contentType))
+    return convertFormEntriesToUrlEncoded(parseFormData(String(body)));
+
+  const paredBody = tryParseJsonObject(body);
+  if (isObject(paredBody)) return paredBody;
+
+  return null;
+}
+
+/**
+ * Formats and beautifies request body content based on Content-Type header
+ *
+ * This utility function automatically detects the content type from headers
+ * and applies appropriate formatting:
+ * - For 'application/x-www-form-urlencoded': sorts and normalizes form data
+ * - For JSON content: pretty-prints with proper indentation
+ * - Gracefully handles malformed JSON without throwing errors
+ *
+ * @param body - The raw body content to format
+ * @param headers - Parsed headers object for Content-Type detection
+ * @returns Formatted body content string
+ */
+export function formatBodyByContentType(body: string, headers: Record<string, string>): string {
+  const contentType = getHeaderValue(headers, 'content-type');
+
+  // Handle form URL-encoded content
+  if (/application\/x-www-form-urlencoded/i.test(contentType)) {
+    return body
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .sort()
+      .join('\n');
+  }
+
+  // Handle JSON content (default case)
+  try {
+    return JSON.stringify(JSON.parse(body), null, 2);
+  } catch {
+    // Return original content if JSON parsing fails
+    return body;
+  }
 }

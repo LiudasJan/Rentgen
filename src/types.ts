@@ -25,8 +25,8 @@ export interface Test {
 }
 
 export interface TestRequest {
-  body?: string;
-  headers: any;
-  method?: Method | string;
+  body: Record<string, unknown> | string | Uint8Array | null;
+  headers: Record<string, string>;
+  method: Method | string;
   url: string;
 }

@@ -14,7 +14,7 @@ import Modal from './components/modals/Modal';
 import ResponsePanel from './components/panels/ResponsePanel';
 import TestsTable, { ExpandedTestComponent, getTestsTableColumns } from './components/tables/TestsTable';
 import useTests from './hooks/useTests';
-import { extractCurl, formatRequestBody, loadProtoSchema, parseHeaders } from './utils';
+import { extractCurl, formatBodyByContentType, loadProtoSchema, parseBodyByContentType, parseHeaders } from './utils';
 
 type Mode = 'HTTP' | 'WSS';
 
@@ -74,7 +74,7 @@ export default function App() {
   >([]);
   const [fieldMappings, setFieldMappings] = useState<Record<string, string>>({});
   const [queryMappings, setQueryMappings] = useState<Record<string, string>>({});
-  const [testsRun, setTestsRun] = useState(false);
+  const [testsRun, setTestsRun] = useState<boolean>(false);
   const {
     crudTests,
     currentTest,
@@ -88,7 +88,13 @@ export default function App() {
     testCount,
     executeAllTests,
     executeLoadTest,
-  } = useTests(method, url, parseHeaders(headers), body, fieldMappings, queryMappings, messageType, protoFile);
+  } = useTests(
+    { url, method, headers: parseHeaders(headers), body: parseBodyByContentType(body, parseHeaders(headers)) },
+    fieldMappings,
+    queryMappings,
+    messageType,
+    protoFile,
+  );
 
   const isRunningTests = isSecurityRunning || isPerformanceRunning || isDataDrivenRunning;
   const disabledRunTests = isRunningTests || !httpResponse || !httpResponse.status.startsWith('2');
@@ -129,7 +135,10 @@ export default function App() {
           options={modeOptions}
           placeholder="MODE"
           value={modeOptions.find((option) => option.value == mode)}
-          onChange={(option: SelectOption<Mode>) => setMode(option.value)}
+          onChange={(option: SelectOption<Mode>) => {
+            setMode(option.value);
+            reset();
+          }}
         />
         {mode === 'HTTP' && (
           <>
@@ -175,13 +184,7 @@ export default function App() {
           onChange={(e) => setUrl(e.target.value)}
         />
         {mode === 'HTTP' && (
-          <Button
-            disabled={!url || isRunningTests}
-            onClick={() => {
-              sendHttp();
-              setTestsRun(false);
-            }}
-          >
+          <Button disabled={!url || isRunningTests} onClick={sendHttp}>
             Send
           </Button>
         )}
@@ -197,8 +200,9 @@ export default function App() {
         )}
       </div>
 
-      <Textarea
+      <TextareaAutosize
         className="font-monospace"
+        maxRows={10}
         placeholder="Header-Key: value"
         value={headers}
         onChange={(e) => setHeaders(e.target.value)}
@@ -207,6 +211,7 @@ export default function App() {
       <div className="relative">
         <TextareaAutosize
           className="font-monospace"
+          maxRows={15}
           placeholder={mode === 'HTTP' ? 'Body JSON' : 'Message body'}
           value={body}
           onChange={(e) => setBody(e.target.value)}
@@ -214,7 +219,7 @@ export default function App() {
         <Button
           className="absolute top-3 right-4 min-w-auto! py-0.5! px-2! rounded-sm"
           buttonType={ButtonType.SECONDARY}
-          onClick={() => setBody((prevBody) => formatRequestBody(prevBody, parseHeaders(headers)))}
+          onClick={() => setBody((prevBody) => formatBodyByContentType(prevBody, parseHeaders(headers)))}
         >
           Beautify
         </Button>
@@ -351,11 +356,13 @@ export default function App() {
         </div>
       )}
 
-      <div>
-        <Button disabled={disabledRunTests} onClick={disabledRunTests ? undefined : runAllTests}>
-          {isRunningTests ? `Running tests... (${currentTest}/${testCount})` : 'Generate & Run Tests'}
-        </Button>
-      </div>
+      {mode === 'HTTP' && (
+        <div>
+          <Button disabled={disabledRunTests} onClick={disabledRunTests ? undefined : runAllTests}>
+            {isRunningTests ? `Running tests... (${currentTest}/${testCount})` : 'Generate & Run Tests'}
+          </Button>
+        </div>
+      )}
 
       {testsRun && (
         <>
@@ -433,6 +440,21 @@ export default function App() {
       )}
     </div>
   );
+
+  function reset() {
+    setMethod('GET');
+    setUrl('');
+    setWssConnected(false);
+    setHeaders('');
+    setBody('{}');
+    setProtoFile(null);
+    setMessageType('');
+    setHttpResponse(null);
+    setMessages([]);
+    setFieldMappings({});
+    setQueryMappings({});
+    setTestsRun(false);
+  }
 
   async function runAllTests() {
     setTestsRun(true);

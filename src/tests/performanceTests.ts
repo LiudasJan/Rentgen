@@ -1,5 +1,4 @@
-import { Method } from 'axios';
-import { Test, TestStatus } from '../types';
+import { Test, TestRequest, TestStatus } from '../types';
 import {
   calculateMedian,
   calculatePercentile,
@@ -8,6 +7,7 @@ import {
   generateRandomEmail,
   generateRandomInteger,
   generateRandomString,
+  isObject,
   setDeepObjectProperty,
 } from '../utils';
 
@@ -90,10 +90,7 @@ export async function runPerformanceInsights(url: string, testResults: Test[]): 
 }
 
 export async function runLoadTest(
-  method: Method,
-  url: string,
-  headers: Record<string, string>,
-  body: string,
+  request: TestRequest,
   fieldMappings: Record<string, string>,
   messageType: string,
   protoFile: File | null,
@@ -101,16 +98,9 @@ export async function runLoadTest(
   requestCount: number,
   updateProgress?: (sentRequestCount: number, requestCount: number) => void,
 ): Promise<Test> {
+  const { body } = request;
   const concurrency = Math.max(1, Math.min(MAX_CONCURRENCY, Math.floor(threadCount)));
   const totalRequests = Math.max(1, Math.min(MAX_TOTAL_REQUESTS, Math.floor(requestCount)));
-
-  let parsedBody: any | null = null;
-  try {
-    parsedBody = body ? JSON.parse(body) : null;
-  } catch {
-    // If not JSON, send raw data without randomization
-    parsedBody = null;
-  }
 
   let requestsSent = 0,
     server5xxFailures = 0,
@@ -122,9 +112,9 @@ export async function runLoadTest(
   async function executeSingleRequest(): Promise<void> {
     if (isAborted) return;
 
-    let data: any = body;
-    if (parsedBody) {
-      const dynamicBody = JSON.parse(JSON.stringify(parsedBody));
+    let data = body;
+    if (isObject(body)) {
+      const dynamicBody = JSON.parse(JSON.stringify(body));
 
       for (const [fieldKey, fieldType] of Object.entries(fieldMappings)) {
         if (fieldType === 'random32') setDeepObjectProperty(dynamicBody, fieldKey, generateRandomString());
@@ -135,7 +125,7 @@ export async function runLoadTest(
       data = dynamicBody;
     }
 
-    if (protoFile && messageType && parsedBody) {
+    if (protoFile && messageType && isObject(body)) {
       try {
         data = encodeMessage(messageType, data);
       } catch (error) {
@@ -146,12 +136,7 @@ export async function runLoadTest(
     }
 
     const startTime = performance.now();
-    const response = await window.electronAPI.sendHttp({
-      url,
-      method,
-      headers,
-      body: data,
-    });
+    const response = await window.electronAPI.sendHttp({ ...request, body: data });
     const endTime = performance.now();
 
     const responseTime = endTime - startTime;

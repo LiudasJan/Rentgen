@@ -1,32 +1,23 @@
-import { Method } from 'axios';
 import { runCorsTest, runNotFoundTest } from '.';
-import { Test, TestStatus } from '../types';
-import { tryParseJsonObject } from '../utils';
+import { Test, TestRequest, TestStatus } from '../types';
+import { extractStatusCode, tryParseJsonObject } from '../utils';
 
 const LARGE_PAYLOAD_SIZE_MB = 10;
 const LARGE_PAYLOAD_SIZE_BYTES = LARGE_PAYLOAD_SIZE_MB * 1024 * 1024;
-const EXPECTED_PAYLOAD_TOO_LARGE_STATUS = '413';
-const EXPECTED_UNAUTHORIZED_STATUS = '401';
-const EXPECTED_METHOD_NOT_ALLOWED_STATUS = '405';
-const EXPECTED_NOT_IMPLEMENTED_STATUS = '501';
-const ACCEPTABLE_OPTIONS_STATUS_CODES = ['200', '204'];
+const EXPECTED_PAYLOAD_TOO_LARGE_STATUS = 413;
+const EXPECTED_UNAUTHORIZED_STATUS = 401;
+const EXPECTED_METHOD_NOT_ALLOWED_STATUS = 405;
+const EXPECTED_NOT_IMPLEMENTED_STATUS = 501;
+const ACCEPTABLE_OPTIONS_STATUS_CODES = [200, 204];
 
 export async function runSecurityTests(
-  method: Method,
-  url: string,
-  headers: Record<string, string>,
-  body: string,
+  request: TestRequest,
 ): Promise<{ securityTestResults: Test[]; crudTestResults: Test[] }> {
+  const { url, method, headers, body } = request;
   const securityTestResults: Test[] = [];
   const crudTestResults: Test[] = [];
 
   try {
-    const request: any = {
-      url,
-      method,
-      headers,
-      body: tryParseJsonObject(body),
-    };
     const response = await window.electronAPI.sendHttp(request);
 
     // 1. Check Server header for version information exposure
@@ -119,8 +110,7 @@ export async function runSecurityTests(
 
       actualCacheControl = cacheControlHeader;
     } else {
-      const httpMethod = method.toUpperCase();
-      if (httpMethod === 'GET' || httpMethod === 'HEAD')
+      if (['GET', 'HEAD'].includes(method.toUpperCase()))
         cacheControlStatus = TestStatus.Fail; // Dangerous for GET/HEAD methods
       else cacheControlStatus = TestStatus.Warning; // Safe by default, but better to specify
     }
@@ -135,16 +125,12 @@ export async function runSecurityTests(
     });
 
     // 6. OPTIONS method
-    const optionsRequest: any = {
-      url,
-      method: 'OPTIONS',
-      headers,
-      body: null,
-    };
+    const optionsRequest: TestRequest = { ...request, method: 'OPTIONS' };
+    delete optionsRequest.body;
     const optionsResponse = await window.electronAPI.sendHttp(optionsRequest);
 
     // Accept both 200 and 204 status codes, but require Allow header
-    const optionsStatusCode = optionsResponse.status.split(' ')[0];
+    const optionsStatusCode = extractStatusCode(optionsResponse);
     const allowHeader =
       optionsResponse.headers?.['allow'] ||
       optionsResponse.headers?.['Allow'] ||
@@ -173,17 +159,9 @@ export async function runSecurityTests(
       });
 
     // 7. Unsupported method
-    const invalidMethodRequest: any = {
-      url,
-      method: 'FOOBAR',
-      headers,
-      body: tryParseJsonObject(body),
-    };
+    const invalidMethodRequest: TestRequest = { ...request, method: 'FOOBAR' };
     const invalidMethodResponse = await window.electronAPI.sendHttp(invalidMethodRequest);
-    const invalidMethodStatusCode = invalidMethodResponse.status.split(' ')[0];
-    const isValidResponse =
-      invalidMethodStatusCode === EXPECTED_METHOD_NOT_ALLOWED_STATUS ||
-      invalidMethodStatusCode === EXPECTED_NOT_IMPLEMENTED_STATUS;
+    const invalidMethodStatusCode = extractStatusCode(invalidMethodResponse);
 
     securityTestResults.push({
       actual: invalidMethodResponse.status,
@@ -191,30 +169,32 @@ export async function runSecurityTests(
       name: 'Unsupported method handling',
       request: invalidMethodRequest,
       response: invalidMethodResponse,
-      status: isValidResponse ? TestStatus.Pass : TestStatus.Fail,
+      status:
+        invalidMethodStatusCode === EXPECTED_METHOD_NOT_ALLOWED_STATUS ||
+        invalidMethodStatusCode === EXPECTED_NOT_IMPLEMENTED_STATUS
+          ? TestStatus.Pass
+          : TestStatus.Fail,
     });
   } catch (error) {
     securityTestResults.push({
       actual: `Unexpected error: ${String(error)}`,
       expected: 'Should respond',
       name: 'Security test error',
-      request: { url, headers, body },
+      request: null,
       response: null,
       status: TestStatus.Fail,
     });
   }
 
   // 8. Test request size limit with large payload
-  const largePayload = 'A'.repeat(LARGE_PAYLOAD_SIZE_BYTES);
-  const largePayloadResponse = await window.electronAPI.sendHttp({
-    url,
-    method: 'POST', // POST method is most commonly used with body
+  const largePayloadRequest: TestRequest = {
+    ...request,
+    method: 'POST',
     headers: { ...headers, 'Content-Type': 'application/json' },
-    body: largePayload,
-  });
-
-  const largePayloadStatusCode = largePayloadResponse.status.split(' ')[0];
-  const isPayloadTooLarge = largePayloadStatusCode === EXPECTED_PAYLOAD_TOO_LARGE_STATUS;
+    body: 'A'.repeat(LARGE_PAYLOAD_SIZE_BYTES),
+  };
+  const largePayloadResponse = await window.electronAPI.sendHttp(largePayloadRequest);
+  const largePayloadStatusCode = extractStatusCode(largePayloadResponse);
 
   securityTestResults.push({
     actual: largePayloadResponse.status,
@@ -227,7 +207,7 @@ export async function runSecurityTests(
       body: `[${LARGE_PAYLOAD_SIZE_MB}MB string]`,
     },
     response: largePayloadResponse,
-    status: isPayloadTooLarge ? TestStatus.Pass : TestStatus.Fail,
+    status: largePayloadStatusCode === EXPECTED_PAYLOAD_TOO_LARGE_STATUS ? TestStatus.Pass : TestStatus.Fail,
   });
 
   // 9. Test missing authorization cookie/token
@@ -243,8 +223,7 @@ export async function runSecurityTests(
       body: tryParseJsonObject(body),
     };
     const unauthorizedResponse = await window.electronAPI.sendHttp(unauthorizedRequest);
-    const unauthorizedStatusCode = unauthorizedResponse.status.split(' ')[0];
-    const isUnauthorized = unauthorizedStatusCode === EXPECTED_UNAUTHORIZED_STATUS;
+    const unauthorizedStatusCode = extractStatusCode(unauthorizedResponse);
 
     securityTestResults.push({
       actual: unauthorizedResponse.status,
@@ -252,7 +231,7 @@ export async function runSecurityTests(
       name: 'Missing authorization cookie/token',
       request: unauthorizedRequest,
       response: unauthorizedResponse,
-      status: isUnauthorized ? TestStatus.Pass : TestStatus.Fail,
+      status: unauthorizedStatusCode === EXPECTED_UNAUTHORIZED_STATUS ? TestStatus.Pass : TestStatus.Fail,
     });
   } catch (error) {
     securityTestResults.push({
@@ -266,11 +245,11 @@ export async function runSecurityTests(
   }
 
   // 10. Run CORS validation test
-  const corsResult = await runCorsTest(method, url, headers, body);
+  const corsResult = await runCorsTest(request);
   securityTestResults.push(corsResult);
 
   // 11. Run 404 Not Found test
-  const notFoundTest = await runNotFoundTest(method, url, headers, body);
+  const notFoundTest = await runNotFoundTest(request);
   securityTestResults.push(notFoundTest);
 
   // 12. Manual tests (requires human verification) ---
@@ -339,7 +318,8 @@ function getCrudTestResults(
 
     // Build CRUD test rows from allowed methods
     const rows: Test[] = allowedMethods.map((method: string) => {
-      const request: any = { url, method, headers };
+      const request: TestRequest = { url, method, headers, body: null };
+      delete request.body;
 
       if (!['GET', 'HEAD'].includes(method)) request.body = body && Object.keys(body).length ? body : {};
 

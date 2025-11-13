@@ -1,6 +1,5 @@
-import { Method } from 'axios';
 import { datasets } from '../constants/datasets';
-import { Test, TestStatus } from '../types';
+import { Test, TestRequest, TestStatus } from '../types';
 import {
   convertFormEntriesToUrlEncoded,
   decodeMessage,
@@ -12,7 +11,6 @@ import {
   getHeaderValue,
   parseFormData,
   setDeepObjectProperty,
-  throwError,
 } from '../utils';
 
 const SUCCESS_STATUS_MIN = 200;
@@ -22,12 +20,10 @@ const CLIENT_ERROR_STATUS_MAX = 499;
 const SERVER_ERROR_STATUS_MIN = 500;
 const EXPECTED_SUCCESS_RESPONSE = '2xx';
 const EXPECTED_CLIENT_ERROR_RESPONSE = '4xx';
+const ORIGINAL_REQUEST_TEST_FIELD_NAME = '[original request]';
 
 export async function runDataDrivenTests(
-  method: Method,
-  url: string,
-  headers: Record<string, string>,
-  body: string,
+  request: TestRequest,
   fieldMappings: Record<string, string>,
   queryMappings: Record<string, string>,
   messageType: string,
@@ -35,19 +31,13 @@ export async function runDataDrivenTests(
   setCurrentTest?: (value: number) => void,
   setTestCount?: (count: number) => void,
 ): Promise<Test[]> {
+  const { body, headers, url } = request;
   const contentType = getHeaderValue(headers, 'content-type');
   const isForm = /application\/x-www-form-urlencoded/i.test(contentType);
-
-  let parsedBody = null;
   let formEntries: Array<[string, string]> = [];
 
   if (isForm) formEntries = parseFormData(String(body));
-  else
-    try {
-      parsedBody = JSON.parse(body);
-    } catch {
-      return [];
-    }
+  else if (body === null) return [];
 
   // Calculate total number of tests (BODY + QUERY parameters)
   let testCount = 0;
@@ -65,42 +55,33 @@ export async function runDataDrivenTests(
   setTestCount?.(1 + testCount);
 
   const results: Test[] = [];
-  const data = isForm ? convertFormEntriesToUrlEncoded(formEntries) : parsedBody;
 
   // Always send the original request first as baseline test
   try {
     const requestStartTime = performance.now();
-    const originalResponse = await window.electronAPI.sendHttp({
-      url,
-      method,
-      headers,
-      body: data,
-    });
-    const requestEndTime = performance.now();
+    const response = await window.electronAPI.sendHttp(request);
+    const responseTime = performance.now() - requestStartTime;
 
     results.push({
-      actual: originalResponse.status,
+      actual: response.status,
       expected: EXPECTED_SUCCESS_RESPONSE,
-      field: '(original request)',
-      request: { url, method, headers, body: data },
-      response:
-        typeof originalResponse.body === 'string'
-          ? originalResponse.body
-          : JSON.stringify(originalResponse.body, null, 2),
-      responseTime: requestEndTime - requestStartTime,
-      status: originalResponse.status?.startsWith('2') ? TestStatus.Pass : TestStatus.Fail,
-      value: isForm ? Object.fromEntries(formEntries) : parsedBody,
+      field: ORIGINAL_REQUEST_TEST_FIELD_NAME,
+      request,
+      response: typeof response.body === 'string' ? response.body : JSON.stringify(response.body, null, 2),
+      responseTime,
+      status: response.status?.startsWith('2') ? TestStatus.Pass : TestStatus.Fail,
+      value: isForm ? Object.fromEntries(formEntries) : body,
     });
   } catch (error) {
     results.push({
-      actual: 'Error',
+      actual: `Unexpected error: ${String(error)}`,
       expected: EXPECTED_SUCCESS_RESPONSE,
-      field: '(original request)',
-      request: { url, method, headers, body: data },
-      response: String(error),
+      field: ORIGINAL_REQUEST_TEST_FIELD_NAME,
+      request,
+      response: null,
       responseTime: 0,
       status: TestStatus.Bug,
-      value: isForm ? Object.fromEntries(formEntries) : parsedBody,
+      value: isForm ? Object.fromEntries(formEntries) : body,
     });
   }
 
@@ -143,6 +124,7 @@ export async function runDataDrivenTests(
         // Apply per-request randomization for other form fields
         for (const [mappedFieldName, mappedFieldType] of Object.entries(fieldMappings)) {
           if (!mappedFieldName.startsWith('form.')) continue;
+
           const mappedFieldKey = mappedFieldName.slice('form.'.length);
           if (mappedFieldKey === fieldKey) continue;
 
@@ -164,36 +146,29 @@ export async function runDataDrivenTests(
           }
         }
 
-        const encodedFormData = convertFormEntriesToUrlEncoded(modifiedFormEntries);
+        const data = convertFormEntriesToUrlEncoded(modifiedFormEntries);
+        const modifiedRequest: TestRequest = { ...request, body: data };
 
         try {
-          const requestStart = performance.now();
-          const httpResponse = await window.electronAPI.sendHttp({
-            url,
-            method,
-            headers,
-            body: encodedFormData,
-          });
-          const requestEnd = performance.now();
-          const responseTime = requestEnd - requestStart;
-
-          const httpStatusCode = extractStatusCode(httpResponse);
-          const isSuccessfulResponse = httpStatusCode >= SUCCESS_STATUS_MIN && httpStatusCode <= SUCCESS_STATUS_MAX;
+          const requestStartTime = performance.now();
+          const response = await window.electronAPI.sendHttp(modifiedRequest);
+          const responseTime = performance.now() - requestStartTime;
+          const statusCode = extractStatusCode(response);
+          const isSuccessfulResponse = statusCode >= SUCCESS_STATUS_MIN && statusCode <= SUCCESS_STATUS_MAX;
           const testStatus =
             (testData.valid && isSuccessfulResponse) ||
-            (!testData.valid && httpStatusCode >= CLIENT_ERROR_STATUS_MIN && httpStatusCode <= CLIENT_ERROR_STATUS_MAX)
+            (!testData.valid && statusCode >= CLIENT_ERROR_STATUS_MIN && statusCode <= CLIENT_ERROR_STATUS_MAX)
               ? TestStatus.Pass
-              : httpStatusCode >= SERVER_ERROR_STATUS_MIN
+              : statusCode >= SERVER_ERROR_STATUS_MIN
                 ? TestStatus.Bug
                 : TestStatus.Fail;
 
           results.push({
-            actual: httpResponse.status,
+            actual: response.status,
             expected: testData.valid ? EXPECTED_SUCCESS_RESPONSE : EXPECTED_CLIENT_ERROR_RESPONSE,
             field: fieldName,
-            request: { url, method, headers, body: encodedFormData },
-            response:
-              typeof httpResponse.body === 'string' ? httpResponse.body : JSON.stringify(httpResponse.body, null, 2),
+            request: modifiedRequest,
+            response: typeof response.body === 'string' ? response.body : JSON.stringify(response.body, null, 2),
             responseTime,
             status: testStatus,
             value: testValue,
@@ -203,7 +178,7 @@ export async function runDataDrivenTests(
             actual: 'Error',
             expected: testData.valid ? EXPECTED_SUCCESS_RESPONSE : EXPECTED_CLIENT_ERROR_RESPONSE,
             field: fieldName,
-            request: { url, method, headers, body: encodedFormData },
+            request: modifiedRequest,
             response: String(error),
             responseTime: 0,
             status: TestStatus.Bug,
@@ -211,123 +186,104 @@ export async function runDataDrivenTests(
           });
         }
       }
-      continue;
-    }
+    } else {
+      for (const testData of testDataset) {
+        currentTestCounter++;
+        setCurrentTest?.(currentTestCounter);
 
-    for (const testData of testDataset) {
-      currentTestCounter++;
-      setCurrentTest?.(currentTestCounter);
+        // Extract test value from dataset
+        const testValue = (testData as any).value;
 
-      // Extract test value from dataset
-      const testValue = (testData as any).value;
+        // Create deep copy of original body to avoid mutation
+        const modifiedBody = JSON.parse(JSON.stringify(body));
+        const generatedTestValue =
+          dataType === 'randomInt'
+            ? generateRandomInteger()
+            : dataType === 'random32'
+              ? generateRandomString()
+              : dataType === 'randomEmail'
+                ? generateRandomEmail()
+                : testValue;
 
-      // Create deep copy of original body to avoid mutation
-      const modifiedRequestBody =
-        parsedBody && typeof parsedBody === 'object'
-          ? JSON.parse(JSON.stringify(parsedBody))
-          : throwError('Parsed body is not an object');
-      const finalTestValue =
-        dataType === 'randomInt'
-          ? generateRandomInteger()
-          : dataType === 'random32'
-            ? generateRandomString()
-            : dataType === 'randomEmail'
-              ? generateRandomEmail()
-              : testValue;
+        setDeepObjectProperty(modifiedBody, fieldName, generatedTestValue);
 
-      setDeepObjectProperty(modifiedRequestBody, fieldName, finalTestValue);
-
-      // For each request, regenerate all random values to ensure fresh data
-      for (const [fieldKey, fieldType] of Object.entries(fieldMappings)) {
-        if (fieldType === 'random32') modifiedRequestBody[fieldKey] = generateRandomString();
-        if (fieldType === 'randomInt') modifiedRequestBody[fieldKey] = generateRandomInteger();
-        if (fieldType === 'randomEmail') modifiedRequestBody[fieldKey] = generateRandomEmail();
-      }
-
-      let requestPayload: any = modifiedRequestBody;
-      if (protoFile && messageType) {
-        try {
-          requestPayload = encodeMessage(messageType, modifiedRequestBody);
-        } catch (error) {
-          results.push({
-            actual: 'Encode error',
-            expected: testData.valid ? EXPECTED_SUCCESS_RESPONSE : EXPECTED_CLIENT_ERROR_RESPONSE,
-            field: fieldName,
-            request: { url, method, headers, body: modifiedRequestBody },
-            response: String(error),
-            responseTime: 0,
-            status: TestStatus.Bug,
-            value: testValue,
-          });
-          continue;
-        }
-      }
-
-      try {
-        const requestStart = performance.now();
-        const httpResponse = await window.electronAPI.sendHttp({
-          url,
-          method,
-          headers,
-          body: requestPayload,
-        });
-        const requestEnd = performance.now();
-        const responseTime = requestEnd - requestStart;
-
-        // Format response text for display
-        let formattedResponseText: string;
-        if (typeof httpResponse.body === 'string') formattedResponseText = httpResponse.body;
-        else {
-          try {
-            formattedResponseText = JSON.stringify(httpResponse.body, null, 2);
-          } catch {
-            formattedResponseText = String(httpResponse.body);
-          }
+        // For each request, regenerate all random values to ensure fresh data
+        for (const [fieldKey, fieldType] of Object.entries(fieldMappings)) {
+          if (fieldType === 'random32') modifiedBody[fieldKey] = generateRandomString();
+          if (fieldType === 'randomInt') modifiedBody[fieldKey] = generateRandomInteger();
+          if (fieldType === 'randomEmail') modifiedBody[fieldKey] = generateRandomEmail();
         }
 
-        let decodedResponse: string | null = null;
+        let data: any = modifiedBody;
         if (protoFile && messageType) {
           try {
-            const decodedObject = decodeMessage(messageType, new Uint8Array(httpResponse.body));
-            decodedResponse = JSON.stringify(decodedObject, null, 2);
-          } catch {
-            decodedResponse = null;
+            data = encodeMessage(messageType, modifiedBody);
+          } catch (error) {
+            results.push({
+              actual: 'Encode error',
+              expected: testData.valid ? EXPECTED_SUCCESS_RESPONSE : EXPECTED_CLIENT_ERROR_RESPONSE,
+              field: fieldName,
+              request: { ...request, body: modifiedBody },
+              response: String(error),
+              responseTime: 0,
+              status: TestStatus.Bug,
+              value: testValue,
+            });
+            continue;
           }
         }
 
-        // Parse HTTP status code from response
-        const httpStatusCode = extractStatusCode(httpResponse);
-        const isSuccessfulResponse = httpStatusCode >= SUCCESS_STATUS_MIN && httpStatusCode <= SUCCESS_STATUS_MAX;
-        const testStatus =
-          (testData.valid && isSuccessfulResponse) ||
-          (!testData.valid && httpStatusCode >= CLIENT_ERROR_STATUS_MIN && httpStatusCode <= CLIENT_ERROR_STATUS_MAX)
-            ? TestStatus.Pass
-            : httpStatusCode >= SERVER_ERROR_STATUS_MIN
-              ? TestStatus.Bug
-              : TestStatus.Fail;
+        const modifiedRequest: TestRequest = { ...request, body: data };
 
-        results.push({
-          actual: httpResponse.status,
-          expected: testData.valid ? EXPECTED_SUCCESS_RESPONSE : EXPECTED_CLIENT_ERROR_RESPONSE,
-          decoded: decodedResponse,
-          field: fieldName,
-          request: { url, method, headers, body: modifiedRequestBody },
-          response: formattedResponseText,
-          responseTime,
-          status: testStatus,
-          value: testValue,
-        });
-      } catch (error) {
-        results.push({
-          actual: 'Error',
-          expected: testData.valid ? EXPECTED_SUCCESS_RESPONSE : EXPECTED_CLIENT_ERROR_RESPONSE,
-          field: fieldName,
-          request: { url, method, headers, body: modifiedRequestBody },
-          response: String(error),
-          responseTime: 0,
-          status: TestStatus.Bug,
-          value: testValue,
-        });
+        try {
+          const requestStartTime = performance.now();
+          const response = await window.electronAPI.sendHttp(modifiedRequest);
+          const responseTime = performance.now() - requestStartTime;
+
+          let decodedResponse: string | null = null;
+          if (protoFile && messageType) {
+            try {
+              const decodedObject = decodeMessage(messageType, new Uint8Array(response.body));
+              decodedResponse = JSON.stringify(decodedObject, null, 2);
+            } catch {
+              decodedResponse = null;
+            }
+          }
+
+          // Parse HTTP status code from response
+          const statusCode = extractStatusCode(response);
+          const isSuccessfulResponse = statusCode >= SUCCESS_STATUS_MIN && statusCode <= SUCCESS_STATUS_MAX;
+          const testStatus =
+            (testData.valid && isSuccessfulResponse) ||
+            (!testData.valid && statusCode >= CLIENT_ERROR_STATUS_MIN && statusCode <= CLIENT_ERROR_STATUS_MAX)
+              ? TestStatus.Pass
+              : statusCode >= SERVER_ERROR_STATUS_MIN
+                ? TestStatus.Bug
+                : TestStatus.Fail;
+
+          results.push({
+            actual: response.status,
+            expected: testData.valid ? EXPECTED_SUCCESS_RESPONSE : EXPECTED_CLIENT_ERROR_RESPONSE,
+            decoded: decodedResponse,
+            field: fieldName,
+            request: modifiedRequest,
+            response: typeof response.body === 'string' ? response.body : JSON.stringify(response.body, null, 2),
+            responseTime,
+            status: testStatus,
+            value: testValue,
+          });
+        } catch (error) {
+          results.push({
+            actual: 'Error',
+            expected: testData.valid ? EXPECTED_SUCCESS_RESPONSE : EXPECTED_CLIENT_ERROR_RESPONSE,
+            field: fieldName,
+            request: modifiedRequest,
+            response: String(error),
+            responseTime: 0,
+            status: TestStatus.Bug,
+            value: testValue,
+          });
+        }
       }
     }
   }
@@ -335,47 +291,38 @@ export async function runDataDrivenTests(
   // Test query parameters with various data types
   for (const [queryParam, dataType] of Object.entries(queryMappings)) {
     if (dataType === 'do-not-test') continue;
-    const queryTestDataset = datasets[dataType] || [];
 
-    for (const queryTestData of queryTestDataset) {
+    const testDataset = datasets[dataType] || [];
+
+    for (const testData of testDataset) {
       currentTestCounter++;
       setCurrentTest?.(currentTestCounter);
 
-      const queryTestValue = queryTestData.value;
+      const testValue = testData.value;
       const urlWithQueryParam = new URL(url);
-      urlWithQueryParam.searchParams.set(queryParam, String(queryTestValue));
+      urlWithQueryParam.searchParams.set(queryParam, String(testValue));
 
-      const queryRequestStart = performance.now();
-      const queryRequestBody = isForm ? convertFormEntriesToUrlEncoded(formEntries) : parsedBody;
-      const queryResponse = await window.electronAPI.sendHttp({
-        url: urlWithQueryParam.toString(),
-        method,
-        headers,
-        body: queryRequestBody,
-      });
-      const queryRequestEnd = performance.now();
-      const queryResponseTime = queryRequestEnd - queryRequestStart;
-
-      const queryStatusCode = extractStatusCode(queryResponse);
-      const isQueryResponseSuccessful = queryStatusCode >= SUCCESS_STATUS_MIN && queryStatusCode <= SUCCESS_STATUS_MAX;
-      const queryTestStatus =
-        (queryTestData.valid && isQueryResponseSuccessful) ||
-        (!queryTestData.valid &&
-          queryStatusCode >= CLIENT_ERROR_STATUS_MIN &&
-          queryStatusCode <= CLIENT_ERROR_STATUS_MAX)
+      const modifiedRequest: TestRequest = { ...request, url: urlWithQueryParam.toString() };
+      const requestStartTime = performance.now();
+      const response = await window.electronAPI.sendHttp(modifiedRequest);
+      const responseTime = performance.now() - requestStartTime;
+      const statusCode = extractStatusCode(response);
+      const isSuccessfulResponse = statusCode >= SUCCESS_STATUS_MIN && statusCode <= SUCCESS_STATUS_MAX;
+      const testStatus =
+        (testData.valid && isSuccessfulResponse) ||
+        (!testData.valid && statusCode >= CLIENT_ERROR_STATUS_MIN && statusCode <= CLIENT_ERROR_STATUS_MAX)
           ? TestStatus.Pass
           : TestStatus.Fail;
 
       results.push({
-        actual: queryResponse.status,
-        expected: queryTestData.valid ? EXPECTED_SUCCESS_RESPONSE : EXPECTED_CLIENT_ERROR_RESPONSE,
+        actual: response.status,
+        expected: testData.valid ? EXPECTED_SUCCESS_RESPONSE : EXPECTED_CLIENT_ERROR_RESPONSE,
         field: `query.${queryParam}`,
-        request: { url: urlWithQueryParam.toString(), method, headers, body: queryRequestBody },
-        response:
-          typeof queryResponse.body === 'string' ? queryResponse.body : JSON.stringify(queryResponse.body, null, 2),
-        responseTime: queryResponseTime,
-        status: queryTestStatus,
-        value: queryTestValue,
+        request: modifiedRequest,
+        response: typeof response.body === 'string' ? response.body : JSON.stringify(response.body, null, 2),
+        responseTime,
+        status: testStatus,
+        value: testValue,
       });
     }
   }

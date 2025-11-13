@@ -1,13 +1,9 @@
-import { Method } from 'axios';
 import { useState } from 'react';
 import { runDataDrivenTests, runLoadTest, runPerformanceInsights, runSecurityTests } from '../tests';
-import { Test } from '../types';
+import { Test, TestRequest } from '../types';
 
 const useTests = (
-  method: Method,
-  url: string,
-  headers: Record<string, string>,
-  body: string,
+  request: TestRequest,
   fieldMappings: Record<string, string>,
   queryMappings: Record<string, string>,
   messageType: string,
@@ -48,10 +44,7 @@ const useTests = (
     setCurrentTest(0);
 
     const dataDrivenTestResults = await runDataDrivenTests(
-      method,
-      url,
-      headers,
-      body,
+      request,
       fieldMappings,
       queryMappings,
       messageType,
@@ -81,10 +74,7 @@ const useTests = (
     });
 
     const loadTestResult = await runLoadTest(
-      method,
-      url,
-      headers,
-      body,
+      request,
       fieldMappings,
       messageType,
       protoFile,
@@ -104,6 +94,8 @@ const useTests = (
   }
 
   async function executePerformanceTests() {
+    const { url } = request;
+
     setIsPerformanceRunning(true);
     setPerformanceTests([]);
 
@@ -118,7 +110,7 @@ const useTests = (
     setSecurityTests([]);
     setCrudTests([]);
 
-    const { securityTestResults, crudTestResults } = await runSecurityTests(method, url, headers, body);
+    const { securityTestResults, crudTestResults } = await runSecurityTests(request);
     setSecurityTests(securityTestResults);
     setCrudTests(crudTestResults);
 

@@ -77,41 +77,6 @@ export function truncateValue(value: any, maxLength = 100): string {
 }
 
 /**
- * Formats and beautifies request body content based on Content-Type header
- *
- * This utility function automatically detects the content type from headers
- * and applies appropriate formatting:
- * - For 'application/x-www-form-urlencoded': sorts and normalizes form data
- * - For JSON content: pretty-prints with proper indentation
- * - Gracefully handles malformed JSON without throwing errors
- *
- * @param body - The raw body content to format
- * @param headers - Parsed headers object for Content-Type detection
- * @returns Formatted body content string
- */
-export function formatRequestBody(body: string, headers: Record<string, string>): string {
-  const contentType = (headers['Content-Type'] || headers['content-type'] || '').toString();
-
-  // Handle form URL-encoded content
-  if (/application\/x-www-form-urlencoded/i.test(contentType)) {
-    return body
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter(Boolean)
-      .sort()
-      .join('\n');
-  }
-
-  // Handle JSON content (default case)
-  try {
-    return JSON.stringify(JSON.parse(body), null, 2);
-  } catch {
-    // Return original content if JSON parsing fails
-    return body;
-  }
-}
-
-/**
  * Attempts to parse a value as JSON, returning the parsed object/array if successful
  *
  * This utility safely parses JSON strings into JavaScript objects or arrays.
@@ -128,16 +93,34 @@ export function formatRequestBody(body: string, headers: Record<string, string>)
  * @returns Parsed object/array if the string contains valid JSON object/array, otherwise returns original value
  */
 export function tryParseJsonObject(value: any): any {
-  if (typeof value === 'object' && value !== null) return value;
-
+  if (isObject(value)) return value;
   if (typeof value !== 'string') return value;
 
   try {
     const parsed = JSON.parse(value);
-    if (typeof parsed === 'object' && parsed !== null) return parsed;
+    if (isObject(parsed)) return parsed;
 
     return value;
   } catch {
     return value;
   }
+}
+
+/**
+ * Type guard to check if a value is a plain object (not null, or other object types)
+ *
+ * This function performs a strict check to determine if a value is a plain JavaScript object.
+ * It returns false for:
+ * - null
+ * - undefined
+ * - Primitives (string, number, boolean)
+ * - Built-in objects (Date, RegExp, Map, Set, etc.)
+ *
+ * It returns true only for plain objects like {}, {key: value}, etc.
+ *
+ * @param value - The value to check
+ * @returns True if value is a plain object, false otherwise
+ */
+export function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
 }

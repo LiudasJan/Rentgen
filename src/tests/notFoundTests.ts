@@ -1,16 +1,11 @@
-import { Method } from 'axios';
-import { Test, TestStatus } from '../types';
-import { extractStatusCode, tryParseJsonObject } from '../utils';
+import { Test, TestRequest, TestStatus } from '../types';
+import { extractStatusCode } from '../utils';
 
 const NOT_FOUND_TEST_NAME = '404 Not Found';
 const NOT_FOUND_TEST_EXPECTED = '404 Not Found';
 
-export async function runNotFoundTest(
-  method: Method,
-  url: string,
-  headers: Record<string, string>,
-  body: string,
-): Promise<Test> {
+export async function runNotFoundTest(request: TestRequest): Promise<Test> {
+  const { url } = request;
   let testUrl = url;
 
   try {
@@ -25,36 +20,31 @@ export async function runNotFoundTest(
     testUrl = url.endsWith('/') ? `${url}NOT_FOUND` : `${url}/NOT_FOUND`;
   }
 
-  const startTime = performance.now();
-  const request = { url: testUrl, method, headers, body: tryParseJsonObject(body) };
+  const modifiedRequest: TestRequest = { ...request, url: testUrl };
 
   try {
-    const response = await window.electronAPI.sendHttp(request);
+    const startTime = performance.now();
+    const response = await window.electronAPI.sendHttp(modifiedRequest);
     const responseTime = performance.now() - startTime;
     const statusCode = extractStatusCode(response);
-    const statusText = response.status?.split(' ').slice(1).join(' ') || '';
-    const status =
-      statusCode === 404 ? TestStatus.Pass : statusCode === 0 ? TestStatus.FailNoResponse : TestStatus.Fail;
 
     return {
-      actual: `${statusCode} ${statusText}`,
+      actual: `${statusCode} ${response.status?.split(' ').slice(1).join(' ') || ''}`,
       expected: NOT_FOUND_TEST_EXPECTED,
       name: NOT_FOUND_TEST_NAME,
-      request,
+      request: modifiedRequest,
       response,
       responseTime,
-      status,
+      status: statusCode === 404 ? TestStatus.Pass : statusCode === 0 ? TestStatus.FailNoResponse : TestStatus.Fail,
     };
   } catch (error) {
-    const responseTime = performance.now() - startTime;
-
     return {
       actual: `Unexpected error: ${String(error)}`,
       expected: NOT_FOUND_TEST_EXPECTED,
       name: NOT_FOUND_TEST_NAME,
-      request,
+      request: modifiedRequest,
       response: null,
-      responseTime,
+      responseTime: 0,
       status: TestStatus.Fail,
     };
   }
