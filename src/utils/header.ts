@@ -127,14 +127,13 @@ export function formatBodyByContentType(body: string, headers: Record<string, st
   const contentType = getHeaderValue(headers, 'content-type');
 
   // Handle form URL-encoded content
-  if (/application\/x-www-form-urlencoded/i.test(contentType)) {
+  if (/application\/x-www-form-urlencoded/i.test(contentType))
     return body
       .split(/\r?\n/)
       .map((line) => line.trim())
       .filter(Boolean)
       .sort()
       .join('\n');
-  }
 
   // Handle JSON content (default case)
   try {
