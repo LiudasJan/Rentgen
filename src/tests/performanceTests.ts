@@ -11,6 +11,8 @@ import {
   setDeepObjectProperty,
 } from '../utils';
 
+export const LOAD_TEST_NAME = 'Load test';
+
 const EXCELLENT_RESPONSE_TIME_MS = 500;
 const ACCEPTABLE_RESPONSE_TIME_MS = 1000;
 const MAX_PING_LATENCY_MS = 100;
@@ -75,7 +77,7 @@ export async function runPerformanceInsights(url: string, testResults: Test[]): 
   results.push({
     actual: '', // Empty until test is executed
     expected: `Median <${EXCELLENT_RESPONSE_TIME_MS} ms (Pass), <${ACCEPTABLE_RESPONSE_TIME_MS} ms (Warning), ≥${ACCEPTABLE_RESPONSE_TIME_MS} ms (Fail)`,
-    name: 'Load test',
+    name: LOAD_TEST_NAME,
     status: TestStatus.Manual, // Requires manual execution
   });
 
@@ -188,7 +190,7 @@ export async function runLoadTest(
   return {
     actual: `${concurrency} threads, ${totalRequests} total req. Executed: ${responseTimes.length} req → p50=${p50.toFixed(0)}ms p90=${p90.toFixed(0)}ms p95=${p95.toFixed(0)}ms avg=${averageResponseTime.toFixed(0)}ms, 4xx=${client4xxFailures}, 5xx=${server5xxFailures}`,
     expected: `Median <${EXCELLENT_RESPONSE_TIME_MS} ms (Pass), <${ACCEPTABLE_RESPONSE_TIME_MS} ms (Warning), ≥${ACCEPTABLE_RESPONSE_TIME_MS} ms (Fail)`,
-    name: 'Load test',
+    name: LOAD_TEST_NAME,
     status: testStatus,
   };
 }

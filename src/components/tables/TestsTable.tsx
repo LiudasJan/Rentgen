@@ -132,11 +132,6 @@ export function getTestsTableColumns(visibleColumns: string[] = []): TableColumn
       selector: (row) => row.status,
       width: '150px',
       omit: true,
-      cell: (row) => {
-        if (row.name === 'Load test') return <div></div>;
-
-        return row.status;
-      },
     },
   ];
 

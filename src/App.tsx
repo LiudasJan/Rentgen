@@ -14,6 +14,7 @@ import Modal from './components/modals/Modal';
 import ResponsePanel from './components/panels/ResponsePanel';
 import TestsTable, { ExpandedTestComponent, getTestsTableColumns } from './components/tables/TestsTable';
 import useTests from './hooks/useTests';
+import { LOAD_TEST_NAME } from './tests';
 import { extractCurl, formatBodyByContentType, loadProtoSchema, parseBodyByContentType, parseHeaders } from './utils';
 
 type Mode = 'HTTP' | 'WSS';
@@ -405,7 +406,7 @@ export default function App() {
                   selector: (row) => row.status,
                   width: '220px',
                   cell: (row) => {
-                    if (row.name === 'Load test')
+                    if (row.name === LOAD_TEST_NAME)
                       return <LoadTestControls isRunning={isLoadTestRunning} executeTest={executeLoadTest} />;
 
                     return row.status;
