@@ -39,10 +39,9 @@ export async function runDataDrivenTests(
   // Calculate total number of tests (BODY + QUERY parameters)
   let testCount = 0;
 
-  for (const [fieldName, dataType] of Object.entries(fieldMappings)) {
+  for (const [, dataType] of Object.entries(fieldMappings)) {
     if (dataType === 'do-not-test' || dataType === 'random32') continue;
-    if (!isForm && !fieldName.startsWith('form.')) testCount += (datasets[dataType] || []).length;
-    if (isForm && fieldName.startsWith('form.')) testCount += (datasets[dataType] || []).length;
+    testCount += (datasets[dataType] || []).length;
   }
 
   for (const [, dataType] of Object.entries(queryMappings)) {

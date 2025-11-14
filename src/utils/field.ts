@@ -7,7 +7,11 @@ export type FieldType =
   | 'boolean'
   | 'currency'
   | 'date_yyyy_mm_dd'
-  | 'string';
+  | 'string'
+  | 'do-not-test'
+  | 'random32'
+  | 'randomInt'
+  | 'randomEmail';
 
 interface FieldDetector {
   type: FieldType;

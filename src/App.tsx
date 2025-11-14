@@ -15,7 +15,14 @@ import ResponsePanel from './components/panels/ResponsePanel';
 import TestsTable, { ExpandedTestComponent, getTestsTableColumns } from './components/tables/TestsTable';
 import useTests from './hooks/useTests';
 import { LOAD_TEST_NAME } from './tests';
-import { extractCurl, formatBodyByContentType, loadProtoSchema, parseBodyByContentType, parseHeaders } from './utils';
+import {
+  extractCurl,
+  FieldType,
+  formatBodyByContentType,
+  loadProtoSchema,
+  parseBodyByContentType,
+  parseHeaders,
+} from './utils';
 
 type Mode = 'HTTP' | 'WSS';
 
@@ -34,7 +41,7 @@ const methodOptions: SelectOption<Method>[] = [
   { value: 'OPTIONS', label: 'OPTIONS', className: 'text-method-options!' },
 ];
 
-const parameterOptions: SelectOption<string>[] = [
+const parameterOptions: SelectOption<FieldType>[] = [
   { value: 'do-not-test', label: 'Do not test' },
   { value: 'random32', label: 'Random string 32' },
   { value: 'randomInt', label: 'Random integer' },
