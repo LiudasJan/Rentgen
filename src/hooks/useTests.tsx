@@ -160,7 +160,7 @@ const useTests = (
     return `${loadBar} (${setRequestCount}/${requestCount})`;
   }
 
-  function getDataDrivenTestsCount(mappings: Record<string, string>): number {
+  function getDataDrivenTestsCount(mappings: Record<string, FieldType>): number {
     let dataDrivenTestsCount = 0;
     for (const [, dataType] of Object.entries(mappings)) {
       if (dataType === 'do-not-test') continue;
