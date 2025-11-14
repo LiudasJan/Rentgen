@@ -24,6 +24,11 @@ export interface TestResult {
   value?: any;
 }
 
+export interface TestData {
+  value: any;
+  valid: boolean;
+}
+
 export interface HttpRequest {
   body?: Record<string, unknown> | string | Uint8Array | null;
   headers: Record<string, string>;

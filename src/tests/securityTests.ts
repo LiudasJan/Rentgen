@@ -46,7 +46,7 @@ export async function runSecurityTests(
       crudTestResults.push(...getCrudTestResults(allowHeader, request.url, request.headers, response));
     else
       crudTestResults.push(
-        createTestResult(
+        createSecurityTestResult(
           CRUD_TEST_NAME,
           CRUD_TEST_EXPECTED,
           'CRUD not available — OPTIONS test failed',
@@ -55,7 +55,12 @@ export async function runSecurityTests(
       );
   } catch (error) {
     securityTestResults.push(
-      createTestResult('Security test error', 'Should respond', `Unexpected error: ${String(error)}`, TestStatus.Bug),
+      createSecurityTestResult(
+        'Security test error',
+        'Should respond',
+        `Unexpected error: ${String(error)}`,
+        TestStatus.Bug,
+      ),
     );
   }
 
@@ -75,7 +80,7 @@ export async function runSecurityTests(
 function testServerHeaderSecurity(request: HttpRequest, response: any): TestResult {
   const serverHeader = getHeaderValue(response.headers, 'server');
 
-  return createTestResult(
+  return createSecurityTestResult(
     'No sensitive server headers',
     'Server header should not expose version',
     serverHeader || 'No Server header',
@@ -90,7 +95,7 @@ function testClickjackingProtection(request: HttpRequest, response: any): TestRe
   const contentSecurityPolicy = getHeaderValue(response.headers, 'content-security-policy');
   const { actual, status } = validateClickjackingProtection(xFrameOptions, contentSecurityPolicy);
 
-  return createTestResult(
+  return createSecurityTestResult(
     'Clickjacking protection',
     'X-Frame-Options DENY/SAMEORIGIN or CSP frame-ancestors',
     actual,
@@ -103,7 +108,7 @@ function testClickjackingProtection(request: HttpRequest, response: any): TestRe
 function testHSTS(request: HttpRequest, response: any): TestResult {
   const hsts = getHeaderValue(response.headers, 'strict-transport-security');
 
-  return createTestResult(
+  return createSecurityTestResult(
     'HSTS (Strict-Transport-Security)',
     'Header should be present on HTTPS endpoints',
     hsts || 'Missing',
@@ -117,7 +122,7 @@ function testMimeSniffing(request: HttpRequest, response: any): TestResult {
   const xContentTypeOptions = getHeaderValue(response.headers, 'x-content-type-options');
   const { actual, status } = validateMimeSniffing(xContentTypeOptions);
 
-  return createTestResult(
+  return createSecurityTestResult(
     'MIME sniffing protection',
     'X-Content-Type-Options: nosniff',
     actual,
@@ -131,7 +136,7 @@ function testCacheControl(request: HttpRequest, response: any): TestResult {
   const cacheControl = getHeaderValue(response.headers, 'cache-control');
   const { actual, status } = validateCacheControl(cacheControl, request.method);
 
-  return createTestResult(
+  return createSecurityTestResult(
     'Cache-Control for private API',
     'Cache-Control: no-store/private',
     actual,
@@ -151,7 +156,7 @@ async function testOptionsMethod(request: HttpRequest): Promise<{ test: TestResu
   const isValid = ACCEPTABLE_OPTIONS_STATUS_CODES.includes(statusCode) && Boolean(allowHeader);
 
   return {
-    test: createTestResult(
+    test: createSecurityTestResult(
       'OPTIONS method handling',
       '200 or 204 + Allow header',
       response.status,
@@ -168,7 +173,7 @@ async function testUnsupportedMethod(request: HttpRequest): Promise<TestResult> 
   const response = await window.electronAPI.sendHttp(modifiedRequest);
   const statusCode = extractStatusCode(response);
 
-  return createTestResult(
+  return createSecurityTestResult(
     'Unsupported method handling',
     '405 Method Not Allowed (or 501)',
     response.status,
@@ -191,7 +196,7 @@ async function testLargePayload(request: HttpRequest): Promise<TestResult> {
   const response = await window.electronAPI.sendHttp(modifiedRequest);
   const statusCode = extractStatusCode(response);
 
-  return createTestResult(
+  return createSecurityTestResult(
     `Request size limit (${LARGE_PAYLOAD_SIZE_MB} MB)`,
     '413 Payload Too Large',
     response.status,
@@ -216,7 +221,7 @@ async function testMissingAuthorization(request: HttpRequest): Promise<TestResul
     const response = await window.electronAPI.sendHttp(modifiedRequest);
     const statusCode = extractStatusCode(response);
 
-    return createTestResult(
+    return createSecurityTestResult(
       AUTHORIZATION_TEST_NAME,
       AUTHORIZATION_TEST_EXPECTED,
       response.status,
@@ -225,7 +230,7 @@ async function testMissingAuthorization(request: HttpRequest): Promise<TestResul
       response,
     );
   } catch (error) {
-    return createTestResult(
+    return createSecurityTestResult(
       AUTHORIZATION_TEST_NAME,
       AUTHORIZATION_TEST_EXPECTED,
       `Unexpected error: ${String(error)}`,
@@ -249,7 +254,7 @@ async function testCors(request: HttpRequest): Promise<TestResult> {
       response.headers?.['access-control-allow-origin'] || response.headers?.['Access-Control-Allow-Origin'];
 
     if (!acaoHeader)
-      return createTestResult(
+      return createSecurityTestResult(
         CORS_TEST_NAME,
         CORS_TEST_EXPECTED,
         'CORS error → API is private (restricted by origin)',
@@ -258,7 +263,7 @@ async function testCors(request: HttpRequest): Promise<TestResult> {
         null,
       );
 
-    return createTestResult(
+    return createSecurityTestResult(
       CORS_TEST_NAME,
       CORS_TEST_EXPECTED,
       'No CORS error → API is public (accessible from any domain)',
@@ -267,7 +272,7 @@ async function testCors(request: HttpRequest): Promise<TestResult> {
       response,
     );
   } catch (error) {
-    return createTestResult(
+    return createSecurityTestResult(
       CORS_TEST_NAME,
       CORS_TEST_EXPECTED,
       `Unexpected error: ${String(error)}`,
@@ -285,7 +290,7 @@ async function testNotFound(request: HttpRequest): Promise<TestResult> {
     const response = await window.electronAPI.sendHttp(modifiedRequest);
     const statusCode = extractStatusCode(response);
 
-    return createTestResult(
+    return createSecurityTestResult(
       NOT_FOUND_TEST_NAME,
       NOT_FOUND_TEST_EXPECTED,
       response.status,
@@ -294,7 +299,7 @@ async function testNotFound(request: HttpRequest): Promise<TestResult> {
       response,
     );
   } catch (error) {
-    return createTestResult(
+    return createSecurityTestResult(
       NOT_FOUND_TEST_NAME,
       NOT_FOUND_TEST_EXPECTED,
       `Unexpected error: ${String(error)}`,
@@ -316,7 +321,7 @@ async function testNotFound(request: HttpRequest): Promise<TestResult> {
   }
 }
 
-function createTestResult(
+function createSecurityTestResult(
   name: string,
   expected: string,
   actual: string,
@@ -399,7 +404,7 @@ function getCrudTestResults(
 
     return allowedMethods.map((method: string) => createCrudTestRow(method, url, headers, body, methodDescriptions));
   } catch {
-    return [createTestResult(CRUD_TEST_NAME, CRUD_TEST_EXPECTED, NOT_AVAILABLE_TEST, TestStatus.Manual)];
+    return [createSecurityTestResult(CRUD_TEST_NAME, CRUD_TEST_EXPECTED, NOT_AVAILABLE_TEST, TestStatus.Manual)];
   }
 
   function createCrudTestRow(
@@ -425,13 +430,18 @@ function getCrudTestResults(
 
 function getManualTests(): TestResult[] {
   return [
-    createTestResult(
+    createSecurityTestResult(
       'Invalid authorization cookie/token',
       AUTHORIZATION_TEST_EXPECTED,
       NOT_AVAILABLE_TEST,
       TestStatus.Manual,
     ),
-    createTestResult("Access other user's data", 'Should return 404 or 403', NOT_AVAILABLE_TEST, TestStatus.Manual),
-    createTestResult('Role-based access control', 'Restricted per role', NOT_AVAILABLE_TEST, TestStatus.Manual),
+    createSecurityTestResult(
+      "Access other user's data",
+      'Should return 404 or 403',
+      NOT_AVAILABLE_TEST,
+      TestStatus.Manual,
+    ),
+    createSecurityTestResult('Role-based access control', 'Restricted per role', NOT_AVAILABLE_TEST, TestStatus.Manual),
   ];
 }

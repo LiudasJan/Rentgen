@@ -69,7 +69,7 @@ export async function runPerformanceInsights(url: string, testResults: TestResul
       actual: `Unexpected error: ${String(error)}`,
       expected: 'Ping should succeed',
       name: 'Ping test error',
-      status: TestStatus.Fail,
+      status: TestStatus.Bug,
     });
   }
 
@@ -137,11 +137,9 @@ export async function runLoadTest(
       }
     }
 
-    const startTime = performance.now();
+    const requestStartTime = performance.now();
     const response = await window.electronAPI.sendHttp({ ...request, body: data });
-    const endTime = performance.now();
-
-    const responseTime = endTime - startTime;
+    const responseTime = performance.now() - requestStartTime;
     responseTimes.push(responseTime);
 
     const statusCode = extractStatusCode(response);
