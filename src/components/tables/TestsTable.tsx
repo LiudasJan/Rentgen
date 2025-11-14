@@ -1,10 +1,10 @@
 import cn from 'classnames';
 import DataTable, { ExpanderComponentProps, TableColumn, TableProps } from 'react-data-table-component';
-import { Test, TestStatus } from '../../types';
-import { generateCurl, truncateValue, tryParseJsonObject } from '../../utils';
+import { TestResult, TestStatus } from '../../types';
+import { extractBodyFromResponse, generateCurl, truncateValue } from '../../utils';
 import { CopyButton } from '../buttons/CopyButton';
 
-export default function TestsTable({ columns, data, className, ...otherProps }: TableProps<Test>) {
+export default function TestsTable({ columns, data, className, ...otherProps }: TableProps<TestResult>) {
   return (
     <DataTable
       className={cn('border-t border-border rounded-t-none!', className)}
@@ -52,12 +52,11 @@ export default function TestsTable({ columns, data, className, ...otherProps }: 
   );
 }
 
-export function ExpandedTestComponent({ data }: ExpanderComponentProps<Test>) {
+export function ExpandedTestComponent({ data }: ExpanderComponentProps<TestResult>) {
   const { decoded, request, response } = data;
+  const modifiedResponse = response ? { ...response } : null;
 
-  let modifiedResponse = response;
-  if (modifiedResponse && modifiedResponse.body && typeof modifiedResponse.body === 'string')
-    modifiedResponse = { ...modifiedResponse, body: tryParseJsonObject(modifiedResponse.body) };
+  if (modifiedResponse) modifiedResponse.body = extractBodyFromResponse(modifiedResponse);
 
   return (
     <div className="p-4 bg-table-data">
@@ -95,8 +94,8 @@ export function ExpandedTestComponent({ data }: ExpanderComponentProps<Test>) {
   );
 }
 
-export function getTestsTableColumns(visibleColumns: string[] = []): TableColumn<Test>[] {
-  const columns: TableColumn<Test>[] = [
+export function getTestsTableColumns(visibleColumns: string[] = []): TableColumn<TestResult>[] {
+  const columns: TableColumn<TestResult>[] = [
     {
       name: 'Field',
       selector: (row) => row.field,

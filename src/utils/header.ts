@@ -57,7 +57,7 @@ export function parseHeaders(headers: string): Record<string, string> {
  * @returns String value of the header, or empty string if header not found
  *
  */
-export function getHeaderValue(headers: Record<string, any>, headerName: string): string {
+export function getHeaderValue(headers: Record<string, string>, headerName: string): string {
   const matchingKey = Object.keys(headers).find((key) => key.toLowerCase() === headerName.toLowerCase());
   return matchingKey ? String(headers[matchingKey]) : '';
 }
@@ -141,5 +141,30 @@ export function formatBodyByContentType(body: string, headers: Record<string, st
   } catch {
     // Return original content if JSON parsing fails
     return body;
+  }
+}
+
+/**
+ * Extracts and normalizes the body content from an HTTP response object
+ *
+ * This function safely extracts the body from various response formats and normalizes it
+ * into a consistent object structure. It handles multiple body formats:
+ * - String bodies (typically JSON): attempts to parse into an object
+ * - Object bodies: returns as-is
+ * - Missing or invalid bodies: returns empty object
+ *
+ * The function is designed to be fail-safe, catching any JSON parsing errors
+ * and returning an empty object rather than throwing exceptions. This makes it
+ * particularly useful when working with responses that may have unpredictable formats.
+ *
+ * @param response - HTTP response object that may contain a body property
+ * @returns Parsed body as an object, or empty object if extraction/parsing fails
+ */
+export function extractBodyFromResponse(response: any): Record<string, unknown> {
+  try {
+    if (typeof response?.body === 'string') return JSON.parse(response.body);
+    if (response?.body && typeof response.body === 'object') return response.body;
+  } catch {
+    return {};
   }
 }

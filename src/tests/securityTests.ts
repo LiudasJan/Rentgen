@@ -1,6 +1,16 @@
-import { runCorsTest, runNotFoundTest } from '.';
-import { HttpRequest, Test, TestStatus } from '../types';
-import { extractStatusCode } from '../utils';
+import { Method } from 'axios';
+import { HttpRequest, TestResult, TestStatus } from '../types';
+import { extractBodyFromResponse, extractStatusCode, getHeaderValue } from '../utils';
+
+const AUTHORIZATION_TEST_NAME = 'Missing authorization cookie/token';
+const AUTHORIZATION_TEST_EXPECTED = 'Should return 401 Unauthorized';
+const CORS_TEST_NAME = 'CORS policy check';
+const CORS_TEST_EXPECTED = 'Detect if API is public or private';
+const CRUD_TEST_NAME = 'CRUD';
+const CRUD_TEST_EXPECTED = 'Discover via OPTIONS';
+const NOT_FOUND_TEST_NAME = '404 Not Found';
+const NOT_FOUND_TEST_EXPECTED = '404 Not Found';
+const NOT_AVAILABLE_TEST = 'Not available';
 
 const LARGE_PAYLOAD_SIZE_MB = 10;
 const LARGE_PAYLOAD_SIZE_BYTES = LARGE_PAYLOAD_SIZE_MB * 1024 * 1024;
@@ -12,272 +22,357 @@ const ACCEPTABLE_OPTIONS_STATUS_CODES = [200, 204];
 
 export async function runSecurityTests(
   request: HttpRequest,
-): Promise<{ securityTestResults: Test[]; crudTestResults: Test[] }> {
-  const { url, method, headers, body } = request;
-  const securityTestResults: Test[] = [];
-  const crudTestResults: Test[] = [];
+): Promise<{ securityTestResults: TestResult[]; crudTestResults: TestResult[] }> {
+  const securityTestResults: TestResult[] = [];
+  const crudTestResults: TestResult[] = [];
 
   try {
     const response = await window.electronAPI.sendHttp(request);
 
-    // 1. Check Server header for version information exposure
-    const serverHeader = response.headers?.['server'] || response.headers?.['Server'] || '';
-    securityTestResults.push({
-      actual: serverHeader || 'No Server header',
-      expected: 'Server header should not expose version',
-      name: 'No sensitive server headers',
-      request,
-      response,
-      status: /\d/.test(serverHeader) ? TestStatus.Fail : TestStatus.Pass,
-    });
+    // Run all header-based security tests
+    securityTestResults.push(
+      testServerHeaderSecurity(request, response),
+      testClickjackingProtection(request, response),
+      testHSTS(request, response),
+      testMimeSniffing(request, response),
+      testCacheControl(request, response),
+    );
 
-    // 2. Check Clickjacking protection
-    const xFrameOptions = response.headers?.['x-frame-options'] || response.headers?.['X-Frame-Options'];
-    const contentSecurityPolicy =
-      response.headers?.['content-security-policy'] || response.headers?.['Content-Security-Policy'];
+    // Test OPTIONS method and get CRUD results
+    const { test, allowHeader } = await testOptionsMethod(request);
+    securityTestResults.push(test);
 
-    let clickjackingStatus = TestStatus.Warning;
-    let actualClickjacking = 'Missing';
-
-    if (xFrameOptions) {
-      const headerValue = xFrameOptions.toUpperCase();
-      if (headerValue === 'DENY' || headerValue === 'SAMEORIGIN') clickjackingStatus = TestStatus.Pass;
-
-      actualClickjacking = `X-Frame-Options: ${headerValue}`;
-    } else if (contentSecurityPolicy && contentSecurityPolicy.includes('frame-ancestors')) {
-      if (/frame-ancestors\s+('none'|'self')/i.test(contentSecurityPolicy)) clickjackingStatus = TestStatus.Pass;
-
-      actualClickjacking = `CSP: ${contentSecurityPolicy}`;
-    }
-
-    securityTestResults.push({
-      actual: actualClickjacking,
-      expected: 'X-Frame-Options DENY/SAMEORIGIN or CSP frame-ancestors',
-      name: 'Clickjacking protection',
-      request,
-      response,
-      status: clickjackingStatus,
-    });
-
-    // 3. Check HSTS (HTTP Strict Transport Security)
-    const hstsHeader =
-      response.headers?.['strict-transport-security'] || response.headers?.['Strict-Transport-Security'];
-    securityTestResults.push({
-      actual: hstsHeader ? hstsHeader : 'Missing',
-      expected: 'Header should be present on HTTPS endpoints',
-      name: 'HSTS (Strict-Transport-Security)',
-      request,
-      response,
-      status: hstsHeader ? TestStatus.Pass : TestStatus.Warning,
-    });
-
-    // 4. Check MIME sniffing protection
-    const xContentTypeOptions =
-      response.headers?.['x-content-type-options'] || response.headers?.['X-Content-Type-Options'];
-
-    let mimeSniffingStatus = TestStatus.Fail;
-    let actualMimeSniffing = 'Missing';
-
-    if (xContentTypeOptions) {
-      if (xContentTypeOptions.toLowerCase() === 'nosniff') {
-        mimeSniffingStatus = TestStatus.Pass;
-        actualMimeSniffing = `X-Content-Type-Options: ${xContentTypeOptions}`;
-      } else {
-        mimeSniffingStatus = TestStatus.Fail;
-        actualMimeSniffing = `Unexpected: ${xContentTypeOptions}`;
-      }
-    }
-
-    securityTestResults.push({
-      actual: actualMimeSniffing,
-      expected: 'X-Content-Type-Options: nosniff',
-      name: 'MIME sniffing protection',
-      request,
-      response,
-      status: mimeSniffingStatus,
-    });
-
-    // 5. Check Cache-Control settings for API security
-    const cacheControlHeader = response.headers?.['cache-control'] || response.headers?.['Cache-Control'];
-
-    let cacheControlStatus = TestStatus.Warning;
-    let actualCacheControl = 'Missing';
-
-    if (cacheControlHeader) {
-      if (cacheControlHeader.includes('no-store') || cacheControlHeader.includes('private'))
-        cacheControlStatus = TestStatus.Pass;
-      else cacheControlStatus = TestStatus.Fail;
-
-      actualCacheControl = cacheControlHeader;
-    } else {
-      if (['GET', 'HEAD'].includes(method.toUpperCase()))
-        cacheControlStatus = TestStatus.Fail; // Dangerous for GET/HEAD methods
-      else cacheControlStatus = TestStatus.Warning; // Safe by default, but better to specify
-    }
-
-    securityTestResults.push({
-      actual: actualCacheControl,
-      expected: 'Cache-Control: no-store/private',
-      name: 'Cache-Control for private API',
-      request,
-      response,
-      status: cacheControlStatus,
-    });
-
-    // 6. OPTIONS method
-    const optionsRequest: HttpRequest = { url, method: 'OPTIONS', headers };
-    const optionsResponse = await window.electronAPI.sendHttp(optionsRequest);
-
-    // Accept both 200 and 204 status codes, but require Allow header
-    const optionsStatusCode = extractStatusCode(optionsResponse);
-    const allowHeader =
-      optionsResponse.headers?.['allow'] ||
-      optionsResponse.headers?.['Allow'] ||
-      optionsResponse.headers?.['access-control-allow-methods'] ||
-      optionsResponse.headers?.['Access-Control-Allow-Methods'];
-    const isOptionsValid = ACCEPTABLE_OPTIONS_STATUS_CODES.includes(optionsStatusCode) && Boolean(allowHeader);
-
-    securityTestResults.push({
-      actual: optionsResponse.status,
-      expected: '200 or 204 + Allow header',
-      name: 'OPTIONS method handling',
-      request: optionsRequest,
-      response: optionsResponse,
-      status: isOptionsValid ? TestStatus.Pass : TestStatus.Fail,
-    });
-
-    if (isOptionsValid) crudTestResults.push(...getCrudTestResults(allowHeader, url, headers, response));
+    if (test.status === TestStatus.Pass)
+      crudTestResults.push(...getCrudTestResults(allowHeader, request.url, request.headers, response));
     else
-      crudTestResults.push({
-        actual: 'CRUD not available — OPTIONS test failed',
-        expected: 'Discover via OPTIONS',
-        method: 'CRUD',
-        request: null,
-        response: null,
-        status: TestStatus.Fail,
-      });
-
-    // 7. Unsupported method
-    const invalidMethodRequest: HttpRequest = { ...request, method: 'FOOBAR' };
-    const invalidMethodResponse = await window.electronAPI.sendHttp(invalidMethodRequest);
-    const invalidMethodStatusCode = extractStatusCode(invalidMethodResponse);
-
-    securityTestResults.push({
-      actual: invalidMethodResponse.status,
-      expected: '405 Method Not Allowed (or 501)',
-      name: 'Unsupported method handling',
-      request: invalidMethodRequest,
-      response: invalidMethodResponse,
-      status:
-        invalidMethodStatusCode === EXPECTED_METHOD_NOT_ALLOWED_STATUS ||
-        invalidMethodStatusCode === EXPECTED_NOT_IMPLEMENTED_STATUS
-          ? TestStatus.Pass
-          : TestStatus.Fail,
-    });
+      crudTestResults.push(
+        createTestResult(
+          CRUD_TEST_NAME,
+          CRUD_TEST_EXPECTED,
+          'CRUD not available — OPTIONS test failed',
+          TestStatus.Fail,
+        ),
+      );
   } catch (error) {
-    securityTestResults.push({
-      actual: `Unexpected error: ${String(error)}`,
-      expected: 'Should respond',
-      name: 'Security test error',
-      request: null,
-      response: null,
-      status: TestStatus.Fail,
-    });
+    securityTestResults.push(
+      createTestResult('Security test error', 'Should respond', `Unexpected error: ${String(error)}`, TestStatus.Bug),
+    );
   }
 
-  // 8. Test request size limit with large payload
-  const largePayloadRequest: HttpRequest = {
-    ...request,
+  // Run tests that don't depend on initial response
+  securityTestResults.push(
+    await testUnsupportedMethod(request),
+    await testLargePayload(request),
+    await testMissingAuthorization(request),
+    await testCors(request),
+    await testNotFound(request),
+    ...getManualTests(),
+  );
+
+  return { securityTestResults, crudTestResults };
+}
+
+function testServerHeaderSecurity(request: HttpRequest, response: any): TestResult {
+  const serverHeader = getHeaderValue(response.headers, 'server');
+
+  return createTestResult(
+    'No sensitive server headers',
+    'Server header should not expose version',
+    serverHeader || 'No Server header',
+    /\d/.test(serverHeader) ? TestStatus.Fail : TestStatus.Pass,
+    request,
+    response,
+  );
+}
+
+function testClickjackingProtection(request: HttpRequest, response: any): TestResult {
+  const xFrameOptions = getHeaderValue(response.headers, 'x-frame-options');
+  const contentSecurityPolicy = getHeaderValue(response.headers, 'content-security-policy');
+  const { actual, status } = validateClickjackingProtection(xFrameOptions, contentSecurityPolicy);
+
+  return createTestResult(
+    'Clickjacking protection',
+    'X-Frame-Options DENY/SAMEORIGIN or CSP frame-ancestors',
+    actual,
+    status,
+    request,
+    response,
+  );
+}
+
+function testHSTS(request: HttpRequest, response: any): TestResult {
+  const hsts = getHeaderValue(response.headers, 'strict-transport-security');
+
+  return createTestResult(
+    'HSTS (Strict-Transport-Security)',
+    'Header should be present on HTTPS endpoints',
+    hsts || 'Missing',
+    hsts ? TestStatus.Pass : TestStatus.Warning,
+    request,
+    response,
+  );
+}
+
+function testMimeSniffing(request: HttpRequest, response: any): TestResult {
+  const xContentTypeOptions = getHeaderValue(response.headers, 'x-content-type-options');
+  const { actual, status } = validateMimeSniffing(xContentTypeOptions);
+
+  return createTestResult(
+    'MIME sniffing protection',
+    'X-Content-Type-Options: nosniff',
+    actual,
+    status,
+    request,
+    response,
+  );
+}
+
+function testCacheControl(request: HttpRequest, response: any): TestResult {
+  const cacheControl = getHeaderValue(response.headers, 'cache-control');
+  const { actual, status } = validateCacheControl(cacheControl, request.method);
+
+  return createTestResult(
+    'Cache-Control for private API',
+    'Cache-Control: no-store/private',
+    actual,
+    status,
+    request,
+    response,
+  );
+}
+
+async function testOptionsMethod(request: HttpRequest): Promise<{ test: TestResult; allowHeader: string }> {
+  const { url, headers } = request;
+  const modifiedRequest: HttpRequest = { url, method: 'OPTIONS', headers };
+  const response = await window.electronAPI.sendHttp(modifiedRequest);
+  const statusCode = extractStatusCode(response);
+  const allowHeader =
+    getHeaderValue(response.headers, 'allow') || getHeaderValue(response.headers, 'access-control-allow-methods');
+  const isValid = ACCEPTABLE_OPTIONS_STATUS_CODES.includes(statusCode) && Boolean(allowHeader);
+
+  return {
+    test: createTestResult(
+      'OPTIONS method handling',
+      '200 or 204 + Allow header',
+      response.status,
+      isValid ? TestStatus.Pass : TestStatus.Fail,
+      modifiedRequest,
+      response,
+    ),
+    allowHeader,
+  };
+}
+
+async function testUnsupportedMethod(request: HttpRequest): Promise<TestResult> {
+  const modifiedRequest: HttpRequest = { ...request, method: 'FOOBAR' };
+  const response = await window.electronAPI.sendHttp(modifiedRequest);
+  const statusCode = extractStatusCode(response);
+
+  return createTestResult(
+    'Unsupported method handling',
+    '405 Method Not Allowed (or 501)',
+    response.status,
+    statusCode === EXPECTED_METHOD_NOT_ALLOWED_STATUS || statusCode === EXPECTED_NOT_IMPLEMENTED_STATUS
+      ? TestStatus.Pass
+      : TestStatus.Fail,
+    modifiedRequest,
+    response,
+  );
+}
+
+async function testLargePayload(request: HttpRequest): Promise<TestResult> {
+  const { url, headers } = request;
+  const modifiedRequest: HttpRequest = {
+    url,
     method: 'POST',
     headers: { ...headers, 'Content-Type': 'application/json' },
     body: 'A'.repeat(LARGE_PAYLOAD_SIZE_BYTES),
   };
-  const largePayloadResponse = await window.electronAPI.sendHttp(largePayloadRequest);
-  const largePayloadStatusCode = extractStatusCode(largePayloadResponse);
+  const response = await window.electronAPI.sendHttp(modifiedRequest);
+  const statusCode = extractStatusCode(response);
 
-  securityTestResults.push({
-    actual: largePayloadResponse.status,
-    expected: '413 Payload Too Large',
-    name: `Request size limit (${LARGE_PAYLOAD_SIZE_MB} MB)`,
-    request: {
+  return createTestResult(
+    `Request size limit (${LARGE_PAYLOAD_SIZE_MB} MB)`,
+    '413 Payload Too Large',
+    response.status,
+    statusCode === EXPECTED_PAYLOAD_TOO_LARGE_STATUS ? TestStatus.Pass : TestStatus.Fail,
+    {
       url,
       method: 'POST',
       headers: { ...headers, 'Content-Type': 'application/json' },
-      body: `[${LARGE_PAYLOAD_SIZE_MB}MB string]`,
+      body: `[${LARGE_PAYLOAD_SIZE_MB} MB string]`,
     },
-    response: largePayloadResponse,
-    status: largePayloadStatusCode === EXPECTED_PAYLOAD_TOO_LARGE_STATUS ? TestStatus.Pass : TestStatus.Fail,
-  });
+    response,
+  );
+}
 
-  // 9. Test missing authorization cookie/token
+async function testMissingAuthorization(request: HttpRequest): Promise<TestResult> {
   try {
     const minimalHeaders: Record<string, string> = {};
-    for (const [key, value] of Object.entries(headers))
+    for (const [key, value] of Object.entries(request.headers))
       if (key.toLowerCase() === 'accept' || key.toLowerCase() === 'content-type') minimalHeaders[key] = value;
 
-    const unauthorizedRequest: HttpRequest = {
-      ...request,
-      headers: minimalHeaders,
-    };
-    const unauthorizedResponse = await window.electronAPI.sendHttp(unauthorizedRequest);
-    const unauthorizedStatusCode = extractStatusCode(unauthorizedResponse);
+    const modifiedRequest: HttpRequest = { ...request, headers: minimalHeaders };
+    const response = await window.electronAPI.sendHttp(modifiedRequest);
+    const statusCode = extractStatusCode(response);
 
-    securityTestResults.push({
-      actual: unauthorizedResponse.status,
-      expected: 'Should return 401 Unauthorized',
-      name: 'Missing authorization cookie/token',
-      request: unauthorizedRequest,
-      response: unauthorizedResponse,
-      status: unauthorizedStatusCode === EXPECTED_UNAUTHORIZED_STATUS ? TestStatus.Pass : TestStatus.Fail,
-    });
+    return createTestResult(
+      AUTHORIZATION_TEST_NAME,
+      AUTHORIZATION_TEST_EXPECTED,
+      response.status,
+      statusCode === EXPECTED_UNAUTHORIZED_STATUS ? TestStatus.Pass : TestStatus.Fail,
+      modifiedRequest,
+      response,
+    );
   } catch (error) {
-    securityTestResults.push({
-      actual: `Unexpected error: ${String(error)}`,
-      expected: 'Should return 401 Unauthorized',
-      name: 'Missing authorization cookie/token',
-      request: { url, method, headers: {}, body },
-      response: null,
-      status: TestStatus.Bug,
-    });
+    return createTestResult(
+      AUTHORIZATION_TEST_NAME,
+      AUTHORIZATION_TEST_EXPECTED,
+      `Unexpected error: ${String(error)}`,
+      TestStatus.Bug,
+      { ...request, headers: {} },
+      null,
+    );
+  }
+}
+
+async function testCors(request: HttpRequest): Promise<TestResult> {
+  const { url, method, headers, body } = request;
+  const modifiedHeaders = { ...headers, Origin: 'https://www.qaontime.com/' };
+  const modifiedRequest: HttpRequest = { url, method, headers: modifiedHeaders };
+
+  try {
+    if (body && !['GET', 'HEAD'].includes(method.toUpperCase())) modifiedRequest.body = body;
+
+    const response = await window.electronAPI.sendHttp(modifiedRequest);
+    const acaoHeader =
+      response.headers?.['access-control-allow-origin'] || response.headers?.['Access-Control-Allow-Origin'];
+
+    if (!acaoHeader)
+      return createTestResult(
+        CORS_TEST_NAME,
+        CORS_TEST_EXPECTED,
+        'CORS error → API is private (restricted by origin)',
+        TestStatus.Info,
+        modifiedRequest,
+        null,
+      );
+
+    return createTestResult(
+      CORS_TEST_NAME,
+      CORS_TEST_EXPECTED,
+      'No CORS error → API is public (accessible from any domain)',
+      TestStatus.Info,
+      modifiedRequest,
+      response,
+    );
+  } catch (error) {
+    return createTestResult(
+      CORS_TEST_NAME,
+      CORS_TEST_EXPECTED,
+      `Unexpected error: ${String(error)}`,
+      TestStatus.Bug,
+      modifiedRequest,
+    );
+  }
+}
+
+async function testNotFound(request: HttpRequest): Promise<TestResult> {
+  const testUrl = createNotFoundUrl(request.url);
+  const modifiedRequest: HttpRequest = { ...request, url: testUrl };
+
+  try {
+    const response = await window.electronAPI.sendHttp(modifiedRequest);
+    const statusCode = extractStatusCode(response);
+
+    return createTestResult(
+      NOT_FOUND_TEST_NAME,
+      NOT_FOUND_TEST_EXPECTED,
+      response.status,
+      statusCode === 404 ? TestStatus.Pass : statusCode === 0 ? TestStatus.FailNoResponse : TestStatus.Fail,
+      modifiedRequest,
+      response,
+    );
+  } catch (error) {
+    return createTestResult(
+      NOT_FOUND_TEST_NAME,
+      NOT_FOUND_TEST_EXPECTED,
+      `Unexpected error: ${String(error)}`,
+      TestStatus.Bug,
+      modifiedRequest,
+    );
   }
 
-  // 10. Run CORS validation test
-  const corsResult = await runCorsTest(request);
-  securityTestResults.push(corsResult);
+  function createNotFoundUrl(url: string): string {
+    try {
+      const parsedUrl = new URL(url);
+      parsedUrl.pathname = parsedUrl.pathname.endsWith('/')
+        ? `${parsedUrl.pathname}NOT_FOUND`
+        : `${parsedUrl.pathname}/NOT_FOUND`;
+      return parsedUrl.toString();
+    } catch {
+      return url.endsWith('/') ? `${url}NOT_FOUND` : `${url}/NOT_FOUND`;
+    }
+  }
+}
 
-  // 11. Run 404 Not Found test
-  const notFoundTest = await runNotFoundTest(request);
-  securityTestResults.push(notFoundTest);
+function createTestResult(
+  name: string,
+  expected: string,
+  actual: string,
+  status: TestStatus,
+  request: HttpRequest | null = null,
+  response: any = null,
+): TestResult {
+  return { name, expected, actual, status, request, response };
+}
 
-  // 12. Manual tests (requires human verification) ---
-  securityTestResults.push(
-    {
-      name: 'Invalid authorization cookie/token',
-      expected: 'Should return 401 Unauthorized',
-      actual: 'Not available yet',
-      status: TestStatus.Manual,
-      request: null,
-      response: null,
-    },
-    {
-      name: 'Access other user’s data',
-      expected: 'Should return 404 or 403',
-      actual: 'Not available yet',
-      status: TestStatus.Manual,
-      request: null,
-      response: null,
-    },
-    {
-      name: 'Role-based access control',
-      expected: 'Restricted per role',
-      actual: 'Not available yet',
-      status: TestStatus.Manual,
-      request: null,
-      response: null,
-    },
-  );
+function validateClickjackingProtection(
+  xFrameOptions: string | undefined,
+  contentSecurityPolicy: string | undefined,
+): { actual: string; status: TestStatus } {
+  if (xFrameOptions) {
+    const headerValue = xFrameOptions.toUpperCase();
 
-  return { securityTestResults, crudTestResults };
+    return {
+      actual: `X-Frame-Options: ${headerValue}`,
+      status: headerValue === 'DENY' || headerValue === 'SAMEORIGIN' ? TestStatus.Pass : TestStatus.Warning,
+    };
+  }
+
+  if (contentSecurityPolicy?.includes('frame-ancestors'))
+    return {
+      actual: `CSP: ${contentSecurityPolicy}`,
+      status: /frame-ancestors\s+('none'|'self')/i.test(contentSecurityPolicy) ? TestStatus.Pass : TestStatus.Warning,
+    };
+
+  return { status: TestStatus.Warning, actual: 'Missing' };
+}
+
+function validateMimeSniffing(xContentTypeOptions: string | undefined): { actual: string; status: TestStatus } {
+  if (!xContentTypeOptions) return { status: TestStatus.Fail, actual: 'Missing' };
+
+  const isValid = xContentTypeOptions.toLowerCase() === 'nosniff';
+  return {
+    actual: isValid ? `X-Content-Type-Options: ${xContentTypeOptions}` : `Unexpected: ${xContentTypeOptions}`,
+    status: isValid ? TestStatus.Pass : TestStatus.Fail,
+  };
+}
+
+function validateCacheControl(
+  cacheControl: string | undefined,
+  method: Method | string,
+): { actual: string; status: TestStatus } {
+  if (!cacheControl)
+    return {
+      actual: 'Missing',
+      status: ['GET', 'HEAD'].includes(method.toUpperCase()) ? TestStatus.Fail : TestStatus.Warning,
+    };
+
+  return {
+    actual: cacheControl,
+    status: cacheControl.includes('no-store') || cacheControl.includes('private') ? TestStatus.Pass : TestStatus.Fail,
+  };
 }
 
 function getCrudTestResults(
@@ -285,24 +380,13 @@ function getCrudTestResults(
   url: string,
   headers: Record<string, string>,
   baseResponse: any,
-): Test[] {
+): TestResult[] {
   try {
     const allowedMethods = String(allowHeader || '')
       .split(',')
       .map((s) => s.trim().toUpperCase())
       .filter(Boolean);
-
-    // Try to extract sample body from original response
-    let body = {};
-    try {
-      if (typeof baseResponse?.body === 'string') body = JSON.parse(baseResponse.body);
-      else if (baseResponse?.body && typeof baseResponse.body === 'object') body = baseResponse.body;
-      else body = {};
-    } catch {
-      body = {};
-    }
-
-    // Method descriptions for CRUD operations
+    const body = extractBodyFromResponse(baseResponse);
     const methodDescriptions: Record<string, string> = {
       GET: 'Fetch data',
       POST: 'Create resource',
@@ -313,34 +397,41 @@ function getCrudTestResults(
       OPTIONS: 'Discovery',
     };
 
-    // Build CRUD test rows from allowed methods
-    const rows: Test[] = allowedMethods.map((method: string) => {
-      const request: HttpRequest = { url, method, headers };
-
-      if (!['GET', 'HEAD'].includes(method)) request.body = body && Object.keys(body).length ? body : {};
-
-      return {
-        actual: 'Not available yet',
-        expected: methodDescriptions[method] || 'Custom method',
-        method,
-        request,
-        response: null,
-        status: TestStatus.Manual,
-      } as Test;
-    });
-
-    return rows;
+    return allowedMethods.map((method: string) => createCrudTestRow(method, url, headers, body, methodDescriptions));
   } catch {
-    // Fallback
-    return [
-      {
-        method: 'CRUD',
-        expected: 'Discover via OPTIONS',
-        actual: 'Not available',
-        status: TestStatus.Manual,
-        request: null,
-        response: null,
-      },
-    ];
+    return [createTestResult(CRUD_TEST_NAME, CRUD_TEST_EXPECTED, NOT_AVAILABLE_TEST, TestStatus.Manual)];
   }
+
+  function createCrudTestRow(
+    method: string,
+    url: string,
+    headers: Record<string, string>,
+    body: Record<string, unknown>,
+    methodDescriptions: Record<string, string>,
+  ): TestResult {
+    const request: HttpRequest = { url, method, headers };
+    if (!['GET', 'HEAD'].includes(method)) request.body = Object.keys(body).length ? body : {};
+
+    return {
+      actual: NOT_AVAILABLE_TEST,
+      expected: methodDescriptions[method] || 'Custom method',
+      method,
+      request,
+      response: null,
+      status: TestStatus.Manual,
+    } as TestResult;
+  }
+}
+
+function getManualTests(): TestResult[] {
+  return [
+    createTestResult(
+      'Invalid authorization cookie/token',
+      AUTHORIZATION_TEST_EXPECTED,
+      NOT_AVAILABLE_TEST,
+      TestStatus.Manual,
+    ),
+    createTestResult("Access other user's data", 'Should return 404 or 403', NOT_AVAILABLE_TEST, TestStatus.Manual),
+    createTestResult('Role-based access control', 'Restricted per role', NOT_AVAILABLE_TEST, TestStatus.Manual),
+  ];
 }

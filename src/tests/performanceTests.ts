@@ -1,4 +1,4 @@
-import { HttpRequest, Test, TestStatus } from '../types';
+import { HttpRequest, TestResult, TestStatus } from '../types';
 import {
   calculateMedian,
   calculatePercentile,
@@ -26,11 +26,11 @@ const MAX_EARLY_ABORT_FAILURES = 5;
 const EARLY_ABORT_RESPONSE_TIME_MS = 5000;
 const MIN_REQUESTS_FOR_ABORT_CHECK = 10;
 
-export async function runPerformanceInsights(url: string, testResults: Test[]): Promise<Test[]> {
-  const results: Test[] = [];
+export async function runPerformanceInsights(url: string, testResults: TestResult[]): Promise<TestResult[]> {
+  const results: TestResult[] = [];
 
   // Calculate response time median from test results
-  const responseTimes = testResults.map((result: Test) => result.responseTime).filter(Boolean);
+  const responseTimes = testResults.map((result: TestResult) => result.responseTime).filter(Boolean);
   const medianResponseTime = calculateMedian(responseTimes);
 
   let responseTimeStatus = TestStatus.Fail;
@@ -99,7 +99,7 @@ export async function runLoadTest(
   threadCount: number,
   requestCount: number,
   updateProgress?: (sentRequestCount: number, requestCount: number) => void,
-): Promise<Test> {
+): Promise<TestResult> {
   const { body } = request;
   const concurrency = Math.max(1, Math.min(MAX_CONCURRENCY, Math.floor(threadCount)));
   const totalRequests = Math.max(1, Math.min(MAX_TOTAL_REQUESTS, Math.floor(requestCount)));

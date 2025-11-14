@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { LOAD_TEST_NAME, runDataDrivenTests, runLoadTest, runPerformanceInsights, runSecurityTests } from '../tests';
-import { HttpRequest, Test } from '../types';
+import { HttpRequest, TestResult } from '../types';
 
 const useTests = (
   request: HttpRequest,
@@ -12,18 +12,18 @@ const useTests = (
   const [currentTest, setCurrentTest] = useState<number>(0);
   const [testCount, setTestCount] = useState<number>(0);
 
-  const [crudTests, setCrudTests] = useState<Test[]>([]);
+  const [crudTests, setCrudTests] = useState<TestResult[]>([]);
 
-  const [dataDrivenTests, setDataDrivenTests] = useState<Test[]>([]);
+  const [dataDrivenTests, setDataDrivenTests] = useState<TestResult[]>([]);
   const [isDataDrivenRunning, setIsDataDrivenRunning] = useState<boolean>(false);
 
   const [isLoadTestRunning, setIsLoadTestRunning] = useState<boolean>(false);
   const [loadProgress, setLoadProgress] = useState<number>(0);
 
-  const [performanceTests, setPerformanceTests] = useState<Test[]>([]);
+  const [performanceTests, setPerformanceTests] = useState<TestResult[]>([]);
   const [isPerformanceRunning, setIsPerformanceRunning] = useState<boolean>(false);
 
-  const [securityTests, setSecurityTests] = useState<Test[]>([]);
+  const [securityTests, setSecurityTests] = useState<TestResult[]>([]);
   const [isSecurityRunning, setIsSecurityRunning] = useState<boolean>(false);
 
   async function executeAllTests() {

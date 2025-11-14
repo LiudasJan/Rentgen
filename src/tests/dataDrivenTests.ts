@@ -1,5 +1,5 @@
 import { datasets } from '../constants/datasets';
-import { HttpRequest, Test, TestStatus } from '../types';
+import { HttpRequest, TestResult, TestStatus } from '../types';
 import {
   convertFormEntriesToUrlEncoded,
   decodeMessage,
@@ -30,7 +30,7 @@ export async function runDataDrivenTests(
   protoFile: File | null,
   setCurrentTest?: (value: number) => void,
   setTestCount?: (count: number) => void,
-): Promise<Test[]> {
+): Promise<TestResult[]> {
   const { body, headers, url } = request;
   const contentType = getHeaderValue(headers, 'content-type');
   const isForm = /application\/x-www-form-urlencoded/i.test(contentType);
@@ -52,7 +52,7 @@ export async function runDataDrivenTests(
 
   setTestCount?.(1 + testCount);
 
-  const results: Test[] = [];
+  const results: TestResult[] = [];
 
   // Always send the original request first as baseline test
   try {

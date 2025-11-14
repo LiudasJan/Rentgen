@@ -10,7 +10,7 @@ export enum TestStatus {
   Warning = '🟠 Warning',
 }
 
-export interface Test {
+export interface TestResult {
   actual: string;
   expected: string;
   decoded?: string | null;
