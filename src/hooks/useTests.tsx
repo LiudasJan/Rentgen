@@ -55,7 +55,7 @@ const useTests = (
       queryMappings,
       messageType,
       protoFile,
-      setCurrentTest,
+      incrementCurrentTest,
     );
     setDataDrivenTests(dataDrivenTestResults);
 
@@ -173,6 +173,10 @@ const useTests = (
     }
 
     return dataDrivenTestsCount;
+  }
+
+  function incrementCurrentTest() {
+    setCurrentTest((prevCurrentTest) => prevCurrentTest + 1);
   }
 
   return {
