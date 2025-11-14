@@ -155,3 +155,25 @@ export function convertFormEntriesToUrlEncoded(formEntries: Array<[string, strin
 
   return urlSearchParams.toString();
 }
+
+/**
+ * Converts URL-encoded string to form field entries
+ *
+ * This function is the inverse of convertFormEntriesToUrlEncoded. It takes a URL-encoded
+ * string (application/x-www-form-urlencoded format) and parses it back into an array of
+ * key-value pairs for easier manipulation and processing.
+ *
+ * Features:
+ * - Proper URL decoding of keys and values
+ * - Handles special characters and encoded spaces
+ * - Preserves multiple values for the same key
+ * - Compatible with standard URLSearchParams format
+ *
+ * @param encoded - URL-encoded string (e.g., "key1=value1&key2=value2")
+ * @returns Array of [key, value] tuples representing decoded form fields
+ *
+ */
+export function convertUrlEncodedToFormEntries(encoded: string): Array<[string, string]> {
+  const urlSearchParams = new URLSearchParams(encoded);
+  return Array.from(urlSearchParams.entries());
+}

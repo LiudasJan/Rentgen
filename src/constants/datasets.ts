@@ -1,4 +1,4 @@
-export const datasets: Record<string, { value: unknown; valid: boolean }[]> = {
+export const datasets: Record<string, { value: any; valid: boolean }[]> = {
   email: [
     { value: 'email@qaontime.com', valid: true },
     { value: 'firstname.lastname@qaontime.com', valid: true },

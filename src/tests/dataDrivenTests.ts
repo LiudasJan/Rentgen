@@ -2,6 +2,7 @@ import { datasets } from '../constants/datasets';
 import { HttpRequest, TestResult, TestStatus } from '../types';
 import {
   convertFormEntriesToUrlEncoded,
+  convertUrlEncodedToFormEntries,
   decodeMessage,
   encodeMessage,
   extractStatusCode,
@@ -9,7 +10,6 @@ import {
   generateRandomInteger,
   generateRandomString,
   getHeaderValue,
-  parseFormData,
   setDeepObjectProperty,
 } from '../utils';
 
@@ -34,7 +34,7 @@ export async function runDataDrivenTests(
   const { body, headers, url } = request;
   const contentType = getHeaderValue(headers, 'content-type');
   const isForm = /application\/x-www-form-urlencoded/i.test(contentType);
-  const formEntries = isForm ? parseFormData(String(body)) : [];
+  const formEntries = isForm ? convertUrlEncodedToFormEntries(String(body)) : [];
 
   // Calculate total number of tests (BODY + QUERY parameters)
   let testCount = 0;
@@ -88,7 +88,13 @@ export async function runDataDrivenTests(
     if (dataType === 'do-not-test') continue;
 
     const testDataset =
-      dataType === 'random32' || dataType === 'randomInt' ? [{ dynamic: true, valid: true }] : datasets[dataType] || [];
+      dataType === 'random32'
+        ? [{ value: generateRandomString(), valid: true }]
+        : dataType === 'randomInt'
+          ? [{ value: String(generateRandomInteger()), valid: true }]
+          : dataType === 'randomEmail'
+            ? [{ value: generateRandomEmail(), valid: true }]
+            : datasets[dataType] || [];
 
     if (isForm) {
       if (!fieldName.startsWith('form.')) continue;
@@ -98,27 +104,18 @@ export async function runDataDrivenTests(
         currentTestCounter++;
         setCurrentTest?.(currentTestCounter);
 
-        const testValue = (testData as any).value;
+        const testValue = testData.value;
         const modifiedFormEntries = [...formEntries];
-        const generatedTestValue =
-          dataType === 'randomInt'
-            ? String(generateRandomInteger())
-            : dataType === 'random32'
-              ? generateRandomString()
-              : dataType === 'randomEmail'
-                ? generateRandomEmail()
-                : String(testValue);
 
         // Update the target form field with test value
         let replaced = false;
         for (let i = 0; i < modifiedFormEntries.length; i++)
           if (modifiedFormEntries[i][0] === fieldKey) {
-            modifiedFormEntries[i] = [fieldKey, generatedTestValue];
+            modifiedFormEntries[i] = [fieldKey, testValue];
             replaced = true;
             break;
           }
-        if (!replaced) modifiedFormEntries.push([fieldKey, generatedTestValue]);
-
+        if (!replaced) modifiedFormEntries.push([fieldKey, testValue]);
         // Apply per-request randomization for other form fields
         for (const [mappedFieldName, mappedFieldType] of Object.entries(fieldMappings)) {
           if (!mappedFieldName.startsWith('form.')) continue;
@@ -190,20 +187,12 @@ export async function runDataDrivenTests(
         setCurrentTest?.(currentTestCounter);
 
         // Extract test value from dataset
-        const testValue = (testData as any).value;
+        const testValue = testData.value;
 
         // Create deep copy of original body to avoid mutation
         const modifiedBody = JSON.parse(JSON.stringify(body));
-        const generatedTestValue =
-          dataType === 'randomInt'
-            ? generateRandomInteger()
-            : dataType === 'random32'
-              ? generateRandomString()
-              : dataType === 'randomEmail'
-                ? generateRandomEmail()
-                : testValue;
 
-        setDeepObjectProperty(modifiedBody, fieldName, generatedTestValue);
+        setDeepObjectProperty(modifiedBody, fieldName, testValue);
 
         // For each request, regenerate all random values to ensure fresh data
         for (const [fieldKey, fieldType] of Object.entries(fieldMappings)) {

@@ -1,11 +1,11 @@
 import { HttpRequest } from '../types';
 import {
+  convertUrlEncodedToFormEntries,
   detectFieldType,
   encodeMessage,
   extractFieldsFromJson,
   extractQueryParams,
   getHeaderValue,
-  parseFormData,
 } from '../utils';
 
 export async function sendHttpRequest(
@@ -36,7 +36,7 @@ export async function sendHttpRequest(
 
     // Generate test mappings based on request body (not response)
     if (isForm) {
-      const formEntries = parseFormData(String(body));
+      const formEntries = convertUrlEncodedToFormEntries(String(body));
 
       for (const [key, value] of formEntries) fieldMappings[`form.${key}`] = detectFieldType(value);
     } else if (body) {
