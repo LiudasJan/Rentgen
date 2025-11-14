@@ -38,6 +38,9 @@ export async function runDataDrivenTests(
   const results: TestResult[] = [];
 
   // Always send the original request first as baseline test
+  let currentTestCounter = 1;
+  setCurrentTest?.(currentTestCounter);
+
   try {
     const requestStartTime = performance.now();
     const response = await window.electronAPI.sendHttp(request);
@@ -66,7 +69,6 @@ export async function runDataDrivenTests(
     });
   }
 
-  let currentTestCounter = 0;
   for (const [fieldName, dataType] of Object.entries(fieldMappings)) {
     if (dataType === 'do-not-test') continue;
 
