@@ -6,6 +6,7 @@ import {
   decodeMessage,
   encodeMessage,
   extractStatusCode,
+  FieldType,
   generateRandomEmail,
   generateRandomInteger,
   generateRandomString,
@@ -24,33 +25,16 @@ const ORIGINAL_REQUEST_TEST_FIELD_NAME = '[original request]';
 
 export async function runDataDrivenTests(
   request: HttpRequest,
-  fieldMappings: Record<string, string>,
-  queryMappings: Record<string, string>,
+  fieldMappings: Record<string, FieldType>,
+  queryMappings: Record<string, FieldType>,
   messageType: string,
   protoFile: File | null,
   setCurrentTest?: (value: number) => void,
-  setTestCount?: (count: number) => void,
 ): Promise<TestResult[]> {
   const { body, headers, url } = request;
   const contentType = getHeaderValue(headers, 'content-type');
   const isForm = /application\/x-www-form-urlencoded/i.test(contentType);
   const formEntries = isForm ? convertUrlEncodedToFormEntries(String(body)) : [];
-
-  // Calculate total number of tests (BODY + QUERY parameters)
-  let testCount = 0;
-
-  for (const [, dataType] of Object.entries(fieldMappings)) {
-    if (dataType === 'do-not-test' || dataType === 'random32') continue;
-    testCount += (datasets[dataType] || []).length;
-  }
-
-  for (const [, dataType] of Object.entries(queryMappings)) {
-    if (dataType === 'do-not-test' || dataType === 'random32') continue;
-    testCount += (datasets[dataType] || []).length;
-  }
-
-  setTestCount?.(1 + testCount);
-
   const results: TestResult[] = [];
 
   // Always send the original request first as baseline test
@@ -86,15 +70,7 @@ export async function runDataDrivenTests(
   for (const [fieldName, dataType] of Object.entries(fieldMappings)) {
     if (dataType === 'do-not-test') continue;
 
-    const testDataset =
-      dataType === 'random32'
-        ? [{ value: generateRandomString(), valid: true }]
-        : dataType === 'randomInt'
-          ? [{ value: String(generateRandomInteger()), valid: true }]
-          : dataType === 'randomEmail'
-            ? [{ value: generateRandomEmail(), valid: true }]
-            : datasets[dataType] || [];
-
+    const testDataset = getTestDataset(dataType);
     if (isForm) {
       if (!fieldName.startsWith('form.')) continue;
 
@@ -278,8 +254,7 @@ export async function runDataDrivenTests(
   for (const [queryParam, dataType] of Object.entries(queryMappings)) {
     if (dataType === 'do-not-test') continue;
 
-    const testDataset = datasets[dataType] || [];
-
+    const testDataset = getTestDataset(dataType);
     for (const testData of testDataset) {
       currentTestCounter++;
       setCurrentTest?.(currentTestCounter);
@@ -314,4 +289,14 @@ export async function runDataDrivenTests(
   }
 
   return results;
+}
+
+function getTestDataset(dataType: FieldType) {
+  return dataType === 'random32'
+    ? [{ value: generateRandomString(), valid: true }]
+    : dataType === 'randomInt'
+      ? [{ value: String(generateRandomInteger()), valid: true }]
+      : dataType === 'randomEmail'
+        ? [{ value: generateRandomEmail(), valid: true }]
+        : datasets[dataType] || [];
 }

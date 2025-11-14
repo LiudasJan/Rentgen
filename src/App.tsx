@@ -80,8 +80,8 @@ export default function App() {
       decoded?: string | null;
     }[]
   >([]);
-  const [fieldMappings, setFieldMappings] = useState<Record<string, string>>({});
-  const [queryMappings, setQueryMappings] = useState<Record<string, string>>({});
+  const [fieldMappings, setFieldMappings] = useState<Record<string, FieldType>>({});
+  const [queryMappings, setQueryMappings] = useState<Record<string, FieldType>>({});
   const [testsRun, setTestsRun] = useState<boolean>(false);
   const {
     crudTests,
@@ -93,7 +93,7 @@ export default function App() {
     isPerformanceRunning,
     performanceTests,
     securityTests,
-    testCount,
+    testsCount,
     executeAllTests,
     executeLoadTest,
   } = useTests(
@@ -341,7 +341,10 @@ export default function App() {
                     options={parameterOptions}
                     value={type}
                     onChange={(e) =>
-                      setFieldMappings((prevFieldMappings) => ({ ...prevFieldMappings, [field]: e.target.value }))
+                      setFieldMappings((prevFieldMappings) => ({
+                        ...prevFieldMappings,
+                        [field]: e.target.value as FieldType,
+                      }))
                     }
                   />
                 </div>
@@ -359,7 +362,10 @@ export default function App() {
                     options={parameterOptions}
                     value={type}
                     onChange={(e) =>
-                      setQueryMappings((prevQueryMappings) => ({ ...prevQueryMappings, [param]: e.target.value }))
+                      setQueryMappings((prevQueryMappings) => ({
+                        ...prevQueryMappings,
+                        [param]: e.target.value as FieldType,
+                      }))
                     }
                   />
                 </div>
@@ -372,7 +378,7 @@ export default function App() {
       {mode === 'HTTP' && (
         <div>
           <Button disabled={disabledRunTests} onClick={disabledRunTests ? undefined : runAllTests}>
-            {isRunningTests ? `Running tests... (${currentTest}/${testCount})` : 'Generate & Run Tests'}
+            {isRunningTests ? `Running tests... (${currentTest}/${testsCount})` : 'Generate & Run Tests'}
           </Button>
         </div>
       )}

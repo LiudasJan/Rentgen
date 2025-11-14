@@ -5,6 +5,7 @@ import {
   encodeMessage,
   extractFieldsFromJson,
   extractQueryParams,
+  FieldType,
   getHeaderValue,
 } from '../utils';
 
@@ -13,13 +14,13 @@ export async function sendHttpRequest(
   messageType: string,
   protoFile: File | null,
 ): Promise<
-  { response: any; fieldMappings: Record<string, string>; queryMappings: Record<string, string> } | undefined
+  { response: any; fieldMappings: Record<string, FieldType>; queryMappings: Record<string, FieldType> } | undefined
 > {
   const { body, headers, url } = request;
 
   try {
-    const fieldMappings: Record<string, string> = {};
-    const queryMappings: Record<string, string> = {};
+    const fieldMappings: Record<string, FieldType> = {};
+    const queryMappings: Record<string, FieldType> = {};
     const contentType = getHeaderValue(headers, 'content-type');
     const isForm = /application\/x-www-form-urlencoded/i.test(contentType);
 
