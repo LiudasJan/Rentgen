@@ -43,22 +43,33 @@ export async function runDataDrivenTests(
 
   // Test body fields
   for (const [fieldName, dataType] of Object.entries(fieldMappings)) {
-    if (dataType === 'do-not-test') continue;
+    if (dataType === 'do-not-test' || dataType === 'random32' || dataType === 'randomInt' || dataType === 'randomEmail')
+      continue;
 
-    const testDataset = getTestDataset(dataType);
+    const testDataset = datasets[dataType] || [];
     for (const testData of testDataset)
       results.push(
-        await testBodyFields(fieldName, testData, request, formEntries, messageType, protoFile, onTestStart),
+        await testBodyFields(
+          fieldName,
+          testData,
+          request,
+          formEntries,
+          fieldMappings,
+          messageType,
+          protoFile,
+          onTestStart,
+        ),
       );
   }
 
   // Test query parameters
   for (const [queryParameter, dataType] of Object.entries(queryMappings)) {
-    if (dataType === 'do-not-test') continue;
+    if (dataType === 'do-not-test' || dataType === 'random32' || dataType === 'randomInt' || dataType === 'randomEmail')
+      continue;
 
-    const testDataset = getTestDataset(dataType);
+    const testDataset = datasets[dataType] || [];
     for (const testData of testDataset)
-      results.push(await testQueryParameters(queryParameter, testData, request, onTestStart));
+      results.push(await testQueryParameters(queryParameter, testData, request, queryMappings, onTestStart));
   }
 
   return results;
@@ -106,6 +117,7 @@ async function testBodyFields(
   testData: TestData,
   request: HttpRequest,
   formEntries: Array<[string, string]>,
+  fieldMappings: Record<string, FieldType>,
   messageType: string,
   protoFile: File | null,
   onTestStart?: () => void,
@@ -114,19 +126,40 @@ async function testBodyFields(
 
   let data: Record<string, unknown> | string | Uint8Array | null = null;
   if (formEntries.length > 0) {
-    const fieldKey = fieldName.slice('form.'.length);
     const modifiedFormEntries = [...formEntries];
 
     for (let i = 0; i < modifiedFormEntries.length; i++)
-      if (modifiedFormEntries[i][0] === fieldKey) {
-        modifiedFormEntries[i] = [fieldKey, testData.value];
+      if (modifiedFormEntries[i][0] === fieldName) {
+        modifiedFormEntries[i] = [fieldName, testData.value];
         break;
       }
+
+    for (const [mappedFieldName, mappedFieldType] of Object.entries(fieldMappings)) {
+      if (
+        mappedFieldType === 'do-not-test' ||
+        (mappedFieldType !== 'random32' && mappedFieldType !== 'randomInt' && mappedFieldType !== 'randomEmail')
+      )
+        continue;
+
+      const randomizedValue = getRandomizedValue(mappedFieldType);
+      if (randomizedValue !== null) {
+        for (let i = 0; i < modifiedFormEntries.length; i++)
+          if (modifiedFormEntries[i][0] === mappedFieldName) {
+            modifiedFormEntries[i] = [mappedFieldName, randomizedValue];
+            break;
+          }
+      }
+    }
 
     data = convertFormEntriesToUrlEncoded(modifiedFormEntries);
   } else {
     const modifiedBody = JSON.parse(JSON.stringify(request.body));
     setDeepObjectProperty(modifiedBody, fieldName, testData.value);
+
+    for (const [fieldKey, fieldType] of Object.entries(fieldMappings)) {
+      const randomizedValue = getRandomizedValue(fieldType);
+      if (randomizedValue !== null) modifiedBody[fieldKey] = randomizedValue;
+    }
 
     data = modifiedBody;
     if (protoFile && messageType) {
@@ -185,12 +218,18 @@ async function testQueryParameters(
   queryParameter: string,
   testData: TestData,
   request: HttpRequest,
+  queryMappings: Record<string, FieldType>,
   onTestStart?: () => void,
 ): Promise<TestResult> {
   onTestStart?.();
 
   const urlWithQueryParam = new URL(request.url);
   urlWithQueryParam.searchParams.set(queryParameter, String(testData.value));
+
+  for (const [queryParameter, dataType] of Object.entries(queryMappings)) {
+    const randomizedValue = getRandomizedValue(dataType);
+    if (randomizedValue !== null) urlWithQueryParam.searchParams.set(queryParameter, randomizedValue);
+  }
 
   const modifiedRequest: HttpRequest = { ...request, url: urlWithQueryParam.toString() };
 
@@ -238,12 +277,12 @@ function createDataDrivenTestResult(
   return { field, expected, actual, status, value, request, response, responseTime, decoded };
 }
 
-function getTestDataset(dataType: FieldType): TestData[] {
-  if (dataType === 'random32') return [{ value: generateRandomString(), valid: true }];
-  if (dataType === 'randomInt') return [{ value: String(generateRandomInteger()), valid: true }];
-  if (dataType === 'randomEmail') return [{ value: generateRandomEmail(), valid: true }];
+function getRandomizedValue(dataType: FieldType): string | null {
+  if (dataType === 'random32') return generateRandomString();
+  if (dataType === 'randomInt') return String(generateRandomInteger());
+  if (dataType === 'randomEmail') return generateRandomEmail();
 
-  return datasets[dataType] || [];
+  return null;
 }
 
 function isSuccessStatus(statusCode: number): boolean {

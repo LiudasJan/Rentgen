@@ -2,13 +2,15 @@ import { HttpRequest, TestResult, TestStatus } from '../types';
 import {
   calculateMedian,
   calculatePercentile,
+  convertFormEntriesToUrlEncoded,
+  convertUrlEncodedToFormEntries,
   encodeMessage,
   extractStatusCode,
+  FieldType,
   generateRandomEmail,
   generateRandomInteger,
   generateRandomString,
-  isObject,
-  setDeepObjectProperty,
+  getHeaderValue,
 } from '../utils';
 
 export const LOAD_TEST_NAME = 'Load test';
@@ -93,14 +95,19 @@ export async function runPerformanceInsights(url: string, testResults: TestResul
 
 export async function runLoadTest(
   request: HttpRequest,
-  fieldMappings: Record<string, string>,
+  fieldMappings: Record<string, FieldType>,
+  queryMappings: Record<string, FieldType>,
   messageType: string,
   protoFile: File | null,
   threadCount: number,
   requestCount: number,
   updateProgress?: (sentRequestCount: number, requestCount: number) => void,
 ): Promise<TestResult> {
-  const { body } = request;
+  const { body, headers } = request;
+  const contentType = getHeaderValue(headers, 'content-type');
+  const formEntries = /application\/x-www-form-urlencoded/i.test(contentType)
+    ? convertUrlEncodedToFormEntries(String(body))
+    : [];
   const concurrency = Math.max(1, Math.min(MAX_CONCURRENCY, Math.floor(threadCount)));
   const totalRequests = Math.max(1, Math.min(MAX_TOTAL_REQUESTS, Math.floor(requestCount)));
 
@@ -114,31 +121,56 @@ export async function runLoadTest(
   async function executeSingleRequest(): Promise<void> {
     if (isAborted) return;
 
-    let data = body;
-    if (isObject(body)) {
-      const dynamicBody = JSON.parse(JSON.stringify(body));
+    let data: Record<string, unknown> | string | Uint8Array | null = null;
+    if (formEntries.length > 0) {
+      const modifiedFormEntries = [...formEntries];
+
+      for (const [mappedFieldName, mappedFieldType] of Object.entries(fieldMappings)) {
+        if (
+          mappedFieldType === 'do-not-test' ||
+          (mappedFieldType !== 'random32' && mappedFieldType !== 'randomInt' && mappedFieldType !== 'randomEmail')
+        )
+          continue;
+
+        const randomizedValue = getRandomizedValue(mappedFieldType);
+        if (randomizedValue !== null) {
+          for (let i = 0; i < modifiedFormEntries.length; i++)
+            if (modifiedFormEntries[i][0] === mappedFieldName) {
+              modifiedFormEntries[i] = [mappedFieldName, randomizedValue];
+              break;
+            }
+        }
+      }
+
+      data = convertFormEntriesToUrlEncoded(modifiedFormEntries);
+    } else {
+      const modifiedBody = JSON.parse(JSON.stringify(request.body));
 
       for (const [fieldKey, fieldType] of Object.entries(fieldMappings)) {
-        if (fieldType === 'random32') setDeepObjectProperty(dynamicBody, fieldKey, generateRandomString());
-        if (fieldType === 'randomInt') setDeepObjectProperty(dynamicBody, fieldKey, generateRandomInteger());
-        if (fieldType === 'randomEmail') setDeepObjectProperty(dynamicBody, fieldKey, generateRandomEmail());
+        const randomizedValue = getRandomizedValue(fieldType);
+        if (randomizedValue !== null) modifiedBody[fieldKey] = randomizedValue;
       }
 
-      data = dynamicBody;
+      data = modifiedBody;
+      if (protoFile && messageType) {
+        try {
+          data = encodeMessage(messageType, modifiedBody);
+        } catch (error) {
+          server5xxFailures++;
+          return;
+        }
+      }
     }
 
-    if (protoFile && messageType && isObject(body)) {
-      try {
-        data = encodeMessage(messageType, data);
-      } catch (error) {
-        // Treat encoding as failure
-        server5xxFailures++;
-        return;
-      }
+    const urlWithQueryParam = new URL(request.url);
+
+    for (const [queryParameter, dataType] of Object.entries(queryMappings)) {
+      const randomizedValue = getRandomizedValue(dataType);
+      if (randomizedValue !== null) urlWithQueryParam.searchParams.set(queryParameter, randomizedValue);
     }
 
     const requestStartTime = performance.now();
-    const response = await window.electronAPI.sendHttp({ ...request, body: data });
+    const response = await window.electronAPI.sendHttp({ ...request, body: data, url: urlWithQueryParam.toString() });
     const responseTime = performance.now() - requestStartTime;
     responseTimes.push(responseTime);
 
@@ -191,4 +223,12 @@ export async function runLoadTest(
     name: LOAD_TEST_NAME,
     status: testStatus,
   };
+}
+
+function getRandomizedValue(dataType: FieldType): string | null {
+  if (dataType === 'random32') return generateRandomString();
+  if (dataType === 'randomInt') return String(generateRandomInteger());
+  if (dataType === 'randomEmail') return generateRandomEmail();
+
+  return null;
 }

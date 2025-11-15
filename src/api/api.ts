@@ -39,7 +39,7 @@ export async function sendHttpRequest(
     if (isForm) {
       const formEntries = convertUrlEncodedToFormEntries(String(body));
 
-      for (const [key, value] of formEntries) fieldMappings[`form.${key}`] = detectFieldType(value);
+      for (const [key, value] of formEntries) fieldMappings[key] = detectFieldType(value);
     } else if (body) {
       // Extract all fields from request body (including nested)
       const extractedFields = extractFieldsFromJson(body);

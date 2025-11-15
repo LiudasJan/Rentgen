@@ -82,6 +82,7 @@ const useTests = (
     const loadTestResult = await runLoadTest(
       request,
       fieldMappings,
+      queryMappings,
       messageType,
       protoFile,
       threadCount,
@@ -162,11 +163,13 @@ const useTests = (
   function getDataDrivenTestsCount(mappings: Record<string, FieldType>): number {
     let dataDrivenTestsCount = 0;
     for (const [, dataType] of Object.entries(mappings)) {
-      if (dataType === 'do-not-test') continue;
-      if (dataType === 'random32' || dataType === 'randomInt' || dataType === 'randomEmail') {
-        dataDrivenTestsCount += 1;
+      if (
+        dataType === 'do-not-test' ||
+        dataType === 'random32' ||
+        dataType === 'randomInt' ||
+        dataType === 'randomEmail'
+      )
         continue;
-      }
 
       dataDrivenTestsCount += (datasets[dataType] || []).length;
     }
