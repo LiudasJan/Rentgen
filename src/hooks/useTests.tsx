@@ -32,7 +32,6 @@ const useTests = (
     setIsDataDrivenRunning(true);
     setIsPerformanceRunning(true);
     setIsSecurityRunning(true);
-
     resetTests();
 
     const dataDrivenTestResults = await executeDataDrivenTests();
@@ -66,7 +65,6 @@ const useTests = (
   async function executeLoadTest(threadCount: number, requestCount: number) {
     setIsLoadTestRunning(true);
     setLoadProgress(0);
-
     setPerformanceTests((prevPerformanceTests) => {
       return prevPerformanceTests.map((performanceTest) => {
         if (performanceTest.name === LOAD_TEST_NAME)
@@ -107,7 +105,6 @@ const useTests = (
 
     const performanceTestResults = await runPerformanceInsights(url, testResults);
     setPerformanceTests(performanceTestResults);
-
     setIsPerformanceRunning(false);
   }
 
