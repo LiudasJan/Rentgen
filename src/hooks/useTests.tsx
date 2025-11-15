@@ -35,12 +35,12 @@ const useTests = (
 
     resetTests();
 
-    await executeDataDrivenTests();
-    await executePerformanceTests();
+    const dataDrivenTestResults = await executeDataDrivenTests();
+    await executePerformanceTests(dataDrivenTestResults);
     await executeSecurityTests();
   }
 
-  async function executeDataDrivenTests() {
+  async function executeDataDrivenTests(): Promise<TestResult[]> {
     setIsDataDrivenRunning(true);
     setDataDrivenTests([]);
     setCurrentTest(0);
@@ -58,8 +58,9 @@ const useTests = (
       incrementCurrentTest,
     );
     setDataDrivenTests(dataDrivenTestResults);
-
     setIsDataDrivenRunning(false);
+
+    return dataDrivenTestResults;
   }
 
   async function executeLoadTest(threadCount: number, requestCount: number) {
@@ -94,17 +95,16 @@ const useTests = (
         return performanceTest;
       });
     });
-
     setIsLoadTestRunning(false);
   }
 
-  async function executePerformanceTests() {
+  async function executePerformanceTests(testResults: TestResult[] = []) {
     const { url } = request;
 
     setIsPerformanceRunning(true);
     setPerformanceTests([]);
 
-    const performanceTestResults = await runPerformanceInsights(url, dataDrivenTests);
+    const performanceTestResults = await runPerformanceInsights(url, testResults);
     setPerformanceTests(performanceTestResults);
 
     setIsPerformanceRunning(false);
@@ -118,7 +118,6 @@ const useTests = (
     const { securityTestResults, crudTestResults } = await runSecurityTests(request);
     setSecurityTests(securityTestResults);
     setCrudTests(crudTestResults);
-
     setIsSecurityRunning(false);
   }
 
