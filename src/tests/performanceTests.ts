@@ -1,4 +1,4 @@
-import { HttpRequest, TestResult, TestStatus } from '../types';
+import { FieldType, HttpRequest, TestResult, TestStatus } from '../types';
 import {
   calculateMedian,
   calculatePercentile,
@@ -6,11 +6,9 @@ import {
   convertUrlEncodedToFormEntries,
   encodeMessage,
   extractStatusCode,
-  FieldType,
-  generateRandomEmail,
-  generateRandomInteger,
-  generateRandomString,
   getHeaderValue,
+  getRandomizedValueByFieldType,
+  updateFormEntry,
 } from '../utils';
 
 export const LOAD_TEST_NAME = 'Load test';
@@ -110,13 +108,12 @@ export async function runLoadTest(
     : [];
   const concurrency = Math.max(1, Math.min(MAX_CONCURRENCY, Math.floor(threadCount)));
   const totalRequests = Math.max(1, Math.min(MAX_TOTAL_REQUESTS, Math.floor(requestCount)));
+  const responseTimes: number[] = [];
 
   let requestsSent = 0,
     server5xxFailures = 0,
     client4xxFailures = 0,
     isAborted = false;
-
-  const responseTimes: number[] = [];
 
   async function executeSingleRequest(): Promise<void> {
     if (isAborted) return;
@@ -125,36 +122,26 @@ export async function runLoadTest(
     if (formEntries.length > 0) {
       const modifiedFormEntries = [...formEntries];
 
-      for (const [mappedFieldName, mappedFieldType] of Object.entries(fieldMappings)) {
-        if (
-          mappedFieldType === 'do-not-test' ||
-          (mappedFieldType !== 'random32' && mappedFieldType !== 'randomInt' && mappedFieldType !== 'randomEmail')
-        )
-          continue;
-
-        const randomizedValue = getRandomizedValue(mappedFieldType);
-        if (randomizedValue !== null) {
-          for (let i = 0; i < modifiedFormEntries.length; i++)
-            if (modifiedFormEntries[i][0] === mappedFieldName) {
-              modifiedFormEntries[i] = [mappedFieldName, randomizedValue];
-              break;
-            }
-        }
+      // Apply random values to random field types
+      for (const [fieldName, fieldType] of Object.entries(fieldMappings)) {
+        const randomizedValue = getRandomizedValueByFieldType(fieldType);
+        if (randomizedValue !== null) updateFormEntry(modifiedFormEntries, fieldName, randomizedValue);
       }
 
       data = convertFormEntriesToUrlEncoded(modifiedFormEntries);
     } else {
       const modifiedBody = JSON.parse(JSON.stringify(request.body));
 
-      for (const [fieldKey, fieldType] of Object.entries(fieldMappings)) {
-        const randomizedValue = getRandomizedValue(fieldType);
-        if (randomizedValue !== null) modifiedBody[fieldKey] = randomizedValue;
+      // Apply random values to random field types
+      for (const [fieldName, fieldType] of Object.entries(fieldMappings)) {
+        const randomizedValue = getRandomizedValueByFieldType(fieldType);
+        if (randomizedValue !== null) modifiedBody[fieldName] = randomizedValue;
       }
 
-      data = modifiedBody;
+      data = structuredClone(modifiedBody);
       if (protoFile && messageType) {
         try {
-          data = encodeMessage(messageType, modifiedBody);
+          data = encodeMessage(messageType, data);
         } catch (error) {
           server5xxFailures++;
           return;
@@ -164,8 +151,9 @@ export async function runLoadTest(
 
     const urlWithQueryParam = new URL(request.url);
 
-    for (const [queryParameter, dataType] of Object.entries(queryMappings)) {
-      const randomizedValue = getRandomizedValue(dataType);
+    // Apply random values to random query parameter types
+    for (const [queryParameter, fieldType] of Object.entries(queryMappings)) {
+      const randomizedValue = getRandomizedValueByFieldType(fieldType);
       if (randomizedValue !== null) urlWithQueryParam.searchParams.set(queryParameter, randomizedValue);
     }
 
@@ -223,12 +211,4 @@ export async function runLoadTest(
     name: LOAD_TEST_NAME,
     status: testStatus,
   };
-}
-
-function getRandomizedValue(dataType: FieldType): string | null {
-  if (dataType === 'random32') return generateRandomString();
-  if (dataType === 'randomInt') return String(generateRandomInteger());
-  if (dataType === 'randomEmail') return generateRandomEmail();
-
-  return null;
 }

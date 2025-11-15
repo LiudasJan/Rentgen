@@ -15,14 +15,8 @@ import ResponsePanel from './components/panels/ResponsePanel';
 import TestsTable, { ExpandedTestComponent, getTestsTableColumns } from './components/tables/TestsTable';
 import useTests from './hooks/useTests';
 import { LOAD_TEST_NAME } from './tests';
-import {
-  extractCurl,
-  FieldType,
-  formatBodyByContentType,
-  loadProtoSchema,
-  parseBodyByContentType,
-  parseHeaders,
-} from './utils';
+import { FieldType } from './types';
+import { extractCurl, formatBodyByContentType, loadProtoSchema, parseBodyByContentType, parseHeaders } from './utils';
 
 type Mode = 'HTTP' | 'WSS';
 

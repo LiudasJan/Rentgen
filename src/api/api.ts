@@ -1,11 +1,11 @@
-import { HttpRequest } from '../types';
+import { FieldType, HttpRequest } from '../types';
 import {
   convertUrlEncodedToFormEntries,
   detectFieldType,
   encodeMessage,
   extractFieldsFromJson,
   extractQueryParams,
-  FieldType,
+  extractStatusCode,
   getHeaderValue,
 } from '../utils';
 
@@ -71,5 +71,22 @@ export async function sendHttpRequest(
       fieldMappings: {},
       queryMappings: {},
     };
+  }
+}
+
+export async function executeTimedRequest<T>(
+  request: HttpRequest,
+  onSuccess: (response: any, responseTime: number, statusCode: number) => T,
+  onError: (error: unknown) => T,
+): Promise<T> {
+  try {
+    const requestStartTime = performance.now();
+    const response = await window.electronAPI.sendHttp(request);
+    const responseTime = performance.now() - requestStartTime;
+    const statusCode = extractStatusCode(response);
+
+    return onSuccess(response, responseTime, statusCode);
+  } catch (error) {
+    return onError(error);
   }
 }

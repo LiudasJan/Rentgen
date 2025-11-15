@@ -65,3 +65,11 @@ export function decodeMessage(path: string, buffer: Uint8Array): Record<string, 
     throw new Error(`Failed to decode message: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
+
+export function decodeProtobufResponse(messageType: string, response: any): string | null {
+  try {
+    return JSON.stringify(decodeMessage(messageType, new Uint8Array(response.body)), null, 2);
+  } catch {
+    return null;
+  }
+}

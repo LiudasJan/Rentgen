@@ -250,8 +250,7 @@ async function testCors(request: HttpRequest): Promise<TestResult> {
     if (body && !['GET', 'HEAD'].includes(method.toUpperCase())) modifiedRequest.body = body;
 
     const response = await window.electronAPI.sendHttp(modifiedRequest);
-    const acaoHeader =
-      response.headers?.['access-control-allow-origin'] || response.headers?.['Access-Control-Allow-Origin'];
+    const acaoHeader = getHeaderValue(response.headers, 'access-control-allow-origin');
 
     if (!acaoHeader)
       return createSecurityTestResult(

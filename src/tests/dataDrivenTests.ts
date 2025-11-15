@@ -1,17 +1,15 @@
+import { executeTimedRequest } from '../api';
 import { datasets } from '../constants/datasets';
-import { HttpRequest, TestData, TestResult, TestStatus } from '../types';
+import { FieldType, HttpRequest, TestData, TestResult, TestStatus } from '../types';
 import {
   convertFormEntriesToUrlEncoded,
   convertUrlEncodedToFormEntries,
-  decodeMessage,
+  decodeProtobufResponse,
   encodeMessage,
-  extractStatusCode,
-  FieldType,
-  generateRandomEmail,
-  generateRandomInteger,
-  generateRandomString,
   getHeaderValue,
+  getRandomizedValueByFieldType,
   setDeepObjectProperty,
+  updateFormEntry,
 } from '../utils';
 
 const SUCCESS_STATUS_MIN = 200;
@@ -42,11 +40,10 @@ export async function runDataDrivenTests(
   results.push(await testOriginalRequest(request, formEntries, onTestStart));
 
   // Test body fields
-  for (const [fieldName, dataType] of Object.entries(fieldMappings)) {
-    if (dataType === 'do-not-test' || dataType === 'random32' || dataType === 'randomInt' || dataType === 'randomEmail')
-      continue;
+  for (const [fieldName, fieldType] of Object.entries(fieldMappings)) {
+    if (shouldSkipFieldType(fieldType)) continue;
 
-    const testDataset = datasets[dataType] || [];
+    const testDataset = datasets[fieldType] || [];
     for (const testData of testDataset)
       results.push(
         await testBodyFields(
@@ -63,11 +60,10 @@ export async function runDataDrivenTests(
   }
 
   // Test query parameters
-  for (const [queryParameter, dataType] of Object.entries(queryMappings)) {
-    if (dataType === 'do-not-test' || dataType === 'random32' || dataType === 'randomInt' || dataType === 'randomEmail')
-      continue;
+  for (const [queryParameter, fieldType] of Object.entries(queryMappings)) {
+    if (shouldSkipFieldType(fieldType)) continue;
 
-    const testDataset = datasets[dataType] || [];
+    const testDataset = datasets[fieldType] || [];
     for (const testData of testDataset)
       results.push(await testQueryParameters(queryParameter, testData, request, queryMappings, onTestStart));
   }
@@ -82,34 +78,32 @@ async function testOriginalRequest(
 ): Promise<TestResult> {
   onTestStart?.();
 
-  try {
-    const requestStartTime = performance.now();
-    const response = await window.electronAPI.sendHttp(request);
-    const responseTime = performance.now() - requestStartTime;
-    const statusCode = extractStatusCode(response);
-
-    return createDataDrivenTestResult(
-      ORIGINAL_REQUEST_TEST_FIELD_NAME,
-      EXPECTED_SUCCESS_RESPONSE,
-      response.status,
-      isSuccessStatus(statusCode) ? TestStatus.Pass : TestStatus.Fail,
-      formEntries.length > 0 ? Object.fromEntries(formEntries) : request.body,
-      request,
-      response,
-      responseTime,
-    );
-  } catch (error) {
-    return createDataDrivenTestResult(
-      ORIGINAL_REQUEST_TEST_FIELD_NAME,
-      EXPECTED_SUCCESS_RESPONSE,
-      `Unexpected error: ${String(error)}`,
-      TestStatus.Bug,
-      formEntries.length > 0 ? Object.fromEntries(formEntries) : request.body,
-      request,
-      null,
-      0,
-    );
-  }
+  const bodyValue = formEntries.length > 0 ? Object.fromEntries(formEntries) : request.body;
+  return executeTimedRequest(
+    request,
+    (response, responseTime, statusCode) =>
+      createDataDrivenTestResult(
+        ORIGINAL_REQUEST_TEST_FIELD_NAME,
+        EXPECTED_SUCCESS_RESPONSE,
+        response.status,
+        isSuccessStatus(statusCode) ? TestStatus.Pass : TestStatus.Fail,
+        bodyValue,
+        request,
+        response,
+        responseTime,
+      ),
+    (error) =>
+      createDataDrivenTestResult(
+        ORIGINAL_REQUEST_TEST_FIELD_NAME,
+        EXPECTED_SUCCESS_RESPONSE,
+        `Unexpected error: ${String(error)}`,
+        TestStatus.Bug,
+        bodyValue,
+        request,
+        null,
+        0,
+      ),
+  );
 }
 
 async function testBodyFields(
@@ -128,43 +122,32 @@ async function testBodyFields(
   if (formEntries.length > 0) {
     const modifiedFormEntries = [...formEntries];
 
-    for (let i = 0; i < modifiedFormEntries.length; i++)
-      if (modifiedFormEntries[i][0] === fieldName) {
-        modifiedFormEntries[i] = [fieldName, testData.value];
-        break;
-      }
+    // Update the field being tested
+    updateFormEntry(modifiedFormEntries, fieldName, testData.value);
 
-    for (const [mappedFieldName, mappedFieldType] of Object.entries(fieldMappings)) {
-      if (
-        mappedFieldType === 'do-not-test' ||
-        (mappedFieldType !== 'random32' && mappedFieldType !== 'randomInt' && mappedFieldType !== 'randomEmail')
-      )
-        continue;
-
-      const randomizedValue = getRandomizedValue(mappedFieldType);
-      if (randomizedValue !== null) {
-        for (let i = 0; i < modifiedFormEntries.length; i++)
-          if (modifiedFormEntries[i][0] === mappedFieldName) {
-            modifiedFormEntries[i] = [mappedFieldName, randomizedValue];
-            break;
-          }
-      }
+    // Apply random values to random field types
+    for (const [fieldKey, fieldType] of Object.entries(fieldMappings)) {
+      const randomizedValue = getRandomizedValueByFieldType(fieldType);
+      if (randomizedValue !== null) updateFormEntry(modifiedFormEntries, fieldKey, randomizedValue);
     }
 
     data = convertFormEntriesToUrlEncoded(modifiedFormEntries);
   } else {
-    const modifiedBody = JSON.parse(JSON.stringify(request.body));
+    const modifiedBody = structuredClone(request.body);
+
+    // Update the field being tested
     setDeepObjectProperty(modifiedBody, fieldName, testData.value);
 
+    // Apply random values to random field types
     for (const [fieldKey, fieldType] of Object.entries(fieldMappings)) {
-      const randomizedValue = getRandomizedValue(fieldType);
-      if (randomizedValue !== null) modifiedBody[fieldKey] = randomizedValue;
+      const randomizedValue = getRandomizedValueByFieldType(fieldType);
+      if (randomizedValue !== null) setDeepObjectProperty(modifiedBody, fieldKey, randomizedValue);
     }
 
-    data = modifiedBody;
+    data = structuredClone(modifiedBody);
     if (protoFile && messageType) {
       try {
-        data = encodeMessage(messageType, modifiedBody);
+        data = encodeMessage(messageType, data);
       } catch (error) {
         return createDataDrivenTestResult(
           fieldName,
@@ -172,7 +155,7 @@ async function testBodyFields(
           'Encode error',
           TestStatus.Bug,
           testData.value,
-          { ...request, body: modifiedBody },
+          { ...request, body: data },
           String(error),
         );
       }
@@ -180,38 +163,36 @@ async function testBodyFields(
   }
 
   const modifiedRequest: HttpRequest = { ...request, body: data };
+  return executeTimedRequest(
+    modifiedRequest,
+    (response, responseTime, statusCode) => {
+      const testStatus = determineTestStatus(testData, statusCode);
+      const decoded =
+        formEntries.length === 0 && protoFile && messageType ? decodeProtobufResponse(messageType, response) : null;
 
-  try {
-    const requestStartTime = performance.now();
-    const response = await window.electronAPI.sendHttp(modifiedRequest);
-    const responseTime = performance.now() - requestStartTime;
-    const statusCode = extractStatusCode(response);
-    const testStatus = determineTestStatus(testData, statusCode);
-    const decoded =
-      formEntries.length === 0 && protoFile && messageType ? decodeProtobufResponse(messageType, response) : null;
-
-    return createDataDrivenTestResult(
-      fieldName,
-      testData.valid ? EXPECTED_SUCCESS_RESPONSE : EXPECTED_CLIENT_ERROR_RESPONSE,
-      response.status,
-      testStatus,
-      testData.value,
-      modifiedRequest,
-      response,
-      responseTime,
-      decoded,
-    );
-  } catch (error) {
-    return createDataDrivenTestResult(
-      fieldName,
-      testData.valid ? EXPECTED_SUCCESS_RESPONSE : EXPECTED_CLIENT_ERROR_RESPONSE,
-      'Error',
-      TestStatus.Bug,
-      testData.value,
-      modifiedRequest,
-      String(error),
-    );
-  }
+      return createDataDrivenTestResult(
+        fieldName,
+        testData.valid ? EXPECTED_SUCCESS_RESPONSE : EXPECTED_CLIENT_ERROR_RESPONSE,
+        response.status,
+        testStatus,
+        testData.value,
+        modifiedRequest,
+        response,
+        responseTime,
+        decoded,
+      );
+    },
+    (error) =>
+      createDataDrivenTestResult(
+        fieldName,
+        testData.valid ? EXPECTED_SUCCESS_RESPONSE : EXPECTED_CLIENT_ERROR_RESPONSE,
+        `Unexpected error: ${String(error)}`,
+        TestStatus.Bug,
+        testData.value,
+        modifiedRequest,
+        String(error),
+      ),
+  );
 }
 
 async function testQueryParameters(
@@ -226,41 +207,40 @@ async function testQueryParameters(
   const urlWithQueryParam = new URL(request.url);
   urlWithQueryParam.searchParams.set(queryParameter, String(testData.value));
 
-  for (const [queryParameter, dataType] of Object.entries(queryMappings)) {
-    const randomizedValue = getRandomizedValue(dataType);
-    if (randomizedValue !== null) urlWithQueryParam.searchParams.set(queryParameter, randomizedValue);
+  // Apply random values to random query parameter types
+  for (const [queryParameterKey, fieldType] of Object.entries(queryMappings)) {
+    const randomizedValue = getRandomizedValueByFieldType(fieldType);
+    if (randomizedValue !== null) urlWithQueryParam.searchParams.set(queryParameterKey, randomizedValue);
   }
 
   const modifiedRequest: HttpRequest = { ...request, url: urlWithQueryParam.toString() };
+  return executeTimedRequest(
+    modifiedRequest,
+    (response, responseTime, statusCode) => {
+      const testStatus = determineTestStatus(testData, statusCode);
 
-  try {
-    const requestStartTime = performance.now();
-    const response = await window.electronAPI.sendHttp(modifiedRequest);
-    const responseTime = performance.now() - requestStartTime;
-    const statusCode = extractStatusCode(response);
-    const testStatus = determineTestStatus(testData, statusCode);
-
-    return createDataDrivenTestResult(
-      `query.${queryParameter}`,
-      testData.valid ? EXPECTED_SUCCESS_RESPONSE : EXPECTED_CLIENT_ERROR_RESPONSE,
-      response.status,
-      testStatus,
-      testData.value,
-      modifiedRequest,
-      response,
-      responseTime,
-    );
-  } catch (error) {
-    return createDataDrivenTestResult(
-      `query.${queryParameter}`,
-      testData.valid ? EXPECTED_SUCCESS_RESPONSE : EXPECTED_CLIENT_ERROR_RESPONSE,
-      'Error',
-      TestStatus.Bug,
-      testData.value,
-      modifiedRequest,
-      String(error),
-    );
-  }
+      return createDataDrivenTestResult(
+        `query.${queryParameter}`,
+        testData.valid ? EXPECTED_SUCCESS_RESPONSE : EXPECTED_CLIENT_ERROR_RESPONSE,
+        response.status,
+        testStatus,
+        testData.value,
+        modifiedRequest,
+        response,
+        responseTime,
+      );
+    },
+    (error) =>
+      createDataDrivenTestResult(
+        `query.${queryParameter}`,
+        testData.valid ? EXPECTED_SUCCESS_RESPONSE : EXPECTED_CLIENT_ERROR_RESPONSE,
+        `Unexpected error: ${String(error)}`,
+        TestStatus.Bug,
+        testData.value,
+        modifiedRequest,
+        String(error),
+      ),
+  );
 }
 
 function createDataDrivenTestResult(
@@ -277,12 +257,12 @@ function createDataDrivenTestResult(
   return { field, expected, actual, status, value, request, response, responseTime, decoded };
 }
 
-function getRandomizedValue(dataType: FieldType): string | null {
-  if (dataType === 'random32') return generateRandomString();
-  if (dataType === 'randomInt') return String(generateRandomInteger());
-  if (dataType === 'randomEmail') return generateRandomEmail();
+export function shouldSkipFieldType(fieldType: FieldType): boolean {
+  return fieldType === 'do-not-test' || isRandomFieldType(fieldType);
+}
 
-  return null;
+export function isRandomFieldType(fieldType: FieldType): boolean {
+  return fieldType === 'random32' || fieldType === 'randomInt' || fieldType === 'randomEmail';
 }
 
 function isSuccessStatus(statusCode: number): boolean {
@@ -304,12 +284,4 @@ function determineTestStatus(testData: TestData, statusCode: number): TestStatus
   if ((testData.valid && isSuccess) || (!testData.valid && isClientError)) return TestStatus.Pass;
 
   return isServerErrorStatus(statusCode) ? TestStatus.Bug : TestStatus.Fail;
-}
-
-function decodeProtobufResponse(messageType: string, response: any): string | null {
-  try {
-    return JSON.stringify(decodeMessage(messageType, new Uint8Array(response.body)), null, 2);
-  } catch {
-    return null;
-  }
 }

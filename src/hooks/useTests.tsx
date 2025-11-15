@@ -1,8 +1,14 @@
 import { useState } from 'react';
 import { datasets } from '../constants/datasets';
-import { LOAD_TEST_NAME, runDataDrivenTests, runLoadTest, runPerformanceInsights, runSecurityTests } from '../tests';
-import { HttpRequest, TestResult } from '../types';
-import { FieldType } from '../utils';
+import {
+  LOAD_TEST_NAME,
+  runDataDrivenTests,
+  runLoadTest,
+  runPerformanceInsights,
+  runSecurityTests,
+  shouldSkipFieldType,
+} from '../tests';
+import { FieldType, HttpRequest, TestResult } from '../types';
 
 const useTests = (
   request: HttpRequest,
@@ -159,16 +165,10 @@ const useTests = (
 
   function getDataDrivenTestsCount(mappings: Record<string, FieldType>): number {
     let dataDrivenTestsCount = 0;
-    for (const [, dataType] of Object.entries(mappings)) {
-      if (
-        dataType === 'do-not-test' ||
-        dataType === 'random32' ||
-        dataType === 'randomInt' ||
-        dataType === 'randomEmail'
-      )
-        continue;
+    for (const [, fieldType] of Object.entries(mappings)) {
+      if (shouldSkipFieldType(fieldType)) continue;
 
-      dataDrivenTestsCount += (datasets[dataType] || []).length;
+      dataDrivenTestsCount += (datasets[fieldType] || []).length;
     }
 
     return dataDrivenTestsCount;
