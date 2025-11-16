@@ -77,6 +77,10 @@ export function createTestHttpRequest(options: TestOptions): HttpRequest {
   }
 
   const modifiedUrl = new URL(url);
+
+  // Update the field being tested
+  if (fieldName && testData) modifiedUrl.searchParams.set(fieldName, String(testData.value));
+
   // Apply random values to random query parameter types
   for (const [queryParameter, fieldType] of Object.entries(queryMappings)) {
     const randomizedValue = getRandomizedValueByFieldType(fieldType);
