@@ -8,15 +8,9 @@ import {
   runSecurityTests,
   shouldSkipFieldType,
 } from '../tests';
-import { FieldType, HttpRequest, TestResult } from '../types';
+import { FieldType, TestOptions, TestResult } from '../types';
 
-const useTests = (
-  request: HttpRequest,
-  fieldMappings: Record<string, FieldType>,
-  queryMappings: Record<string, FieldType>,
-  messageType: string,
-  protoFile: File | null,
-) => {
+const useTests = (options: TestOptions) => {
   const [currentTest, setCurrentTest] = useState<number>(0);
   const [testsCount, setTestsCount] = useState<number>(0);
 
@@ -46,22 +40,17 @@ const useTests = (
   }
 
   async function executeDataDrivenTests(): Promise<TestResult[]> {
+    const { bodyMappings, queryMappings } = options;
+
     setIsDataDrivenRunning(true);
     setDataDrivenTests([]);
     setCurrentTest(0);
     setTestsCount(
       (prevTestsCount) =>
-        prevTestsCount + 1 + getDataDrivenTestsCount(fieldMappings) + getDataDrivenTestsCount(queryMappings),
+        prevTestsCount + 1 + getDataDrivenTestsCount(bodyMappings) + getDataDrivenTestsCount(queryMappings),
     );
 
-    const dataDrivenTestResults = await runDataDrivenTests(
-      request,
-      fieldMappings,
-      queryMappings,
-      messageType,
-      protoFile,
-      incrementCurrentTest,
-    );
+    const dataDrivenTestResults = await runDataDrivenTests(options, incrementCurrentTest);
     setDataDrivenTests(dataDrivenTestResults);
     setIsDataDrivenRunning(false);
 
@@ -83,16 +72,7 @@ const useTests = (
       });
     });
 
-    const loadTestResult = await runLoadTest(
-      request,
-      fieldMappings,
-      queryMappings,
-      messageType,
-      protoFile,
-      threadCount,
-      requestCount,
-      updateLoadProgress,
-    );
+    const loadTestResult = await runLoadTest(options, threadCount, requestCount, updateLoadProgress);
     setPerformanceTests((prevPerformanceTests) => {
       return prevPerformanceTests.map((performanceTest) => {
         if (performanceTest.name === LOAD_TEST_NAME) return loadTestResult;
@@ -104,7 +84,7 @@ const useTests = (
   }
 
   async function executePerformanceTests(testResults: TestResult[] = []) {
-    const { url } = request;
+    const { url } = options;
 
     setIsPerformanceRunning(true);
     setPerformanceTests([]);
@@ -119,7 +99,7 @@ const useTests = (
     setSecurityTests([]);
     setCrudTests([]);
 
-    const { securityTestResults, crudTestResults } = await runSecurityTests(request);
+    const { securityTestResults, crudTestResults } = await runSecurityTests(options);
     setSecurityTests(securityTestResults);
     setCrudTests(crudTestResults);
     setIsSecurityRunning(false);

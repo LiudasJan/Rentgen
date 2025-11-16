@@ -40,10 +40,22 @@ export interface TestData {
   valid: boolean;
 }
 
+export interface TestOptions {
+  body: string | null;
+  headers: string;
+  fieldName?: string;
+  method: Method | string;
+  bodyMappings: Record<string, FieldType>;
+  queryMappings: Record<string, FieldType>;
+  messageType: string;
+  protoFile: File | null;
+  testData?: TestData;
+  url: string;
+}
+
 export interface TestResult {
   actual: string;
   expected: string;
-  decoded?: string | null;
   field?: string;
   method?: Method | string;
   name?: string;

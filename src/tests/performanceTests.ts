@@ -1,15 +1,5 @@
-import { FieldType, HttpRequest, TestResult, TestStatus } from '../types';
-import {
-  calculateMedian,
-  calculatePercentile,
-  convertFormEntriesToUrlEncoded,
-  convertUrlEncodedToFormEntries,
-  encodeMessage,
-  extractStatusCode,
-  getHeaderValue,
-  getRandomizedValueByFieldType,
-  updateFormEntry,
-} from '../utils';
+import { TestOptions, TestResult, TestStatus } from '../types';
+import { calculateMedian, calculatePercentile, createTestHttpRequest, extractStatusCode } from '../utils';
 
 export const LOAD_TEST_NAME = 'Load test';
 
@@ -92,20 +82,11 @@ export async function runPerformanceInsights(url: string, testResults: TestResul
 }
 
 export async function runLoadTest(
-  request: HttpRequest,
-  fieldMappings: Record<string, FieldType>,
-  queryMappings: Record<string, FieldType>,
-  messageType: string,
-  protoFile: File | null,
+  options: TestOptions,
   threadCount: number,
   requestCount: number,
   updateProgress?: (sentRequestCount: number, requestCount: number) => void,
 ): Promise<TestResult> {
-  const { body, headers } = request;
-  const contentType = getHeaderValue(headers, 'content-type');
-  const formEntries = /application\/x-www-form-urlencoded/i.test(contentType)
-    ? convertUrlEncodedToFormEntries(String(body))
-    : [];
   const concurrency = Math.max(1, Math.min(MAX_CONCURRENCY, Math.floor(threadCount)));
   const totalRequests = Math.max(1, Math.min(MAX_TOTAL_REQUESTS, Math.floor(requestCount)));
   const responseTimes: number[] = [];
@@ -118,47 +99,9 @@ export async function runLoadTest(
   async function executeSingleRequest(): Promise<void> {
     if (isAborted) return;
 
-    let data: Record<string, unknown> | string | Uint8Array | null = null;
-    if (formEntries.length > 0) {
-      const modifiedFormEntries = [...formEntries];
-
-      // Apply random values to random field types
-      for (const [fieldName, fieldType] of Object.entries(fieldMappings)) {
-        const randomizedValue = getRandomizedValueByFieldType(fieldType);
-        if (randomizedValue !== null) updateFormEntry(modifiedFormEntries, fieldName, randomizedValue);
-      }
-
-      data = convertFormEntriesToUrlEncoded(modifiedFormEntries);
-    } else {
-      const modifiedBody = JSON.parse(JSON.stringify(request.body));
-
-      // Apply random values to random field types
-      for (const [fieldName, fieldType] of Object.entries(fieldMappings)) {
-        const randomizedValue = getRandomizedValueByFieldType(fieldType);
-        if (randomizedValue !== null) modifiedBody[fieldName] = randomizedValue;
-      }
-
-      data = structuredClone(modifiedBody);
-      if (protoFile && messageType) {
-        try {
-          data = encodeMessage(messageType, data);
-        } catch (error) {
-          server5xxFailures++;
-          return;
-        }
-      }
-    }
-
-    const urlWithQueryParam = new URL(request.url);
-
-    // Apply random values to random query parameter types
-    for (const [queryParameter, fieldType] of Object.entries(queryMappings)) {
-      const randomizedValue = getRandomizedValueByFieldType(fieldType);
-      if (randomizedValue !== null) urlWithQueryParam.searchParams.set(queryParameter, randomizedValue);
-    }
-
+    const request = createTestHttpRequest(options);
     const requestStartTime = performance.now();
-    const response = await window.electronAPI.sendHttp({ ...request, body: data, url: urlWithQueryParam.toString() });
+    const response = await window.electronAPI.sendHttp(request);
     const responseTime = performance.now() - requestStartTime;
     responseTimes.push(responseTime);
 

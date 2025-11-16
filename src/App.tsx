@@ -1,7 +1,6 @@
 import { Method } from 'axios';
 import cn from 'classnames';
 import { useEffect, useState } from 'react';
-import { sendHttpRequest } from './api';
 import Button, { ButtonType } from './components/buttons/Button';
 import Input from './components/inputs/Input';
 import Select, { SelectOption } from './components/inputs/Select';
@@ -16,7 +15,19 @@ import TestsTable, { ExpandedTestComponent, getTestsTableColumns } from './compo
 import useTests from './hooks/useTests';
 import { LOAD_TEST_NAME } from './tests';
 import { FieldType } from './types';
-import { extractCurl, formatBodyByContentType, loadProtoSchema, parseBodyByContentType, parseHeaders } from './utils';
+import {
+  convertUrlEncodedToFormEntries,
+  createHttpRequest,
+  detectFieldType,
+  extractCurl,
+  extractFieldsFromJson,
+  extractQueryParameters,
+  formatBody,
+  isUrlEncodedContentType,
+  loadProtoSchema,
+  parseBody,
+  parseHeaders,
+} from './utils';
 
 type Mode = 'HTTP' | 'WSS';
 
@@ -53,13 +64,13 @@ const parameterOptions: SelectOption<FieldType>[] = [
 export default function App() {
   const [mode, setMode] = useState<Mode>('HTTP');
   const [method, setMethod] = useState<Method>('GET');
-  const [url, setUrl] = useState<string>('');
-  const [wssConnected, setWssConnected] = useState<boolean>(false);
   const [openCurlModal, setOpenCurlModal] = useState<boolean>(false);
-  const [curlError, setCurlError] = useState<string>('');
   const [curl, setCurl] = useState<string>('');
-  const [headers, setHeaders] = useState<string>('');
+  const [curlError, setCurlError] = useState<string>('');
+  const [url, setUrl] = useState<string>('');
   const [body, setBody] = useState<string>('{}');
+  const [headers, setHeaders] = useState<string>('');
+  const [wssConnected, setWssConnected] = useState<boolean>(false);
   const [protoFile, setProtoFile] = useState<File | null>(null);
   const [messageType, setMessageType] = useState<string>('');
   const [httpResponse, setHttpResponse] = useState<{
@@ -74,7 +85,7 @@ export default function App() {
       decoded?: string | null;
     }[]
   >([]);
-  const [fieldMappings, setFieldMappings] = useState<Record<string, FieldType>>({});
+  const [bodyMappings, setBodyMappings] = useState<Record<string, FieldType>>({});
   const [queryMappings, setQueryMappings] = useState<Record<string, FieldType>>({});
   const [testsRun, setTestsRun] = useState<boolean>(false);
   const {
@@ -90,13 +101,7 @@ export default function App() {
     testsCount,
     executeAllTests,
     executeLoadTest,
-  } = useTests(
-    { url, method, headers: parseHeaders(headers), body: parseBodyByContentType(body, parseHeaders(headers)) },
-    fieldMappings,
-    queryMappings,
-    messageType,
-    protoFile,
-  );
+  } = useTests({ body, headers, method, bodyMappings, queryMappings, messageType, protoFile, url });
 
   const isRunningTests = isSecurityRunning || isPerformanceRunning || isDataDrivenRunning;
   const disabledRunTests = isRunningTests || !httpResponse || !httpResponse.status.startsWith('2');
@@ -109,11 +114,7 @@ export default function App() {
       if (event.type === 'close') setWssConnected(false);
       if (event.type === 'message') {
         setMessages((prevMessages) => [
-          {
-            direction: 'received',
-            data: String(event.data),
-            decoded: event.decoded ?? null,
-          },
+          { direction: 'received', data: String(event.data), decoded: event.decoded ?? null },
           ...prevMessages,
         ]);
       }
@@ -219,60 +220,63 @@ export default function App() {
         <TextareaAutosize
           className="font-monospace"
           maxRows={15}
-          placeholder={mode === 'HTTP' ? 'Body JSON' : 'Message body'}
+          placeholder={mode === 'HTTP' ? 'Enter request body (JSON or Form Data)' : 'Message body'}
           value={body}
           onChange={(e) => setBody(e.target.value)}
         />
         <Button
           className="absolute top-3 right-4 min-w-auto! py-0.5! px-2! rounded-sm"
           buttonType={ButtonType.SECONDARY}
-          onClick={() => setBody((prevBody) => formatBodyByContentType(prevBody, parseHeaders(headers)))}
+          onClick={() => setBody((prevBody) => formatBody(prevBody, parseHeaders(headers)))}
         >
           Beautify
         </Button>
       </div>
 
-      <div>
-        <label className="block mb-2 font-bold text-sm">
-          Protobuf schema & message type <span className="font-normal text-gray-500/80">(optional)</span>:
-        </label>
-        <div className="flex items-center">
-          <Input
-            accept=".proto"
-            className="font-monospace rounded-r-none!"
-            type="file"
-            onChange={async (e) => {
-              const file = e.target.files?.[0];
-              if (!file) return;
+      {mode === 'HTTP' && (
+        <div>
+          <label className="block mb-1 font-bold text-sm">Protobuf schema & message type</label>
+          <div className="mb-3 text-xs text-gray-500/80">
+            Experimental and optional section. If used, both fields must be completed
+          </div>
+          <div className="flex items-center">
+            <Input
+              accept=".proto"
+              className="font-monospace rounded-r-none!"
+              type="file"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
 
-              try {
-                await loadProtoSchema(file);
+                const fileExtension = file.name.split('.').pop().toLowerCase();
+                if (fileExtension !== 'proto') return;
 
-                setProtoFile(file);
-                setMessages((prevMessages) => [
-                  { direction: 'system', data: '📂 Proto schema loaded' },
-                  ...prevMessages,
-                ]);
-              } catch (error) {
-                setMessages((prevMessages) => [
-                  {
-                    direction: 'system',
-                    data: '❌ Failed to parse proto: ' + error,
-                  },
-                  ...prevMessages,
-                ]);
-              }
-            }}
-          />
+                try {
+                  await loadProtoSchema(file);
 
-          <Input
-            className="flex-auto font-monospace border-l-0! rounded-l-none!"
-            placeholder="Message type (e.g. mypackage.MyMessage)"
-            value={messageType}
-            onChange={(e) => setMessageType(e.target.value)}
-          />
+                  setProtoFile(file);
+                  setMessages((prevMessages) => [
+                    { direction: 'system', data: '📂 Proto schema loaded' },
+                    ...prevMessages,
+                  ]);
+                } catch (error) {
+                  setMessages((prevMessages) => [
+                    { direction: 'system', data: '❌ Failed to parse proto: ' + error },
+                    ...prevMessages,
+                  ]);
+                }
+              }}
+            />
+
+            <Input
+              className="flex-auto font-monospace border-l-0! rounded-l-none!"
+              placeholder="Message type (e.g. mypackage.MyMessage)"
+              value={messageType}
+              onChange={(e) => setMessageType(e.target.value)}
+            />
+          </div>
         </div>
-      </div>
+      )}
 
       {mode === 'HTTP' && httpResponse && (
         <ResponsePanel title="Response">
@@ -323,21 +327,21 @@ export default function App() {
         </ResponsePanel>
       )}
 
-      {(Object.keys(fieldMappings).length > 0 || Object.keys(queryMappings).length > 0) && (
+      {(Object.keys(bodyMappings).length > 0 || Object.keys(queryMappings).length > 0) && (
         <div className="grid grid-cols-2 gap-4 items-stretch">
-          {Object.keys(fieldMappings).length > 0 && (
+          {Object.keys(bodyMappings).length > 0 && (
             <ResponsePanel title="Body Parameters">
-              {Object.entries(fieldMappings).map(([field, type]) => (
-                <div key={field} className="pb-4 first-of-type:pt-4 px-4 flex items-center justify-between gap-4">
-                  <span className="flex-1 font-monospace text-ellipsis text-nowrap overflow-hidden">{field}</span>
+              {Object.entries(bodyMappings).map(([key, type]) => (
+                <div key={key} className="pb-4 first-of-type:pt-4 px-4 flex items-center justify-between gap-4">
+                  <span className="flex-1 font-monospace text-ellipsis text-nowrap overflow-hidden">{key}</span>
                   <SimpleSelect
                     className="rounded-none! p-1! outline-none"
                     options={parameterOptions}
                     value={type}
                     onChange={(e) =>
-                      setFieldMappings((prevFieldMappings) => ({
-                        ...prevFieldMappings,
-                        [field]: e.target.value as FieldType,
+                      setBodyMappings((prevBodyMappings) => ({
+                        ...prevBodyMappings,
+                        [key]: e.target.value as FieldType,
                       }))
                     }
                   />
@@ -348,9 +352,9 @@ export default function App() {
 
           {Object.keys(queryMappings).length > 0 && (
             <ResponsePanel title="Query Parameters">
-              {Object.entries(queryMappings).map(([param, type]) => (
-                <div key={param} className="pb-4 first-of-type:pt-4 px-4 flex items-center justify-between gap-4">
-                  <span className="flex-1 font-monospace text-ellipsis text-nowrap overflow-hidden">{param}</span>
+              {Object.entries(queryMappings).map(([key, type]) => (
+                <div key={key} className="pb-4 first-of-type:pt-4 px-4 flex items-center justify-between gap-4">
+                  <span className="flex-1 font-monospace text-ellipsis text-nowrap overflow-hidden">{key}</span>
                   <SimpleSelect
                     className="rounded-none! p-1! outline-none"
                     options={parameterOptions}
@@ -358,7 +362,7 @@ export default function App() {
                     onChange={(e) =>
                       setQueryMappings((prevQueryMappings) => ({
                         ...prevQueryMappings,
-                        [param]: e.target.value as FieldType,
+                        [key]: e.target.value as FieldType,
                       }))
                     }
                   />
@@ -384,6 +388,7 @@ export default function App() {
               columns={getTestsTableColumns(['Check', 'Expected', 'Actual', 'Result'])}
               expandableRows
               expandableRowsComponent={ExpandedTestComponent}
+              expandableRowsComponentProps={{ headers: parseHeaders(headers), protoFile, messageType }}
               expandOnRowClicked
               data={securityTests}
               progressComponent={<TestRunningLoader text="Running security tests..." />}
@@ -431,6 +436,7 @@ export default function App() {
               columns={getTestsTableColumns(['Field', 'Value', 'Expected', 'Actual', 'Result'])}
               expandableRows
               expandableRowsComponent={ExpandedTestComponent}
+              expandableRowsComponentProps={{ headers: parseHeaders(headers), protoFile, messageType }}
               expandOnRowClicked
               data={dataDrivenTests}
               progressComponent={<TestRunningLoader text="Running data-driven tests..." />}
@@ -443,6 +449,7 @@ export default function App() {
               columns={getTestsTableColumns(['Method', 'Expected', 'Actual', 'Result'])}
               expandableRows
               expandableRowsComponent={ExpandedTestComponent}
+              expandableRowsComponentProps={{ headers: parseHeaders(headers), protoFile, messageType }}
               expandOnRowClicked
               data={crudTests}
               progressComponent={<TestRunningLoader text="Preparing CRUD…" />}
@@ -464,7 +471,7 @@ export default function App() {
     setMessageType('');
     setHttpResponse(null);
     setMessages([]);
-    setFieldMappings({});
+    setBodyMappings({});
     setQueryMappings({});
     setTestsRun(false);
   }
@@ -510,18 +517,52 @@ export default function App() {
       body: '',
       headers: {},
     });
-    setFieldMappings({});
+    setBodyMappings({});
     setQueryMappings({});
 
-    const { response, fieldMappings, queryMappings } = await sendHttpRequest(
-      { url, method, headers: parseHeaders(headers), body: parseBodyByContentType(body, parseHeaders(headers)) },
-      messageType,
-      protoFile,
-    );
+    const bodyMappings: Record<string, FieldType> = {};
+    const queryMappings: Record<string, FieldType> = {};
 
-    setHttpResponse(response);
-    setFieldMappings(fieldMappings);
-    setQueryMappings(queryMappings);
+    try {
+      const parsedHeaders = parseHeaders(headers);
+      const parsedBody = parseBody(body, parsedHeaders, messageType, protoFile);
+      const response = await window.electronAPI.sendHttp(createHttpRequest(parsedBody, parsedHeaders, method, url));
+
+      setHttpResponse(response);
+
+      if (!response.status.startsWith('2') || !parsedBody) return;
+
+      // Generate test mappings based on request body (not response)
+      if (isUrlEncodedContentType(parsedHeaders)) {
+        const formEntries = convertUrlEncodedToFormEntries(parsedBody as string);
+        for (const [key, value] of formEntries) bodyMappings[key] = detectFieldType(value);
+      } else {
+        const extractedFields = extractFieldsFromJson(parsedBody);
+        for (const [key, value] of Object.entries(extractedFields)) {
+          if (value === 'DO_NOT_TEST') bodyMappings[key] = 'do-not-test';
+          else {
+            const pathSegments = key.replace(/\[(\d+)\]/g, '.$1').split('.');
+            let parsedValue = JSON.parse(JSON.stringify(parsedBody));
+
+            for (const segment of pathSegments) parsedValue = parsedValue[segment];
+
+            bodyMappings[key] = detectFieldType(parsedValue);
+          }
+        }
+      }
+
+      const queryParameters = extractQueryParameters(url);
+      for (const [key, value] of Object.entries(queryParameters)) queryMappings[key] = detectFieldType(value);
+
+      setBodyMappings(bodyMappings);
+      setQueryMappings(queryMappings);
+    } catch (error) {
+      setHttpResponse({
+        status: 'Network Error',
+        body: String(error),
+        headers: {},
+      });
+    }
   }
 
   function connectWss() {

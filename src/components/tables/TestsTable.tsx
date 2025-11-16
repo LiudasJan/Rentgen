@@ -1,7 +1,13 @@
 import cn from 'classnames';
 import DataTable, { ExpanderComponentProps, TableColumn, TableProps } from 'react-data-table-component';
 import { TestResult, TestStatus } from '../../types';
-import { extractBodyFromResponse, generateCurl, truncateValue } from '../../utils';
+import {
+  decodeProtobufResponse,
+  extractBodyFromResponse,
+  generateCurl,
+  isUrlEncodedContentType,
+  truncateValue,
+} from '../../utils';
 import { CopyButton } from '../buttons/CopyButton';
 
 export default function TestsTable({ columns, data, className, ...otherProps }: TableProps<TestResult>) {
@@ -52,8 +58,21 @@ export default function TestsTable({ columns, data, className, ...otherProps }: 
   );
 }
 
-export function ExpandedTestComponent({ data }: ExpanderComponentProps<TestResult>) {
-  const { decoded, request, response } = data;
+export function ExpandedTestComponent({
+  data,
+  headers,
+  messageType,
+  protoFile,
+}: ExpanderComponentProps<TestResult> & {
+  headers: Record<string, string>;
+  messageType: string;
+  protoFile: File | null;
+}) {
+  const { request, response } = data;
+  const decoded =
+    headers && isUrlEncodedContentType(headers) && protoFile && messageType
+      ? decodeProtobufResponse(messageType, response)
+      : null;
   const modifiedResponse = response ? { ...response } : null;
 
   if (modifiedResponse) modifiedResponse.body = extractBodyFromResponse(modifiedResponse);

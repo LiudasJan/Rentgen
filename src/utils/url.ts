@@ -1,4 +1,4 @@
-export function extractQueryParams(url: string): Record<string, string> {
+export function extractQueryParameters(url: string): Record<string, string> {
   try {
     const parsedUrl = new URL(url);
     const params: Record<string, string> = {};

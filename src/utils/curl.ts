@@ -58,7 +58,7 @@ export function extractCurl(curl: string): ParsedCurlResult {
   // Normalize headers: always use "Cookie", never "Set-Cookie"
   const headers: Record<string, string> = {};
   if (parsedCurl.header) {
-    for (const [headerKey, headerValue] of Object.entries(parsedCurl.header as Record<string, any>)) {
+    for (const [headerKey, headerValue] of Object.entries(parsedCurl.header as Record<string, string>)) {
       const key = String(headerKey);
       const value = String(headerValue ?? '');
 

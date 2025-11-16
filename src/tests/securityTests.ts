@@ -1,6 +1,12 @@
 import { Method } from 'axios';
-import { HttpRequest, TestResult, TestStatus } from '../types';
-import { extractBodyFromResponse, extractStatusCode, getHeaderValue } from '../utils';
+import { HttpRequest, TestOptions, TestResult, TestStatus } from '../types';
+import {
+  createHttpRequest,
+  createTestHttpRequest,
+  extractBodyFromResponse,
+  extractStatusCode,
+  getHeaderValue,
+} from '../utils';
 
 const AUTHORIZATION_TEST_NAME = 'Missing authorization cookie/token';
 const AUTHORIZATION_TEST_EXPECTED = 'Should return 401 Unauthorized';
@@ -20,11 +26,14 @@ const EXPECTED_METHOD_NOT_ALLOWED_STATUS = 405;
 const EXPECTED_NOT_IMPLEMENTED_STATUS = 501;
 const ACCEPTABLE_OPTIONS_STATUS_CODES = [200, 204];
 
-export async function runSecurityTests(
-  request: HttpRequest,
-): Promise<{ securityTestResults: TestResult[]; crudTestResults: TestResult[] }> {
+export async function runSecurityTests(options: TestOptions): Promise<{
+  securityTestResults: TestResult[];
+  crudTestResults: TestResult[];
+}> {
   const securityTestResults: TestResult[] = [];
   const crudTestResults: TestResult[] = [];
+  const request = createTestHttpRequest(options);
+  const { headers, url } = request;
 
   try {
     const response = await window.electronAPI.sendHttp(request);
@@ -39,11 +48,11 @@ export async function runSecurityTests(
     );
 
     // Test OPTIONS method and get CRUD results
-    const { test, allowHeader } = await testOptionsMethod(request);
+    const { test, allowHeader } = await testOptionsMethod(options);
     securityTestResults.push(test);
 
     if (test.status === TestStatus.Pass)
-      crudTestResults.push(...getCrudTestResults(allowHeader, request.url, request.headers, response));
+      crudTestResults.push(...getCrudTestResults(allowHeader, headers, url, response));
     else
       crudTestResults.push(
         createSecurityTestResult(
@@ -66,11 +75,11 @@ export async function runSecurityTests(
 
   // Run tests that don't depend on initial response
   securityTestResults.push(
-    await testUnsupportedMethod(request),
-    await testLargePayload(request),
-    await testMissingAuthorization(request),
-    await testCors(request),
-    await testNotFound(request),
+    await testUnsupportedMethod(options),
+    await testLargePayload(options),
+    await testMissingAuthorization(options),
+    await testCors(options),
+    await testNotFound(options),
     ...getManualTests(),
   );
 
@@ -146,9 +155,9 @@ function testCacheControl(request: HttpRequest, response: any): TestResult {
   );
 }
 
-async function testOptionsMethod(request: HttpRequest): Promise<{ test: TestResult; allowHeader: string }> {
-  const { url, headers } = request;
-  const modifiedRequest: HttpRequest = { url, method: 'OPTIONS', headers };
+async function testOptionsMethod(options: TestOptions): Promise<{ test: TestResult; allowHeader: string }> {
+  const request = createTestHttpRequest(options);
+  const modifiedRequest: HttpRequest = { url: request.url, method: 'OPTIONS', headers: request.headers };
   const response = await window.electronAPI.sendHttp(modifiedRequest);
   const statusCode = extractStatusCode(response);
   const allowHeader =
@@ -168,9 +177,9 @@ async function testOptionsMethod(request: HttpRequest): Promise<{ test: TestResu
   };
 }
 
-async function testUnsupportedMethod(request: HttpRequest): Promise<TestResult> {
-  const modifiedRequest: HttpRequest = { ...request, method: 'FOOBAR' };
-  const response = await window.electronAPI.sendHttp(modifiedRequest);
+async function testUnsupportedMethod(options: TestOptions): Promise<TestResult> {
+  const request = createTestHttpRequest({ ...options, method: 'FOOBAR' });
+  const response = await window.electronAPI.sendHttp(request);
   const statusCode = extractStatusCode(response);
 
   return createSecurityTestResult(
@@ -180,17 +189,16 @@ async function testUnsupportedMethod(request: HttpRequest): Promise<TestResult> 
     statusCode === EXPECTED_METHOD_NOT_ALLOWED_STATUS || statusCode === EXPECTED_NOT_IMPLEMENTED_STATUS
       ? TestStatus.Pass
       : TestStatus.Fail,
-    modifiedRequest,
+    request,
     response,
   );
 }
 
-async function testLargePayload(request: HttpRequest): Promise<TestResult> {
-  const { url, headers } = request;
+async function testLargePayload(options: TestOptions): Promise<TestResult> {
+  const request = createTestHttpRequest({ ...options, method: 'POST' });
   const modifiedRequest: HttpRequest = {
-    url,
-    method: 'POST',
-    headers: { ...headers, 'Content-Type': 'application/json' },
+    ...request,
+    headers: { ...request.headers, 'Content-Type': 'application/json' },
     body: 'A'.repeat(LARGE_PAYLOAD_SIZE_BYTES),
   };
   const response = await window.electronAPI.sendHttp(modifiedRequest);
@@ -202,22 +210,23 @@ async function testLargePayload(request: HttpRequest): Promise<TestResult> {
     response.status,
     statusCode === EXPECTED_PAYLOAD_TOO_LARGE_STATUS ? TestStatus.Pass : TestStatus.Fail,
     {
-      url,
-      method: 'POST',
-      headers: { ...headers, 'Content-Type': 'application/json' },
+      ...modifiedRequest,
       body: `[${LARGE_PAYLOAD_SIZE_MB} MB string]`,
     },
     response,
   );
 }
 
-async function testMissingAuthorization(request: HttpRequest): Promise<TestResult> {
-  try {
-    const minimalHeaders: Record<string, string> = {};
-    for (const [key, value] of Object.entries(request.headers))
-      if (key.toLowerCase() === 'accept' || key.toLowerCase() === 'content-type') minimalHeaders[key] = value;
+async function testMissingAuthorization(options: TestOptions): Promise<TestResult> {
+  const request = createTestHttpRequest(options);
+  const minimalHeaders: Record<string, string> = {};
 
-    const modifiedRequest: HttpRequest = { ...request, headers: minimalHeaders };
+  for (const [key, value] of Object.entries(request.headers))
+    if (key.toLowerCase() === 'accept' || key.toLowerCase() === 'content-type') minimalHeaders[key] = value;
+
+  const modifiedRequest: HttpRequest = { ...request, headers: minimalHeaders };
+
+  try {
     const response = await window.electronAPI.sendHttp(modifiedRequest);
     const statusCode = extractStatusCode(response);
 
@@ -235,20 +244,20 @@ async function testMissingAuthorization(request: HttpRequest): Promise<TestResul
       AUTHORIZATION_TEST_EXPECTED,
       `Unexpected error: ${String(error)}`,
       TestStatus.Bug,
-      { ...request, headers: {} },
+      modifiedRequest,
       null,
     );
   }
 }
 
-async function testCors(request: HttpRequest): Promise<TestResult> {
-  const { url, method, headers, body } = request;
-  const modifiedHeaders = { ...headers, Origin: 'https://www.qaontime.com/' };
-  const modifiedRequest: HttpRequest = { url, method, headers: modifiedHeaders };
+async function testCors(options: TestOptions): Promise<TestResult> {
+  const request = createTestHttpRequest(options);
+  const modifiedRequest: HttpRequest = {
+    ...request,
+    headers: { ...request.headers, Origin: 'https://www.qaontime.com/' },
+  };
 
   try {
-    if (body && !['GET', 'HEAD'].includes(method.toUpperCase())) modifiedRequest.body = body;
-
     const response = await window.electronAPI.sendHttp(modifiedRequest);
     const acaoHeader = getHeaderValue(response.headers, 'access-control-allow-origin');
 
@@ -281,9 +290,9 @@ async function testCors(request: HttpRequest): Promise<TestResult> {
   }
 }
 
-async function testNotFound(request: HttpRequest): Promise<TestResult> {
-  const testUrl = createNotFoundUrl(request.url);
-  const modifiedRequest: HttpRequest = { ...request, url: testUrl };
+async function testNotFound(options: TestOptions): Promise<TestResult> {
+  const request = createTestHttpRequest(options);
+  const modifiedRequest: HttpRequest = { ...request, url: createNotFoundUrl(request.url) };
 
   try {
     const response = await window.electronAPI.sendHttp(modifiedRequest);
@@ -381,16 +390,16 @@ function validateCacheControl(
 
 function getCrudTestResults(
   allowHeader: string,
-  url: string,
   headers: Record<string, string>,
-  baseResponse: any,
+  url: string,
+  response: any,
 ): TestResult[] {
   try {
     const allowedMethods = String(allowHeader || '')
       .split(',')
       .map((s) => s.trim().toUpperCase())
       .filter(Boolean);
-    const body = extractBodyFromResponse(baseResponse);
+    const body = extractBodyFromResponse(response);
     const methodDescriptions: Record<string, string> = {
       GET: 'Fetch data',
       POST: 'Create resource',
@@ -401,29 +410,19 @@ function getCrudTestResults(
       OPTIONS: 'Discovery',
     };
 
-    return allowedMethods.map((method: string) => createCrudTestRow(method, url, headers, body, methodDescriptions));
+    return allowedMethods.map(
+      (method: string) =>
+        ({
+          actual: NOT_AVAILABLE_TEST,
+          expected: methodDescriptions[method] || 'Custom method',
+          method,
+          request: createHttpRequest(body, headers, method, url),
+          response: null,
+          status: TestStatus.Manual,
+        }) as TestResult,
+    );
   } catch {
     return [createSecurityTestResult(CRUD_TEST_NAME, CRUD_TEST_EXPECTED, NOT_AVAILABLE_TEST, TestStatus.Manual)];
-  }
-
-  function createCrudTestRow(
-    method: string,
-    url: string,
-    headers: Record<string, string>,
-    body: Record<string, unknown>,
-    methodDescriptions: Record<string, string>,
-  ): TestResult {
-    const request: HttpRequest = { url, method, headers };
-    if (!['GET', 'HEAD'].includes(method)) request.body = Object.keys(body).length ? body : {};
-
-    return {
-      actual: NOT_AVAILABLE_TEST,
-      expected: methodDescriptions[method] || 'Custom method',
-      method,
-      request,
-      response: null,
-      status: TestStatus.Manual,
-    } as TestResult;
   }
 }
 

@@ -1,16 +1,7 @@
-import { isObject, tryParseJsonObject } from './object';
-
-export function parseFormData(rawFormData: string): Array<[string, string]> {
-  return (rawFormData || '')
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => {
-      const equalIndex = line.indexOf('=');
-      if (equalIndex === -1) return [line, ''];
-      return [line.slice(0, equalIndex).trim(), line.slice(equalIndex + 1).trim()];
-    });
-}
+import { Method } from 'axios';
+import { encodeMessage, getRandomizedValueByFieldType } from '.';
+import { HttpRequest, TestOptions, TestResult } from '../types';
+import { isObject, setDeepObjectProperty, tryParseJsonObject } from './object';
 
 export function convertFormEntriesToUrlEncoded(formEntries: Array<[string, string]>): string {
   const urlSearchParams = new URLSearchParams();
@@ -22,6 +13,164 @@ export function convertFormEntriesToUrlEncoded(formEntries: Array<[string, strin
 export function convertUrlEncodedToFormEntries(encoded: string): Array<[string, string]> {
   const urlSearchParams = new URLSearchParams(encoded);
   return Array.from(urlSearchParams.entries());
+}
+
+export function createHttpRequest(
+  body: Record<string, unknown> | string | Uint8Array | null,
+  headers: Record<string, string>,
+  method: Method | string,
+  url: string,
+): HttpRequest {
+  const request: HttpRequest = { url, method, headers };
+  if (body && !['GET', 'HEAD'].includes(method.toUpperCase())) request.body = body;
+
+  return request;
+}
+
+export function extractBodyFromResponse(response: any): Record<string, unknown> {
+  try {
+    if (typeof response?.body === 'string') return JSON.parse(response.body);
+    if (response?.body && typeof response.body === 'object') return response.body;
+  } catch {
+    return {};
+  }
+}
+
+export function createTestHttpRequest(options: TestOptions): HttpRequest {
+  const { body, fieldName, headers, method, bodyMappings, queryMappings, messageType, protoFile, testData, url } =
+    options;
+
+  let parsedBody: Record<string, unknown> | string | Uint8Array | null = null;
+  let formEntries: Array<[string, string]> = [];
+
+  if (isUrlEncodedContentType(parseHeaders(headers))) formEntries = parseFormData(body);
+  else parsedBody = tryParseJsonObject(body);
+
+  if (formEntries.length > 0) {
+    // Update the field being tested
+    if (fieldName && testData) updateFormEntry(formEntries, fieldName, testData.value);
+
+    // Apply random values to random field types
+    for (const [key, type] of Object.entries(bodyMappings)) {
+      const randomizedValue = getRandomizedValueByFieldType(type);
+      if (randomizedValue !== null) updateFormEntry(formEntries, key, randomizedValue);
+    }
+
+    parsedBody = convertFormEntriesToUrlEncoded(formEntries);
+  } else {
+    // Update the field being tested
+    if (fieldName && testData) setDeepObjectProperty(parsedBody, fieldName, testData.value);
+
+    // Apply random values to random field types
+    for (const [key, type] of Object.entries(bodyMappings)) {
+      const randomizedValue = getRandomizedValueByFieldType(type);
+      if (randomizedValue !== null) setDeepObjectProperty(parsedBody, key, randomizedValue);
+    }
+
+    if (protoFile && messageType) {
+      try {
+        parsedBody = encodeMessage(messageType, parsedBody);
+      } catch {
+        // Ignore encoding errors and use the modified body as-is
+      }
+    }
+  }
+
+  const modifiedUrl = new URL(url);
+  // Apply random values to random query parameter types
+  for (const [queryParameter, fieldType] of Object.entries(queryMappings)) {
+    const randomizedValue = getRandomizedValueByFieldType(fieldType);
+    if (randomizedValue !== null) modifiedUrl.searchParams.set(queryParameter, randomizedValue);
+  }
+
+  return createHttpRequest(parsedBody, parseHeaders(headers), method, modifiedUrl.toString());
+}
+
+export async function executeTimedRequest(
+  request: HttpRequest,
+  onSuccess: (response: any, responseTime: number, statusCode: number) => TestResult,
+  onError: (error: unknown) => TestResult,
+): Promise<TestResult> {
+  try {
+    const requestStartTime = performance.now();
+    const response = await window.electronAPI.sendHttp(request);
+    const responseTime = performance.now() - requestStartTime;
+    const statusCode = extractStatusCode(response);
+
+    return onSuccess(response, responseTime, statusCode);
+  } catch (error) {
+    return onError(error);
+  }
+}
+
+export function extractStatusCode(response: any): number {
+  const status = (response?.status || '').toString();
+  const parsedStatus = parseInt(status.split(' ')[0] || '0', 10);
+  return Number.isFinite(parsedStatus) ? parsedStatus : 0;
+}
+
+export function formatBody(body: string, headers: Record<string, string>): string {
+  // Handle form URL-encoded content
+  if (isUrlEncodedContentType(headers))
+    return body
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .sort()
+      .join('\n');
+
+  // Handle JSON content (default case)
+  try {
+    return JSON.stringify(JSON.parse(body), null, 2);
+  } catch {
+    // Return original content if JSON parsing fails
+    return body;
+  }
+}
+
+export function getHeaderValue(headers: Record<string, string>, headerName: string): string {
+  const matchingKey = Object.keys(headers).find((key) => key.toLowerCase() === headerName.toLowerCase());
+  return matchingKey ? String(headers[matchingKey]) : '';
+}
+
+export function isUrlEncodedContentType(headers: Record<string, string>): boolean {
+  return /application\/x-www-form-urlencoded/i.test(getHeaderValue(headers, 'content-type'));
+}
+
+export function parseBody(
+  body: string,
+  headers: Record<string, string>,
+  messageType: string,
+  protoFile: File | null,
+): any {
+  if (isUrlEncodedContentType(headers)) return convertFormEntriesToUrlEncoded(parseFormData(body));
+
+  const paredBody = tryParseJsonObject(body);
+  if (isObject(paredBody)) {
+    if (protoFile && messageType) {
+      try {
+        return encodeMessage(messageType, paredBody);
+      } catch {
+        return paredBody;
+      }
+    }
+
+    return paredBody;
+  }
+
+  return null;
+}
+
+export function parseFormData(rawFormData: string): Array<[string, string]> {
+  return (rawFormData || '')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const equalIndex = line.indexOf('=');
+      if (equalIndex === -1) return [line, ''];
+      return [line.slice(0, equalIndex).trim(), line.slice(equalIndex + 1).trim()];
+    });
 }
 
 export function parseHeaders(headers: string): Record<string, string> {
@@ -44,59 +193,6 @@ export function parseHeaders(headers: string): Record<string, string> {
         return [headerKey.trim(), valueParts.join(':').trim()];
       }),
   );
-}
-
-export function getHeaderValue(headers: Record<string, string>, headerName: string): string {
-  const matchingKey = Object.keys(headers).find((key) => key.toLowerCase() === headerName.toLowerCase());
-  return matchingKey ? String(headers[matchingKey]) : '';
-}
-
-export function extractStatusCode(response: any): number {
-  const status = (response?.status || '').toString();
-  const parsedStatus = parseInt(status.split(' ')[0] || '0', 10);
-  return Number.isFinite(parsedStatus) ? parsedStatus : 0;
-}
-
-export function parseBodyByContentType(body: string, headers: Record<string, any>): any {
-  const contentType = getHeaderValue(headers, 'content-type');
-
-  if (/application\/x-www-form-urlencoded/i.test(contentType))
-    return convertFormEntriesToUrlEncoded(parseFormData(String(body)));
-
-  const paredBody = tryParseJsonObject(body);
-  if (isObject(paredBody)) return paredBody;
-
-  return null;
-}
-
-export function formatBodyByContentType(body: string, headers: Record<string, string>): string {
-  const contentType = getHeaderValue(headers, 'content-type');
-
-  // Handle form URL-encoded content
-  if (/application\/x-www-form-urlencoded/i.test(contentType))
-    return body
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter(Boolean)
-      .sort()
-      .join('\n');
-
-  // Handle JSON content (default case)
-  try {
-    return JSON.stringify(JSON.parse(body), null, 2);
-  } catch {
-    // Return original content if JSON parsing fails
-    return body;
-  }
-}
-
-export function extractBodyFromResponse(response: any): Record<string, unknown> {
-  try {
-    if (typeof response?.body === 'string') return JSON.parse(response.body);
-    if (response?.body && typeof response.body === 'object') return response.body;
-  } catch {
-    return {};
-  }
 }
 
 export function updateFormEntry(formEntries: Array<[string, string]>, fieldName: string, value: string): void {
