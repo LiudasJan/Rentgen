@@ -67,7 +67,7 @@ export interface TestResult {
 }
 
 export enum TestStatus {
-  Bug = '🔴 Bug',
+  Bug = '🟣 Bug',
   Fail = '🔴 Fail',
   FailNoResponse = '🔴 Fail (No response)',
   Info = '🔵 Info',
