@@ -1,4 +1,5 @@
 import { Method } from 'axios';
+import { RESPONSE_STATUS } from '../constants/responseStatus';
 import { HttpRequest, TestOptions, TestResult, TestStatus } from '../types';
 import {
   createHttpRequest,
@@ -20,11 +21,6 @@ const NOT_AVAILABLE_TEST = 'Not available';
 
 const LARGE_PAYLOAD_SIZE_MB = 10;
 const LARGE_PAYLOAD_SIZE_BYTES = LARGE_PAYLOAD_SIZE_MB * 1024 * 1024;
-const EXPECTED_PAYLOAD_TOO_LARGE_STATUS = 413;
-const EXPECTED_UNAUTHORIZED_STATUS = 401;
-const EXPECTED_METHOD_NOT_ALLOWED_STATUS = 405;
-const EXPECTED_NOT_IMPLEMENTED_STATUS = 501;
-const ACCEPTABLE_OPTIONS_STATUS_CODES = [200, 204];
 
 export async function runSecurityTests(options: TestOptions): Promise<{
   securityTestResults: TestResult[];
@@ -162,7 +158,8 @@ async function testOptionsMethod(options: TestOptions): Promise<{ test: TestResu
   const statusCode = extractStatusCode(response);
   const allowHeader =
     getHeaderValue(response.headers, 'allow') || getHeaderValue(response.headers, 'access-control-allow-methods');
-  const isValid = ACCEPTABLE_OPTIONS_STATUS_CODES.includes(statusCode) && Boolean(allowHeader);
+  const isValid =
+    (statusCode === RESPONSE_STATUS.OK || statusCode === RESPONSE_STATUS.NO_CONTENT) && Boolean(allowHeader);
 
   return {
     test: createSecurityTestResult(
@@ -186,7 +183,7 @@ async function testUnsupportedMethod(options: TestOptions): Promise<TestResult> 
     'Unsupported method handling',
     '405 Method Not Allowed (or 501)',
     response.status,
-    statusCode === EXPECTED_METHOD_NOT_ALLOWED_STATUS || statusCode === EXPECTED_NOT_IMPLEMENTED_STATUS
+    statusCode === RESPONSE_STATUS.METHOD_NOT_ALLOWED || statusCode === RESPONSE_STATUS.NOT_IMPLEMENTED
       ? TestStatus.Pass
       : TestStatus.Fail,
     request,
@@ -208,7 +205,7 @@ async function testLargePayload(options: TestOptions): Promise<TestResult> {
     `Request size limit (${LARGE_PAYLOAD_SIZE_MB} MB)`,
     '413 Payload Too Large',
     response.status,
-    statusCode === EXPECTED_PAYLOAD_TOO_LARGE_STATUS ? TestStatus.Pass : TestStatus.Fail,
+    statusCode === RESPONSE_STATUS.PAYLOAD_TOO_LARGE ? TestStatus.Pass : TestStatus.Fail,
     {
       ...modifiedRequest,
       body: `[${LARGE_PAYLOAD_SIZE_MB} MB string]`,
@@ -234,7 +231,7 @@ async function testMissingAuthorization(options: TestOptions): Promise<TestResul
       AUTHORIZATION_TEST_NAME,
       AUTHORIZATION_TEST_EXPECTED,
       response.status,
-      statusCode === EXPECTED_UNAUTHORIZED_STATUS ? TestStatus.Pass : TestStatus.Fail,
+      statusCode === RESPONSE_STATUS.UNAUTHORIZED ? TestStatus.Pass : TestStatus.Fail,
       modifiedRequest,
       response,
     );

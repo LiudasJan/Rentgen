@@ -1,4 +1,5 @@
 import { datasets } from '../constants/datasets';
+import { RESPONSE_STATUS } from '../constants/responseStatus';
 import { FieldType, HttpRequest, TestData, TestOptions, TestResult, TestStatus } from '../types';
 import {
   convertUrlEncodedToFormEntries,
@@ -10,11 +11,6 @@ import {
   parseHeaders,
 } from '../utils';
 
-const SUCCESS_STATUS_MIN = 200;
-const SUCCESS_STATUS_MAX = 299;
-const CLIENT_ERROR_STATUS_MIN = 400;
-const CLIENT_ERROR_STATUS_MAX = 499;
-const SERVER_ERROR_STATUS_MIN = 500;
 const EXPECTED_SUCCESS_RESPONSE = '2xx';
 const EXPECTED_CLIENT_ERROR_RESPONSE = '4xx';
 const ORIGINAL_REQUEST_TEST_FIELD_NAME = '[original request]';
@@ -64,7 +60,7 @@ async function testOriginalRequest(request: HttpRequest, onTestStart?: () => voi
         ORIGINAL_REQUEST_TEST_FIELD_NAME,
         EXPECTED_SUCCESS_RESPONSE,
         response.status,
-        statusCode >= SUCCESS_STATUS_MIN && statusCode <= SUCCESS_STATUS_MAX ? TestStatus.Pass : TestStatus.Fail,
+        statusCode >= RESPONSE_STATUS.OK && statusCode < RESPONSE_STATUS.REDIRECT ? TestStatus.Pass : TestStatus.Fail,
         bodyValue,
         request,
         response,
@@ -140,10 +136,10 @@ export function shouldSkipFieldType(fieldType: FieldType): boolean {
 
 function determineTestStatus(testData: TestData, statusCode: number): TestStatus {
   if (
-    (testData.valid && statusCode >= SUCCESS_STATUS_MIN && statusCode <= SUCCESS_STATUS_MAX) ||
-    (!testData.valid && statusCode >= CLIENT_ERROR_STATUS_MIN && statusCode <= CLIENT_ERROR_STATUS_MAX)
+    (testData.valid && statusCode >= RESPONSE_STATUS.OK && statusCode < RESPONSE_STATUS.REDIRECT) ||
+    (!testData.valid && statusCode >= RESPONSE_STATUS.CLIENT_ERROR && statusCode < RESPONSE_STATUS.SERVER_ERROR)
   )
     return TestStatus.Pass;
 
-  return statusCode >= SERVER_ERROR_STATUS_MIN ? TestStatus.Bug : TestStatus.Fail;
+  return statusCode >= RESPONSE_STATUS.SERVER_ERROR ? TestStatus.Bug : TestStatus.Fail;
 }

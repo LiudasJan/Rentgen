@@ -1,3 +1,4 @@
+import { RESPONSE_STATUS } from '../constants/responseStatus';
 import { TestOptions, TestResult, TestStatus } from '../types';
 import { calculateMedian, calculatePercentile, createTestHttpRequest, extractStatusCode } from '../utils';
 
@@ -106,8 +107,8 @@ export async function runLoadTest(
     responseTimes.push(responseTime);
 
     const statusCode = extractStatusCode(response);
-    if (statusCode >= 500) server5xxFailures++;
-    if (statusCode >= 400 && statusCode < 500) client4xxFailures++;
+    if (statusCode >= RESPONSE_STATUS.SERVER_ERROR) server5xxFailures++;
+    if (statusCode >= RESPONSE_STATUS.CLIENT_ERROR && statusCode < RESPONSE_STATUS.SERVER_ERROR) client4xxFailures++;
 
     // Check early abort conditions
     if (server5xxFailures >= MAX_EARLY_ABORT_FAILURES) isAborted = true;

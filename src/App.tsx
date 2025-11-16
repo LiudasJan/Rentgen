@@ -12,6 +12,7 @@ import { LoadTestControls } from './components/LoadTestControls';
 import Modal from './components/modals/Modal';
 import ResponsePanel from './components/panels/ResponsePanel';
 import TestsTable, { ExpandedTestComponent, getTestsTableColumns } from './components/tables/TestsTable';
+import { RESPONSE_STATUS } from './constants/responseStatus';
 import useTests from './hooks/useTests';
 import { LOAD_TEST_NAME } from './tests';
 import { FieldType } from './types';
@@ -22,6 +23,7 @@ import {
   extractCurl,
   extractFieldsFromJson,
   extractQueryParameters,
+  extractStatusCode,
   formatBody,
   isUrlEncodedContentType,
   loadProtoSchema,
@@ -104,7 +106,9 @@ export default function App() {
   } = useTests({ body, headers, method, bodyMappings, queryMappings, messageType, protoFile, url });
 
   const isRunningTests = isSecurityRunning || isPerformanceRunning || isDataDrivenRunning;
-  const disabledRunTests = isRunningTests || !httpResponse || !httpResponse.status.startsWith('2');
+  const statusCode = extractStatusCode(httpResponse);
+  const disabledRunTests =
+    isRunningTests || !httpResponse || statusCode < RESPONSE_STATUS.OK || statusCode > RESPONSE_STATUS.CLIENT_ERROR;
 
   useEffect(() => {
     if (!window.electronAPI?.onWssEvent) return;
