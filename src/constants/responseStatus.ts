@@ -1,4 +1,5 @@
 export const RESPONSE_STATUS = {
+  NETWORK_ERROR: 0,
   OK: 200,
   NO_CONTENT: 204,
   REDIRECT: 300,

@@ -299,7 +299,11 @@ async function testNotFound(options: TestOptions): Promise<TestResult> {
       NOT_FOUND_TEST_NAME,
       NOT_FOUND_TEST_EXPECTED,
       response.status,
-      statusCode === 404 ? TestStatus.Pass : statusCode === 0 ? TestStatus.FailNoResponse : TestStatus.Fail,
+      statusCode === 404
+        ? TestStatus.Pass
+        : statusCode === RESPONSE_STATUS.NETWORK_ERROR
+          ? TestStatus.FailNoResponse
+          : TestStatus.Fail,
       modifiedRequest,
       response,
     );
