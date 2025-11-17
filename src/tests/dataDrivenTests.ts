@@ -115,7 +115,9 @@ async function testValueNormalization(options: TestOptions, onTestStart?: () => 
         `${mappingType}.${fieldName}`,
         VALUE_NORMALIZATION_TEST_EXPECTED,
         testStatus === TestStatus.Pass
-          ? `Trimmed/normalized or rejected ${RESPONSE_STATUS.CLIENT_ERROR}/${RESPONSE_STATUS.UNPROCESSABLE_ENTITY}`
+          ? statusCode === RESPONSE_STATUS.CLIENT_ERROR || statusCode === RESPONSE_STATUS.UNPROCESSABLE_ENTITY
+            ? `Rejected with ${statusCode}`
+            : 'Value trimmed/normalized'
           : testStatus === TestStatus.Info
             ? 'Check manually via GET method or database'
             : 'Contains value with spaces, not trimmed/normalized',
@@ -217,6 +219,7 @@ function determineValueNormalizationTestStatus(
   fieldName: string,
   testData: TestData,
 ): TestStatus {
+  if (statusCode >= RESPONSE_STATUS.SERVER_ERROR) return TestStatus.Bug;
   if (statusCode === RESPONSE_STATUS.CLIENT_ERROR || statusCode === RESPONSE_STATUS.UNPROCESSABLE_ENTITY)
     return TestStatus.Pass;
 
