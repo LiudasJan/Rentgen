@@ -286,15 +286,21 @@ export default function App() {
         <ResponsePanel title="Response">
           <div className="p-4 font-bold bg-body border-t border-border">{httpResponse.status}</div>
           {httpResponse.status !== 'Sending...' && (
-            <div className="max-h-[400px] p-4 border-t border-border overflow-y-auto">
-              <h4 className="m-0">Headers</h4>
-              <pre className="m-0! mt-4! whitespace-pre-wrap break-all">
-                {JSON.stringify(httpResponse.headers, null, 2)}
-              </pre>
-              <h4 className="m-0 mt-4 pt-4 border-t border-border">Body</h4>
-              <pre className="m-0! mt-4! whitespace-pre-wrap break-all">
-                {typeof httpResponse.body === 'string' ? httpResponse.body : JSON.stringify(httpResponse.body, null, 2)}
-              </pre>
+            <div className="flex max-h-[450px] p-4 border-t border-border overflow-y-auto">
+              <div className="flex-1 h-full">
+                <h4 className="m-0">Headers</h4>
+                <pre className="m-0! mt-4! whitespace-pre-wrap break-all">
+                  {JSON.stringify(httpResponse.headers, null, 2)}
+                </pre>
+              </div>
+              <div className="flex-1 h-full ml-4 pl-4 border-l border-border">
+                <h4 className="m-0">Body</h4>
+                <pre className="m-0! mt-4! whitespace-pre-wrap break-all">
+                  {typeof httpResponse.body === 'string'
+                    ? httpResponse.body
+                    : JSON.stringify(httpResponse.body, null, 2)}
+                </pre>
+              </div>
             </div>
           )}
         </ResponsePanel>
