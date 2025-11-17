@@ -226,13 +226,8 @@ function determineValueNormalizationTestStatus(
   const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
   if (!responseBody) return TestStatus.Info;
 
-  const trimmedValue = String(testData.value).trim();
-  const isValueTrimmed =
-    responseBody.includes(`"${fieldName}":"${trimmedValue}"`) ||
-    responseBody.includes(`'${fieldName}':'${trimmedValue}'`) ||
-    responseBody.includes(`${fieldName}=${encodeURIComponent(trimmedValue)}`);
-
-  return isValueTrimmed ? TestStatus.Pass : TestStatus.Fail;
+  const pattern = new RegExp(`["']${fieldName}["']\\s*:\\s*["']${String(testData.value).trim()}["']`);
+  return pattern.test(responseBody) ? TestStatus.Pass : TestStatus.Fail;
 }
 
 function determineMappingsTestStatus(statusCode: number, testData: TestData): TestStatus {
