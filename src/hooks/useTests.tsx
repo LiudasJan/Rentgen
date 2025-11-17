@@ -36,7 +36,11 @@ const useTests = (options: TestOptions) => {
     setDataDrivenTests([]);
     setCurrentTest(0);
 
-    const dataDrivenTestResults = await runDataDrivenTests(options, setTestsCount, incrementCurrentTest);
+    const dataDrivenTestResults = await runDataDrivenTests(
+      options,
+      (testsCount) => setTestsCount((prevTestsCount) => prevTestsCount + testsCount),
+      incrementCurrentTest,
+    );
     setDataDrivenTests(dataDrivenTestResults);
     setIsDataDrivenRunning(false);
 
