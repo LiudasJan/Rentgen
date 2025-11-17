@@ -226,7 +226,11 @@ function determineValueNormalizationTestStatus(
   const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
   if (!responseBody) return TestStatus.Info;
 
-  const pattern = new RegExp(`["']${fieldName}["']\\s*:\\s*["']${String(testData.value).trim()}["']`);
+  const pattern = new RegExp(
+    `["']${fieldName.split('.').pop()}["']\\s*:\\s*["']${String(testData.value).trim()}["']`,
+    'i',
+  );
+
   return pattern.test(responseBody) ? TestStatus.Pass : TestStatus.Fail;
 }
 
