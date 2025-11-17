@@ -31,7 +31,7 @@ export async function runDataDrivenTests(options: TestOptions, onTestStart?: () 
 
     const testDataset = datasets[type] || [];
     for (const testData of testDataset)
-      results.push(await testMappings({ ...options, fieldName, testData }, 'body', onTestStart));
+      results.push(await testMappings({ ...options, fieldName, mappingType: 'body', testData }, onTestStart));
   }
 
   // Test query parameters
@@ -40,7 +40,7 @@ export async function runDataDrivenTests(options: TestOptions, onTestStart?: () 
 
     const testDataset = datasets[type] || [];
     for (const testData of testDataset)
-      results.push(await testMappings({ ...options, fieldName, testData }, 'query', onTestStart));
+      results.push(await testMappings({ ...options, fieldName, mappingType: 'query', testData }, onTestStart));
   }
 
   return results;
@@ -80,10 +80,10 @@ async function testOriginalRequest(request: HttpRequest, onTestStart?: () => voi
   );
 }
 
-async function testMappings(options: TestOptions, mappingType: string, onTestStart?: () => void): Promise<TestResult> {
+async function testMappings(options: TestOptions, onTestStart?: () => void): Promise<TestResult> {
   onTestStart?.();
 
-  const { fieldName, testData } = options;
+  const { fieldName, mappingType, testData } = options;
   const request = createTestHttpRequest(options);
 
   return executeTimedRequest(

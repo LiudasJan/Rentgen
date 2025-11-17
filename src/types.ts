@@ -20,6 +20,8 @@ export type FieldType =
   | 'randomInt'
   | 'randomEmail';
 
+export type MappingType = 'body' | 'query';
+
 export interface HttpRequest {
   body?: Record<string, unknown> | string | Uint8Array | null;
   headers: Record<string, string>;
@@ -47,6 +49,7 @@ export interface TestOptions {
   method: Method | string;
   bodyMappings: Record<string, FieldType>;
   queryMappings: Record<string, FieldType>;
+  mappingType?: MappingType;
   messageType: string;
   protoFile: File | null;
   testData?: TestData;

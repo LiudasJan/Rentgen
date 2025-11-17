@@ -28,8 +28,19 @@ export function createHttpRequest(
 }
 
 export function createTestHttpRequest(options: TestOptions): HttpRequest {
-  const { body, fieldName, headers, method, bodyMappings, queryMappings, messageType, protoFile, testData, url } =
-    options;
+  const {
+    body,
+    fieldName,
+    headers,
+    method,
+    bodyMappings,
+    queryMappings,
+    mappingType,
+    messageType,
+    protoFile,
+    testData,
+    url,
+  } = options;
 
   let parsedBody: Record<string, unknown> | string | Uint8Array | null = null;
   let formEntries: Array<[string, string]> = [];
@@ -39,7 +50,7 @@ export function createTestHttpRequest(options: TestOptions): HttpRequest {
 
   if (formEntries.length > 0) {
     // Update the field being tested
-    if (fieldName && testData) updateFormEntry(formEntries, fieldName, testData.value);
+    if (mappingType === 'body' && fieldName && testData) updateFormEntry(formEntries, fieldName, testData.value);
 
     // Apply random values to random field types
     for (const [key, type] of Object.entries(bodyMappings)) {
@@ -50,7 +61,7 @@ export function createTestHttpRequest(options: TestOptions): HttpRequest {
     parsedBody = convertFormEntriesToUrlEncoded(formEntries);
   } else {
     // Update the field being tested
-    if (fieldName && testData) setDeepObjectProperty(parsedBody, fieldName, testData.value);
+    if (mappingType === 'body' && fieldName && testData) setDeepObjectProperty(parsedBody, fieldName, testData.value);
 
     // Apply random values to random field types
     for (const [key, type] of Object.entries(bodyMappings)) {
@@ -70,7 +81,7 @@ export function createTestHttpRequest(options: TestOptions): HttpRequest {
   const modifiedUrl = new URL(url);
 
   // Update the field being tested
-  if (fieldName && testData) modifiedUrl.searchParams.set(fieldName, String(testData.value));
+  if (mappingType === 'query' && fieldName && testData) modifiedUrl.searchParams.set(fieldName, String(testData.value));
 
   // Apply random values to random query parameter types
   for (const [queryParameter, fieldType] of Object.entries(queryMappings)) {
