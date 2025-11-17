@@ -17,15 +17,13 @@ import useTests from './hooks/useTests';
 import { LOAD_TEST_NAME } from './tests';
 import { FieldType } from './types';
 import {
-  convertUrlEncodedToFormEntries,
   createHttpRequest,
   detectFieldType,
+  extractBodyFieldMappings,
   extractCurl,
-  extractFieldsFromJson,
   extractQueryParameters,
   extractStatusCode,
   formatBody,
-  isUrlEncodedContentType,
   loadProtoSchema,
   parseBody,
   parseHeaders,
@@ -530,9 +528,6 @@ export default function App() {
     setBodyMappings({});
     setQueryMappings({});
 
-    const bodyMappings: Record<string, FieldType> = {};
-    const queryMappings: Record<string, FieldType> = {};
-
     try {
       const parsedHeaders = parseHeaders(headers);
       const parsedBody = parseBody(body, parsedHeaders, messageType, protoFile);
@@ -542,27 +537,10 @@ export default function App() {
 
       if (!response.status.startsWith('2') || !parsedBody) return;
 
-      // Generate test mappings based on request body (not response)
-      if (isUrlEncodedContentType(parsedHeaders)) {
-        const formEntries = convertUrlEncodedToFormEntries(parsedBody as string);
-        for (const [key, value] of formEntries) bodyMappings[key] = detectFieldType(value);
-      } else {
-        const extractedFields = extractFieldsFromJson(parsedBody);
-        for (const [key, value] of Object.entries(extractedFields)) {
-          if (value === 'DO_NOT_TEST') bodyMappings[key] = 'do-not-test';
-          else {
-            const pathSegments = key.replace(/\[(\d+)\]/g, '.$1').split('.');
-            let parsedValue = JSON.parse(JSON.stringify(parsedBody));
-
-            for (const segment of pathSegments) parsedValue = parsedValue[segment];
-
-            bodyMappings[key] = detectFieldType(parsedValue);
-          }
-        }
-      }
-
-      const queryParameters = extractQueryParameters(url);
-      for (const [key, value] of Object.entries(queryParameters)) queryMappings[key] = detectFieldType(value);
+      const bodyMappings = extractBodyFieldMappings(parsedBody, parsedHeaders);
+      const queryMappings = Object.fromEntries(
+        Object.entries(extractQueryParameters(url)).map(([key, value]) => [key, detectFieldType(value)]),
+      );
 
       setBodyMappings(bodyMappings);
       setQueryMappings(queryMappings);

@@ -1,6 +1,6 @@
 import { Method } from 'axios';
-import { encodeMessage, getRandomizedValueByFieldType } from '.';
-import { HttpRequest, TestOptions, TestResult } from '../types';
+import { detectFieldType, encodeMessage, extractFieldsFromJson, getRandomizedValueByFieldType } from '.';
+import { FieldType, HttpRequest, TestOptions, TestResult } from '../types';
 import { isObject, setDeepObjectProperty, tryParseJsonObject } from './object';
 
 export function convertFormEntriesToUrlEncoded(formEntries: Array<[string, string]>): string {
@@ -25,15 +25,6 @@ export function createHttpRequest(
   if (body && !['GET', 'HEAD'].includes(method.toUpperCase())) request.body = body;
 
   return request;
-}
-
-export function extractBodyFromResponse(response: any): Record<string, unknown> {
-  try {
-    if (typeof response?.body === 'string') return JSON.parse(response.body);
-    if (response?.body && typeof response.body === 'object') return response.body;
-  } catch {
-    return {};
-  }
 }
 
 export function createTestHttpRequest(options: TestOptions): HttpRequest {
@@ -104,6 +95,46 @@ export async function executeTimedRequest(
     return onSuccess(response, responseTime, statusCode);
   } catch (error) {
     return onError(error);
+  }
+}
+
+export function extractBodyFieldMappings(body: unknown, headers: Record<string, string>): Record<string, FieldType> {
+  const mappings: Record<string, FieldType> = {};
+
+  if (isUrlEncodedContentType(headers)) {
+    const formEntries = convertUrlEncodedToFormEntries(body as string);
+    for (const [key, value] of formEntries) {
+      mappings[key] = detectFieldType(value);
+    }
+  } else {
+    const extractedFields = extractFieldsFromJson(body);
+    for (const [key, value] of Object.entries(extractedFields)) {
+      if (value === 'DO_NOT_TEST') {
+        mappings[key] = 'do-not-test';
+      } else {
+        // Navigate to the actual value in the parsed body
+        const pathSegments = key.replace(/\[(\d+)\]/g, '.$1').split('.');
+        let fieldValue: any = body;
+
+        for (const segment of pathSegments) {
+          if (fieldValue == null) break;
+          fieldValue = fieldValue[segment];
+        }
+
+        mappings[key] = detectFieldType(fieldValue);
+      }
+    }
+  }
+
+  return mappings;
+}
+
+export function extractBodyFromResponse(response: any): Record<string, unknown> {
+  try {
+    if (typeof response?.body === 'string') return JSON.parse(response.body);
+    if (response?.body && typeof response.body === 'object') return response.body;
+  } catch {
+    return {};
   }
 }
 
