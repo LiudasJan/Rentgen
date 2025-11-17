@@ -117,7 +117,7 @@ export function getTestsTableColumns(visibleColumns: string[] = []): TableColumn
   const columns: TableColumn<TestResult>[] = [
     {
       name: 'Field',
-      selector: (row) => row.field,
+      selector: (row) => row.name,
       omit: true,
     },
     {

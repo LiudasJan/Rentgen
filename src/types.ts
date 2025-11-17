@@ -59,7 +59,6 @@ export interface TestOptions {
 export interface TestResult {
   actual: string;
   expected: string;
-  field?: string;
   name?: string;
   request?: HttpRequest | null;
   response?: any | null;

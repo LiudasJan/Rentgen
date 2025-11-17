@@ -175,7 +175,7 @@ async function testMappings(options: TestOptions, onTestStart?: () => void): Pro
 }
 
 function createDataDrivenTestResult(
-  field: string,
+  name: string,
   expected: string,
   actual: string,
   status: TestStatus,
@@ -184,7 +184,7 @@ function createDataDrivenTestResult(
   response: any = null,
   responseTime = 0,
 ): TestResult {
-  return { field, expected, actual, status, value, request, response, responseTime };
+  return { name, expected, actual, status, value, request, response, responseTime };
 }
 
 function calculateDataDrivenTestsCount(
