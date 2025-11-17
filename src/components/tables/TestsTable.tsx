@@ -38,7 +38,7 @@ export default function TestsTable({ columns, data, className, ...otherProps }: 
         },
         {
           when: (row) => row.status === TestStatus.Bug,
-          style: { backgroundColor: '#ffe0e0' },
+          style: { backgroundColor: '#f3e8ff' },
         },
       ]}
       customStyles={{
