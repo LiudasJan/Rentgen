@@ -109,7 +109,7 @@ async function testValueNormalization(options: TestOptions, onTestStart?: () => 
   return executeTimedRequest(
     request,
     (response, responseTime, statusCode) => {
-      const testStatus = determineValueNormalizationTestStatus(response, statusCode, fieldName, testData);
+      const testStatus = determineValueNormalizationTestStatus(response, statusCode, testData);
 
       return createDataDrivenTestResult(
         `${mappingType}.${fieldName}`,
@@ -213,12 +213,7 @@ function calculateDataDrivenTestsCount(
   return dataDrivenTestsCount;
 }
 
-function determineValueNormalizationTestStatus(
-  response: any,
-  statusCode: number,
-  fieldName: string,
-  testData: TestData,
-): TestStatus {
+function determineValueNormalizationTestStatus(response: any, statusCode: number, testData: TestData): TestStatus {
   if (statusCode >= RESPONSE_STATUS.SERVER_ERROR) return TestStatus.Bug;
   if (statusCode === RESPONSE_STATUS.CLIENT_ERROR || statusCode === RESPONSE_STATUS.UNPROCESSABLE_ENTITY)
     return TestStatus.Pass;
@@ -226,12 +221,7 @@ function determineValueNormalizationTestStatus(
   const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
   if (!responseBody) return TestStatus.Info;
 
-  const pattern = new RegExp(
-    `["']${fieldName.split('.').pop()}["']\\s*:\\s*["']${String(testData.value).trim()}["']`,
-    'i',
-  );
-
-  return pattern.test(responseBody) ? TestStatus.Pass : TestStatus.Fail;
+  return !responseBody.includes(String(testData.value)) ? TestStatus.Pass : TestStatus.Fail;
 }
 
 function determineMappingsTestStatus(statusCode: number, testData: TestData): TestStatus {
