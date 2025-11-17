@@ -13,7 +13,7 @@ import {
   parseHeaders,
 } from '../utils';
 
-const VALUE_NORMALIZATION_TEST_EXPECTED = 'Value must be trimmed/normalized or reject with 4xx';
+const VALUE_NORMALIZATION_TEST_EXPECTED = `Value must be trimmed/normalized or reject with ${RESPONSE_STATUS.CLIENT_ERROR}/${RESPONSE_STATUS.UNPROCESSABLE_ENTITY}`;
 const SUCCESS_RESPONSE_EXPECTED = '2xx';
 const CLIENT_ERROR_RESPONSE_EXPECTED = '4xx';
 const ORIGINAL_REQUEST_TEST_FIELD_NAME = '[original request]';
@@ -115,7 +115,7 @@ async function testValueNormalization(options: TestOptions, onTestStart?: () => 
         `${mappingType}.${fieldName}`,
         VALUE_NORMALIZATION_TEST_EXPECTED,
         testStatus === TestStatus.Pass
-          ? `Trimmed/normalized or rejected ${CLIENT_ERROR_RESPONSE_EXPECTED}`
+          ? `Trimmed/normalized or rejected ${RESPONSE_STATUS.CLIENT_ERROR}/${RESPONSE_STATUS.UNPROCESSABLE_ENTITY}`
           : testStatus === TestStatus.Info
             ? 'Check manually via GET method or database'
             : 'Contains value with spaces, not trimmed/normalized',
@@ -220,7 +220,7 @@ function determineValueNormalizationTestStatus(
   if (statusCode === RESPONSE_STATUS.CLIENT_ERROR || statusCode === RESPONSE_STATUS.UNPROCESSABLE_ENTITY)
     return TestStatus.Pass;
 
-  const responseBody = response.body === 'string' ? response.body : JSON.stringify(response.body);
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
   if (!responseBody) return TestStatus.Info;
 
   const trimmedValue = String(testData.value).trim();
