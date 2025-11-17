@@ -124,6 +124,11 @@ export function getTestsTableColumns(visibleColumns: string[] = []): TableColumn
       name: 'Value',
       selector: (row) => truncateValue(row.value),
       omit: true,
+      style: {
+        'div:first-child': {
+          whiteSpace: 'pre !important',
+        },
+      },
     },
     {
       name: 'Check',

@@ -1,14 +1,6 @@
 import { useState } from 'react';
-import { datasets } from '../constants/datasets';
-import {
-  LOAD_TEST_NAME,
-  runDataDrivenTests,
-  runLoadTest,
-  runPerformanceInsights,
-  runSecurityTests,
-  shouldSkipFieldType,
-} from '../tests';
-import { FieldType, TestOptions, TestResult } from '../types';
+import { LOAD_TEST_NAME, runDataDrivenTests, runLoadTest, runPerformanceInsights, runSecurityTests } from '../tests';
+import { TestOptions, TestResult } from '../types';
 
 const useTests = (options: TestOptions) => {
   const [currentTest, setCurrentTest] = useState<number>(0);
@@ -40,17 +32,11 @@ const useTests = (options: TestOptions) => {
   }
 
   async function executeDataDrivenTests(): Promise<TestResult[]> {
-    const { bodyMappings, queryMappings } = options;
-
     setIsDataDrivenRunning(true);
     setDataDrivenTests([]);
     setCurrentTest(0);
-    setTestsCount(
-      (prevTestsCount) =>
-        prevTestsCount + 1 + getDataDrivenTestsCount(bodyMappings) + getDataDrivenTestsCount(queryMappings),
-    );
 
-    const dataDrivenTestResults = await runDataDrivenTests(options, incrementCurrentTest);
+    const dataDrivenTestResults = await runDataDrivenTests(options, setTestsCount, incrementCurrentTest);
     setDataDrivenTests(dataDrivenTestResults);
     setIsDataDrivenRunning(false);
 
@@ -141,17 +127,6 @@ const useTests = (options: TestOptions) => {
 
   function formatLoadTestProgress(loadBar: string, setRequestCount: number, requestCount: number): string {
     return `${loadBar} (${setRequestCount}/${requestCount})`;
-  }
-
-  function getDataDrivenTestsCount(mappings: Record<string, FieldType>): number {
-    let dataDrivenTestsCount = 0;
-    for (const [, fieldType] of Object.entries(mappings)) {
-      if (shouldSkipFieldType(fieldType)) continue;
-
-      dataDrivenTestsCount += (datasets[fieldType] || []).length;
-    }
-
-    return dataDrivenTestsCount;
   }
 
   function incrementCurrentTest() {

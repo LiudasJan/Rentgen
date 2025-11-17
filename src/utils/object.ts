@@ -2,11 +2,9 @@ export function setDeepObjectProperty(targetObject: any, propertyPath: string, n
   const pathParts = propertyPath.replace(/\[(\d+)\]/g, '.$1').split('.');
   let currentObject = targetObject;
 
-  for (let i = 0; i < pathParts.length - 1; i++) {
-    const currentKey = pathParts[i];
-    if (!(currentKey in currentObject)) currentObject[currentKey] = {};
-
-    currentObject = currentObject[currentKey];
+  for (const key of pathParts.slice(0, -1)) {
+    if (!(key in currentObject)) currentObject[key] = {};
+    currentObject = currentObject[key];
   }
 
   currentObject[pathParts[pathParts.length - 1]] = newValue;
@@ -39,7 +37,7 @@ export function truncateValue(value: any, maxLength = 100): string {
   }
 
   if (formattedString.length > maxLength) {
-    const truncationSuffix = ' ...';
+    const truncationSuffix = '...';
     const availableLength = maxLength - truncationSuffix.length;
     return formattedString.slice(0, Math.max(0, availableLength)) + truncationSuffix;
   }

@@ -242,7 +242,6 @@ async function testMissingAuthorization(options: TestOptions): Promise<TestResul
       `Unexpected error: ${String(error)}`,
       TestStatus.Bug,
       modifiedRequest,
-      null,
     );
   }
 }

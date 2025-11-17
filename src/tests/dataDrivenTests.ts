@@ -6,24 +6,46 @@ import {
   createHttpRequest,
   createTestHttpRequest,
   executeTimedRequest,
+  extractBodyFieldMappings,
+  getFieldValueFromBody,
   isUrlEncodedContentType,
   parseBody,
   parseHeaders,
 } from '../utils';
 
-const EXPECTED_SUCCESS_RESPONSE = '2xx';
-const EXPECTED_CLIENT_ERROR_RESPONSE = '4xx';
+const VALUE_NORMALIZATION_TEST_EXPECTED = 'Value must be trimmed/normalized or reject with 4xx';
+const SUCCESS_RESPONSE_EXPECTED = '2xx';
+const CLIENT_ERROR_RESPONSE_EXPECTED = '4xx';
 const ORIGINAL_REQUEST_TEST_FIELD_NAME = '[original request]';
 
-export async function runDataDrivenTests(options: TestOptions, onTestStart?: () => void): Promise<TestResult[]> {
+export async function runDataDrivenTests(
+  options: TestOptions,
+  onCalculateTestsCount?: (count: number) => void,
+  onTestStart?: () => void,
+): Promise<TestResult[]> {
   const { body, bodyMappings, headers, messageType, method, protoFile, queryMappings, url } = options;
   const results: TestResult[] = [];
   const parsedHeaders = parseHeaders(headers);
   const parsedBody = parseBody(body, parsedHeaders, messageType, protoFile);
   const request = createHttpRequest(parsedBody, parsedHeaders, method, url);
+  const originalBodyMappings = extractBodyFieldMappings(parsedBody, parsedHeaders);
+
+  onCalculateTestsCount?.(1 + calculateDataDrivenTestsCount(originalBodyMappings, bodyMappings, queryMappings));
 
   // Test original request first as baseline
   results.push(await testOriginalRequest(request, onTestStart));
+
+  // Test string value normalization (trimming)
+  for (const [fieldName, type] of Object.entries(bodyMappings)) {
+    const originalType = originalBodyMappings[fieldName];
+    if (shouldSkipFieldType(type) || shouldSkipNormalizationTest(originalType)) continue;
+
+    const testData: TestData = {
+      value: `   ${getFieldValueFromBody(parsedBody, fieldName, parsedHeaders)}   `,
+      valid: false,
+    };
+    results.push(await testValueNormalization({ ...options, fieldName, mappingType: 'body', testData }, onTestStart));
+  }
 
   // Test body fields
   for (const [fieldName, type] of Object.entries(bodyMappings)) {
@@ -58,7 +80,7 @@ async function testOriginalRequest(request: HttpRequest, onTestStart?: () => voi
     (response, responseTime, statusCode) =>
       createDataDrivenTestResult(
         ORIGINAL_REQUEST_TEST_FIELD_NAME,
-        EXPECTED_SUCCESS_RESPONSE,
+        SUCCESS_RESPONSE_EXPECTED,
         response.status,
         statusCode >= RESPONSE_STATUS.OK && statusCode < RESPONSE_STATUS.REDIRECT ? TestStatus.Pass : TestStatus.Fail,
         bodyValue,
@@ -69,13 +91,49 @@ async function testOriginalRequest(request: HttpRequest, onTestStart?: () => voi
     (error) =>
       createDataDrivenTestResult(
         ORIGINAL_REQUEST_TEST_FIELD_NAME,
-        EXPECTED_SUCCESS_RESPONSE,
+        SUCCESS_RESPONSE_EXPECTED,
         `Unexpected error: ${String(error)}`,
         TestStatus.Bug,
         bodyValue,
         request,
-        null,
-        0,
+      ),
+  );
+}
+
+async function testValueNormalization(options: TestOptions, onTestStart?: () => void): Promise<TestResult> {
+  onTestStart?.();
+
+  const { fieldName, mappingType, testData } = options;
+  const request = createTestHttpRequest(options);
+
+  return executeTimedRequest(
+    request,
+    (response, responseTime, statusCode) => {
+      const testStatus = determineValueNormalizationTestStatus(response, statusCode, fieldName, testData);
+
+      return createDataDrivenTestResult(
+        `${mappingType}.${fieldName}`,
+        VALUE_NORMALIZATION_TEST_EXPECTED,
+        testStatus === TestStatus.Pass
+          ? `Trimmed/normalized or rejected ${CLIENT_ERROR_RESPONSE_EXPECTED}`
+          : testStatus === TestStatus.Info
+            ? 'Check manually via GET method or database'
+            : 'Contains value with spaces, not trimmed/normalized',
+        testStatus,
+        testData.value,
+        request,
+        response,
+        responseTime,
+      );
+    },
+    (error) =>
+      createDataDrivenTestResult(
+        `${mappingType}.${fieldName}`,
+        VALUE_NORMALIZATION_TEST_EXPECTED,
+        `Unexpected error: ${String(error)}`,
+        TestStatus.Bug,
+        testData.value,
+        request,
       ),
   );
 }
@@ -89,11 +147,11 @@ async function testMappings(options: TestOptions, onTestStart?: () => void): Pro
   return executeTimedRequest(
     request,
     (response, responseTime, statusCode) => {
-      const testStatus = determineTestStatus(testData, statusCode);
+      const testStatus = determineMappingsTestStatus(statusCode, testData);
 
       return createDataDrivenTestResult(
         `${mappingType}.${fieldName}`,
-        testData.valid ? EXPECTED_SUCCESS_RESPONSE : EXPECTED_CLIENT_ERROR_RESPONSE,
+        testData.valid ? SUCCESS_RESPONSE_EXPECTED : CLIENT_ERROR_RESPONSE_EXPECTED,
         response.status,
         testStatus,
         testData.value,
@@ -105,12 +163,11 @@ async function testMappings(options: TestOptions, onTestStart?: () => void): Pro
     (error) =>
       createDataDrivenTestResult(
         `${mappingType}.${fieldName}`,
-        testData.valid ? EXPECTED_SUCCESS_RESPONSE : EXPECTED_CLIENT_ERROR_RESPONSE,
+        testData.valid ? SUCCESS_RESPONSE_EXPECTED : CLIENT_ERROR_RESPONSE_EXPECTED,
         `Unexpected error: ${String(error)}`,
         TestStatus.Bug,
         testData.value,
         request,
-        String(error),
       ),
   );
 }
@@ -128,13 +185,54 @@ function createDataDrivenTestResult(
   return { field, expected, actual, status, value, request, response, responseTime };
 }
 
-export function shouldSkipFieldType(fieldType: FieldType): boolean {
-  return (
-    fieldType === 'do-not-test' || fieldType === 'random32' || fieldType === 'randomInt' || fieldType === 'randomEmail'
-  );
+function calculateDataDrivenTestsCount(
+  originalBodyMappings: Record<string, FieldType>,
+  bodyMappings: Record<string, FieldType>,
+  queryMappings: Record<string, FieldType>,
+): number {
+  let dataDrivenTestsCount = 0;
+
+  for (const [key, type] of Object.entries(bodyMappings)) {
+    const originalType = originalBodyMappings[key];
+    if (shouldSkipFieldType(type) || shouldSkipNormalizationTest(originalType)) continue;
+    dataDrivenTestsCount += 1;
+  }
+
+  for (const [, type] of Object.entries(bodyMappings)) {
+    if (shouldSkipFieldType(type)) continue;
+    dataDrivenTestsCount += (datasets[type] || []).length;
+  }
+
+  for (const [, type] of Object.entries(queryMappings)) {
+    if (shouldSkipFieldType(type)) continue;
+    dataDrivenTestsCount += (datasets[type] || []).length;
+  }
+
+  return dataDrivenTestsCount;
 }
 
-function determineTestStatus(testData: TestData, statusCode: number): TestStatus {
+function determineValueNormalizationTestStatus(
+  response: any,
+  statusCode: number,
+  fieldName: string,
+  testData: TestData,
+): TestStatus {
+  if (statusCode === RESPONSE_STATUS.CLIENT_ERROR || statusCode === RESPONSE_STATUS.UNPROCESSABLE_ENTITY)
+    return TestStatus.Pass;
+
+  const responseBody = response.body === 'string' ? response.body : JSON.stringify(response.body);
+  if (!responseBody) return TestStatus.Info;
+
+  const trimmedValue = String(testData.value).trim();
+  const isValueTrimmed =
+    responseBody.includes(`"${fieldName}":"${trimmedValue}"`) ||
+    responseBody.includes(`'${fieldName}':'${trimmedValue}'`) ||
+    responseBody.includes(`${fieldName}=${encodeURIComponent(trimmedValue)}`);
+
+  return isValueTrimmed ? TestStatus.Pass : TestStatus.Fail;
+}
+
+function determineMappingsTestStatus(statusCode: number, testData: TestData): TestStatus {
   if (
     (testData.valid && statusCode >= RESPONSE_STATUS.OK && statusCode < RESPONSE_STATUS.REDIRECT) ||
     (!testData.valid && statusCode >= RESPONSE_STATUS.CLIENT_ERROR && statusCode < RESPONSE_STATUS.SERVER_ERROR)
@@ -142,4 +240,14 @@ function determineTestStatus(testData: TestData, statusCode: number): TestStatus
     return TestStatus.Pass;
 
   return statusCode >= RESPONSE_STATUS.SERVER_ERROR ? TestStatus.Bug : TestStatus.Fail;
+}
+
+export function shouldSkipFieldType(fieldType: FieldType): boolean {
+  return (
+    fieldType === 'do-not-test' || fieldType === 'random32' || fieldType === 'randomInt' || fieldType === 'randomEmail'
+  );
+}
+
+export function shouldSkipNormalizationTest(fieldType: string | undefined): boolean {
+  return fieldType === 'boolean' || fieldType === 'number';
 }

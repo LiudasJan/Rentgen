@@ -120,16 +120,15 @@ export function extractBodyFieldMappings(body: unknown, headers: Record<string, 
   } else {
     const extractedFields = extractFieldsFromJson(body);
     for (const [key, value] of Object.entries(extractedFields)) {
-      if (value === 'DO_NOT_TEST') {
-        mappings[key] = 'do-not-test';
-      } else {
+      if (value === 'DO_NOT_TEST') mappings[key] = 'do-not-test';
+      else {
         // Navigate to the actual value in the parsed body
-        const pathSegments = key.replace(/\[(\d+)\]/g, '.$1').split('.');
+        const pathParts = key.replace(/\[(\d+)\]/g, '.$1').split('.');
         let fieldValue: any = body;
 
-        for (const segment of pathSegments) {
+        for (const path of pathParts) {
           if (fieldValue == null) break;
-          fieldValue = fieldValue[segment];
+          fieldValue = fieldValue[path];
         }
 
         mappings[key] = detectFieldType(fieldValue);
@@ -177,6 +176,23 @@ export function formatBody(body: string, headers: Record<string, string>): strin
 export function getHeaderValue(headers: Record<string, string>, headerName: string): string {
   const matchingKey = Object.keys(headers).find((key) => key.toLowerCase() === headerName.toLowerCase());
   return matchingKey ? String(headers[matchingKey]) : '';
+}
+
+export function getFieldValueFromBody(body: unknown, fieldName: string, headers: Record<string, string>): any {
+  if (isUrlEncodedContentType(headers)) {
+    const formEntries = convertUrlEncodedToFormEntries(body as string);
+    return formEntries.find(([key]) => key === fieldName)?.[1];
+  }
+
+  const pathParts = fieldName.replace(/\[(\d+)\]/g, '.$1').split('.');
+  let fieldValue: any = body;
+
+  for (const path of pathParts) {
+    if (fieldValue == null) return undefined;
+    fieldValue = fieldValue[path];
+  }
+
+  return fieldValue;
 }
 
 export function isUrlEncodedContentType(headers: Record<string, string>): boolean {
@@ -242,9 +258,9 @@ export function parseHeaders(headers: string): Record<string, string> {
 }
 
 export function updateFormEntry(formEntries: Array<[string, string]>, fieldName: string, value: string): void {
-  for (let i = 0; i < formEntries.length; i++) {
-    if (formEntries[i][0] === fieldName) {
-      formEntries[i] = [fieldName, value];
+  for (const formEntry of formEntries) {
+    if (formEntry[0] === fieldName) {
+      formEntry[1] = value;
       break;
     }
   }
