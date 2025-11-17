@@ -60,7 +60,6 @@ export interface TestResult {
   actual: string;
   expected: string;
   field?: string;
-  method?: Method | string;
   name?: string;
   request?: HttpRequest | null;
   response?: any | null;

@@ -413,9 +413,9 @@ function getCrudTestResults(
     return allowedMethods.map(
       (method: string) =>
         ({
+          name: method,
           actual: NOT_AVAILABLE_TEST,
           expected: methodDescriptions[method] || 'Custom method',
-          method,
           request: createHttpRequest(body, headers, method, url),
           response: null,
           status: TestStatus.Manual,

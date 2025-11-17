@@ -137,7 +137,7 @@ export function getTestsTableColumns(visibleColumns: string[] = []): TableColumn
     },
     {
       name: 'Method',
-      selector: (row) => row.method,
+      selector: (row) => row.name,
       omit: true,
     },
     {
