@@ -32,13 +32,12 @@ export function CopyButton({
     navigator.clipboard
       .writeText(textToCopy)
       .then(() => {
-        console.log('✅ Copied to clipboard');
         setCopied(true);
         clearTimeout(copiedTimeout);
         copiedTimeout = setTimeout(() => setCopied(false), 2000);
       })
       .catch((error) => {
-        console.error('❌ Failed to copy clipboard', error);
+        console.error('Failed to copy clipboard', error);
       });
   }
 }

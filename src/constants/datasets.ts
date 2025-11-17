@@ -1,4 +1,6 @@
-export const datasets: Record<string, { value: unknown; valid: boolean }[]> = {
+import { TestData } from '../types';
+
+export const datasets: Record<string, TestData[]> = {
   email: [
     { value: 'email@qaontime.com', valid: true },
     { value: 'firstname.lastname@qaontime.com', valid: true },

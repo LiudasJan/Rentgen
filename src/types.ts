@@ -1,32 +1,78 @@
 import { Method } from 'axios';
 
-export enum TestStatus {
-  Bug = '🔴 Bug',
-  Fail = '🔴 Fail',
-  FailNoResponse = '🔴 Fail (No response)',
-  Info = '🔵 Info',
-  Manual = '⚪ Manual',
-  Pass = '🟢 Pass',
-  Warning = '🟠 Warning',
+export interface FieldDetector {
+  type: FieldType;
+  regex: RegExp;
 }
 
-export interface Test {
+export type FieldType =
+  | 'email'
+  | 'url'
+  | 'ftp_url'
+  | 'phone'
+  | 'number'
+  | 'boolean'
+  | 'currency'
+  | 'date_yyyy_mm_dd'
+  | 'string'
+  | 'do-not-test'
+  | 'random32'
+  | 'randomInt'
+  | 'randomEmail';
+
+export type MappingType = 'body' | 'query';
+
+export interface HttpRequest {
+  body?: Record<string, unknown> | string | Uint8Array | null;
+  headers: Record<string, string>;
+  method: Method | string;
+  url: string;
+}
+
+export interface ParsedCurlResult {
+  body: string | null;
+  decodedLines: string[];
+  headers: Record<string, string>;
+  method: string;
+  url: string;
+}
+
+export interface TestData {
+  value: any;
+  valid: boolean;
+}
+
+export interface TestOptions {
+  body: string | null;
+  headers: string;
+  fieldName?: string;
+  method: Method | string;
+  bodyMappings: Record<string, FieldType>;
+  queryMappings: Record<string, FieldType>;
+  mappingType?: MappingType;
+  messageType: string;
+  protoFile: File | null;
+  testData?: TestData;
+  url: string;
+}
+
+export interface TestResult {
   actual: string;
   expected: string;
-  decoded?: string | null;
-  field?: string;
-  method?: Method | string;
   name?: string;
-  request?: TestRequest | null;
+  request?: HttpRequest | null;
   response?: any | null;
   responseTime?: number;
   status: TestStatus;
   value?: any;
 }
 
-export interface TestRequest {
-  body?: string;
-  headers: any;
-  method?: Method | string;
-  url: string;
+export enum TestStatus {
+  Bug = '🟣 Bug',
+  Fail = '🔴 Fail',
+  FailNoResponse = '🔴 Fail (No response)',
+  Info = '🔵 Info',
+  Manual = '⚪ Manual',
+  Pass = '🟢 Pass',
+  Warning = '🟠 Warning',
 }

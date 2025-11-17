@@ -1,10 +1,16 @@
 import cn from 'classnames';
 import DataTable, { ExpanderComponentProps, TableColumn, TableProps } from 'react-data-table-component';
-import { Test, TestStatus } from '../../types';
-import { generateCurl, truncateValue } from '../../utils';
+import { TestResult, TestStatus } from '../../types';
+import {
+  decodeProtobufResponse,
+  extractBodyFromResponse,
+  generateCurl,
+  isUrlEncodedContentType,
+  truncateValue,
+} from '../../utils';
 import { CopyButton } from '../buttons/CopyButton';
 
-export default function TestsTable({ columns, data, className, ...otherProps }: TableProps<Test>) {
+export default function TestsTable({ columns, data, className, ...otherProps }: TableProps<TestResult>) {
   return (
     <DataTable
       className={cn('border-t border-border rounded-t-none!', className)}
@@ -32,7 +38,7 @@ export default function TestsTable({ columns, data, className, ...otherProps }: 
         },
         {
           when: (row) => row.status === TestStatus.Bug,
-          style: { backgroundColor: '#ffe0e0' },
+          style: { backgroundColor: '#f3e8ff' },
         },
       ]}
       customStyles={{
@@ -52,8 +58,24 @@ export default function TestsTable({ columns, data, className, ...otherProps }: 
   );
 }
 
-export function ExpandedTestComponent({ data }: ExpanderComponentProps<Test>) {
-  const { request, decoded } = data;
+export function ExpandedTestComponent({
+  data,
+  headers,
+  messageType,
+  protoFile,
+}: ExpanderComponentProps<TestResult> & {
+  headers: Record<string, string>;
+  messageType: string;
+  protoFile: File | null;
+}) {
+  const { request, response } = data;
+  const decoded =
+    headers && isUrlEncodedContentType(headers) && protoFile && messageType
+      ? decodeProtobufResponse(messageType, response)
+      : null;
+  const modifiedResponse = response ? { ...response } : null;
+
+  if (modifiedResponse) modifiedResponse.body = extractBodyFromResponse(modifiedResponse);
 
   return (
     <div className="p-4 bg-table-data">
@@ -68,14 +90,14 @@ export function ExpandedTestComponent({ data }: ExpanderComponentProps<Test>) {
       <div className="grid grid-cols-2 gap-4 items-stretch">
         <div className="flex flex-col gap-2.5">
           <h4 className="m-0">Request</h4>
-          <pre className="flex-auto m-0 p-2.5 bg-white border border-border rounded whitespace-pre-wrap break-all">
-            {JSON.stringify(data.request, null, 2)}
+          <pre className="max-h-80 flex-auto m-0 p-2.5 bg-white border border-border rounded whitespace-pre-wrap break-all overflow-y-auto">
+            {JSON.stringify(request, null, 2)}
           </pre>
         </div>
         <div className="flex flex-col gap-2.5">
           <h4 className="m-0">Response</h4>
-          <pre className="flex-auto m-0 p-2.5 bg-white border border-border rounded whitespace-pre-wrap break-all">
-            {typeof data.response === 'string' ? data.response : JSON.stringify(data.response, null, 2)}
+          <pre className="max-h-80 flex-auto m-0 p-2.5 bg-white border border-border rounded whitespace-pre-wrap break-all overflow-y-auto">
+            {typeof modifiedResponse === 'string' ? modifiedResponse : JSON.stringify(modifiedResponse, null, 2)}
           </pre>
           {decoded && (
             <>
@@ -91,17 +113,22 @@ export function ExpandedTestComponent({ data }: ExpanderComponentProps<Test>) {
   );
 }
 
-export function getTestsTableColumns(visibleColumns: string[] = []): TableColumn<Test>[] {
-  const columns: TableColumn<Test>[] = [
+export function getTestsTableColumns(visibleColumns: string[] = []): TableColumn<TestResult>[] {
+  const columns: TableColumn<TestResult>[] = [
     {
       name: 'Field',
-      selector: (row) => row.field,
+      selector: (row) => row.name,
       omit: true,
     },
     {
       name: 'Value',
       selector: (row) => truncateValue(row.value),
       omit: true,
+      style: {
+        'div:first-child': {
+          whiteSpace: 'pre !important',
+        },
+      },
     },
     {
       name: 'Check',
@@ -110,7 +137,7 @@ export function getTestsTableColumns(visibleColumns: string[] = []): TableColumn
     },
     {
       name: 'Method',
-      selector: (row) => row.method,
+      selector: (row) => row.name,
       omit: true,
     },
     {
@@ -128,11 +155,6 @@ export function getTestsTableColumns(visibleColumns: string[] = []): TableColumn
       selector: (row) => row.status,
       width: '150px',
       omit: true,
-      cell: (row) => {
-        if (row.name === 'Load test') return <div></div>;
-
-        return row.status;
-      },
     },
   ];
 

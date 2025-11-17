@@ -1,76 +1,58 @@
-import { Method } from 'axios';
 import { useState } from 'react';
-import { runDataDrivenTests, runLoadTest, runPerformanceInsights, runSecurityTests } from '../tests';
-import { Test } from '../types';
+import { LOAD_TEST_NAME, runDataDrivenTests, runLoadTest, runPerformanceInsights, runSecurityTests } from '../tests';
+import { TestOptions, TestResult } from '../types';
 
-const useTests = (
-  method: Method,
-  url: string,
-  headers: Record<string, string>,
-  body: string,
-  fieldMappings: Record<string, string>,
-  queryMappings: Record<string, string>,
-  messageType: string,
-  protoFile: File | null,
-) => {
+const useTests = (options: TestOptions) => {
   const [currentTest, setCurrentTest] = useState<number>(0);
-  const [testCount, setTestCount] = useState<number>(0);
+  const [testsCount, setTestsCount] = useState<number>(0);
 
-  const [crudTests, setCrudTests] = useState<Test[]>([]);
+  const [crudTests, setCrudTests] = useState<TestResult[]>([]);
 
-  const [dataDrivenTests, setDataDrivenTests] = useState<Test[]>([]);
+  const [dataDrivenTests, setDataDrivenTests] = useState<TestResult[]>([]);
   const [isDataDrivenRunning, setIsDataDrivenRunning] = useState<boolean>(false);
 
   const [isLoadTestRunning, setIsLoadTestRunning] = useState<boolean>(false);
   const [loadProgress, setLoadProgress] = useState<number>(0);
 
-  const [performanceTests, setPerformanceTests] = useState<Test[]>([]);
+  const [performanceTests, setPerformanceTests] = useState<TestResult[]>([]);
   const [isPerformanceRunning, setIsPerformanceRunning] = useState<boolean>(false);
 
-  const [securityTests, setSecurityTests] = useState<Test[]>([]);
+  const [securityTests, setSecurityTests] = useState<TestResult[]>([]);
   const [isSecurityRunning, setIsSecurityRunning] = useState<boolean>(false);
 
   async function executeAllTests() {
     setIsDataDrivenRunning(true);
     setIsPerformanceRunning(true);
     setIsSecurityRunning(true);
-
     resetTests();
 
-    await executeDataDrivenTests();
-    await executePerformanceTests();
+    const dataDrivenTestResults = await executeDataDrivenTests();
+    await executePerformanceTests(dataDrivenTestResults);
     await executeSecurityTests();
   }
 
-  async function executeDataDrivenTests() {
+  async function executeDataDrivenTests(): Promise<TestResult[]> {
     setIsDataDrivenRunning(true);
     setDataDrivenTests([]);
     setCurrentTest(0);
 
     const dataDrivenTestResults = await runDataDrivenTests(
-      method,
-      url,
-      headers,
-      body,
-      fieldMappings,
-      queryMappings,
-      messageType,
-      protoFile,
-      setCurrentTest,
-      setTestCount,
+      options,
+      (testsCount) => setTestsCount((prevTestsCount) => prevTestsCount + testsCount),
+      incrementCurrentTest,
     );
     setDataDrivenTests(dataDrivenTestResults);
-
     setIsDataDrivenRunning(false);
+
+    return dataDrivenTestResults;
   }
 
   async function executeLoadTest(threadCount: number, requestCount: number) {
     setIsLoadTestRunning(true);
     setLoadProgress(0);
-
     setPerformanceTests((prevPerformanceTests) => {
       return prevPerformanceTests.map((performanceTest) => {
-        if (performanceTest.name === 'Load test')
+        if (performanceTest.name === LOAD_TEST_NAME)
           return {
             ...performanceTest,
             actual: formatLoadTestProgress(generateLoadBarProgress(0), 0, requestCount),
@@ -80,36 +62,25 @@ const useTests = (
       });
     });
 
-    const loadTestResult = await runLoadTest(
-      method,
-      url,
-      headers,
-      body,
-      fieldMappings,
-      messageType,
-      protoFile,
-      threadCount,
-      requestCount,
-      updateLoadProgress,
-    );
+    const loadTestResult = await runLoadTest(options, threadCount, requestCount, updateLoadProgress);
     setPerformanceTests((prevPerformanceTests) => {
       return prevPerformanceTests.map((performanceTest) => {
-        if (performanceTest.name === 'Load test') return loadTestResult;
+        if (performanceTest.name === LOAD_TEST_NAME) return loadTestResult;
 
         return performanceTest;
       });
     });
-
     setIsLoadTestRunning(false);
   }
 
-  async function executePerformanceTests() {
+  async function executePerformanceTests(testResults: TestResult[] = []) {
+    const { url } = options;
+
     setIsPerformanceRunning(true);
     setPerformanceTests([]);
 
-    const performanceTestResults = await runPerformanceInsights(url, dataDrivenTests);
+    const performanceTestResults = await runPerformanceInsights(url, testResults);
     setPerformanceTests(performanceTestResults);
-
     setIsPerformanceRunning(false);
   }
 
@@ -118,10 +89,9 @@ const useTests = (
     setSecurityTests([]);
     setCrudTests([]);
 
-    const { securityTestResults, crudTestResults } = await runSecurityTests(method, url, headers, body);
+    const { securityTestResults, crudTestResults } = await runSecurityTests(options);
     setSecurityTests(securityTestResults);
     setCrudTests(crudTestResults);
-
     setIsSecurityRunning(false);
   }
 
@@ -131,7 +101,7 @@ const useTests = (
     setPerformanceTests([]);
     setSecurityTests([]);
     setCurrentTest(0);
-    setTestCount(0);
+    setTestsCount(0);
   }
 
   function updateLoadProgress(setRequestCount: number, requestCount: number) {
@@ -140,7 +110,7 @@ const useTests = (
       setLoadProgress(percent);
       setPerformanceTests((prevPerformanceTests) => {
         return prevPerformanceTests.map((performanceTest) => {
-          if (performanceTest.name === 'Load test')
+          if (performanceTest.name === LOAD_TEST_NAME)
             return {
               ...performanceTest,
               actual: formatLoadTestProgress(generateLoadBarProgress(percent), setRequestCount, requestCount),
@@ -163,6 +133,10 @@ const useTests = (
     return `${loadBar} (${setRequestCount}/${requestCount})`;
   }
 
+  function incrementCurrentTest() {
+    setCurrentTest((prevCurrentTest) => prevCurrentTest + 1);
+  }
+
   return {
     crudTests,
     currentTest,
@@ -173,7 +147,7 @@ const useTests = (
     isSecurityRunning,
     performanceTests,
     securityTests,
-    testCount,
+    testsCount,
     executeAllTests,
     executeLoadTest,
     executeDataDrivenTests,

@@ -1,15 +1,8 @@
-import { Method } from 'axios';
-import { Test, TestStatus } from '../types';
-import {
-  calculateMedian,
-  calculatePercentile,
-  encodeMessage,
-  extractStatusCode,
-  generateRandomEmail,
-  generateRandomInteger,
-  generateRandomString,
-  setDeepObjectProperty,
-} from '../utils';
+import { RESPONSE_STATUS } from '../constants/responseStatus';
+import { TestOptions, TestResult, TestStatus } from '../types';
+import { calculateMedian, calculatePercentile, createTestHttpRequest, extractStatusCode } from '../utils';
+
+export const LOAD_TEST_NAME = 'Load test';
 
 const EXCELLENT_RESPONSE_TIME_MS = 500;
 const ACCEPTABLE_RESPONSE_TIME_MS = 1000;
@@ -24,11 +17,11 @@ const MAX_EARLY_ABORT_FAILURES = 5;
 const EARLY_ABORT_RESPONSE_TIME_MS = 5000;
 const MIN_REQUESTS_FOR_ABORT_CHECK = 10;
 
-export async function runPerformanceInsights(url: string, testResults: Test[]): Promise<Test[]> {
-  const results: Test[] = [];
+export async function runPerformanceInsights(url: string, testResults: TestResult[]): Promise<TestResult[]> {
+  const results: TestResult[] = [];
 
   // Calculate response time median from test results
-  const responseTimes = testResults.map((result: Test) => result.responseTime).filter(Boolean);
+  const responseTimes = testResults.map((result: TestResult) => result.responseTime).filter(Boolean);
   const medianResponseTime = calculateMedian(responseTimes);
 
   let responseTimeStatus = TestStatus.Fail;
@@ -64,10 +57,10 @@ export async function runPerformanceInsights(url: string, testResults: Test[]): 
     });
   } catch (error) {
     results.push({
-      actual: String(error),
+      actual: `Unexpected error: ${String(error)}`,
       expected: 'Ping should succeed',
       name: 'Ping test error',
-      status: TestStatus.Fail,
+      status: TestStatus.Bug,
     });
   }
 
@@ -75,7 +68,7 @@ export async function runPerformanceInsights(url: string, testResults: Test[]): 
   results.push({
     actual: '', // Empty until test is executed
     expected: `Median <${EXCELLENT_RESPONSE_TIME_MS} ms (Pass), <${ACCEPTABLE_RESPONSE_TIME_MS} ms (Warning), ≥${ACCEPTABLE_RESPONSE_TIME_MS} ms (Fail)`,
-    name: 'Load test',
+    name: LOAD_TEST_NAME,
     status: TestStatus.Manual, // Requires manual execution
   });
 
@@ -90,76 +83,32 @@ export async function runPerformanceInsights(url: string, testResults: Test[]): 
 }
 
 export async function runLoadTest(
-  method: Method,
-  url: string,
-  headers: Record<string, string>,
-  body: string,
-  fieldMappings: Record<string, string>,
-  messageType: string,
-  protoFile: File | null,
+  options: TestOptions,
   threadCount: number,
   requestCount: number,
   updateProgress?: (sentRequestCount: number, requestCount: number) => void,
-): Promise<Test> {
+): Promise<TestResult> {
   const concurrency = Math.max(1, Math.min(MAX_CONCURRENCY, Math.floor(threadCount)));
   const totalRequests = Math.max(1, Math.min(MAX_TOTAL_REQUESTS, Math.floor(requestCount)));
-
-  let parsedBody: any | null = null;
-  try {
-    parsedBody = body ? JSON.parse(body) : null;
-  } catch {
-    // If not JSON, send raw data without randomization
-    parsedBody = null;
-  }
+  const responseTimes: number[] = [];
 
   let requestsSent = 0,
     server5xxFailures = 0,
     client4xxFailures = 0,
     isAborted = false;
 
-  const responseTimes: number[] = [];
-
   async function executeSingleRequest(): Promise<void> {
     if (isAborted) return;
 
-    let data: any = body;
-    if (parsedBody) {
-      const dynamicBody = JSON.parse(JSON.stringify(parsedBody));
-
-      for (const [fieldKey, fieldType] of Object.entries(fieldMappings)) {
-        if (fieldType === 'random32') setDeepObjectProperty(dynamicBody, fieldKey, generateRandomString());
-        if (fieldType === 'randomInt') setDeepObjectProperty(dynamicBody, fieldKey, generateRandomInteger());
-        if (fieldType === 'randomEmail') setDeepObjectProperty(dynamicBody, fieldKey, generateRandomEmail());
-      }
-
-      data = dynamicBody;
-    }
-
-    if (protoFile && messageType && parsedBody) {
-      try {
-        data = encodeMessage(messageType, data);
-      } catch (error) {
-        // Treat encoding as failure
-        server5xxFailures++;
-        return;
-      }
-    }
-
-    const startTime = performance.now();
-    const response = await window.electronAPI.sendHttp({
-      url,
-      method,
-      headers,
-      body: data,
-    });
-    const endTime = performance.now();
-
-    const responseTime = endTime - startTime;
+    const request = createTestHttpRequest(options);
+    const requestStartTime = performance.now();
+    const response = await window.electronAPI.sendHttp(request);
+    const responseTime = performance.now() - requestStartTime;
     responseTimes.push(responseTime);
 
     const statusCode = extractStatusCode(response);
-    if (statusCode >= 500) server5xxFailures++;
-    if (statusCode >= 400 && statusCode < 500) client4xxFailures++;
+    if (statusCode >= RESPONSE_STATUS.SERVER_ERROR) server5xxFailures++;
+    if (statusCode >= RESPONSE_STATUS.CLIENT_ERROR && statusCode < RESPONSE_STATUS.SERVER_ERROR) client4xxFailures++;
 
     // Check early abort conditions
     if (server5xxFailures >= MAX_EARLY_ABORT_FAILURES) isAborted = true;
@@ -203,7 +152,7 @@ export async function runLoadTest(
   return {
     actual: `${concurrency} threads, ${totalRequests} total req. Executed: ${responseTimes.length} req → p50=${p50.toFixed(0)}ms p90=${p90.toFixed(0)}ms p95=${p95.toFixed(0)}ms avg=${averageResponseTime.toFixed(0)}ms, 4xx=${client4xxFailures}, 5xx=${server5xxFailures}`,
     expected: `Median <${EXCELLENT_RESPONSE_TIME_MS} ms (Pass), <${ACCEPTABLE_RESPONSE_TIME_MS} ms (Warning), ≥${ACCEPTABLE_RESPONSE_TIME_MS} ms (Fail)`,
-    name: 'Load test',
+    name: LOAD_TEST_NAME,
     status: testStatus,
   };
 }

@@ -12,18 +12,20 @@ import { LoadTestControls } from './components/LoadTestControls';
 import Modal from './components/modals/Modal';
 import ResponsePanel from './components/panels/ResponsePanel';
 import TestsTable, { ExpandedTestComponent, getTestsTableColumns } from './components/tables/TestsTable';
+import { RESPONSE_STATUS } from './constants/responseStatus';
 import useTests from './hooks/useTests';
+import { LOAD_TEST_NAME } from './tests';
+import { FieldType } from './types';
 import {
-  convertFormEntriesToUrlEncoded,
+  createHttpRequest,
   detectFieldType,
-  encodeMessage,
+  extractBodyFieldMappings,
   extractCurl,
-  extractFieldsFromJson,
-  extractQueryParams,
-  formatRequestBody,
-  getHeaderValue,
+  extractQueryParameters,
+  extractStatusCode,
+  formatBody,
   loadProtoSchema,
-  parseFormData,
+  parseBody,
   parseHeaders,
 } from './utils';
 
@@ -44,7 +46,7 @@ const methodOptions: SelectOption<Method>[] = [
   { value: 'OPTIONS', label: 'OPTIONS', className: 'text-method-options!' },
 ];
 
-const parameterOptions: SelectOption<string>[] = [
+const parameterOptions: SelectOption<FieldType>[] = [
   { value: 'do-not-test', label: 'Do not test' },
   { value: 'random32', label: 'Random string 32' },
   { value: 'randomInt', label: 'Random integer' },
@@ -62,13 +64,13 @@ const parameterOptions: SelectOption<string>[] = [
 export default function App() {
   const [mode, setMode] = useState<Mode>('HTTP');
   const [method, setMethod] = useState<Method>('GET');
-  const [url, setUrl] = useState<string>('');
-  const [wssConnected, setWssConnected] = useState<boolean>(false);
   const [openCurlModal, setOpenCurlModal] = useState<boolean>(false);
-  const [curlError, setCurlError] = useState<string>('');
   const [curl, setCurl] = useState<string>('');
-  const [headers, setHeaders] = useState<string>('');
+  const [curlError, setCurlError] = useState<string>('');
+  const [url, setUrl] = useState<string>('');
   const [body, setBody] = useState<string>('{}');
+  const [headers, setHeaders] = useState<string>('');
+  const [wssConnected, setWssConnected] = useState<boolean>(false);
   const [protoFile, setProtoFile] = useState<File | null>(null);
   const [messageType, setMessageType] = useState<string>('');
   const [httpResponse, setHttpResponse] = useState<{
@@ -83,9 +85,9 @@ export default function App() {
       decoded?: string | null;
     }[]
   >([]);
-  const [fieldMappings, setFieldMappings] = useState<Record<string, string>>({});
-  const [queryMappings, setQueryMappings] = useState<Record<string, string>>({});
-  const [testsRun, setTestsRun] = useState(false);
+  const [bodyMappings, setBodyMappings] = useState<Record<string, FieldType>>({});
+  const [queryMappings, setQueryMappings] = useState<Record<string, FieldType>>({});
+  const [testsRun, setTestsRun] = useState<boolean>(false);
   const {
     crudTests,
     currentTest,
@@ -96,13 +98,15 @@ export default function App() {
     isPerformanceRunning,
     performanceTests,
     securityTests,
-    testCount,
+    testsCount,
     executeAllTests,
     executeLoadTest,
-  } = useTests(method, url, parseHeaders(headers), body, fieldMappings, queryMappings, messageType, protoFile);
+  } = useTests({ body, headers, method, bodyMappings, queryMappings, messageType, protoFile, url });
 
   const isRunningTests = isSecurityRunning || isPerformanceRunning || isDataDrivenRunning;
-  const disabledRunTests = isRunningTests || !httpResponse || !httpResponse.status.includes('200');
+  const statusCode = extractStatusCode(httpResponse);
+  const disabledRunTests =
+    isRunningTests || !httpResponse || statusCode < RESPONSE_STATUS.OK || statusCode > RESPONSE_STATUS.CLIENT_ERROR;
 
   useEffect(() => {
     if (!window.electronAPI?.onWssEvent) return;
@@ -112,11 +116,7 @@ export default function App() {
       if (event.type === 'close') setWssConnected(false);
       if (event.type === 'message') {
         setMessages((prevMessages) => [
-          {
-            direction: 'received',
-            data: String(event.data),
-            decoded: event.decoded ?? null,
-          },
+          { direction: 'received', data: String(event.data), decoded: event.decoded ?? null },
           ...prevMessages,
         ]);
       }
@@ -140,7 +140,10 @@ export default function App() {
           options={modeOptions}
           placeholder="MODE"
           value={modeOptions.find((option) => option.value == mode)}
-          onChange={(option: SelectOption<Mode>) => setMode(option.value)}
+          onChange={(option: SelectOption<Mode>) => {
+            setMode(option.value);
+            reset();
+          }}
         />
         {mode === 'HTTP' && (
           <>
@@ -168,31 +171,30 @@ export default function App() {
       </div>
 
       <div className="flex items-center gap-2">
-        {mode === 'HTTP' && (
-          <Select
-            className="font-bold uppercase"
-            classNames={{ input: () => 'm-0! p-0! [&>:first-child]:uppercase' }}
-            isCreatable={true}
-            options={methodOptions}
-            placeholder="METHOD"
-            value={methodOptions.find((option) => option.value == method)}
-            onChange={(option: SelectOption<Method>) => setMethod(option.value)}
+        <div className="flex-auto flex items-center">
+          {mode === 'HTTP' && (
+            <Select
+              className="font-bold uppercase"
+              classNames={{
+                control: () => 'min-h-auto! border! border-border! rounded-none! rounded-l-md! shadow-none!',
+                input: () => 'm-0! p-0! [&>:first-child]:uppercase',
+              }}
+              isCreatable={true}
+              options={methodOptions}
+              placeholder="METHOD"
+              value={methodOptions.find((option) => option.value == method)}
+              onChange={(option: SelectOption<Method>) => setMethod(option.value)}
+            />
+          )}
+          <Input
+            className={cn('flex-auto font-monospace', { 'border-l-0! rounded-l-none!': mode === 'HTTP' })}
+            placeholder="Enter URL or paste text"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
           />
-        )}
-        <Input
-          className="flex-auto font-monospace"
-          placeholder="Enter URL or paste text"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-        />
+        </div>
         {mode === 'HTTP' && (
-          <Button
-            disabled={!url || isRunningTests}
-            onClick={() => {
-              sendHttp();
-              setTestsRun(false);
-            }}
-          >
+          <Button disabled={!url || isRunningTests} onClick={sendHttp}>
             Send
           </Button>
         )}
@@ -210,6 +212,7 @@ export default function App() {
 
       <TextareaAutosize
         className="font-monospace"
+        maxRows={10}
         placeholder="Header-Key: value"
         value={headers}
         onChange={(e) => setHeaders(e.target.value)}
@@ -218,74 +221,84 @@ export default function App() {
       <div className="relative">
         <TextareaAutosize
           className="font-monospace"
-          placeholder={mode === 'HTTP' ? 'Body JSON' : 'Message body'}
+          maxRows={15}
+          placeholder={mode === 'HTTP' ? 'Enter request body (JSON or Form Data)' : 'Message body'}
           value={body}
           onChange={(e) => setBody(e.target.value)}
         />
         <Button
           className="absolute top-3 right-4 min-w-auto! py-0.5! px-2! rounded-sm"
           buttonType={ButtonType.SECONDARY}
-          onClick={() => setBody((prevBody) => formatRequestBody(prevBody, parseHeaders(headers)))}
+          onClick={() => setBody((prevBody) => formatBody(prevBody, parseHeaders(headers)))}
         >
           Beautify
         </Button>
       </div>
 
-      <div>
-        <label className="block mb-2 font-bold text-sm">
-          Protobuf schema & message type <span className="font-normal text-gray-500/80">(optional)</span>:
-        </label>
-        <div className="flex items-center gap-2">
-          <Input
-            accept=".proto"
-            className="font-monospace"
-            type="file"
-            onChange={async (e) => {
-              const file = e.target.files?.[0];
-              if (!file) return;
+      {mode === 'HTTP' && (
+        <div>
+          <label className="block mb-1 font-bold text-sm">Protobuf schema & message type</label>
+          <div className="mb-3 text-xs text-gray-500/80">
+            Experimental and optional section. If used, both fields must be completed
+          </div>
+          <div className="flex items-center">
+            <Input
+              accept=".proto"
+              className="font-monospace rounded-r-none!"
+              type="file"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
 
-              try {
-                await loadProtoSchema(file);
+                const fileExtension = file.name.split('.').pop().toLowerCase();
+                if (fileExtension !== 'proto') return;
 
-                setProtoFile(file);
-                setMessages((prevMessages) => [
-                  { direction: 'system', data: '📂 Proto schema loaded' },
-                  ...prevMessages,
-                ]);
-              } catch (error) {
-                setMessages((prevMessages) => [
-                  {
-                    direction: 'system',
-                    data: '❌ Failed to parse proto: ' + error,
-                  },
-                  ...prevMessages,
-                ]);
-              }
-            }}
-          />
+                try {
+                  await loadProtoSchema(file);
 
-          <Input
-            className="flex-auto font-monospace"
-            placeholder="Message type (e.g. mypackage.MyMessage)"
-            value={messageType}
-            onChange={(e) => setMessageType(e.target.value)}
-          />
+                  setProtoFile(file);
+                  setMessages((prevMessages) => [
+                    { direction: 'system', data: '📂 Proto schema loaded' },
+                    ...prevMessages,
+                  ]);
+                } catch (error) {
+                  setMessages((prevMessages) => [
+                    { direction: 'system', data: '❌ Failed to parse proto: ' + error },
+                    ...prevMessages,
+                  ]);
+                }
+              }}
+            />
+
+            <Input
+              className="flex-auto font-monospace border-l-0! rounded-l-none!"
+              placeholder="Message type (e.g. mypackage.MyMessage)"
+              value={messageType}
+              onChange={(e) => setMessageType(e.target.value)}
+            />
+          </div>
         </div>
-      </div>
+      )}
 
       {mode === 'HTTP' && httpResponse && (
         <ResponsePanel title="Response">
           <div className="p-4 font-bold bg-body border-t border-border">{httpResponse.status}</div>
           {httpResponse.status !== 'Sending...' && (
-            <div className="max-h-[400px] p-4 border-t border-border overflow-y-auto">
-              <h4 className="m-0">Headers</h4>
-              <pre className="m-0! mt-4! whitespace-pre-wrap break-all">
-                {JSON.stringify(httpResponse.headers, null, 2)}
-              </pre>
-              <h4 className="m-0 mt-4 pt-4 border-t border-border">Body</h4>
-              <pre className="m-0! mt-4! whitespace-pre-wrap break-all">
-                {typeof httpResponse.body === 'string' ? httpResponse.body : JSON.stringify(httpResponse.body, null, 2)}
-              </pre>
+            <div className="grid grid-cols-2 items-stretch max-h-[450px] p-4 border-t border-border overflow-y-auto">
+              <div className="flex-1 pr-4">
+                <h4 className="m-0">Headers</h4>
+                <pre className="m-0! mt-4! whitespace-pre-wrap break-all">
+                  {JSON.stringify(httpResponse.headers, null, 2)}
+                </pre>
+              </div>
+              <div className="flex-1 pl-4 border-l border-border">
+                <h4 className="m-0">Body</h4>
+                <pre className="m-0! mt-4! whitespace-pre-wrap break-all">
+                  {typeof httpResponse.body === 'string'
+                    ? httpResponse.body
+                    : JSON.stringify(httpResponse.body, null, 2)}
+                </pre>
+              </div>
             </div>
           )}
         </ResponsePanel>
@@ -322,19 +335,22 @@ export default function App() {
         </ResponsePanel>
       )}
 
-      {(Object.keys(fieldMappings).length > 0 || Object.keys(queryMappings).length > 0) && (
+      {(Object.keys(bodyMappings).length > 0 || Object.keys(queryMappings).length > 0) && (
         <div className="grid grid-cols-2 gap-4 items-stretch">
-          {Object.keys(fieldMappings).length > 0 && (
+          {Object.keys(bodyMappings).length > 0 && (
             <ResponsePanel title="Body Parameters">
-              {Object.entries(fieldMappings).map(([field, type]) => (
-                <div key={field} className="pb-4 first-of-type:pt-4 px-4 flex items-center justify-between gap-4">
-                  <span className="flex-1 font-monospace text-ellipsis text-nowrap overflow-hidden">{field}</span>
+              {Object.entries(bodyMappings).map(([key, type]) => (
+                <div key={key} className="pb-4 first-of-type:pt-4 px-4 flex items-center justify-between gap-4">
+                  <span className="flex-1 font-monospace text-ellipsis text-nowrap overflow-hidden">{key}</span>
                   <SimpleSelect
                     className="rounded-none! p-1! outline-none"
                     options={parameterOptions}
                     value={type}
                     onChange={(e) =>
-                      setFieldMappings((prevFieldMappings) => ({ ...prevFieldMappings, [field]: e.target.value }))
+                      setBodyMappings((prevBodyMappings) => ({
+                        ...prevBodyMappings,
+                        [key]: e.target.value as FieldType,
+                      }))
                     }
                   />
                 </div>
@@ -344,15 +360,18 @@ export default function App() {
 
           {Object.keys(queryMappings).length > 0 && (
             <ResponsePanel title="Query Parameters">
-              {Object.entries(queryMappings).map(([param, type]) => (
-                <div key={param} className="pb-4 first-of-type:pt-4 px-4 flex items-center justify-between gap-4">
-                  <span className="flex-1 font-monospace text-ellipsis text-nowrap overflow-hidden">{param}</span>
+              {Object.entries(queryMappings).map(([key, type]) => (
+                <div key={key} className="pb-4 first-of-type:pt-4 px-4 flex items-center justify-between gap-4">
+                  <span className="flex-1 font-monospace text-ellipsis text-nowrap overflow-hidden">{key}</span>
                   <SimpleSelect
                     className="rounded-none! p-1! outline-none"
                     options={parameterOptions}
                     value={type}
                     onChange={(e) =>
-                      setQueryMappings((prevQueryMappings) => ({ ...prevQueryMappings, [param]: e.target.value }))
+                      setQueryMappings((prevQueryMappings) => ({
+                        ...prevQueryMappings,
+                        [key]: e.target.value as FieldType,
+                      }))
                     }
                   />
                 </div>
@@ -362,11 +381,13 @@ export default function App() {
         </div>
       )}
 
-      <div>
-        <Button disabled={disabledRunTests} onClick={disabledRunTests ? undefined : runAllTests}>
-          {isRunningTests ? `Running tests... (${currentTest}/${testCount})` : 'Generate & Run Tests'}
-        </Button>
-      </div>
+      {mode === 'HTTP' && (
+        <div>
+          <Button disabled={disabledRunTests} onClick={disabledRunTests ? undefined : runAllTests}>
+            {isRunningTests ? `Running tests... (${currentTest}/${testsCount})` : 'Generate & Run Tests'}
+          </Button>
+        </div>
+      )}
 
       {testsRun && (
         <>
@@ -375,6 +396,7 @@ export default function App() {
               columns={getTestsTableColumns(['Check', 'Expected', 'Actual', 'Result'])}
               expandableRows
               expandableRowsComponent={ExpandedTestComponent}
+              expandableRowsComponentProps={{ headers: parseHeaders(headers), protoFile, messageType }}
               expandOnRowClicked
               data={securityTests}
               progressComponent={<TestRunningLoader text="Running security tests..." />}
@@ -404,7 +426,7 @@ export default function App() {
                   selector: (row) => row.status,
                   width: '220px',
                   cell: (row) => {
-                    if (row.name === 'Load test')
+                    if (row.name === LOAD_TEST_NAME)
                       return <LoadTestControls isRunning={isLoadTestRunning} executeTest={executeLoadTest} />;
 
                     return row.status;
@@ -422,6 +444,7 @@ export default function App() {
               columns={getTestsTableColumns(['Field', 'Value', 'Expected', 'Actual', 'Result'])}
               expandableRows
               expandableRowsComponent={ExpandedTestComponent}
+              expandableRowsComponentProps={{ headers: parseHeaders(headers), protoFile, messageType }}
               expandOnRowClicked
               data={dataDrivenTests}
               progressComponent={<TestRunningLoader text="Running data-driven tests..." />}
@@ -434,6 +457,7 @@ export default function App() {
               columns={getTestsTableColumns(['Method', 'Expected', 'Actual', 'Result'])}
               expandableRows
               expandableRowsComponent={ExpandedTestComponent}
+              expandableRowsComponentProps={{ headers: parseHeaders(headers), protoFile, messageType }}
               expandOnRowClicked
               data={crudTests}
               progressComponent={<TestRunningLoader text="Preparing CRUD…" />}
@@ -444,6 +468,21 @@ export default function App() {
       )}
     </div>
   );
+
+  function reset() {
+    setMethod('GET');
+    setUrl('');
+    setWssConnected(false);
+    setHeaders('');
+    setBody('{}');
+    setProtoFile(null);
+    setMessageType('');
+    setHttpResponse(null);
+    setMessages([]);
+    setBodyMappings({});
+    setQueryMappings({});
+    setTestsRun(false);
+  }
 
   async function runAllTests() {
     setTestsRun(true);
@@ -459,27 +498,17 @@ export default function App() {
 
       setUrl(url);
       setMethod(method as Method);
-
-      if (decodedLines.length > 0) {
-        setBody(decodedLines.join('\n'));
-
-        const formMappings: Record<string, string> = {};
-        decodedLines.forEach((decodedLine) => {
-          const [key] = decodedLine.split('=');
-          if (key) formMappings[`form.${key.trim()}`] = 'string';
-        });
-
-        setFieldMappings(formMappings);
-      } else {
-        const trimmedBody = body ? String(body).trim() : '';
-        setBody(trimmedBody !== '' ? trimmedBody : '{}');
-      }
-
       setHeaders(
         Object.entries(headers)
           .map(([k, v]) => `${k}: ${v}`)
           .join('\n'),
       );
+
+      if (decodedLines.length > 0) setBody(decodedLines.join('\n'));
+      else {
+        const trimmedBody = body ? String(body).trim() : '';
+        setBody(trimmedBody !== '' ? trimmedBody : '{}');
+      }
 
       setOpenCurlModal(false);
       setCurl('');
@@ -496,79 +525,25 @@ export default function App() {
       body: '',
       headers: {},
     });
+    setBodyMappings({});
+    setQueryMappings({});
 
     try {
       const parsedHeaders = parseHeaders(headers);
-      const contentType = getHeaderValue(parsedHeaders, 'content-type');
-      const isForm = /application\/x-www-form-urlencoded/i.test(contentType);
-
-      let data: string | Uint8Array | undefined = body;
-      if (protoFile && messageType) data = encodeMessage(messageType, JSON.parse(body));
-      else if (isForm) data = convertFormEntriesToUrlEncoded(parseFormData(String(body)));
-
-      // Ensure proper Content-Type header for form data
-      if (isForm && !getHeaderValue(parsedHeaders, 'content-type'))
-        parsedHeaders['Content-Type'] = 'application/x-www-form-urlencoded';
-
-      const response = await window.electronAPI.sendHttp({
-        url,
-        method,
-        headers: parsedHeaders,
-        body: data,
-      });
+      const parsedBody = parseBody(body, parsedHeaders, messageType, protoFile);
+      const response = await window.electronAPI.sendHttp(createHttpRequest(parsedBody, parsedHeaders, method, url));
 
       setHttpResponse(response);
 
-      // Generate test mappings based on request body (not response)
-      let parsedBody;
-      try {
-        parsedBody = JSON.parse(body);
-      } catch {
-        return;
-      }
+      if (!response.status.startsWith('2') || !parsedBody) return;
 
-      if (response.status.startsWith('2')) {
-        if (parsedBody) {
-          // Extract all fields from request body (including nested)
-          const extractedFields = extractFieldsFromJson(parsedBody);
-          const bodyMappings: Record<string, string> = {};
+      const bodyMappings = extractBodyFieldMappings(parsedBody, parsedHeaders);
+      const queryMappings = Object.fromEntries(
+        Object.entries(extractQueryParameters(url)).map(([key, value]) => [key, detectFieldType(value)]),
+      );
 
-          for (const [fieldPath, fieldType] of Object.entries(extractedFields)) {
-            if (fieldType === 'DO_NOT_TEST') bodyMappings[fieldPath] = 'do-not-test';
-            else {
-              const pathSegments = fieldPath.replace(/\[(\d+)\]/g, '.$1').split('.');
-              let fieldValue = parsedBody;
-              for (const segment of pathSegments) {
-                if (fieldValue == null) break;
-                fieldValue = fieldValue[segment];
-              }
-
-              bodyMappings[fieldPath] = detectFieldType(fieldValue);
-            }
-          }
-
-          setFieldMappings(bodyMappings);
-        }
-
-        if (isForm) {
-          const formEntries = parseFormData(String(body));
-          const formMappings: Record<string, string> = {};
-
-          for (const [key, value] of formEntries) formMappings[`form.${key}`] = detectFieldType(value);
-
-          setFieldMappings((prevFieldMappings) => ({
-            ...(prevFieldMappings || {}),
-            ...formMappings,
-          }));
-        }
-
-        const queryParams = extractQueryParams(url);
-        const queryParamMappings: Record<string, string> = {};
-
-        for (const [key, value] of Object.entries(queryParams)) queryParamMappings[key] = detectFieldType(value);
-
-        setQueryMappings(queryParamMappings);
-      }
+      setBodyMappings(bodyMappings);
+      setQueryMappings(queryMappings);
     } catch (error) {
       setHttpResponse({
         status: 'Network Error',
