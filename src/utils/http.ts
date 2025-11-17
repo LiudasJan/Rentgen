@@ -196,7 +196,11 @@ export function getFieldValueFromBody(body: unknown, fieldName: string, headers:
 }
 
 export function isUrlEncodedContentType(headers: Record<string, string>): boolean {
-  return /application\/x-www-form-urlencoded/i.test(getHeaderValue(headers, 'content-type'));
+  return isUrlEncodedContentTypeString(getHeaderValue(headers, 'content-type'));
+}
+
+export function isUrlEncodedContentTypeString(value: string): boolean {
+  return /application\/x-www-form-urlencoded/i.test(value);
 }
 
 export function parseBody(

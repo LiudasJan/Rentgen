@@ -1,5 +1,6 @@
 import { Method } from 'axios';
 import parseCurl from 'parse-curl';
+import { isUrlEncodedContentTypeString } from '.';
 import { ParsedCurlResult } from '../types';
 
 export function extractCurl(curl: string): ParsedCurlResult {
@@ -63,7 +64,7 @@ export function extractCurl(curl: string): ParsedCurlResult {
       const value = String(headerValue ?? '');
 
       if (
-        !/application\/x-www-form-urlencoded/i.test(trimmedCurl) &&
+        !isUrlEncodedContentTypeString(trimmedCurl) &&
         value.toLocaleLowerCase() === 'application/x-www-form-urlencoded'
       )
         continue;
