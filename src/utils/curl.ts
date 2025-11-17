@@ -62,6 +62,12 @@ export function extractCurl(curl: string): ParsedCurlResult {
       const key = String(headerKey);
       const value = String(headerValue ?? '');
 
+      if (
+        !/application\/x-www-form-urlencoded/i.test(trimmedCurl) &&
+        value.toLocaleLowerCase() === 'application/x-www-form-urlencoded'
+      )
+        continue;
+
       if (key.toLowerCase() === 'set-cookie') headers['Cookie'] = value;
       else headers[key] = value;
     }
