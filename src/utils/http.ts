@@ -1,6 +1,6 @@
 import { Method } from 'axios';
 import { detectFieldType, encodeMessage, extractFieldsFromJson, getRandomizedValueByFieldType } from '.';
-import { FieldType, HttpRequest, TestOptions, TestResult } from '../types';
+import { FieldType, HttpRequest, HttpResponse, TestOptions, TestResult } from '../types';
 import { isObject, setDeepObjectProperty, tryParseJsonObject } from './object';
 
 export function convertFormEntriesToUrlEncoded(formEntries: Array<[string, string]>): string {
@@ -94,7 +94,7 @@ export function createTestHttpRequest(options: TestOptions): HttpRequest {
 
 export async function executeTimedRequest(
   request: HttpRequest,
-  onSuccess: (response: any, responseTime: number, statusCode: number) => TestResult,
+  onSuccess: (response: HttpResponse, responseTime: number, statusCode: number) => TestResult,
   onError: (error: unknown) => TestResult,
 ): Promise<TestResult> {
   try {
@@ -137,7 +137,7 @@ export function extractBodyFieldMappings(body: unknown, headers: Record<string, 
   return mappings;
 }
 
-export function extractBodyFromResponse(response: any): Record<string, unknown> {
+export function extractBodyFromResponse(response: HttpResponse): Record<string, unknown> {
   try {
     if (typeof response?.body === 'string') return JSON.parse(response.body);
     if (response?.body && typeof response.body === 'object') return response.body;
@@ -146,7 +146,7 @@ export function extractBodyFromResponse(response: any): Record<string, unknown> 
   }
 }
 
-export function extractStatusCode(response: any): number {
+export function extractStatusCode(response: HttpResponse): number {
   const status = (response?.status || '').toString();
   const parsedStatus = parseInt(status.split(' ')[0] || '0', 10);
   return Number.isFinite(parsedStatus) ? parsedStatus : 0;

@@ -2,7 +2,7 @@ import { Method } from 'axios';
 import { BaseTests, NOT_AVAILABLE_TEST } from '.';
 import { RESPONSE_STATUS } from '../constants/responseStatus';
 import { Test } from '../decorators';
-import { HttpRequest, TestResult, TestStatus } from '../types';
+import { HttpRequest, HttpResponse, TestResult, TestStatus } from '../types';
 import {
   createHttpRequest,
   createTestHttpRequest,
@@ -85,7 +85,7 @@ export class SecurityTests extends BaseTests {
   }
 
   @Test('Validates that server header does not expose sensitive version information')
-  private testServerHeaderSecurity(request: HttpRequest, response: any): TestResult {
+  private testServerHeaderSecurity(request: HttpRequest, response: HttpResponse): TestResult {
     this.onTestStart?.();
 
     const serverHeader = getHeaderValue(response.headers, 'server');
@@ -101,7 +101,7 @@ export class SecurityTests extends BaseTests {
   }
 
   @Test('Checks for clickjacking protection via X-Frame-Options or CSP frame-ancestors')
-  private testClickjackingProtection(request: HttpRequest, response: any): TestResult {
+  private testClickjackingProtection(request: HttpRequest, response: HttpResponse): TestResult {
     this.onTestStart?.();
 
     const xFrameOptions = getHeaderValue(response.headers, 'x-frame-options');
@@ -119,7 +119,7 @@ export class SecurityTests extends BaseTests {
   }
 
   @Test('Verifies Strict-Transport-Security header is present on HTTPS endpoints')
-  private testHSTS(request: HttpRequest, response: any): TestResult {
+  private testHSTS(request: HttpRequest, response: HttpResponse): TestResult {
     this.onTestStart?.();
 
     const hsts = getHeaderValue(response.headers, 'strict-transport-security');
@@ -135,7 +135,7 @@ export class SecurityTests extends BaseTests {
   }
 
   @Test('Checks for X-Content-Type-Options: nosniff to prevent MIME sniffing')
-  private testMimeSniffing(request: HttpRequest, response: any): TestResult {
+  private testMimeSniffing(request: HttpRequest, response: HttpResponse): TestResult {
     this.onTestStart?.();
 
     const xContentTypeOptions = getHeaderValue(response.headers, 'x-content-type-options');
@@ -152,7 +152,7 @@ export class SecurityTests extends BaseTests {
   }
 
   @Test('Validates Cache-Control header for private API endpoints')
-  private testCacheControl(request: HttpRequest, response: any): TestResult {
+  private testCacheControl(request: HttpRequest, response: HttpResponse): TestResult {
     this.onTestStart?.();
 
     const cacheControl = getHeaderValue(response.headers, 'cache-control');
@@ -359,7 +359,7 @@ function createSecurityTestResult(
   actual: string,
   status: TestStatus,
   request: HttpRequest | null = null,
-  response: any = null,
+  response: HttpResponse | null = null,
 ): TestResult {
   return { name, expected, actual, status, request, response };
 }
@@ -428,7 +428,7 @@ function getCrudTestResults(
   allowHeader: string,
   headers: Record<string, string>,
   url: string,
-  response: any,
+  response: HttpResponse,
 ): TestResult[] {
   try {
     const allowedMethods = String(allowHeader || '')

@@ -15,7 +15,7 @@ import TestsTable, { ExpandedTestComponent, getTestsTableColumns } from './compo
 import { RESPONSE_STATUS } from './constants/responseStatus';
 import useTests from './hooks/useTests';
 import { LOAD_TEST_NAME } from './tests';
-import { FieldType } from './types';
+import { FieldType, HttpResponse } from './types';
 import {
   createHttpRequest,
   detectFieldType,
@@ -73,11 +73,7 @@ export default function App() {
   const [wssConnected, setWssConnected] = useState<boolean>(false);
   const [protoFile, setProtoFile] = useState<File | null>(null);
   const [messageType, setMessageType] = useState<string>('');
-  const [httpResponse, setHttpResponse] = useState<{
-    status: string;
-    body: any;
-    headers: any;
-  } | null>(null);
+  const [httpResponse, setHttpResponse] = useState<HttpResponse | null>(null);
   const [messages, setMessages] = useState<
     {
       direction: 'sent' | 'received' | 'system';

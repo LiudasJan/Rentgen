@@ -75,7 +75,7 @@ export function ExpandedTestComponent({
       : null;
   const modifiedResponse = response ? { ...response } : null;
 
-  if (modifiedResponse) modifiedResponse.body = extractBodyFromResponse(modifiedResponse);
+  if (modifiedResponse) modifiedResponse.body = extractBodyFromResponse(modifiedResponse) as any;
 
   return (
     <div className="p-4 bg-table-data">

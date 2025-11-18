@@ -2,7 +2,7 @@ import { BaseTests } from '.';
 import { datasets } from '../constants/datasets';
 import { RESPONSE_STATUS } from '../constants/responseStatus';
 import { Test } from '../decorators';
-import { FieldType, HttpRequest, TestData, TestOptions, TestResult, TestStatus } from '../types';
+import { FieldType, HttpRequest, HttpResponse, TestData, TestOptions, TestResult, TestStatus } from '../types';
 import {
   convertUrlEncodedToFormEntries,
   createHttpRequest,
@@ -203,13 +203,17 @@ function createDataDrivenTestResult(
   status: TestStatus,
   value: any,
   request: HttpRequest,
-  response: any = null,
+  response: HttpResponse = null,
   responseTime = 0,
 ): TestResult {
   return { name, expected, actual, status, value, request, response, responseTime };
 }
 
-function determineValueNormalizationTestStatus(response: any, statusCode: number, testData: TestData): TestStatus {
+function determineValueNormalizationTestStatus(
+  response: HttpResponse,
+  statusCode: number,
+  testData: TestData,
+): TestStatus {
   if (statusCode >= RESPONSE_STATUS.SERVER_ERROR) return TestStatus.Bug;
   if (statusCode === RESPONSE_STATUS.CLIENT_ERROR || statusCode === RESPONSE_STATUS.UNPROCESSABLE_ENTITY)
     return TestStatus.Pass;
