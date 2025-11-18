@@ -114,9 +114,7 @@ export function extractBodyFieldMappings(body: unknown, headers: Record<string, 
 
   if (isUrlEncodedContentType(headers)) {
     const formEntries = convertUrlEncodedToFormEntries(body as string);
-    for (const [key, value] of formEntries) {
-      mappings[key] = detectFieldType(value);
-    }
+    for (const [key, value] of formEntries) mappings[key] = detectFieldType(value);
   } else {
     const extractedFields = extractFieldsFromJson(body);
     for (const [key, value] of Object.entries(extractedFields)) {
@@ -131,7 +129,7 @@ export function extractBodyFieldMappings(body: unknown, headers: Record<string, 
           fieldValue = fieldValue[path];
         }
 
-        mappings[key] = detectFieldType(fieldValue);
+        mappings[key] = detectFieldType(fieldValue, true);
       }
     }
   }
