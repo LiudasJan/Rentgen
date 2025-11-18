@@ -370,14 +370,15 @@ export class SecurityTests extends BaseTests {
       );
 
     const request = createTestHttpRequest(this.options);
+    const testValue = 'No XSS echo';
     const modifiedRequest: HttpRequest = {
       ...request,
-      body: '<script>alert("No XSS echo")</script>',
+      body: `<script>alert("${testValue}")</script>`,
     };
 
     try {
       const response = await window.electronAPI.sendHttp(modifiedRequest);
-      const { actual, status } = validateReflectedPayloadSafety(response);
+      const { actual, status } = validateReflectedPayloadSafety(response, testValue);
 
       return createSecurityTestResult(
         REFLECTED_PAYLOAD_SAFETY_TEST_NAME,
@@ -470,7 +471,10 @@ function validateCacheControl(
   };
 }
 
-function validateReflectedPayloadSafety(response: HttpResponse): {
+function validateReflectedPayloadSafety(
+  response: HttpResponse,
+  testValue: string,
+): {
   actual: string;
   status: TestStatus;
 } {
@@ -481,7 +485,7 @@ function validateReflectedPayloadSafety(response: HttpResponse): {
   const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
   if (!responseBody) return { actual: 'Check manually via GET method or database', status: TestStatus.Info };
 
-  return !responseBody.includes('No XSS echo')
+  return !responseBody.includes(testValue)
     ? { actual: `${response.status} without mirrored content`, status: TestStatus.Pass }
     : { actual: `${response.status} with mirrored content`, status: TestStatus.Fail };
 }
