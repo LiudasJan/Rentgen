@@ -1,4 +1,4 @@
 export * from './BaseTests';
-export * from './dataDrivenTestss';
-export * from './performanceTests';
-export * from './securityTestss';
+export * from './DataDrivenTests';
+export * from './PerformanceInsights';
+export * from './SecurityTests';
