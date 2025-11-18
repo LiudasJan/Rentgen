@@ -1,6 +1,15 @@
 import { useState } from 'react';
-import { LOAD_TEST_NAME, runDataDrivenTests, runLoadTest, runPerformanceInsights, runSecurityTests } from '../tests';
-import { TestOptions, TestResult } from '../types';
+import { datasets } from '../constants/datasets';
+import { getTestCount } from '../decorators';
+import {
+  DataDrivenTests,
+  LOAD_TEST_NAME,
+  runLoadTest,
+  PerformanceInsights,
+  runDataDrivenTests,
+  SecurityTests,
+} from '../tests';
+import { FieldType, TestOptions, TestResult } from '../types';
 
 const useTests = (options: TestOptions) => {
   const [currentTest, setCurrentTest] = useState<number>(0);
@@ -26,21 +35,22 @@ const useTests = (options: TestOptions) => {
     setIsSecurityRunning(true);
     resetTests();
 
+    setTestsCount(
+      (await calculateDataDrivenTestsCount()) + getTestCount(SecurityTests) + getTestCount(PerformanceInsights),
+    );
+
+    await executeSecurityTests();
     const dataDrivenTestResults = await executeDataDrivenTests();
     await executePerformanceTests(dataDrivenTestResults);
-    await executeSecurityTests();
   }
 
   async function executeDataDrivenTests(): Promise<TestResult[]> {
     setIsDataDrivenRunning(true);
     setDataDrivenTests([]);
-    setCurrentTest(0);
 
-    const dataDrivenTestResults = await runDataDrivenTests(
-      options,
-      (testsCount) => setTestsCount((prevTestsCount) => prevTestsCount + testsCount),
-      incrementCurrentTest,
-    );
+    const dataDrivenTests = new DataDrivenTests(options, incrementCurrentTest);
+    const dataDrivenTestResults = await dataDrivenTests.run();
+
     setDataDrivenTests(dataDrivenTestResults);
     setIsDataDrivenRunning(false);
 
@@ -63,6 +73,7 @@ const useTests = (options: TestOptions) => {
     });
 
     const loadTestResult = await runLoadTest(options, threadCount, requestCount, updateLoadProgress);
+
     setPerformanceTests((prevPerformanceTests) => {
       return prevPerformanceTests.map((performanceTest) => {
         if (performanceTest.name === LOAD_TEST_NAME) return loadTestResult;
@@ -79,7 +90,9 @@ const useTests = (options: TestOptions) => {
     setIsPerformanceRunning(true);
     setPerformanceTests([]);
 
-    const performanceTestResults = await runPerformanceInsights(url, testResults);
+    const performanceInsights = new PerformanceInsights(url, testResults, incrementCurrentTest);
+    const performanceTestResults = await performanceInsights.run();
+
     setPerformanceTests(performanceTestResults);
     setIsPerformanceRunning(false);
   }
@@ -89,7 +102,9 @@ const useTests = (options: TestOptions) => {
     setSecurityTests([]);
     setCrudTests([]);
 
-    const { securityTestResults, crudTestResults } = await runSecurityTests(options);
+    const securityTests = new SecurityTests(options, incrementCurrentTest);
+    const { securityTestResults, crudTestResults } = await securityTests.run();
+
     setSecurityTests(securityTestResults);
     setCrudTests(crudTestResults);
     setIsSecurityRunning(false);
@@ -135,6 +150,26 @@ const useTests = (options: TestOptions) => {
 
   function incrementCurrentTest() {
     setCurrentTest((prevCurrentTest) => prevCurrentTest + 1);
+  }
+
+  async function calculateDataDrivenTestsCount(): Promise<number> {
+    // Original request test
+    let dataDrivenTestsCount = 1;
+
+    await runDataDrivenTests(
+      options,
+      async () => {
+        dataDrivenTestsCount += 1;
+      },
+      async (_, type: FieldType) => {
+        dataDrivenTestsCount += (datasets[type] || []).length;
+      },
+      async (_, type: FieldType) => {
+        dataDrivenTestsCount += (datasets[type] || []).length;
+      },
+    );
+
+    return dataDrivenTestsCount;
   }
 
   return {

@@ -1,4 +1,6 @@
+import { NOT_AVAILABLE_TEST } from '.';
 import { RESPONSE_STATUS } from '../constants/responseStatus';
+import { Test } from '../decorators';
 import { TestOptions, TestResult, TestStatus } from '../types';
 import { calculateMedian, calculatePercentile, createTestHttpRequest, extractStatusCode } from '../utils';
 
@@ -17,69 +19,92 @@ const MAX_EARLY_ABORT_FAILURES = 5;
 const EARLY_ABORT_RESPONSE_TIME_MS = 5000;
 const MIN_REQUESTS_FOR_ABORT_CHECK = 10;
 
-export async function runPerformanceInsights(url: string, testResults: TestResult[]): Promise<TestResult[]> {
-  const results: TestResult[] = [];
-
-  // Calculate response time median from test results
-  const responseTimes = testResults.map((result: TestResult) => result.responseTime).filter(Boolean);
-  const medianResponseTime = calculateMedian(responseTimes);
-
-  let responseTimeStatus = TestStatus.Fail;
-  if (medianResponseTime <= EXCELLENT_RESPONSE_TIME_MS) responseTimeStatus = TestStatus.Pass;
-  else if (medianResponseTime <= ACCEPTABLE_RESPONSE_TIME_MS) responseTimeStatus = TestStatus.Warning;
-
-  results.push({
-    actual: `${medianResponseTime.toFixed(0)} ms`,
-    expected: `<= ${EXCELLENT_RESPONSE_TIME_MS} ms`,
-    name: 'Median response time',
-    status: responseTimeStatus,
-  });
-
-  // Test network ping latency to the target host
-  try {
-    const targetDomain = new URL(url).hostname;
-    const pingResults: number[] = [];
-
-    for (let i = 0; i < PING_TEST_COUNT; i++) {
-      const pingTime = await window.electronAPI.pingHost(targetDomain);
-      pingResults.push(pingTime);
-    }
-
-    const highLatencyCount = pingResults.filter((pingTime) => pingTime > MAX_PING_LATENCY_MS).length;
-    const averagePingTime = pingResults.reduce((sum, pingTime) => sum + pingTime, 0) / pingResults.length;
-    const pingLatencyStatus = highLatencyCount >= MAX_ACCEPTABLE_BAD_PINGS ? TestStatus.Fail : TestStatus.Pass;
-
-    results.push({
-      actual: `${averagePingTime.toFixed(0)} ms (high latency ${highLatencyCount}/${PING_TEST_COUNT})`,
-      expected: `<= ${MAX_PING_LATENCY_MS} ms (${MAX_ACCEPTABLE_BAD_PINGS}/${PING_TEST_COUNT} rule)`,
-      name: 'Ping latency',
-      status: pingLatencyStatus,
-    });
-  } catch (error) {
-    results.push({
-      actual: `Unexpected error: ${String(error)}`,
-      expected: 'Ping should succeed',
-      name: 'Ping test error',
-      status: TestStatus.Bug,
-    });
+export class PerformanceInsights {
+  constructor(
+    private url: string,
+    private testResults: TestResult[],
+    protected onTestStart?: () => void,
+  ) {
+    this.url = url;
+    this.testResults = testResults;
   }
 
-  // Manual performance tests (require human verification) ---
-  results.push({
-    actual: '', // Empty until test is executed
-    expected: `Median <${EXCELLENT_RESPONSE_TIME_MS} ms (Pass), <${ACCEPTABLE_RESPONSE_TIME_MS} ms (Warning), ≥${ACCEPTABLE_RESPONSE_TIME_MS} ms (Fail)`,
-    name: LOAD_TEST_NAME,
-    status: TestStatus.Manual, // Requires manual execution
-  });
+  public async run(): Promise<TestResult[]> {
+    const results: TestResult[] = [];
 
-  results.push({
-    actual: 'Not available yet',
-    expected: EXPECTED_RATE_LIMIT_STATUS,
-    name: 'Rate limiting implementation',
-    status: TestStatus.Manual,
-  });
+    results.push(this.testMedianResponseTime(), await this.testNetworkPingLatency(), ...getManualTests());
 
-  return results;
+    return results;
+  }
+
+  @Test('Calculates the median response time from load test results')
+  private testMedianResponseTime(): TestResult {
+    this.onTestStart?.();
+
+    const responseTimes = this.testResults.map((result: TestResult) => result.responseTime).filter(Boolean);
+    const medianResponseTime = calculateMedian(responseTimes);
+
+    let responseTimeStatus = TestStatus.Fail;
+    if (medianResponseTime <= EXCELLENT_RESPONSE_TIME_MS) responseTimeStatus = TestStatus.Pass;
+    else if (medianResponseTime <= ACCEPTABLE_RESPONSE_TIME_MS) responseTimeStatus = TestStatus.Warning;
+
+    return {
+      actual: `${medianResponseTime.toFixed(0)} ms`,
+      expected: `<= ${EXCELLENT_RESPONSE_TIME_MS} ms`,
+      name: 'Median response time',
+      status: responseTimeStatus,
+    };
+  }
+
+  @Test('Tests network ping latency')
+  private async testNetworkPingLatency(): Promise<TestResult> {
+    this.onTestStart?.();
+
+    try {
+      const targetDomain = new URL(this.url).hostname;
+      const pingResults: number[] = [];
+
+      for (let i = 0; i < PING_TEST_COUNT; i++) {
+        const pingTime = await window.electronAPI.pingHost(targetDomain);
+        pingResults.push(pingTime);
+      }
+
+      const highLatencyCount = pingResults.filter((pingTime) => pingTime > MAX_PING_LATENCY_MS).length;
+      const averagePingTime = pingResults.reduce((sum, pingTime) => sum + pingTime, 0) / pingResults.length;
+      const pingLatencyStatus = highLatencyCount >= MAX_ACCEPTABLE_BAD_PINGS ? TestStatus.Fail : TestStatus.Pass;
+
+      return {
+        actual: `${averagePingTime.toFixed(0)} ms (high latency ${highLatencyCount}/${PING_TEST_COUNT})`,
+        expected: `<= ${MAX_PING_LATENCY_MS} ms (${MAX_ACCEPTABLE_BAD_PINGS}/${PING_TEST_COUNT} rule)`,
+        name: 'Ping latency',
+        status: pingLatencyStatus,
+      };
+    } catch (error) {
+      return {
+        actual: `Unexpected error: ${String(error)}`,
+        expected: 'Ping should succeed',
+        name: 'Ping test error',
+        status: TestStatus.Bug,
+      };
+    }
+  }
+}
+
+function getManualTests(): TestResult[] {
+  return [
+    {
+      actual: '', // Empty until test is executed
+      expected: `Median <${EXCELLENT_RESPONSE_TIME_MS} ms (Pass), <${ACCEPTABLE_RESPONSE_TIME_MS} ms (Warning), ≥${ACCEPTABLE_RESPONSE_TIME_MS} ms (Fail)`,
+      name: LOAD_TEST_NAME,
+      status: TestStatus.Manual, // Requires manual execution
+    },
+    {
+      actual: NOT_AVAILABLE_TEST,
+      expected: EXPECTED_RATE_LIMIT_STATUS,
+      name: 'Rate limiting implementation',
+      status: TestStatus.Manual,
+    },
+  ];
 }
 
 export async function runLoadTest(
