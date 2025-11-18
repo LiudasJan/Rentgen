@@ -105,3 +105,59 @@ npm run package
 ### If you want a ready-to-distribute installer
 npm run make
 ```
+
+## 🚀 Creating a Release
+
+Releases are automatically built and published when you create and push a Git tag. The GitHub Actions workflow will:
+
+1. **Build** the application for all platforms (Windows, macOS, Linux)
+2. **Generate release notes** from git commits since the last tag
+3. **Create a GitHub release** with all build artifacts attached
+
+### Steps to create a release:
+
+1. **Update the version** in `package.json` (if needed):
+
+   ```bash
+   # Edit package.json and update the version field
+   ```
+
+2. **Update CHANGELOG.md** with the changes for this release:
+
+   ```bash
+   # Edit CHANGELOG.md and move items from [Unreleased] to a new version section
+   ```
+
+3. **Commit your changes**:
+
+   ```bash
+   git add package.json CHANGELOG.md
+   git commit -m "chore: bump version to X.Y.Z"
+   ```
+
+4. **Create and push a tag**:
+
+   ```bash
+   # Create an annotated tag (recommended)
+   git tag -a v1.2.0 -m "Release version 1.2.0"
+
+   # Or create a lightweight tag
+   git tag v1.2.0
+
+   # Push the tag to trigger the release workflow
+   git push origin v1.2.0
+   ```
+
+### Tag naming convention
+
+Use semantic versioning format: `vMAJOR.MINOR.PATCH` (e.g., `v1.2.0`, `v2.0.0`, `v1.2.1`)
+
+### Release notes
+
+Release notes are automatically generated from git commits between the previous tag and the current tag. The workflow will:
+
+- List all commits (excluding merge commits)
+- Include commit messages and short hashes
+- Add a link to the full changelog comparison
+
+You can also manually edit the release notes on GitHub after the release is created.

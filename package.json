@@ -1,13 +1,15 @@
 {
   "name": "rentgen",
   "productName": "Rentgen",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Lightweight API testing tool with cURL import and auto generated tests",
   "main": ".webpack/main",
   "scripts": {
     "start": "electron-forge start",
-    "package": "electron-forge package",
+    "package": "electron-forge package --arch=x64,arm64",
     "make": "electron-forge make",
+    "make:x64": "electron-forge make --arch=x64",
+    "make:arm64": "electron-forge make --arch=arm64",
     "publish": "electron-forge publish",
     "lint": "eslint --ext .ts,.tsx ."
   },
@@ -20,6 +22,7 @@
   "devDependencies": {
     "@electron-forge/cli": "^7.10.2",
     "@electron-forge/maker-deb": "^7.10.2",
+    "@electron-forge/maker-dmg": "^7.10.2",
     "@electron-forge/maker-rpm": "^7.10.2",
     "@electron-forge/maker-squirrel": "^7.10.2",
     "@electron-forge/maker-zip": "^7.10.2",
