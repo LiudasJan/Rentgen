@@ -480,14 +480,15 @@ function validateReflectedPayloadSafety(
 } {
   const statusCode = extractStatusCode(response);
   if (statusCode >= RESPONSE_STATUS.SERVER_ERROR) return { actual: response.status, status: TestStatus.Bug };
-  if (statusCode === RESPONSE_STATUS.CLIENT_ERROR) return { actual: response.status, status: TestStatus.Pass };
 
   const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
-  if (!responseBody) return { actual: 'Check manually via GET method or database', status: TestStatus.Info };
+  if (
+    (!responseBody || !responseBody.includes(testValue)) &&
+    (statusCode === RESPONSE_STATUS.CLIENT_ERROR || statusCode === RESPONSE_STATUS.UNPROCESSABLE_ENTITY)
+  )
+    return { actual: `${response.status} → without mirrored content`, status: TestStatus.Pass };
 
-  return !responseBody.includes(testValue)
-    ? { actual: `${response.status} without mirrored content`, status: TestStatus.Pass }
-    : { actual: `${response.status} with mirrored content`, status: TestStatus.Fail };
+  return { actual: response.status, status: TestStatus.Fail };
 }
 
 function getCrudTestResults(

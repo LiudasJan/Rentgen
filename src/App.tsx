@@ -102,7 +102,7 @@ export default function App() {
   const isRunningTests = isSecurityRunning || isPerformanceRunning || isDataDrivenRunning;
   const statusCode = extractStatusCode(httpResponse);
   const disabledRunTests =
-    isRunningTests || !httpResponse || statusCode < RESPONSE_STATUS.OK || statusCode > RESPONSE_STATUS.CLIENT_ERROR;
+    isRunningTests || !httpResponse || statusCode < RESPONSE_STATUS.OK || statusCode >= RESPONSE_STATUS.CLIENT_ERROR;
 
   useEffect(() => {
     if (!window.electronAPI?.onWssEvent) return;
@@ -527,7 +527,8 @@ export default function App() {
     try {
       const parsedHeaders = parseHeaders(headers);
       const parsedBody = parseBody(body, parsedHeaders, messageType, protoFile);
-      const response = await window.electronAPI.sendHttp(createHttpRequest(parsedBody, parsedHeaders, method, url));
+      const request = createHttpRequest(parsedBody, parsedHeaders, method, url);
+      const response = await window.electronAPI.sendHttp(request);
 
       setHttpResponse(response);
 

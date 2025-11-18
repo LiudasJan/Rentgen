@@ -59,7 +59,7 @@ export function createTestHttpRequest(options: TestOptions): HttpRequest {
     }
 
     parsedBody = convertFormEntriesToUrlEncoded(formEntries);
-  } else {
+  } else if (isObject(parsedBody)) {
     // Update the field being tested
     if (mappingType === 'body' && fieldName && testData) setDeepObjectProperty(parsedBody, fieldName, testData.value);
 
@@ -115,7 +115,7 @@ export function extractBodyFieldMappings(body: unknown, headers: Record<string, 
   if (isUrlEncodedContentType(headers)) {
     const formEntries = convertUrlEncodedToFormEntries(body as string);
     for (const [key, value] of formEntries) mappings[key] = detectFieldType(value);
-  } else {
+  } else if (isObject(body)) {
     const extractedFields = extractFieldsFromJson(body);
     for (const [key, value] of Object.entries(extractedFields)) {
       if (value === 'DO_NOT_TEST') mappings[key] = 'do-not-test';
@@ -210,19 +210,15 @@ export function parseBody(
   if (isUrlEncodedContentType(headers)) return convertFormEntriesToUrlEncoded(parseFormData(body));
 
   const paredBody = tryParseJsonObject(body);
-  if (isObject(paredBody)) {
-    if (protoFile && messageType) {
-      try {
-        return encodeMessage(messageType, paredBody);
-      } catch {
-        return paredBody;
-      }
+  if (isObject(paredBody) && protoFile && messageType) {
+    try {
+      return encodeMessage(messageType, paredBody);
+    } catch {
+      return paredBody;
     }
-
-    return paredBody;
   }
 
-  return null;
+  return paredBody;
 }
 
 export function parseFormData(rawFormData: string): Array<[string, string]> {
