@@ -105,11 +105,13 @@ export class DataDrivenTests extends BaseTests {
           VALUE_NORMALIZATION_TEST_EXPECTED,
           testStatus === TestStatus.Pass
             ? statusCode === RESPONSE_STATUS.CLIENT_ERROR || statusCode === RESPONSE_STATUS.UNPROCESSABLE_ENTITY
-              ? `Rejected with ${statusCode}`
+              ? `Rejected with ${response.status}`
               : 'Value trimmed/normalized'
             : testStatus === TestStatus.Info
               ? 'Check manually via GET method or database'
-              : 'Contains value with spaces, not trimmed/normalized',
+              : testStatus === TestStatus.Bug
+                ? response.status
+                : 'Contains value with spaces, not trimmed/normalized',
           testStatus,
           testData.value,
           request,

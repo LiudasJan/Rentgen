@@ -19,6 +19,8 @@ const CRUD_TEST_NAME = 'CRUD';
 const CRUD_TEST_EXPECTED = 'Discover via OPTIONS';
 const NOT_FOUND_TEST_NAME = '404 Not Found';
 const NOT_FOUND_TEST_EXPECTED = '404 Not Found';
+const REFLECTED_PAYLOAD_SAFETY_TEST_NAME = 'Reflected Payload Safety';
+const REFLECTED_PAYLOAD_SAFETY_TEST_EXPECTED = `Reject with ${RESPONSE_STATUS.CLIENT_ERROR} or ${RESPONSE_STATUS.UNPROCESSABLE_ENTITY} without mirrored content`;
 
 const LARGE_PAYLOAD_SIZE_MB = 10;
 const LARGE_PAYLOAD_SIZE_BYTES = LARGE_PAYLOAD_SIZE_MB * 1024 * 1024;
@@ -78,6 +80,7 @@ export class SecurityTests extends BaseTests {
       await this.testMissingAuthorization(),
       await this.testCors(),
       await this.testNotFound(),
+      await this.testReflectedPayloadSafety(),
       ...getManualTests(),
     );
 
@@ -333,7 +336,7 @@ export class SecurityTests extends BaseTests {
         NOT_FOUND_TEST_NAME,
         NOT_FOUND_TEST_EXPECTED,
         response.status,
-        statusCode === 404
+        statusCode === RESPONSE_STATUS.NOT_FOUND
           ? TestStatus.Pass
           : statusCode === RESPONSE_STATUS.NETWORK_ERROR
             ? TestStatus.FailNoResponse
@@ -345,6 +348,49 @@ export class SecurityTests extends BaseTests {
       return createSecurityTestResult(
         NOT_FOUND_TEST_NAME,
         NOT_FOUND_TEST_EXPECTED,
+        `Unexpected error: ${String(error)}`,
+        TestStatus.Bug,
+        modifiedRequest,
+      );
+    }
+  }
+
+  @Test('Tests reflected payload safety by sending a payload that should be rejected if reflected')
+  private async testReflectedPayloadSafety(): Promise<TestResult> {
+    this.onTestStart?.();
+
+    const { method } = this.options;
+
+    if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase()))
+      return createSecurityTestResult(
+        REFLECTED_PAYLOAD_SAFETY_TEST_NAME,
+        REFLECTED_PAYLOAD_SAFETY_TEST_EXPECTED,
+        NOT_AVAILABLE_TEST,
+        TestStatus.Manual,
+      );
+
+    const request = createTestHttpRequest(this.options);
+    const modifiedRequest: HttpRequest = {
+      ...request,
+      body: '<script>alert("No XSS echo")</script>',
+    };
+
+    try {
+      const response = await window.electronAPI.sendHttp(modifiedRequest);
+      const { actual, status } = validateReflectedPayloadSafety(response);
+
+      return createSecurityTestResult(
+        REFLECTED_PAYLOAD_SAFETY_TEST_NAME,
+        REFLECTED_PAYLOAD_SAFETY_TEST_EXPECTED,
+        actual,
+        status,
+        modifiedRequest,
+        response,
+      );
+    } catch (error) {
+      return createSecurityTestResult(
+        REFLECTED_PAYLOAD_SAFETY_TEST_NAME,
+        REFLECTED_PAYLOAD_SAFETY_TEST_EXPECTED,
         `Unexpected error: ${String(error)}`,
         TestStatus.Bug,
         modifiedRequest,
@@ -422,6 +468,22 @@ function validateCacheControl(
     actual: cacheControl,
     status: cacheControl.includes('no-store') || cacheControl.includes('private') ? TestStatus.Pass : TestStatus.Fail,
   };
+}
+
+function validateReflectedPayloadSafety(response: HttpResponse): {
+  actual: string;
+  status: TestStatus;
+} {
+  const statusCode = extractStatusCode(response);
+  if (statusCode >= RESPONSE_STATUS.SERVER_ERROR) return { actual: response.status, status: TestStatus.Bug };
+  if (statusCode === RESPONSE_STATUS.CLIENT_ERROR) return { actual: response.status, status: TestStatus.Pass };
+
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  if (!responseBody) return { actual: 'Check manually via GET method or database', status: TestStatus.Info };
+
+  return !responseBody.includes('No XSS echo')
+    ? { actual: `${response.status} without mirrored content`, status: TestStatus.Pass }
+    : { actual: `${response.status} with mirrored content`, status: TestStatus.Fail };
 }
 
 function getCrudTestResults(
