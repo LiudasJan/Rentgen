@@ -80,10 +80,7 @@ export function ExpandedTestComponent({
   return (
     <div className="p-4 bg-table-data">
       {request && (
-        <CopyButton
-          className="mb-4"
-          textToCopy={generateCurl(request.body, request.headers, request.method, request.url)}
-        >
+        <CopyButton className="mb-4" textToCopy={generateCurl(request)}>
           Copy cURL
         </CopyButton>
       )}
@@ -149,6 +146,12 @@ export function getTestsTableColumns(visibleColumns: string[] = []): TableColumn
       name: 'Actual',
       selector: (row) => row.actual,
       omit: true,
+      style: {
+        'div:first-child': {
+          padding: '0.5rem 0',
+          whiteSpace: 'normal !important',
+        },
+      },
     },
     {
       name: 'Result',

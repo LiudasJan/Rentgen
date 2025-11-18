@@ -414,12 +414,12 @@ export default function App() {
                 {
                   name: 'Expected',
                   selector: (row) => row.expected,
-                  cell: (row) => <div className="py-1">{row.expected}</div>,
+                  cell: (row) => <div className="py-2">{row.expected}</div>,
                 },
                 {
                   name: 'Actual',
                   selector: (row) => row.actual,
-                  cell: (row) => <div className="py-1">{row.actual}</div>,
+                  cell: (row) => <div className="py-2">{row.actual}</div>,
                 },
                 {
                   name: 'Result',
