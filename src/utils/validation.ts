@@ -1,4 +1,6 @@
-import { FieldDetector, FieldType } from '../types';
+import { extractStatusCode } from '.';
+import { RESPONSE_STATUS } from '../constants/responseStatus';
+import { FieldDetector, FieldType, HttpResponse, TestStatus } from '../types';
 
 const fieldDetectors: ReadonlyArray<FieldDetector> = [
   { type: 'email', regex: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ },
@@ -54,4 +56,17 @@ export function extractFieldsFromJson(obj: unknown, prefix = ''): Record<string,
   } else fields[prefix] = typeof obj;
 
   return fields;
+}
+
+export function determineTestStatus(
+  response: HttpResponse,
+  determine: (response: HttpResponse, statusCode: number) => { actual: string; status: TestStatus },
+): {
+  actual: string;
+  status: TestStatus;
+} {
+  const statusCode = extractStatusCode(response);
+  if (statusCode >= RESPONSE_STATUS.SERVER_ERROR) return { actual: response.status, status: TestStatus.Bug };
+
+  return determine(response, statusCode);
 }

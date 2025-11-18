@@ -94,16 +94,15 @@ export function createTestHttpRequest(options: TestOptions): HttpRequest {
 
 export async function executeTimedRequest(
   request: HttpRequest,
-  onSuccess: (response: HttpResponse, responseTime: number, statusCode: number) => TestResult,
+  onSuccess: (response: HttpResponse, responseTime: number) => TestResult,
   onError: (error: unknown) => TestResult,
 ): Promise<TestResult> {
   try {
     const requestStartTime = performance.now();
     const response = await window.electronAPI.sendHttp(request);
     const responseTime = performance.now() - requestStartTime;
-    const statusCode = extractStatusCode(response);
 
-    return onSuccess(response, responseTime, statusCode);
+    return onSuccess(response, responseTime);
   } catch (error) {
     return onError(error);
   }

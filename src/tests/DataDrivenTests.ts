@@ -7,6 +7,7 @@ import {
   convertUrlEncodedToFormEntries,
   createHttpRequest,
   createTestHttpRequest,
+  determineTestStatus,
   executeTimedRequest,
   extractBodyFieldMappings,
   getFieldValueFromBody,
@@ -65,17 +66,26 @@ export class DataDrivenTests extends BaseTests {
 
     return executeTimedRequest(
       request,
-      (response, responseTime, statusCode) =>
-        createDataDrivenTestResult(
+      (response, responseTime) => {
+        const { actual, status } = determineTestStatus(response, (response, statusCode) => {
+          const testStatus = { actual: response.status, status: TestStatus.Fail };
+          if (statusCode >= RESPONSE_STATUS.OK && statusCode < RESPONSE_STATUS.REDIRECT)
+            testStatus.status = TestStatus.Pass;
+
+          return testStatus;
+        });
+
+        return createDataDrivenTestResult(
           ORIGINAL_REQUEST_TEST_FIELD_NAME,
           SUCCESS_RESPONSE_EXPECTED,
-          response.status,
-          statusCode >= RESPONSE_STATUS.OK && statusCode < RESPONSE_STATUS.REDIRECT ? TestStatus.Pass : TestStatus.Fail,
+          actual,
+          status,
           bodyValue,
           request,
           response,
           responseTime,
-        ),
+        );
+      },
       (error) =>
         createDataDrivenTestResult(
           ORIGINAL_REQUEST_TEST_FIELD_NAME,
@@ -97,22 +107,29 @@ export class DataDrivenTests extends BaseTests {
 
     return executeTimedRequest(
       request,
-      (response, responseTime, statusCode) => {
-        const testStatus = determineValueNormalizationTestStatus(response, statusCode, testData);
+      (response, responseTime) => {
+        const { actual, status } = determineTestStatus(response, (response, statusCode) => {
+          if (statusCode === RESPONSE_STATUS.CLIENT_ERROR || statusCode === RESPONSE_STATUS.UNPROCESSABLE_ENTITY)
+            return { actual: `Rejected with ${response.status}`, status: TestStatus.Pass };
+
+          const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+          if (!responseBody)
+            return {
+              actual: `${response.status} → check manually via GET method or database`,
+              status: TestStatus.Info,
+            };
+
+          if (!responseBody.includes(String(testData.value)))
+            return { actual: `${response.status} with trimmed/normalized value`, status: TestStatus.Pass };
+
+          return { actual: `${response.status} with not trimmed/normalized value`, status: TestStatus.Fail };
+        });
 
         return createDataDrivenTestResult(
           `${mappingType}.${fieldName}`,
           VALUE_NORMALIZATION_TEST_EXPECTED,
-          testStatus === TestStatus.Pass
-            ? statusCode === RESPONSE_STATUS.CLIENT_ERROR || statusCode === RESPONSE_STATUS.UNPROCESSABLE_ENTITY
-              ? `Rejected with ${response.status}`
-              : `${response.status} with trimmed/normalized value`
-            : testStatus === TestStatus.Info
-              ? `${response.status} → check manually via GET method or database`
-              : testStatus === TestStatus.Bug
-                ? response.status
-                : `${response.status} with not trimmed/normalized value`,
-          testStatus,
+          actual,
+          status,
           testData.value,
           request,
           response,
@@ -140,14 +157,23 @@ export class DataDrivenTests extends BaseTests {
 
     return executeTimedRequest(
       request,
-      (response, responseTime, statusCode) => {
-        const testStatus = determineMappingsTestStatus(statusCode, testData);
+      (response, responseTime) => {
+        const { actual, status } = determineTestStatus(response, (response, statusCode) => {
+          const testStatus = { actual: response.status, status: TestStatus.Fail };
+          if (
+            (testData.valid && statusCode >= RESPONSE_STATUS.OK && statusCode < RESPONSE_STATUS.REDIRECT) ||
+            (!testData.valid && statusCode >= RESPONSE_STATUS.CLIENT_ERROR && statusCode < RESPONSE_STATUS.SERVER_ERROR)
+          )
+            testStatus.status = TestStatus.Pass;
+
+          return testStatus;
+        });
 
         return createDataDrivenTestResult(
           `${mappingType}.${fieldName}`,
           testData.valid ? SUCCESS_RESPONSE_EXPECTED : CLIENT_ERROR_RESPONSE_EXPECTED,
-          response.status,
-          testStatus,
+          actual,
+          status,
           testData.value,
           request,
           response,
@@ -209,31 +235,6 @@ function createDataDrivenTestResult(
   responseTime = 0,
 ): TestResult {
   return { name, expected, actual, status, value, request, response, responseTime };
-}
-
-function determineValueNormalizationTestStatus(
-  response: HttpResponse,
-  statusCode: number,
-  testData: TestData,
-): TestStatus {
-  if (statusCode >= RESPONSE_STATUS.SERVER_ERROR) return TestStatus.Bug;
-  if (statusCode === RESPONSE_STATUS.CLIENT_ERROR || statusCode === RESPONSE_STATUS.UNPROCESSABLE_ENTITY)
-    return TestStatus.Pass;
-
-  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
-  if (!responseBody) return TestStatus.Info;
-
-  return !responseBody.includes(String(testData.value)) ? TestStatus.Pass : TestStatus.Fail;
-}
-
-function determineMappingsTestStatus(statusCode: number, testData: TestData): TestStatus {
-  if (
-    (testData.valid && statusCode >= RESPONSE_STATUS.OK && statusCode < RESPONSE_STATUS.REDIRECT) ||
-    (!testData.valid && statusCode >= RESPONSE_STATUS.CLIENT_ERROR && statusCode < RESPONSE_STATUS.SERVER_ERROR)
-  )
-    return TestStatus.Pass;
-
-  return statusCode >= RESPONSE_STATUS.SERVER_ERROR ? TestStatus.Bug : TestStatus.Fail;
 }
 
 export function shouldSkipFieldType(fieldType: FieldType): boolean {
