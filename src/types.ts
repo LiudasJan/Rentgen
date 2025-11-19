@@ -29,6 +29,12 @@ export interface HttpRequest {
   url: string;
 }
 
+export interface HttpResponse {
+  body?: string;
+  headers: Record<string, string>;
+  status: string;
+}
+
 export interface ParsedCurlResult {
   body: string | null;
   decodedLines: string[];
@@ -61,7 +67,7 @@ export interface TestResult {
   expected: string;
   name?: string;
   request?: HttpRequest | null;
-  response?: any | null;
+  response?: HttpResponse | null;
   responseTime?: number;
   status: TestStatus;
   value?: any;

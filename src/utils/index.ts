@@ -5,5 +5,6 @@ export * from './object';
 export * from './proto';
 export * from './random';
 export * from './statistics';
+export * from './string';
 export * from './url';
 export * from './validation';
