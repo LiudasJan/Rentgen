@@ -4,18 +4,18 @@ import { useEffect, useState } from 'react';
 import Button, { ButtonType } from './components/buttons/Button';
 import Input from './components/inputs/Input';
 import Select, { SelectOption } from './components/inputs/Select';
-import SimpleSelect from './components/inputs/SimpleSelect';
 import Textarea from './components/inputs/Textarea';
 import TextareaAutosize from './components/inputs/TextareaAutosize';
 import TestRunningLoader from './components/loaders/TestRunningLoader';
 import { LoadTestControls } from './components/LoadTestControls';
 import Modal from './components/modals/Modal';
+import ParametersPanel from './components/panels/ParametersPanel';
 import ResponsePanel from './components/panels/ResponsePanel';
 import TestsTable, { ExpandedTestComponent, getTestsTableColumns } from './components/tables/TestsTable';
 import { RESPONSE_STATUS } from './constants/responseStatus';
 import useTests from './hooks/useTests';
 import { LOAD_TEST_NAME } from './tests';
-import { FieldType } from './types';
+import { FieldType, HttpResponse } from './types';
 import {
   createHttpRequest,
   detectFieldType,
@@ -46,21 +46,6 @@ const methodOptions: SelectOption<Method>[] = [
   { value: 'OPTIONS', label: 'OPTIONS', className: 'text-method-options!' },
 ];
 
-const parameterOptions: SelectOption<FieldType>[] = [
-  { value: 'do-not-test', label: 'Do not test' },
-  { value: 'random32', label: 'Random string 32' },
-  { value: 'randomInt', label: 'Random integer' },
-  { value: 'randomEmail', label: 'Random email' },
-  { value: 'string', label: 'String' },
-  { value: 'email', label: 'Email' },
-  { value: 'phone', label: 'Phone' },
-  { value: 'url', label: 'URL' },
-  { value: 'number', label: 'Number' },
-  { value: 'boolean', label: 'Boolean' },
-  { value: 'currency', label: 'Currency' },
-  { value: 'date_yyyy_mm_dd', label: 'Date (YYYY-MM-DD)' },
-];
-
 export default function App() {
   const [mode, setMode] = useState<Mode>('HTTP');
   const [method, setMethod] = useState<Method>('GET');
@@ -73,11 +58,7 @@ export default function App() {
   const [wssConnected, setWssConnected] = useState<boolean>(false);
   const [protoFile, setProtoFile] = useState<File | null>(null);
   const [messageType, setMessageType] = useState<string>('');
-  const [httpResponse, setHttpResponse] = useState<{
-    status: string;
-    body: any;
-    headers: any;
-  } | null>(null);
+  const [httpResponse, setHttpResponse] = useState<HttpResponse | null>(null);
   const [messages, setMessages] = useState<
     {
       direction: 'sent' | 'received' | 'system';
@@ -106,7 +87,7 @@ export default function App() {
   const isRunningTests = isSecurityRunning || isPerformanceRunning || isDataDrivenRunning;
   const statusCode = extractStatusCode(httpResponse);
   const disabledRunTests =
-    isRunningTests || !httpResponse || statusCode < RESPONSE_STATUS.OK || statusCode > RESPONSE_STATUS.CLIENT_ERROR;
+    isRunningTests || !httpResponse || statusCode < RESPONSE_STATUS.OK || statusCode >= RESPONSE_STATUS.BAD_REQUEST;
 
   useEffect(() => {
     if (!window.electronAPI?.onWssEvent) return;
@@ -160,7 +141,7 @@ export default function App() {
                 {curlError && <div className="text-xs text-red-600">{curlError}</div>}
                 <div className="flex items-center justify-end gap-4">
                   <Button onClick={importCurl}>Import</Button>
-                  <Button buttonType={ButtonType.SECONDARY} onClick={() => setOpenCurlModal(false)}>
+                  <Button buttonType={ButtonType.SECONDARY} onClick={closeCurlModal}>
                     Cancel
                   </Button>
                 </div>
@@ -338,45 +319,41 @@ export default function App() {
       {(Object.keys(bodyMappings).length > 0 || Object.keys(queryMappings).length > 0) && (
         <div className="grid grid-cols-2 gap-4 items-stretch">
           {Object.keys(bodyMappings).length > 0 && (
-            <ResponsePanel title="Body Parameters">
-              {Object.entries(bodyMappings).map(([key, type]) => (
-                <div key={key} className="pb-4 first-of-type:pt-4 px-4 flex items-center justify-between gap-4">
-                  <span className="flex-1 font-monospace text-ellipsis text-nowrap overflow-hidden">{key}</span>
-                  <SimpleSelect
-                    className="rounded-none! p-1! outline-none"
-                    options={parameterOptions}
-                    value={type}
-                    onChange={(e) =>
-                      setBodyMappings((prevBodyMappings) => ({
-                        ...prevBodyMappings,
-                        [key]: e.target.value as FieldType,
-                      }))
-                    }
-                  />
-                </div>
-              ))}
-            </ResponsePanel>
+            <ParametersPanel
+              title="Body Parameters"
+              mappings={bodyMappings}
+              onFieldTypeChange={(key, value) =>
+                setBodyMappings((prevBodyMappings) => ({
+                  ...prevBodyMappings,
+                  [key]: value,
+                }))
+              }
+              onRemoveClick={(key) =>
+                setBodyMappings((prevBodyMappings) => ({
+                  ...prevBodyMappings,
+                  [key]: 'do-not-test',
+                }))
+              }
+            />
           )}
 
           {Object.keys(queryMappings).length > 0 && (
-            <ResponsePanel title="Query Parameters">
-              {Object.entries(queryMappings).map(([key, type]) => (
-                <div key={key} className="pb-4 first-of-type:pt-4 px-4 flex items-center justify-between gap-4">
-                  <span className="flex-1 font-monospace text-ellipsis text-nowrap overflow-hidden">{key}</span>
-                  <SimpleSelect
-                    className="rounded-none! p-1! outline-none"
-                    options={parameterOptions}
-                    value={type}
-                    onChange={(e) =>
-                      setQueryMappings((prevQueryMappings) => ({
-                        ...prevQueryMappings,
-                        [key]: e.target.value as FieldType,
-                      }))
-                    }
-                  />
-                </div>
-              ))}
-            </ResponsePanel>
+            <ParametersPanel
+              title="Query Parameters"
+              mappings={queryMappings}
+              onFieldTypeChange={(key, value) =>
+                setQueryMappings((prevQueryMappings) => ({
+                  ...prevQueryMappings,
+                  [key]: value,
+                }))
+              }
+              onRemoveClick={(key) =>
+                setQueryMappings((prevQueryMappings) => ({
+                  ...prevQueryMappings,
+                  [key]: 'do-not-test',
+                }))
+              }
+            />
           )}
         </div>
       )}
@@ -391,7 +368,7 @@ export default function App() {
 
       {testsRun && (
         <>
-          <ResponsePanel title="Security & Headers Tests">
+          <ResponsePanel title="Security Tests">
             <TestsTable
               columns={getTestsTableColumns(['Check', 'Expected', 'Actual', 'Result'])}
               expandableRows
@@ -399,7 +376,7 @@ export default function App() {
               expandableRowsComponentProps={{ headers: parseHeaders(headers), protoFile, messageType }}
               expandOnRowClicked
               data={securityTests}
-              progressComponent={<TestRunningLoader text="Running security tests..." />}
+              progressComponent={<TestRunningLoader text="Running Security Tests..." />}
               progressPending={isSecurityRunning}
             />
           </ResponsePanel>
@@ -414,12 +391,12 @@ export default function App() {
                 {
                   name: 'Expected',
                   selector: (row) => row.expected,
-                  cell: (row) => <div className="py-1">{row.expected}</div>,
+                  cell: (row) => <div className="py-2">{row.expected}</div>,
                 },
                 {
                   name: 'Actual',
                   selector: (row) => row.actual,
-                  cell: (row) => <div className="py-1">{row.actual}</div>,
+                  cell: (row) => <div className="py-2">{row.actual}</div>,
                 },
                 {
                   name: 'Result',
@@ -434,12 +411,12 @@ export default function App() {
                 },
               ]}
               data={performanceTests}
-              progressComponent={<TestRunningLoader text="Running performance insights..." />}
+              progressComponent={<TestRunningLoader text="Running Performance Insights..." />}
               progressPending={isPerformanceRunning}
             />
           </ResponsePanel>
 
-          <ResponsePanel title="Data Handling & Input Validation">
+          <ResponsePanel title="Data-Driven Tests">
             <TestsTable
               columns={getTestsTableColumns(['Field', 'Value', 'Expected', 'Actual', 'Result'])}
               expandableRows
@@ -447,7 +424,7 @@ export default function App() {
               expandableRowsComponentProps={{ headers: parseHeaders(headers), protoFile, messageType }}
               expandOnRowClicked
               data={dataDrivenTests}
-              progressComponent={<TestRunningLoader text="Running data-driven tests..." />}
+              progressComponent={<TestRunningLoader text="Running Data-Driven Tests..." />}
               progressPending={isDataDrivenRunning}
             />
           </ResponsePanel>
@@ -510,13 +487,17 @@ export default function App() {
         setBody(trimmedBody !== '' ? trimmedBody : '{}');
       }
 
-      setOpenCurlModal(false);
-      setCurl('');
-      setCurlError('');
+      closeCurlModal();
     } catch (error) {
       console.error('cURL import failed', error);
       setCurlError('The cURL command you provided appears to be invalid. Please check it and try again.');
     }
+  }
+
+  function closeCurlModal() {
+    setOpenCurlModal(false);
+    setCurl('');
+    setCurlError('');
   }
 
   async function sendHttp() {
@@ -531,11 +512,12 @@ export default function App() {
     try {
       const parsedHeaders = parseHeaders(headers);
       const parsedBody = parseBody(body, parsedHeaders, messageType, protoFile);
-      const response = await window.electronAPI.sendHttp(createHttpRequest(parsedBody, parsedHeaders, method, url));
+      const request = createHttpRequest(parsedBody, parsedHeaders, method, url);
+      const response = await window.electronAPI.sendHttp(request);
 
       setHttpResponse(response);
 
-      if (!response.status.startsWith('2') || !parsedBody) return;
+      if (!response.status.startsWith('2')) return;
 
       const bodyMappings = extractBodyFieldMappings(parsedBody, parsedHeaders);
       const queryMappings = Object.fromEntries(

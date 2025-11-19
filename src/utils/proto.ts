@@ -1,4 +1,5 @@
 import protobuf from 'protobufjs';
+import { HttpResponse } from '../types';
 
 let root: protobuf.Root | null = null;
 
@@ -66,9 +67,9 @@ export function decodeMessage(path: string, buffer: Uint8Array): Record<string, 
   }
 }
 
-export function decodeProtobufResponse(messageType: string, response: any): string | null {
+export function decodeProtobufResponse(messageType: string, response: HttpResponse): string | null {
   try {
-    return JSON.stringify(decodeMessage(messageType, new Uint8Array(response.body)), null, 2);
+    return JSON.stringify(decodeMessage(messageType, new Uint8Array(response.body as any)), null, 2);
   } catch {
     return null;
   }

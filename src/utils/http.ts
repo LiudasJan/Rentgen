@@ -1,7 +1,9 @@
 import { Method } from 'axios';
-import { detectFieldType, encodeMessage, extractFieldsFromJson, getRandomizedValueByFieldType } from '.';
-import { FieldType, HttpRequest, TestOptions, TestResult } from '../types';
+import { FieldType, HttpRequest, HttpResponse, TestOptions, TestResult } from '../types';
 import { isObject, setDeepObjectProperty, tryParseJsonObject } from './object';
+import { encodeMessage } from './proto';
+import { getRandomizedValueByFieldType } from './random';
+import { detectFieldType, extractFieldsFromJson } from './validation';
 
 export function convertFormEntriesToUrlEncoded(formEntries: Array<[string, string]>): string {
   const urlSearchParams = new URLSearchParams();
@@ -59,7 +61,7 @@ export function createTestHttpRequest(options: TestOptions): HttpRequest {
     }
 
     parsedBody = convertFormEntriesToUrlEncoded(formEntries);
-  } else {
+  } else if (isObject(parsedBody)) {
     // Update the field being tested
     if (mappingType === 'body' && fieldName && testData) setDeepObjectProperty(parsedBody, fieldName, testData.value);
 
@@ -94,16 +96,15 @@ export function createTestHttpRequest(options: TestOptions): HttpRequest {
 
 export async function executeTimedRequest(
   request: HttpRequest,
-  onSuccess: (response: any, responseTime: number, statusCode: number) => TestResult,
+  onSuccess: (response: HttpResponse, responseTime: number) => TestResult,
   onError: (error: unknown) => TestResult,
 ): Promise<TestResult> {
   try {
     const requestStartTime = performance.now();
     const response = await window.electronAPI.sendHttp(request);
     const responseTime = performance.now() - requestStartTime;
-    const statusCode = extractStatusCode(response);
 
-    return onSuccess(response, responseTime, statusCode);
+    return onSuccess(response, responseTime);
   } catch (error) {
     return onError(error);
   }
@@ -114,10 +115,8 @@ export function extractBodyFieldMappings(body: unknown, headers: Record<string, 
 
   if (isUrlEncodedContentType(headers)) {
     const formEntries = convertUrlEncodedToFormEntries(body as string);
-    for (const [key, value] of formEntries) {
-      mappings[key] = detectFieldType(value);
-    }
-  } else {
+    for (const [key, value] of formEntries) mappings[key] = detectFieldType(value);
+  } else if (isObject(body)) {
     const extractedFields = extractFieldsFromJson(body);
     for (const [key, value] of Object.entries(extractedFields)) {
       if (value === 'DO_NOT_TEST') mappings[key] = 'do-not-test';
@@ -131,7 +130,7 @@ export function extractBodyFieldMappings(body: unknown, headers: Record<string, 
           fieldValue = fieldValue[path];
         }
 
-        mappings[key] = detectFieldType(fieldValue);
+        mappings[key] = detectFieldType(fieldValue, true);
       }
     }
   }
@@ -139,7 +138,7 @@ export function extractBodyFieldMappings(body: unknown, headers: Record<string, 
   return mappings;
 }
 
-export function extractBodyFromResponse(response: any): Record<string, unknown> {
+export function extractBodyFromResponse(response: HttpResponse): Record<string, unknown> {
   try {
     if (typeof response?.body === 'string') return JSON.parse(response.body);
     if (response?.body && typeof response.body === 'object') return response.body;
@@ -148,7 +147,7 @@ export function extractBodyFromResponse(response: any): Record<string, unknown> 
   }
 }
 
-export function extractStatusCode(response: any): number {
+export function extractStatusCode(response: HttpResponse): number {
   const status = (response?.status || '').toString();
   const parsedStatus = parseInt(status.split(' ')[0] || '0', 10);
   return Number.isFinite(parsedStatus) ? parsedStatus : 0;
@@ -196,7 +195,11 @@ export function getFieldValueFromBody(body: unknown, fieldName: string, headers:
 }
 
 export function isUrlEncodedContentType(headers: Record<string, string>): boolean {
-  return /application\/x-www-form-urlencoded/i.test(getHeaderValue(headers, 'content-type'));
+  return isUrlEncodedContentTypeString(getHeaderValue(headers, 'content-type'));
+}
+
+export function isUrlEncodedContentTypeString(value: string): boolean {
+  return /application\/x-www-form-urlencoded/i.test(value);
 }
 
 export function parseBody(
@@ -208,19 +211,15 @@ export function parseBody(
   if (isUrlEncodedContentType(headers)) return convertFormEntriesToUrlEncoded(parseFormData(body));
 
   const paredBody = tryParseJsonObject(body);
-  if (isObject(paredBody)) {
-    if (protoFile && messageType) {
-      try {
-        return encodeMessage(messageType, paredBody);
-      } catch {
-        return paredBody;
-      }
+  if (isObject(paredBody) && protoFile && messageType) {
+    try {
+      return encodeMessage(messageType, paredBody);
+    } catch {
+      return paredBody;
     }
-
-    return paredBody;
   }
 
-  return null;
+  return paredBody;
 }
 
 export function parseFormData(rawFormData: string): Array<[string, string]> {
