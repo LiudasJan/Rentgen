@@ -1,8 +1,7 @@
-import { HTMLAttributes } from 'react';
 import { FieldType } from '../../types';
 import { SelectOption } from '../inputs/Select';
 import SimpleSelect from '../inputs/SimpleSelect';
-import ResponsePanel from './ResponsePanel';
+import ResponsePanel, { Props as ResponsePanelProps } from './ResponsePanel';
 
 const parameterOptions: SelectOption<FieldType>[] = [
   { value: 'do-not-test', label: 'Do not test' },
@@ -19,8 +18,7 @@ const parameterOptions: SelectOption<FieldType>[] = [
   { value: 'date_yyyy_mm_dd', label: 'Date (YYYY-MM-DD)' },
 ];
 
-interface Props extends HTMLAttributes<HTMLDivElement> {
-  title: string;
+interface Props extends ResponsePanelProps {
   mappings: Record<string, FieldType>;
   onFieldTypeChange: (key: string, value: FieldType) => void;
   onRemoveClick: (key: string) => void;
