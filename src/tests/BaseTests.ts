@@ -39,7 +39,7 @@ export function createErrorTestResult(
   return createTestResult(
     name,
     expected,
-    `Unexpected error: ${String(actual)}`,
+    `Unexpected Error: ${String(actual)}`,
     TestStatus.Bug,
     request,
     null,
