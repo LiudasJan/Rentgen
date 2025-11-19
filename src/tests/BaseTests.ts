@@ -2,7 +2,7 @@ import { RESPONSE_STATUS } from '../constants/responseStatus';
 import { HttpRequest, HttpResponse, TestOptions, TestResult, TestStatus } from '../types';
 import { extractStatusCode } from '../utils';
 
-export const NOT_AVAILABLE_TEST = 'Not available';
+export const NOT_AVAILABLE_TEST = 'Not Available';
 
 export abstract class BaseTests {
   constructor(

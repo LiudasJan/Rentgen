@@ -1,18 +1,18 @@
 import { createErrorTestResult, createTestResult, NOT_AVAILABLE_TEST } from '.';
-import { RESPONSE_STATUS } from '../constants/responseStatus';
+import { getResponseStatusTitle, RESPONSE_STATUS } from '../constants/responseStatus';
 import { Test } from '../decorators';
 import { TestOptions, TestResult, TestStatus } from '../types';
 import { calculateMedian, calculatePercentile, createTestHttpRequest, extractStatusCode } from '../utils';
 
-export const LOAD_TEST_NAME = 'Load test';
-const PING_LATENCY_TEST_NAME = 'Ping latency';
+export const LOAD_TEST_NAME = 'Load Test';
+const PING_LATENCY_TEST_NAME = 'Ping Latency';
 
 const EXCELLENT_RESPONSE_TIME_MS = 500;
 const ACCEPTABLE_RESPONSE_TIME_MS = 1000;
 const MAX_PING_LATENCY_MS = 100;
 const PING_TEST_COUNT = 5;
 const MAX_ACCEPTABLE_BAD_PINGS = 3;
-const EXPECTED_RATE_LIMIT_STATUS = '429 Too Many Requests';
+const EXPECTED_RATE_LIMIT_STATUS = `${RESPONSE_STATUS.TOO_MANY_REQUESTS} ${getResponseStatusTitle(RESPONSE_STATUS.TOO_MANY_REQUESTS)}`;
 
 const MAX_CONCURRENCY = 100;
 const MAX_TOTAL_REQUESTS = 10000;
@@ -50,7 +50,7 @@ export class PerformanceInsights {
     else if (medianResponseTime <= ACCEPTABLE_RESPONSE_TIME_MS) responseTimeStatus = TestStatus.Warning;
 
     return createTestResult(
-      'Median response time',
+      'Median Response Time',
       `<= ${EXCELLENT_RESPONSE_TIME_MS} ms`,
       `${medianResponseTime.toFixed(0)} ms`,
       responseTimeStatus,
@@ -81,7 +81,7 @@ export class PerformanceInsights {
         pingLatencyStatus,
       );
     } catch (error) {
-      return createErrorTestResult(PING_LATENCY_TEST_NAME, 'Ping should succeed', String(error));
+      return createErrorTestResult(PING_LATENCY_TEST_NAME, 'Ping Succeeds', String(error));
     }
   }
 }
@@ -94,7 +94,7 @@ function getManualTests(): TestResult[] {
       '', // Empty until test is executed
       TestStatus.Manual, // Requires manual execution
     ),
-    createTestResult('Rate limiting implementation', EXPECTED_RATE_LIMIT_STATUS, NOT_AVAILABLE_TEST, TestStatus.Manual),
+    createTestResult('Rate Limiting Implementation', EXPECTED_RATE_LIMIT_STATUS, NOT_AVAILABLE_TEST, TestStatus.Manual),
   ];
 }
 
@@ -124,7 +124,7 @@ export async function runLoadTest(
 
     const statusCode = extractStatusCode(response);
     if (statusCode >= RESPONSE_STATUS.SERVER_ERROR) server5xxFailures++;
-    if (statusCode >= RESPONSE_STATUS.CLIENT_ERROR && statusCode < RESPONSE_STATUS.SERVER_ERROR) client4xxFailures++;
+    if (statusCode >= RESPONSE_STATUS.BAD_REQUEST && statusCode < RESPONSE_STATUS.SERVER_ERROR) client4xxFailures++;
 
     // Check early abort conditions
     if (server5xxFailures >= MAX_EARLY_ABORT_FAILURES) isAborted = true;

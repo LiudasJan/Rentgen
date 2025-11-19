@@ -1,6 +1,6 @@
 import { BaseTests, createErrorTestResult, createTestResult, determineTestStatus } from '.';
 import { datasets } from '../constants/datasets';
-import { RESPONSE_STATUS } from '../constants/responseStatus';
+import { getResponseStatusTitle, RESPONSE_STATUS } from '../constants/responseStatus';
 import { Test } from '../decorators';
 import { FieldType, HttpRequest, TestData, TestOptions, TestResult, TestStatus } from '../types';
 import {
@@ -15,7 +15,7 @@ import {
   parseHeaders,
 } from '../utils';
 
-const VALUE_NORMALIZATION_TEST_EXPECTED = `Value must be trimmed/normalized or reject with ${RESPONSE_STATUS.CLIENT_ERROR}/${RESPONSE_STATUS.UNPROCESSABLE_ENTITY}`;
+const VALUE_NORMALIZATION_TEST_EXPECTED = `${RESPONSE_STATUS.BAD_REQUEST} ${getResponseStatusTitle(RESPONSE_STATUS.BAD_REQUEST)}/${RESPONSE_STATUS.UNPROCESSABLE_ENTITY} ${getResponseStatusTitle(RESPONSE_STATUS.UNPROCESSABLE_ENTITY)} or Trimmed/Normalized Value`;
 const SUCCESS_RESPONSE_EXPECTED = '2xx';
 const CLIENT_ERROR_RESPONSE_EXPECTED = '4xx';
 const ORIGINAL_REQUEST_TEST_FIELD_NAME = '[original request]';
@@ -107,20 +107,20 @@ export class DataDrivenTests extends BaseTests {
       request,
       (response, responseTime) => {
         const { actual, status } = determineTestStatus(response, (response, statusCode) => {
-          if (statusCode === RESPONSE_STATUS.CLIENT_ERROR || statusCode === RESPONSE_STATUS.UNPROCESSABLE_ENTITY)
-            return { actual: `Rejected with ${response.status}`, status: TestStatus.Pass };
+          if (statusCode === RESPONSE_STATUS.BAD_REQUEST || statusCode === RESPONSE_STATUS.UNPROCESSABLE_ENTITY)
+            return { actual: response.status, status: TestStatus.Pass };
 
           const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
           if (!responseBody)
             return {
-              actual: `${response.status} → check manually via GET method or database`,
+              actual: `${response.status} → Check Manually via GET Method or Database`,
               status: TestStatus.Info,
             };
 
           if (!responseBody.includes(String(testData.value)))
-            return { actual: `${response.status} with trimmed/normalized value`, status: TestStatus.Pass };
+            return { actual: `${response.status} + Trimmed/Normalized Value`, status: TestStatus.Pass };
 
-          return { actual: `${response.status} with not trimmed/normalized value`, status: TestStatus.Fail };
+          return { actual: `${response.status} + Not Trimmed/Normalized Value`, status: TestStatus.Fail };
         });
 
         return createTestResult(
@@ -159,7 +159,7 @@ export class DataDrivenTests extends BaseTests {
           const testStatus = { actual: response.status, status: TestStatus.Fail };
           if (
             (testData.valid && statusCode >= RESPONSE_STATUS.OK && statusCode < RESPONSE_STATUS.REDIRECT) ||
-            (!testData.valid && statusCode >= RESPONSE_STATUS.CLIENT_ERROR && statusCode < RESPONSE_STATUS.SERVER_ERROR)
+            (!testData.valid && statusCode >= RESPONSE_STATUS.BAD_REQUEST && statusCode < RESPONSE_STATUS.SERVER_ERROR)
           )
             testStatus.status = TestStatus.Pass;
 

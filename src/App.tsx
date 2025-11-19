@@ -102,7 +102,7 @@ export default function App() {
   const isRunningTests = isSecurityRunning || isPerformanceRunning || isDataDrivenRunning;
   const statusCode = extractStatusCode(httpResponse);
   const disabledRunTests =
-    isRunningTests || !httpResponse || statusCode < RESPONSE_STATUS.OK || statusCode >= RESPONSE_STATUS.CLIENT_ERROR;
+    isRunningTests || !httpResponse || statusCode < RESPONSE_STATUS.OK || statusCode >= RESPONSE_STATUS.BAD_REQUEST;
 
   useEffect(() => {
     if (!window.electronAPI?.onWssEvent) return;
@@ -387,7 +387,7 @@ export default function App() {
 
       {testsRun && (
         <>
-          <ResponsePanel title="Security & Headers Tests">
+          <ResponsePanel title="Security Tests">
             <TestsTable
               columns={getTestsTableColumns(['Check', 'Expected', 'Actual', 'Result'])}
               expandableRows
@@ -395,7 +395,7 @@ export default function App() {
               expandableRowsComponentProps={{ headers: parseHeaders(headers), protoFile, messageType }}
               expandOnRowClicked
               data={securityTests}
-              progressComponent={<TestRunningLoader text="Running security tests..." />}
+              progressComponent={<TestRunningLoader text="Running Security Tests..." />}
               progressPending={isSecurityRunning}
             />
           </ResponsePanel>
@@ -430,12 +430,12 @@ export default function App() {
                 },
               ]}
               data={performanceTests}
-              progressComponent={<TestRunningLoader text="Running performance insights..." />}
+              progressComponent={<TestRunningLoader text="Running Performance Insights..." />}
               progressPending={isPerformanceRunning}
             />
           </ResponsePanel>
 
-          <ResponsePanel title="Data Handling & Input Validation">
+          <ResponsePanel title="Data-Driven Tests">
             <TestsTable
               columns={getTestsTableColumns(['Field', 'Value', 'Expected', 'Actual', 'Result'])}
               expandableRows
@@ -443,7 +443,7 @@ export default function App() {
               expandableRowsComponentProps={{ headers: parseHeaders(headers), protoFile, messageType }}
               expandOnRowClicked
               data={dataDrivenTests}
-              progressComponent={<TestRunningLoader text="Running data-driven tests..." />}
+              progressComponent={<TestRunningLoader text="Running Data-Driven Tests..." />}
               progressPending={isDataDrivenRunning}
             />
           </ResponsePanel>

@@ -1,6 +1,6 @@
 import { Method } from 'axios';
 import { BaseTests, createErrorTestResult, createTestResult, determineTestStatus, NOT_AVAILABLE_TEST } from '.';
-import { RESPONSE_STATUS } from '../constants/responseStatus';
+import { getResponseStatusTitle, RESPONSE_STATUS } from '../constants/responseStatus';
 import { Test } from '../decorators';
 import { HttpRequest, HttpResponse, TestResult, TestStatus } from '../types';
 import { createHttpRequest, createTestHttpRequest, extractBodyFromResponse, getHeaderValue } from '../utils';
@@ -8,21 +8,21 @@ import { createHttpRequest, createTestHttpRequest, extractBodyFromResponse, getH
 const LARGE_PAYLOAD_SIZE_MB = 10;
 const LARGE_PAYLOAD_SIZE_BYTES = LARGE_PAYLOAD_SIZE_MB * 1024 * 1024;
 
-const AUTHORIZATION_TEST_NAME = 'Missing authorization cookie/token';
-const AUTHORIZATION_TEST_EXPECTED = 'Should return 401 Unauthorized';
-const CORS_TEST_NAME = 'CORS policy check';
-const CORS_TEST_EXPECTED = 'Detect if API is public or private';
+const AUTHORIZATION_TEST_NAME = 'Missing Authorization Cookie/Token';
+const AUTHORIZATION_TEST_EXPECTED = `${RESPONSE_STATUS.UNAUTHORIZED} ${getResponseStatusTitle(RESPONSE_STATUS.UNAUTHORIZED)}`;
+const CORS_TEST_NAME = 'CORS Policy Check';
+const CORS_TEST_EXPECTED = 'Public or Private API';
 const CRUD_TEST_NAME = 'CRUD';
 const CRUD_TEST_EXPECTED = 'Discover via OPTIONS';
-const LARGE_PAYLOAD_NAME = `Request size limit (${LARGE_PAYLOAD_SIZE_MB} MB)`;
-const LARGE_PAYLOAD_EXPECTED = '413 Payload Too Large';
-const MISSING_ACTUAL = 'Missing';
-const NOT_FOUND_TEST_NAME = '404 Not Found';
-const NOT_FOUND_TEST_EXPECTED = '404 Not Found';
+const LARGE_PAYLOAD_TEST_NAME = `Large Payload → Request Size Limit (${LARGE_PAYLOAD_SIZE_MB} MB)`;
+const LARGE_PAYLOAD_TEST_EXPECTED = `${RESPONSE_STATUS.PAYLOAD_TOO_LARGE} ${getResponseStatusTitle(RESPONSE_STATUS.PAYLOAD_TOO_LARGE)}`;
+const MISSING_ACTUAL = '-';
+const NOT_FOUND_TEST_NAME = `${RESPONSE_STATUS.NOT_FOUND} ${getResponseStatusTitle(RESPONSE_STATUS.NOT_FOUND)}`;
+const NOT_FOUND_TEST_EXPECTED = `${RESPONSE_STATUS.NOT_FOUND} ${getResponseStatusTitle(RESPONSE_STATUS.NOT_FOUND)}`;
 const REFLECTED_PAYLOAD_SAFETY_TEST_NAME = 'Reflected Payload Safety';
-const REFLECTED_PAYLOAD_SAFETY_TEST_EXPECTED = `Reject with ${RESPONSE_STATUS.CLIENT_ERROR} or ${RESPONSE_STATUS.UNPROCESSABLE_ENTITY} without mirrored content`;
+const REFLECTED_PAYLOAD_SAFETY_TEST_EXPECTED = `${RESPONSE_STATUS.BAD_REQUEST} ${getResponseStatusTitle(RESPONSE_STATUS.BAD_REQUEST)} or ${RESPONSE_STATUS.UNPROCESSABLE_ENTITY} ${getResponseStatusTitle(RESPONSE_STATUS.UNPROCESSABLE_ENTITY)} + No Mirrored Content`;
 const UNSUPPORTED_METHOD_TEST_NAME = 'Unsupported HTTP Method Handling';
-const UNSUPPORTED_METHOD_TEST_EXPECTED = '405 Method Not Allowed or 501 Not Implemented';
+const UNSUPPORTED_METHOD_TEST_EXPECTED = `${RESPONSE_STATUS.METHOD_NOT_ALLOWED} ${getResponseStatusTitle(RESPONSE_STATUS.METHOD_NOT_ALLOWED)} or ${RESPONSE_STATUS.NOT_IMPLEMENTED} ${getResponseStatusTitle(RESPONSE_STATUS.NOT_IMPLEMENTED)}`;
 
 export class SecurityTests extends BaseTests {
   public async run(): Promise<{
@@ -58,12 +58,12 @@ export class SecurityTests extends BaseTests {
           createTestResult(
             CRUD_TEST_NAME,
             CRUD_TEST_EXPECTED,
-            'CRUD not available — OPTIONS test failed',
+            'OPTIONS Method Handling Failed → CRUD Not Available',
             TestStatus.Fail,
           ),
         );
     } catch (error) {
-      securityTestResults.push(createErrorTestResult('Security test error', 'Should respond', String(error), request));
+      securityTestResults.push(createErrorTestResult('Security Test Error', 'Responds', String(error), request));
     }
 
     // Run tests that don't depend on initial response
@@ -87,9 +87,9 @@ export class SecurityTests extends BaseTests {
     const serverHeader = getHeaderValue(response.headers, 'server');
 
     return createTestResult(
-      'No sensitive server headers',
-      'Server header should not expose version',
-      serverHeader || 'No Server header',
+      'No Sensitive Server Headers',
+      'Server Header Does Not Expose Version',
+      serverHeader || 'No Server Header',
       /\d/.test(serverHeader) ? TestStatus.Fail : TestStatus.Pass,
       request,
       response,
@@ -105,7 +105,7 @@ export class SecurityTests extends BaseTests {
     const { actual, status } = validateClickjackingProtection(xFrameOptions, contentSecurityPolicy);
 
     return createTestResult(
-      'Clickjacking protection',
+      'Clickjacking Protection',
       'X-Frame-Options DENY/SAMEORIGIN or CSP frame-ancestors',
       actual,
       status,
@@ -122,7 +122,7 @@ export class SecurityTests extends BaseTests {
 
     return createTestResult(
       'HSTS (Strict-Transport-Security)',
-      'Header should be present on HTTPS endpoints',
+      'Header Present on HTTPS Endpoints',
       hsts || MISSING_ACTUAL,
       hsts ? TestStatus.Pass : TestStatus.Warning,
       request,
@@ -155,7 +155,7 @@ export class SecurityTests extends BaseTests {
     const { actual, status } = validateCacheControl(cacheControl, request.method);
 
     return createTestResult(
-      'Cache-Control for private API',
+      'Cache-Control for Private API',
       'Cache-Control: no-store/private',
       actual,
       status,
@@ -183,8 +183,8 @@ export class SecurityTests extends BaseTests {
 
     return {
       testResult: createTestResult(
-        'OPTIONS method handling',
-        '200 or 204 + Allow header',
+        'OPTIONS Method Handling',
+        `${RESPONSE_STATUS.OK} ${getResponseStatusTitle(RESPONSE_STATUS.OK)} or ${RESPONSE_STATUS.NO_CONTENT} ${getResponseStatusTitle(RESPONSE_STATUS.NO_CONTENT)} + Allow Header`,
         actual,
         status,
         modifiedRequest,
@@ -249,8 +249,8 @@ export class SecurityTests extends BaseTests {
       });
 
       return createTestResult(
-        LARGE_PAYLOAD_NAME,
-        LARGE_PAYLOAD_EXPECTED,
+        LARGE_PAYLOAD_TEST_NAME,
+        LARGE_PAYLOAD_TEST_EXPECTED,
         actual,
         status,
         {
@@ -260,7 +260,12 @@ export class SecurityTests extends BaseTests {
         response,
       );
     } catch (error) {
-      return createErrorTestResult(LARGE_PAYLOAD_NAME, LARGE_PAYLOAD_EXPECTED, String(error), modifiedRequest);
+      return createErrorTestResult(
+        LARGE_PAYLOAD_TEST_NAME,
+        LARGE_PAYLOAD_TEST_EXPECTED,
+        String(error),
+        modifiedRequest,
+      );
     }
   }
 
@@ -321,7 +326,7 @@ export class SecurityTests extends BaseTests {
         return createTestResult(
           CORS_TEST_NAME,
           CORS_TEST_EXPECTED,
-          'CORS error → API is private (restricted by origin)',
+          'CORS Error → Private API (Restricted By Origin)',
           TestStatus.Info,
           modifiedRequest,
           null,
@@ -330,7 +335,7 @@ export class SecurityTests extends BaseTests {
       return createTestResult(
         CORS_TEST_NAME,
         CORS_TEST_EXPECTED,
-        'No CORS error → API is public (accessible from any domain)',
+        'No CORS Error → Public API (Accessible From Any Domain)',
         TestStatus.Info,
         modifiedRequest,
         response,
@@ -390,9 +395,9 @@ export class SecurityTests extends BaseTests {
         const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
         if (
           (!responseBody || !responseBody.includes(testValue)) &&
-          (statusCode === RESPONSE_STATUS.CLIENT_ERROR || statusCode === RESPONSE_STATUS.UNPROCESSABLE_ENTITY)
+          (statusCode === RESPONSE_STATUS.BAD_REQUEST || statusCode === RESPONSE_STATUS.UNPROCESSABLE_ENTITY)
         )
-          return { actual: `${response.status} → without mirrored content`, status: TestStatus.Pass };
+          return { actual: `${response.status} + No Mirrored Content`, status: TestStatus.Pass };
 
         return { actual: response.status, status: TestStatus.Fail };
       });
@@ -429,12 +434,12 @@ export class SecurityTests extends BaseTests {
         .filter(Boolean);
       const body = extractBodyFromResponse(response);
       const methodDescriptions: Record<string, string> = {
-        GET: 'Fetch data',
-        POST: 'Create resource',
-        PUT: 'Update resource',
-        PATCH: 'Update resource fields',
-        DELETE: 'Remove resource',
-        HEAD: 'Headers only',
+        GET: 'Fetch Data',
+        POST: 'Create Resource',
+        PUT: 'Update Resource',
+        PATCH: 'Update Resource Fields',
+        DELETE: 'Remove Resource',
+        HEAD: 'Headers Only',
         OPTIONS: 'Discovery',
       };
 
@@ -518,12 +523,17 @@ function validateCacheControl(
 function getManualTests(): TestResult[] {
   return [
     createTestResult(
-      'Invalid authorization cookie/token',
+      'Invalid Authorization Cookie/Token',
       AUTHORIZATION_TEST_EXPECTED,
       NOT_AVAILABLE_TEST,
       TestStatus.Manual,
     ),
-    createTestResult("Access other user's data", 'Should return 404 or 403', NOT_AVAILABLE_TEST, TestStatus.Manual),
-    createTestResult('Role-based access control', 'Restricted per role', NOT_AVAILABLE_TEST, TestStatus.Manual),
+    createTestResult(
+      "Access Other User's Data",
+      `${RESPONSE_STATUS.FORBIDDEN} ${getResponseStatusTitle(RESPONSE_STATUS.FORBIDDEN)} or ${RESPONSE_STATUS.NOT_FOUND} ${getResponseStatusTitle(RESPONSE_STATUS.NOT_FOUND)}`,
+      NOT_AVAILABLE_TEST,
+      TestStatus.Manual,
+    ),
+    createTestResult('Role-based Access Control', 'Restricted Per Role', NOT_AVAILABLE_TEST, TestStatus.Manual),
   ];
 }

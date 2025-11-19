@@ -141,6 +141,12 @@ export function getTestsTableColumns(visibleColumns: string[] = []): TableColumn
       name: 'Expected',
       selector: (row) => row.expected,
       omit: true,
+      style: {
+        'div:first-child': {
+          padding: '0.5rem 0',
+          whiteSpace: 'normal !important',
+        },
+      },
     },
     {
       name: 'Actual',
