@@ -43,17 +43,23 @@ export class DataDrivenTests extends BaseTests {
           value: `   ${getFieldValueFromBody(parsedBody, fieldName, parsedHeaders)}   `,
           valid: false,
         };
-        results.push(await this.testValueNormalization({ ...this.options, fieldName, mappingType: 'body', testData }));
+        results.push(
+          await testValueNormalization({ ...this.options, fieldName, mappingType: 'body', testData }, this.onTestStart),
+        );
       },
       async (fieldName: string, type: FieldType) => {
         const testDataset = datasets[type] || [];
         for (const testData of testDataset)
-          results.push(await this.testMappings({ ...this.options, fieldName, mappingType: 'body', testData }));
+          results.push(
+            await testMappings({ ...this.options, fieldName, mappingType: 'body', testData }, this.onTestStart),
+          );
       },
       async (fieldName: string, type: FieldType) => {
         const testDataset = datasets[type] || [];
         for (const testData of testDataset)
-          results.push(await this.testMappings({ ...this.options, fieldName, mappingType: 'query', testData }));
+          results.push(
+            await testMappings({ ...this.options, fieldName, mappingType: 'query', testData }, this.onTestStart),
+          );
       },
     );
 
@@ -100,98 +106,6 @@ export class DataDrivenTests extends BaseTests {
         ),
     );
   }
-
-  @Test('Tests value normalization (trimming) for string fields')
-  private async testValueNormalization(options: TestOptions): Promise<TestResult> {
-    this.onTestStart?.();
-
-    const { fieldName, mappingType, testData } = options;
-    const request = createTestHttpRequest(options);
-
-    return executeTimedRequest(
-      request,
-      (response, responseTime) => {
-        const { actual, status } = determineTestStatus(response, (response, statusCode) => {
-          if (statusCode === RESPONSE_STATUS.BAD_REQUEST || statusCode === RESPONSE_STATUS.UNPROCESSABLE_ENTITY)
-            return { actual: response.status, status: TestStatus.Pass };
-
-          const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
-          if (!responseBody)
-            return {
-              actual: `${response.status} → Check Manually via GET Method or Database`,
-              status: TestStatus.Info,
-            };
-
-          if (!responseBody.includes(String(testData.value)))
-            return { actual: `${response.status} + Trimmed/Normalized Value`, status: TestStatus.Pass };
-
-          return { actual: `${response.status} + Not Trimmed/Normalized Value`, status: TestStatus.Fail };
-        });
-
-        return createTestResult(
-          `${mappingType}.${fieldName}`,
-          VALUE_NORMALIZATION_TEST_EXPECTED,
-          actual,
-          status,
-          request,
-          response,
-          responseTime,
-          testData.value,
-        );
-      },
-      (error) =>
-        createErrorTestResult(
-          `${mappingType}.${fieldName}`,
-          VALUE_NORMALIZATION_TEST_EXPECTED,
-          String(error),
-          request,
-          testData.value,
-        ),
-    );
-  }
-
-  @Test('Tests field mappings with various valid and invalid values')
-  private async testMappings(options: TestOptions): Promise<TestResult> {
-    this.onTestStart?.();
-
-    const { fieldName, mappingType, testData } = options;
-    const request = createTestHttpRequest(options);
-
-    return executeTimedRequest(
-      request,
-      (response, responseTime) => {
-        const { actual, status } = determineTestStatus(response, (response, statusCode) => {
-          const testStatus = { actual: response.status, status: TestStatus.Fail };
-          if (
-            (testData.valid && statusCode >= RESPONSE_STATUS.OK && statusCode < RESPONSE_STATUS.REDIRECT) ||
-            (!testData.valid && statusCode >= RESPONSE_STATUS.BAD_REQUEST && statusCode < RESPONSE_STATUS.SERVER_ERROR)
-          )
-            testStatus.status = TestStatus.Pass;
-
-          return testStatus;
-        });
-
-        return createTestResult(
-          `${mappingType}.${fieldName}`,
-          testData.valid ? SUCCESS_RESPONSE_EXPECTED : CLIENT_ERROR_RESPONSE_EXPECTED,
-          actual,
-          status,
-          request,
-          response,
-          responseTime,
-          testData.value,
-        );
-      },
-      (error) =>
-        createErrorTestResult(
-          `${mappingType}.${fieldName}`,
-          testData.valid ? SUCCESS_RESPONSE_EXPECTED : CLIENT_ERROR_RESPONSE_EXPECTED,
-          String(error),
-          request,
-          testData.value,
-        ),
-    );
-  }
 }
 
 export async function runDataDrivenTests(
@@ -223,6 +137,96 @@ export async function runDataDrivenTests(
     if (shouldSkipFieldType(type)) continue;
     await onQueryMappingTest(key, type);
   }
+}
+
+async function testValueNormalization(options: TestOptions, onTestStart?: () => void): Promise<TestResult> {
+  onTestStart?.();
+
+  const { fieldName, mappingType, testData } = options;
+  const request = createTestHttpRequest(options);
+
+  return executeTimedRequest(
+    request,
+    (response, responseTime) => {
+      const { actual, status } = determineTestStatus(response, (response, statusCode) => {
+        if (statusCode === RESPONSE_STATUS.BAD_REQUEST || statusCode === RESPONSE_STATUS.UNPROCESSABLE_ENTITY)
+          return { actual: response.status, status: TestStatus.Pass };
+
+        const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+        if (!responseBody)
+          return {
+            actual: `${response.status} → Check Manually via GET Method or Database`,
+            status: TestStatus.Info,
+          };
+
+        if (!responseBody.includes(String(testData.value)))
+          return { actual: `${response.status} + Trimmed/Normalized Value`, status: TestStatus.Pass };
+
+        return { actual: `${response.status} + Not Trimmed/Normalized Value`, status: TestStatus.Fail };
+      });
+
+      return createTestResult(
+        `${mappingType}.${fieldName}`,
+        VALUE_NORMALIZATION_TEST_EXPECTED,
+        actual,
+        status,
+        request,
+        response,
+        responseTime,
+        testData.value,
+      );
+    },
+    (error) =>
+      createErrorTestResult(
+        `${mappingType}.${fieldName}`,
+        VALUE_NORMALIZATION_TEST_EXPECTED,
+        String(error),
+        request,
+        testData.value,
+      ),
+  );
+}
+
+async function testMappings(options: TestOptions, onTestStart?: () => void): Promise<TestResult> {
+  onTestStart?.();
+
+  const { fieldName, mappingType, testData } = options;
+  const request = createTestHttpRequest(options);
+
+  return executeTimedRequest(
+    request,
+    (response, responseTime) => {
+      const { actual, status } = determineTestStatus(response, (response, statusCode) => {
+        const testStatus = { actual: response.status, status: TestStatus.Fail };
+        if (
+          (testData.valid && statusCode >= RESPONSE_STATUS.OK && statusCode < RESPONSE_STATUS.REDIRECT) ||
+          (!testData.valid && statusCode >= RESPONSE_STATUS.BAD_REQUEST && statusCode < RESPONSE_STATUS.SERVER_ERROR)
+        )
+          testStatus.status = TestStatus.Pass;
+
+        return testStatus;
+      });
+
+      return createTestResult(
+        `${mappingType}.${fieldName}`,
+        testData.valid ? SUCCESS_RESPONSE_EXPECTED : CLIENT_ERROR_RESPONSE_EXPECTED,
+        actual,
+        status,
+        request,
+        response,
+        responseTime,
+        testData.value,
+      );
+    },
+    (error) =>
+      createErrorTestResult(
+        `${mappingType}.${fieldName}`,
+        testData.valid ? SUCCESS_RESPONSE_EXPECTED : CLIENT_ERROR_RESPONSE_EXPECTED,
+        String(error),
+        request,
+        testData.value,
+      ),
+  );
 }
 
 export function shouldSkipFieldType(fieldType: FieldType): boolean {

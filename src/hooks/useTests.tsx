@@ -36,7 +36,10 @@ const useTests = (options: TestOptions) => {
     resetTests();
 
     setTestsCount(
-      (await calculateDataDrivenTestsCount()) + getTestCount(SecurityTests) + getTestCount(PerformanceInsights),
+      (await calculateDataDrivenTestsCount()) +
+        getTestCount(DataDrivenTests) +
+        getTestCount(SecurityTests) +
+        getTestCount(PerformanceInsights),
     );
 
     await executeSecurityTests();
@@ -153,8 +156,7 @@ const useTests = (options: TestOptions) => {
   }
 
   async function calculateDataDrivenTestsCount(): Promise<number> {
-    // Original request test
-    let dataDrivenTestsCount = 1;
+    let dataDrivenTestsCount = 0;
 
     await runDataDrivenTests(
       options,
