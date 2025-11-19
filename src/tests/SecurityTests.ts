@@ -33,6 +33,8 @@ const LARGE_PAYLOAD_TEST_EXPECTED = `${RESPONSE_STATUS.PAYLOAD_TOO_LARGE} ${getR
 const MISSING_ACTUAL = '-';
 const NOT_FOUND_TEST_NAME = `${RESPONSE_STATUS.NOT_FOUND} ${getResponseStatusTitle(RESPONSE_STATUS.NOT_FOUND)}`;
 const NOT_FOUND_TEST_EXPECTED = `${RESPONSE_STATUS.NOT_FOUND} ${getResponseStatusTitle(RESPONSE_STATUS.NOT_FOUND)}`;
+const OPTIONS_METHOD_HANDLING_TEST_NAME = 'OPTIONS Method Handling';
+const OPTIONS_METHOD_HANDLING_TEST_EXPECTED = `${RESPONSE_STATUS.OK} ${getResponseStatusTitle(RESPONSE_STATUS.OK)} or ${RESPONSE_STATUS.NO_CONTENT} ${getResponseStatusTitle(RESPONSE_STATUS.NO_CONTENT)} + Allow Header`;
 const REFLECTED_PAYLOAD_SAFETY_TEST_NAME = 'Reflected Payload Safety';
 const REFLECTED_PAYLOAD_SAFETY_TEST_EXPECTED = `${RESPONSE_STATUS.BAD_REQUEST} ${getResponseStatusTitle(RESPONSE_STATUS.BAD_REQUEST)} or ${RESPONSE_STATUS.UNPROCESSABLE_ENTITY} ${getResponseStatusTitle(RESPONSE_STATUS.UNPROCESSABLE_ENTITY)} + No Mirrored Content`;
 const UPPERCASE_DOMAIN_TEST_NAME = 'Uppercase Domain Test';
@@ -189,28 +191,41 @@ export class SecurityTests extends BaseTests {
 
     const request = createTestHttpRequest(this.options);
     const modifiedRequest: HttpRequest = { url: request.url, method: 'OPTIONS', headers: request.headers };
-    const response = await window.electronAPI.sendHttp(modifiedRequest);
-    const allowHeader =
-      getHeaderValue(response.headers, 'allow') || getHeaderValue(response.headers, 'access-control-allow-methods');
-    const { actual, status } = determineTestStatus(response, (response, statusCode) => {
-      const testStatus = { actual: response.status, status: TestStatus.Fail };
-      if ((statusCode === RESPONSE_STATUS.OK || statusCode === RESPONSE_STATUS.NO_CONTENT) && Boolean(allowHeader))
-        testStatus.status = TestStatus.Pass;
 
-      return testStatus;
-    });
+    try {
+      const response = await window.electronAPI.sendHttp(modifiedRequest);
+      const allowHeader =
+        getHeaderValue(response.headers, 'allow') || getHeaderValue(response.headers, 'access-control-allow-methods');
+      const { actual, status } = determineTestStatus(response, (response, statusCode) => {
+        const testStatus = { actual: response.status, status: TestStatus.Fail };
+        if ((statusCode === RESPONSE_STATUS.OK || statusCode === RESPONSE_STATUS.NO_CONTENT) && Boolean(allowHeader))
+          testStatus.status = TestStatus.Pass;
 
-    return {
-      testResult: createTestResult(
-        'OPTIONS Method Handling',
-        `${RESPONSE_STATUS.OK} ${getResponseStatusTitle(RESPONSE_STATUS.OK)} or ${RESPONSE_STATUS.NO_CONTENT} ${getResponseStatusTitle(RESPONSE_STATUS.NO_CONTENT)} + Allow Header`,
-        actual,
-        status,
-        modifiedRequest,
-        response,
-      ),
-      allowHeader,
-    };
+        return testStatus;
+      });
+
+      return {
+        testResult: createTestResult(
+          OPTIONS_METHOD_HANDLING_TEST_NAME,
+          OPTIONS_METHOD_HANDLING_TEST_EXPECTED,
+          actual,
+          status,
+          modifiedRequest,
+          response,
+        ),
+        allowHeader,
+      };
+    } catch (error) {
+      return {
+        testResult: createErrorTestResult(
+          OPTIONS_METHOD_HANDLING_TEST_NAME,
+          OPTIONS_METHOD_HANDLING_TEST_EXPECTED,
+          String(error),
+          modifiedRequest,
+        ),
+        allowHeader: '',
+      };
+    }
   }
 
   @Test('Verifies server properly rejects unsupported HTTP methods with 405 or 501')
