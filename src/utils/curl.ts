@@ -1,6 +1,6 @@
 import parseCurl from 'parse-curl';
-import { convertUrlEncodedToFormEntries, isUrlEncodedContentType, isUrlEncodedContentTypeString } from '.';
 import { HttpRequest, ParsedCurlResult } from '../types';
+import { convertUrlEncodedToFormEntries, isUrlEncodedContentType, isUrlEncodedContentTypeString } from './http';
 
 export function extractCurl(curl: string): ParsedCurlResult {
   const trimmedCurl = curl.replace(/\\\n/g, ' ').trim();

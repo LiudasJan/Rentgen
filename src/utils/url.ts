@@ -24,3 +24,10 @@ export function uppercaseDomain(url: string): string {
 
   return `${protocol}//${uppercaseHostname}${port}${pathname}${search}${hash}`;
 }
+
+export function uppercasePath(url: string): string {
+  const parsedUrl = new URL(url);
+  parsedUrl.pathname = parsedUrl.pathname.toUpperCase();
+
+  return parsedUrl.toString();
+}

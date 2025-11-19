@@ -1,12 +1,4 @@
 import { Method } from 'axios';
-import {
-  BaseTests,
-  createErrorTestResult,
-  createTestResult,
-  determineTestStatus,
-  NOT_AVAILABLE_TEST,
-  SUCCESS_RESPONSE_EXPECTED,
-} from '.';
 import { getResponseStatusTitle, RESPONSE_STATUS } from '../constants/responseStatus';
 import { Test } from '../decorators';
 import { HttpRequest, HttpResponse, TestResult, TestStatus } from '../types';
@@ -16,7 +8,16 @@ import {
   extractBodyFromResponse,
   getHeaderValue,
   uppercaseDomain,
+  uppercasePath,
 } from '../utils';
+import {
+  BaseTests,
+  createErrorTestResult,
+  createTestResult,
+  determineTestStatus,
+  NOT_AVAILABLE_TEST,
+  SUCCESS_RESPONSE_EXPECTED,
+} from './BaseTests';
 
 const LARGE_PAYLOAD_SIZE_MB = 10;
 const LARGE_PAYLOAD_SIZE_BYTES = LARGE_PAYLOAD_SIZE_MB * 1024 * 1024;
@@ -27,7 +28,6 @@ const CORS_TEST_NAME = 'CORS Policy Check';
 const CORS_TEST_EXPECTED = 'Public or Private API';
 const CRUD_TEST_NAME = 'CRUD';
 const CRUD_TEST_EXPECTED = 'Discover via OPTIONS';
-const DOMAIN_TEST_NAME = 'Domain Test';
 const LARGE_PAYLOAD_TEST_NAME = `Large Payload → Request Size Limit (${LARGE_PAYLOAD_SIZE_MB} MB)`;
 const LARGE_PAYLOAD_TEST_EXPECTED = `${RESPONSE_STATUS.PAYLOAD_TOO_LARGE} ${getResponseStatusTitle(RESPONSE_STATUS.PAYLOAD_TOO_LARGE)}`;
 const MISSING_ACTUAL = '-';
@@ -35,6 +35,9 @@ const NOT_FOUND_TEST_NAME = `${RESPONSE_STATUS.NOT_FOUND} ${getResponseStatusTit
 const NOT_FOUND_TEST_EXPECTED = `${RESPONSE_STATUS.NOT_FOUND} ${getResponseStatusTitle(RESPONSE_STATUS.NOT_FOUND)}`;
 const REFLECTED_PAYLOAD_SAFETY_TEST_NAME = 'Reflected Payload Safety';
 const REFLECTED_PAYLOAD_SAFETY_TEST_EXPECTED = `${RESPONSE_STATUS.BAD_REQUEST} ${getResponseStatusTitle(RESPONSE_STATUS.BAD_REQUEST)} or ${RESPONSE_STATUS.UNPROCESSABLE_ENTITY} ${getResponseStatusTitle(RESPONSE_STATUS.UNPROCESSABLE_ENTITY)} + No Mirrored Content`;
+const UPPERCASE_DOMAIN_TEST_NAME = 'Uppercase Domain Test';
+const UPPERCASE_PATH_TEST_NAME = 'Uppercase Path Test';
+const UPPERCASE_PATH_TEST_EXPECTED = `${RESPONSE_STATUS.NOT_FOUND} ${getResponseStatusTitle(RESPONSE_STATUS.NOT_FOUND)}`;
 const UNSUPPORTED_METHOD_TEST_NAME = 'Unsupported HTTP Method Handling';
 const UNSUPPORTED_METHOD_TEST_EXPECTED = `${RESPONSE_STATUS.METHOD_NOT_ALLOWED} ${getResponseStatusTitle(RESPONSE_STATUS.METHOD_NOT_ALLOWED)} or ${RESPONSE_STATUS.NOT_IMPLEMENTED} ${getResponseStatusTitle(RESPONSE_STATUS.NOT_IMPLEMENTED)}`;
 
@@ -88,7 +91,8 @@ export class SecurityTests extends BaseTests {
       await this.testCors(),
       await this.testNotFound(),
       await this.testReflectedPayloadSafety(),
-      await this.testDomain(),
+      await this.testUppercaseDomain(),
+      await this.testUppercasePath(),
       ...getManualTests(),
     );
 
@@ -438,12 +442,11 @@ export class SecurityTests extends BaseTests {
   @Test(
     'Tests if the server behaves according to RFC 3986 — specifically, that the domain part is treated as case-insensitive',
   )
-  private async testDomain(): Promise<TestResult> {
+  private async testUppercaseDomain(): Promise<TestResult> {
     this.onTestStart?.();
 
     const request = createTestHttpRequest(this.options);
     const modifiedRequest: HttpRequest = { ...request, url: uppercaseDomain(request.url) };
-    console.log(modifiedRequest);
 
     try {
       const response = await window.electronAPI.sendHttp(modifiedRequest);
@@ -455,9 +458,57 @@ export class SecurityTests extends BaseTests {
         return testStatus;
       });
 
-      return createTestResult(DOMAIN_TEST_NAME, SUCCESS_RESPONSE_EXPECTED, actual, status, modifiedRequest, response);
+      return createTestResult(
+        UPPERCASE_DOMAIN_TEST_NAME,
+        SUCCESS_RESPONSE_EXPECTED,
+        actual,
+        status,
+        modifiedRequest,
+        response,
+      );
     } catch (error) {
-      return createErrorTestResult(DOMAIN_TEST_NAME, SUCCESS_RESPONSE_EXPECTED, String(error), modifiedRequest);
+      return createErrorTestResult(
+        UPPERCASE_DOMAIN_TEST_NAME,
+        SUCCESS_RESPONSE_EXPECTED,
+        String(error),
+        modifiedRequest,
+      );
+    }
+  }
+
+  @Test(
+    'Tests if the server behaves according to RFC 3986 — specifically, that the path part is treated as case-sensitive',
+  )
+  private async testUppercasePath(): Promise<TestResult> {
+    this.onTestStart?.();
+
+    const request = createTestHttpRequest(this.options);
+    const modifiedRequest: HttpRequest = { ...request, url: uppercasePath(request.url) };
+
+    try {
+      const response = await window.electronAPI.sendHttp(modifiedRequest);
+      const { actual, status } = determineTestStatus(response, (response, statusCode) => {
+        const testStatus = { actual: response.status, status: TestStatus.Fail };
+        if (statusCode === RESPONSE_STATUS.NOT_FOUND) testStatus.status = TestStatus.Pass;
+
+        return testStatus;
+      });
+
+      return createTestResult(
+        UPPERCASE_PATH_TEST_NAME,
+        UPPERCASE_PATH_TEST_EXPECTED,
+        actual,
+        status,
+        modifiedRequest,
+        response,
+      );
+    } catch (error) {
+      return createErrorTestResult(
+        UPPERCASE_PATH_TEST_NAME,
+        UPPERCASE_PATH_TEST_EXPECTED,
+        String(error),
+        modifiedRequest,
+      );
     }
   }
 

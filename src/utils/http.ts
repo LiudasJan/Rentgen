@@ -1,7 +1,9 @@
 import { Method } from 'axios';
-import { detectFieldType, encodeMessage, extractFieldsFromJson, getRandomizedValueByFieldType } from '.';
 import { FieldType, HttpRequest, HttpResponse, TestOptions, TestResult } from '../types';
 import { isObject, setDeepObjectProperty, tryParseJsonObject } from './object';
+import { encodeMessage } from './proto';
+import { getRandomizedValueByFieldType } from './random';
+import { detectFieldType, extractFieldsFromJson } from './validation';
 
 export function convertFormEntriesToUrlEncoded(formEntries: Array<[string, string]>): string {
   const urlSearchParams = new URLSearchParams();

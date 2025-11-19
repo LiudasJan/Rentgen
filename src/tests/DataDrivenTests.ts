@@ -1,11 +1,3 @@
-import {
-  BaseTests,
-  CLIENT_ERROR_RESPONSE_EXPECTED,
-  createErrorTestResult,
-  createTestResult,
-  determineTestStatus,
-  SUCCESS_RESPONSE_EXPECTED,
-} from '.';
 import { datasets } from '../constants/datasets';
 import { getResponseStatusTitle, RESPONSE_STATUS } from '../constants/responseStatus';
 import { Test } from '../decorators';
@@ -21,6 +13,14 @@ import {
   parseBody,
   parseHeaders,
 } from '../utils';
+import {
+  BaseTests,
+  CLIENT_ERROR_RESPONSE_EXPECTED,
+  createErrorTestResult,
+  createTestResult,
+  determineTestStatus,
+  SUCCESS_RESPONSE_EXPECTED,
+} from './BaseTests';
 
 const VALUE_NORMALIZATION_TEST_EXPECTED = `${RESPONSE_STATUS.BAD_REQUEST} ${getResponseStatusTitle(RESPONSE_STATUS.BAD_REQUEST)}/${RESPONSE_STATUS.UNPROCESSABLE_ENTITY} ${getResponseStatusTitle(RESPONSE_STATUS.UNPROCESSABLE_ENTITY)} or Trimmed/Normalized Value`;
 const ORIGINAL_REQUEST_TEST_FIELD_NAME = '[original request]';

@@ -1,8 +1,8 @@
-import { createErrorTestResult, createTestResult, NOT_AVAILABLE_TEST } from '.';
 import { getResponseStatusTitle, RESPONSE_STATUS } from '../constants/responseStatus';
 import { Test } from '../decorators';
 import { TestOptions, TestResult, TestStatus } from '../types';
 import { calculateMedian, calculatePercentile, createTestHttpRequest, extractStatusCode } from '../utils';
+import { createErrorTestResult, createTestResult, NOT_AVAILABLE_TEST } from './BaseTests';
 
 export const LOAD_TEST_NAME = 'Load Test';
 const PING_LATENCY_TEST_NAME = 'Ping Latency';
