@@ -1,13 +1,12 @@
-import { BaseTests } from '.';
+import { BaseTests, createErrorTestResult, createTestResult, determineTestStatus } from '.';
 import { datasets } from '../constants/datasets';
 import { RESPONSE_STATUS } from '../constants/responseStatus';
 import { Test } from '../decorators';
-import { FieldType, HttpRequest, HttpResponse, TestData, TestOptions, TestResult, TestStatus } from '../types';
+import { FieldType, HttpRequest, TestData, TestOptions, TestResult, TestStatus } from '../types';
 import {
   convertUrlEncodedToFormEntries,
   createHttpRequest,
   createTestHttpRequest,
-  determineTestStatus,
   executeTimedRequest,
   extractBodyFieldMappings,
   getFieldValueFromBody,
@@ -75,25 +74,24 @@ export class DataDrivenTests extends BaseTests {
           return testStatus;
         });
 
-        return createDataDrivenTestResult(
+        return createTestResult(
           ORIGINAL_REQUEST_TEST_FIELD_NAME,
           SUCCESS_RESPONSE_EXPECTED,
           actual,
           status,
-          bodyValue,
           request,
           response,
           responseTime,
+          bodyValue,
         );
       },
       (error) =>
-        createDataDrivenTestResult(
+        createErrorTestResult(
           ORIGINAL_REQUEST_TEST_FIELD_NAME,
           SUCCESS_RESPONSE_EXPECTED,
-          `Unexpected error: ${String(error)}`,
-          TestStatus.Bug,
-          bodyValue,
+          String(error),
           request,
+          bodyValue,
         ),
     );
   }
@@ -125,25 +123,24 @@ export class DataDrivenTests extends BaseTests {
           return { actual: `${response.status} with not trimmed/normalized value`, status: TestStatus.Fail };
         });
 
-        return createDataDrivenTestResult(
+        return createTestResult(
           `${mappingType}.${fieldName}`,
           VALUE_NORMALIZATION_TEST_EXPECTED,
           actual,
           status,
-          testData.value,
           request,
           response,
           responseTime,
+          testData.value,
         );
       },
       (error) =>
-        createDataDrivenTestResult(
+        createErrorTestResult(
           `${mappingType}.${fieldName}`,
           VALUE_NORMALIZATION_TEST_EXPECTED,
-          `Unexpected error: ${String(error)}`,
-          TestStatus.Bug,
-          testData.value,
+          String(error),
           request,
+          testData.value,
         ),
     );
   }
@@ -169,25 +166,24 @@ export class DataDrivenTests extends BaseTests {
           return testStatus;
         });
 
-        return createDataDrivenTestResult(
+        return createTestResult(
           `${mappingType}.${fieldName}`,
           testData.valid ? SUCCESS_RESPONSE_EXPECTED : CLIENT_ERROR_RESPONSE_EXPECTED,
           actual,
           status,
-          testData.value,
           request,
           response,
           responseTime,
+          testData.value,
         );
       },
       (error) =>
-        createDataDrivenTestResult(
+        createErrorTestResult(
           `${mappingType}.${fieldName}`,
           testData.valid ? SUCCESS_RESPONSE_EXPECTED : CLIENT_ERROR_RESPONSE_EXPECTED,
-          `Unexpected error: ${String(error)}`,
-          TestStatus.Bug,
-          testData.value,
+          String(error),
           request,
+          testData.value,
         ),
     );
   }
@@ -222,19 +218,6 @@ export async function runDataDrivenTests(
     if (shouldSkipFieldType(type)) continue;
     await onQueryMappingTest(key, type);
   }
-}
-
-function createDataDrivenTestResult(
-  name: string,
-  expected: string,
-  actual: string,
-  status: TestStatus,
-  value: any,
-  request: HttpRequest,
-  response: HttpResponse = null,
-  responseTime = 0,
-): TestResult {
-  return { name, expected, actual, status, value, request, response, responseTime };
 }
 
 export function shouldSkipFieldType(fieldType: FieldType): boolean {

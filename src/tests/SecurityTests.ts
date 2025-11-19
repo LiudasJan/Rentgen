@@ -1,15 +1,9 @@
 import { Method } from 'axios';
-import { BaseTests, NOT_AVAILABLE_TEST } from '.';
+import { BaseTests, createErrorTestResult, createTestResult, determineTestStatus, NOT_AVAILABLE_TEST } from '.';
 import { RESPONSE_STATUS } from '../constants/responseStatus';
 import { Test } from '../decorators';
 import { HttpRequest, HttpResponse, TestResult, TestStatus } from '../types';
-import {
-  createHttpRequest,
-  createTestHttpRequest,
-  determineTestStatus,
-  extractBodyFromResponse,
-  getHeaderValue,
-} from '../utils';
+import { createHttpRequest, createTestHttpRequest, extractBodyFromResponse, getHeaderValue } from '../utils';
 
 const LARGE_PAYLOAD_SIZE_MB = 10;
 const LARGE_PAYLOAD_SIZE_BYTES = LARGE_PAYLOAD_SIZE_MB * 1024 * 1024;
@@ -56,11 +50,12 @@ export class SecurityTests extends BaseTests {
       const { testResult, allowHeader } = await this.testOptionsMethod();
       securityTestResults.push(testResult);
 
+      this.onTestStart?.();
       if (testResult.status === TestStatus.Pass)
-        crudTestResults.push(...getCrudTestResults(allowHeader, headers, url, response));
+        crudTestResults.push(...this.getCrudTestResults(allowHeader, headers, url, response));
       else
         crudTestResults.push(
-          createSecurityTestResult(
+          createTestResult(
             CRUD_TEST_NAME,
             CRUD_TEST_EXPECTED,
             'CRUD not available — OPTIONS test failed',
@@ -68,14 +63,7 @@ export class SecurityTests extends BaseTests {
           ),
         );
     } catch (error) {
-      securityTestResults.push(
-        createSecurityTestResult(
-          'Security test error',
-          'Should respond',
-          `Unexpected error: ${String(error)}`,
-          TestStatus.Bug,
-        ),
-      );
+      securityTestResults.push(createErrorTestResult('Security test error', 'Should respond', String(error), request));
     }
 
     // Run tests that don't depend on initial response
@@ -98,7 +86,7 @@ export class SecurityTests extends BaseTests {
 
     const serverHeader = getHeaderValue(response.headers, 'server');
 
-    return createSecurityTestResult(
+    return createTestResult(
       'No sensitive server headers',
       'Server header should not expose version',
       serverHeader || 'No Server header',
@@ -116,7 +104,7 @@ export class SecurityTests extends BaseTests {
     const contentSecurityPolicy = getHeaderValue(response.headers, 'content-security-policy');
     const { actual, status } = validateClickjackingProtection(xFrameOptions, contentSecurityPolicy);
 
-    return createSecurityTestResult(
+    return createTestResult(
       'Clickjacking protection',
       'X-Frame-Options DENY/SAMEORIGIN or CSP frame-ancestors',
       actual,
@@ -132,7 +120,7 @@ export class SecurityTests extends BaseTests {
 
     const hsts = getHeaderValue(response.headers, 'strict-transport-security');
 
-    return createSecurityTestResult(
+    return createTestResult(
       'HSTS (Strict-Transport-Security)',
       'Header should be present on HTTPS endpoints',
       hsts || MISSING_ACTUAL,
@@ -149,7 +137,7 @@ export class SecurityTests extends BaseTests {
     const xContentTypeOptions = getHeaderValue(response.headers, 'x-content-type-options');
     const { actual, status } = validateMimeSniffing(xContentTypeOptions);
 
-    return createSecurityTestResult(
+    return createTestResult(
       'MIME sniffing protection',
       'X-Content-Type-Options: nosniff',
       actual,
@@ -166,7 +154,7 @@ export class SecurityTests extends BaseTests {
     const cacheControl = getHeaderValue(response.headers, 'cache-control');
     const { actual, status } = validateCacheControl(cacheControl, request.method);
 
-    return createSecurityTestResult(
+    return createTestResult(
       'Cache-Control for private API',
       'Cache-Control: no-store/private',
       actual,
@@ -194,7 +182,7 @@ export class SecurityTests extends BaseTests {
     });
 
     return {
-      testResult: createSecurityTestResult(
+      testResult: createTestResult(
         'OPTIONS method handling',
         '200 or 204 + Allow header',
         actual,
@@ -222,7 +210,7 @@ export class SecurityTests extends BaseTests {
         return testStatus;
       });
 
-      return createSecurityTestResult(
+      return createTestResult(
         UNSUPPORTED_METHOD_TEST_NAME,
         UNSUPPORTED_METHOD_TEST_EXPECTED,
         actual,
@@ -231,11 +219,10 @@ export class SecurityTests extends BaseTests {
         response,
       );
     } catch (error) {
-      return createSecurityTestResult(
+      return createErrorTestResult(
         UNSUPPORTED_METHOD_TEST_NAME,
         UNSUPPORTED_METHOD_TEST_EXPECTED,
-        `Unexpected error: ${String(error)}`,
-        TestStatus.Bug,
+        String(error),
         request,
       );
     }
@@ -261,7 +248,7 @@ export class SecurityTests extends BaseTests {
         return testStatus;
       });
 
-      return createSecurityTestResult(
+      return createTestResult(
         LARGE_PAYLOAD_NAME,
         LARGE_PAYLOAD_EXPECTED,
         actual,
@@ -273,13 +260,7 @@ export class SecurityTests extends BaseTests {
         response,
       );
     } catch (error) {
-      return createSecurityTestResult(
-        LARGE_PAYLOAD_NAME,
-        LARGE_PAYLOAD_EXPECTED,
-        `Unexpected error: ${String(error)}`,
-        TestStatus.Bug,
-        modifiedRequest,
-      );
+      return createErrorTestResult(LARGE_PAYLOAD_NAME, LARGE_PAYLOAD_EXPECTED, String(error), modifiedRequest);
     }
   }
 
@@ -304,7 +285,7 @@ export class SecurityTests extends BaseTests {
         return testStatus;
       });
 
-      return createSecurityTestResult(
+      return createTestResult(
         AUTHORIZATION_TEST_NAME,
         AUTHORIZATION_TEST_EXPECTED,
         actual,
@@ -313,11 +294,10 @@ export class SecurityTests extends BaseTests {
         response,
       );
     } catch (error) {
-      return createSecurityTestResult(
+      return createErrorTestResult(
         AUTHORIZATION_TEST_NAME,
         AUTHORIZATION_TEST_EXPECTED,
-        `Unexpected error: ${String(error)}`,
-        TestStatus.Bug,
+        String(error),
         modifiedRequest,
       );
     }
@@ -338,7 +318,7 @@ export class SecurityTests extends BaseTests {
       const acaoHeader = getHeaderValue(response.headers, 'access-control-allow-origin');
 
       if (!acaoHeader)
-        return createSecurityTestResult(
+        return createTestResult(
           CORS_TEST_NAME,
           CORS_TEST_EXPECTED,
           'CORS error → API is private (restricted by origin)',
@@ -347,7 +327,7 @@ export class SecurityTests extends BaseTests {
           null,
         );
 
-      return createSecurityTestResult(
+      return createTestResult(
         CORS_TEST_NAME,
         CORS_TEST_EXPECTED,
         'No CORS error → API is public (accessible from any domain)',
@@ -356,13 +336,7 @@ export class SecurityTests extends BaseTests {
         response,
       );
     } catch (error) {
-      return createSecurityTestResult(
-        CORS_TEST_NAME,
-        CORS_TEST_EXPECTED,
-        `Unexpected error: ${String(error)}`,
-        TestStatus.Bug,
-        modifiedRequest,
-      );
+      return createErrorTestResult(CORS_TEST_NAME, CORS_TEST_EXPECTED, String(error), modifiedRequest);
     }
   }
 
@@ -383,22 +357,9 @@ export class SecurityTests extends BaseTests {
         return testStatus;
       });
 
-      return createSecurityTestResult(
-        NOT_FOUND_TEST_NAME,
-        NOT_FOUND_TEST_EXPECTED,
-        actual,
-        status,
-        modifiedRequest,
-        response,
-      );
+      return createTestResult(NOT_FOUND_TEST_NAME, NOT_FOUND_TEST_EXPECTED, actual, status, modifiedRequest, response);
     } catch (error) {
-      return createSecurityTestResult(
-        NOT_FOUND_TEST_NAME,
-        NOT_FOUND_TEST_EXPECTED,
-        `Unexpected error: ${String(error)}`,
-        TestStatus.Bug,
-        modifiedRequest,
-      );
+      return createErrorTestResult(NOT_FOUND_TEST_NAME, NOT_FOUND_TEST_EXPECTED, String(error), modifiedRequest);
     }
   }
 
@@ -409,7 +370,7 @@ export class SecurityTests extends BaseTests {
     const { method } = this.options;
 
     if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase()))
-      return createSecurityTestResult(
+      return createTestResult(
         REFLECTED_PAYLOAD_SAFETY_TEST_NAME,
         REFLECTED_PAYLOAD_SAFETY_TEST_EXPECTED,
         NOT_AVAILABLE_TEST,
@@ -436,7 +397,7 @@ export class SecurityTests extends BaseTests {
         return { actual: response.status, status: TestStatus.Fail };
       });
 
-      return createSecurityTestResult(
+      return createTestResult(
         REFLECTED_PAYLOAD_SAFETY_TEST_NAME,
         REFLECTED_PAYLOAD_SAFETY_TEST_EXPECTED,
         actual,
@@ -445,26 +406,53 @@ export class SecurityTests extends BaseTests {
         response,
       );
     } catch (error) {
-      return createSecurityTestResult(
+      return createErrorTestResult(
         REFLECTED_PAYLOAD_SAFETY_TEST_NAME,
         REFLECTED_PAYLOAD_SAFETY_TEST_EXPECTED,
-        `Unexpected error: ${String(error)}`,
-        TestStatus.Bug,
+        String(error),
         modifiedRequest,
       );
     }
   }
-}
 
-function createSecurityTestResult(
-  name: string,
-  expected: string,
-  actual: string,
-  status: TestStatus,
-  request: HttpRequest | null = null,
-  response: HttpResponse | null = null,
-): TestResult {
-  return { name, expected, actual, status, request, response };
+  @Test('Generates CRUD test results based on Allow header from OPTIONS response')
+  private getCrudTestResults(
+    allowHeader: string,
+    headers: Record<string, string>,
+    url: string,
+    response: HttpResponse,
+  ): TestResult[] {
+    try {
+      const allowedMethods = String(allowHeader || '')
+        .split(',')
+        .map((s) => s.trim().toUpperCase())
+        .filter(Boolean);
+      const body = extractBodyFromResponse(response);
+      const methodDescriptions: Record<string, string> = {
+        GET: 'Fetch data',
+        POST: 'Create resource',
+        PUT: 'Update resource',
+        PATCH: 'Update resource fields',
+        DELETE: 'Remove resource',
+        HEAD: 'Headers only',
+        OPTIONS: 'Discovery',
+      };
+
+      return allowedMethods.map(
+        (method: string) =>
+          ({
+            name: method,
+            actual: NOT_AVAILABLE_TEST,
+            expected: methodDescriptions[method] || 'Custom method',
+            request: createHttpRequest(body, headers, method, url),
+            response: null,
+            status: TestStatus.Manual,
+          }) as TestResult,
+      );
+    } catch {
+      return [createTestResult(CRUD_TEST_NAME, CRUD_TEST_EXPECTED, NOT_AVAILABLE_TEST, TestStatus.Manual)];
+    }
+  }
 }
 
 function createNotFoundUrl(url: string): string {
@@ -527,58 +515,15 @@ function validateCacheControl(
   };
 }
 
-function getCrudTestResults(
-  allowHeader: string,
-  headers: Record<string, string>,
-  url: string,
-  response: HttpResponse,
-): TestResult[] {
-  try {
-    const allowedMethods = String(allowHeader || '')
-      .split(',')
-      .map((s) => s.trim().toUpperCase())
-      .filter(Boolean);
-    const body = extractBodyFromResponse(response);
-    const methodDescriptions: Record<string, string> = {
-      GET: 'Fetch data',
-      POST: 'Create resource',
-      PUT: 'Update resource',
-      PATCH: 'Update resource fields',
-      DELETE: 'Remove resource',
-      HEAD: 'Headers only',
-      OPTIONS: 'Discovery',
-    };
-
-    return allowedMethods.map(
-      (method: string) =>
-        ({
-          name: method,
-          actual: NOT_AVAILABLE_TEST,
-          expected: methodDescriptions[method] || 'Custom method',
-          request: createHttpRequest(body, headers, method, url),
-          response: null,
-          status: TestStatus.Manual,
-        }) as TestResult,
-    );
-  } catch {
-    return [createSecurityTestResult(CRUD_TEST_NAME, CRUD_TEST_EXPECTED, NOT_AVAILABLE_TEST, TestStatus.Manual)];
-  }
-}
-
 function getManualTests(): TestResult[] {
   return [
-    createSecurityTestResult(
+    createTestResult(
       'Invalid authorization cookie/token',
       AUTHORIZATION_TEST_EXPECTED,
       NOT_AVAILABLE_TEST,
       TestStatus.Manual,
     ),
-    createSecurityTestResult(
-      "Access other user's data",
-      'Should return 404 or 403',
-      NOT_AVAILABLE_TEST,
-      TestStatus.Manual,
-    ),
-    createSecurityTestResult('Role-based access control', 'Restricted per role', NOT_AVAILABLE_TEST, TestStatus.Manual),
+    createTestResult("Access other user's data", 'Should return 404 or 403', NOT_AVAILABLE_TEST, TestStatus.Manual),
+    createTestResult('Role-based access control', 'Restricted per role', NOT_AVAILABLE_TEST, TestStatus.Manual),
   ];
 }

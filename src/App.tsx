@@ -156,7 +156,7 @@ export default function App() {
                 {curlError && <div className="text-xs text-red-600">{curlError}</div>}
                 <div className="flex items-center justify-end gap-4">
                   <Button onClick={importCurl}>Import</Button>
-                  <Button buttonType={ButtonType.SECONDARY} onClick={() => setOpenCurlModal(false)}>
+                  <Button buttonType={ButtonType.SECONDARY} onClick={closeCurlModal}>
                     Cancel
                   </Button>
                 </div>
@@ -506,13 +506,17 @@ export default function App() {
         setBody(trimmedBody !== '' ? trimmedBody : '{}');
       }
 
-      setOpenCurlModal(false);
-      setCurl('');
-      setCurlError('');
+      closeCurlModal();
     } catch (error) {
       console.error('cURL import failed', error);
       setCurlError('The cURL command you provided appears to be invalid. Please check it and try again.');
     }
+  }
+
+  function closeCurlModal() {
+    setOpenCurlModal(false);
+    setCurl('');
+    setCurlError('');
   }
 
   async function sendHttp() {
@@ -532,7 +536,7 @@ export default function App() {
 
       setHttpResponse(response);
 
-      if (!response.status.startsWith('2') || !parsedBody) return;
+      if (!response.status.startsWith('2')) return;
 
       const bodyMappings = extractBodyFieldMappings(parsedBody, parsedHeaders);
       const queryMappings = Object.fromEntries(

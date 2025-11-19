@@ -1,10 +1,11 @@
-import { NOT_AVAILABLE_TEST } from '.';
+import { createErrorTestResult, createTestResult, NOT_AVAILABLE_TEST } from '.';
 import { RESPONSE_STATUS } from '../constants/responseStatus';
 import { Test } from '../decorators';
 import { TestOptions, TestResult, TestStatus } from '../types';
 import { calculateMedian, calculatePercentile, createTestHttpRequest, extractStatusCode } from '../utils';
 
 export const LOAD_TEST_NAME = 'Load test';
+const PING_LATENCY_TEST_NAME = 'Ping latency';
 
 const EXCELLENT_RESPONSE_TIME_MS = 500;
 const ACCEPTABLE_RESPONSE_TIME_MS = 1000;
@@ -48,12 +49,12 @@ export class PerformanceInsights {
     if (medianResponseTime <= EXCELLENT_RESPONSE_TIME_MS) responseTimeStatus = TestStatus.Pass;
     else if (medianResponseTime <= ACCEPTABLE_RESPONSE_TIME_MS) responseTimeStatus = TestStatus.Warning;
 
-    return {
-      actual: `${medianResponseTime.toFixed(0)} ms`,
-      expected: `<= ${EXCELLENT_RESPONSE_TIME_MS} ms`,
-      name: 'Median response time',
-      status: responseTimeStatus,
-    };
+    return createTestResult(
+      'Median response time',
+      `<= ${EXCELLENT_RESPONSE_TIME_MS} ms`,
+      `${medianResponseTime.toFixed(0)} ms`,
+      responseTimeStatus,
+    );
   }
 
   @Test('Tests network ping latency')
@@ -73,37 +74,27 @@ export class PerformanceInsights {
       const averagePingTime = pingResults.reduce((sum, pingTime) => sum + pingTime, 0) / pingResults.length;
       const pingLatencyStatus = highLatencyCount >= MAX_ACCEPTABLE_BAD_PINGS ? TestStatus.Fail : TestStatus.Pass;
 
-      return {
-        actual: `${averagePingTime.toFixed(0)} ms (high latency ${highLatencyCount}/${PING_TEST_COUNT})`,
-        expected: `<= ${MAX_PING_LATENCY_MS} ms (${MAX_ACCEPTABLE_BAD_PINGS}/${PING_TEST_COUNT} rule)`,
-        name: 'Ping latency',
-        status: pingLatencyStatus,
-      };
+      return createTestResult(
+        PING_LATENCY_TEST_NAME,
+        `<= ${MAX_PING_LATENCY_MS} ms (${MAX_ACCEPTABLE_BAD_PINGS}/${PING_TEST_COUNT} rule)`,
+        `${averagePingTime.toFixed(0)} ms (high latency ${highLatencyCount}/${PING_TEST_COUNT})`,
+        pingLatencyStatus,
+      );
     } catch (error) {
-      return {
-        actual: `Unexpected error: ${String(error)}`,
-        expected: 'Ping should succeed',
-        name: 'Ping test error',
-        status: TestStatus.Bug,
-      };
+      return createErrorTestResult(PING_LATENCY_TEST_NAME, 'Ping should succeed', String(error));
     }
   }
 }
 
 function getManualTests(): TestResult[] {
   return [
-    {
-      actual: '', // Empty until test is executed
-      expected: `Median <${EXCELLENT_RESPONSE_TIME_MS} ms (Pass), <${ACCEPTABLE_RESPONSE_TIME_MS} ms (Warning), ≥${ACCEPTABLE_RESPONSE_TIME_MS} ms (Fail)`,
-      name: LOAD_TEST_NAME,
-      status: TestStatus.Manual, // Requires manual execution
-    },
-    {
-      actual: NOT_AVAILABLE_TEST,
-      expected: EXPECTED_RATE_LIMIT_STATUS,
-      name: 'Rate limiting implementation',
-      status: TestStatus.Manual,
-    },
+    createTestResult(
+      LOAD_TEST_NAME,
+      `Median <${EXCELLENT_RESPONSE_TIME_MS} ms (Pass), <${ACCEPTABLE_RESPONSE_TIME_MS} ms (Warning), ≥${ACCEPTABLE_RESPONSE_TIME_MS} ms (Fail)`,
+      '', // Empty until test is executed
+      TestStatus.Manual, // Requires manual execution
+    ),
+    createTestResult('Rate limiting implementation', EXPECTED_RATE_LIMIT_STATUS, NOT_AVAILABLE_TEST, TestStatus.Manual),
   ];
 }
 
@@ -174,10 +165,10 @@ export async function runLoadTest(
           ? TestStatus.Warning
           : TestStatus.Fail;
 
-  return {
-    actual: `${concurrency} threads, ${totalRequests} total req. Executed: ${responseTimes.length} req → p50=${p50.toFixed(0)}ms p90=${p90.toFixed(0)}ms p95=${p95.toFixed(0)}ms avg=${averageResponseTime.toFixed(0)}ms, 4xx=${client4xxFailures}, 5xx=${server5xxFailures}`,
-    expected: `Median <${EXCELLENT_RESPONSE_TIME_MS} ms (Pass), <${ACCEPTABLE_RESPONSE_TIME_MS} ms (Warning), ≥${ACCEPTABLE_RESPONSE_TIME_MS} ms (Fail)`,
-    name: LOAD_TEST_NAME,
-    status: testStatus,
-  };
+  return createTestResult(
+    LOAD_TEST_NAME,
+    `Median <${EXCELLENT_RESPONSE_TIME_MS} ms (Pass), <${ACCEPTABLE_RESPONSE_TIME_MS} ms (Warning), ≥${ACCEPTABLE_RESPONSE_TIME_MS} ms (Fail)`,
+    `${concurrency} threads, ${totalRequests} total req. Executed: ${responseTimes.length} req → p50=${p50.toFixed(0)}ms p90=${p90.toFixed(0)}ms p95=${p95.toFixed(0)}ms avg=${averageResponseTime.toFixed(0)}ms, 4xx=${client4xxFailures}, 5xx=${server5xxFailures}`,
+    testStatus,
+  );
 }
