@@ -74,10 +74,7 @@ jobs:
         id: release_notes
         run: |
           TAG_NAME="${{ steps.tag.outputs.TAG_NAME }}"
-          
-          # Extract version from tag (remove 'v' prefix if present)
-          VERSION=$(echo "$TAG_NAME" | sed 's/^v//')
-          
+
           # Check if CHANGELOG.md exists
           if [ ! -f "CHANGELOG.md" ]; then
             echo "CHANGELOG.md not found, falling back to git commits"
@@ -112,20 +109,19 @@ jobs:
             } > release_notes.md
             exit 0
           fi
-          
+
           # Extract changelog entry for this version
-          # Look for lines starting with ## [vVERSION] or ## [VERSION] or ## [TAG_NAME]
+          # Look for lines starting with ## [TAG_NAME] (e.g., ## [v1.2.0.9])
           CHANGELOG_ENTRY=""
           IN_SECTION=false
-          
-          # Escape special characters in version for regex
-          ESCAPED_VERSION=$(echo "$VERSION" | sed 's/\./\\./g')
+
+          # Escape special characters in tag for regex
           ESCAPED_TAG=$(echo "$TAG_NAME" | sed 's/\./\\./g')
-          
+
           while IFS= read -r line || [ -n "$line" ]; do
             # Check if this is the start of our version section
-            # Match patterns like: ## [v1.2.0.9], ## [1.2.0.9], or ## [v1.2.0.9]
-            if echo "$line" | grep -qE "^## \[v?${ESCAPED_VERSION}\]|^## \[${ESCAPED_TAG}\]"; then
+            # Match pattern like: ## [v1.2.0.9] or ## [TAG_NAME]
+            if echo "$line" | grep -qE "^## \[${ESCAPED_TAG}\]"; then
               IN_SECTION=true
               # Skip the header line itself, we'll use the content below
               continue
@@ -140,10 +136,10 @@ jobs:
               CHANGELOG_ENTRY="${CHANGELOG_ENTRY}${line}"$'\n'
             fi
           done < CHANGELOG.md
-          
+
           # Trim trailing newlines and whitespace
           CHANGELOG_ENTRY=$(echo -n "$CHANGELOG_ENTRY" | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}' | sed 's/[[:space:]]*$//')
-          
+
           # Get previous tag for compare URL
           git tag --sort=-version:refname > /tmp/all_tags.txt
           PREVIOUS_TAG=""
@@ -153,13 +149,13 @@ jobs:
               break
             fi
           done < /tmp/all_tags.txt
-          
+
           if [ -z "$PREVIOUS_TAG" ]; then
             COMPARE_URL="https://github.com/${{ github.repository }}/releases/tag/${TAG_NAME}"
           else
             COMPARE_URL="https://github.com/${{ github.repository }}/compare/${PREVIOUS_TAG}...${TAG_NAME}"
           fi
-          
+
           # If we found changelog entry, use it; otherwise fallback to git commits
           # Check if CHANGELOG_ENTRY has meaningful content (not just whitespace)
           if [ -n "$CHANGELOG_ENTRY" ] && [ "$(echo "$CHANGELOG_ENTRY" | tr -d '[:space:]')" != "" ]; then
@@ -194,24 +190,22 @@ jobs:
       - name: Rename installer files with platform prefixes
         run: |
           TAG_NAME="${{ steps.tag.outputs.TAG_NAME }}"
-          # Extract version from tag (remove 'v' prefix if present, then add it back in format)
-          VERSION=$(echo "$TAG_NAME" | sed 's/^v//')
-          echo "Renaming installer files to format: Rentgen-v${VERSION}-platform-arch.extension"
+          echo "Renaming installer files to format: Rentgen-${TAG_NAME}-platform-arch.extension"
 
-          # Rename DMG files (macOS): Rentgen-VERSION-ARCH.dmg -> Rentgen-vVERSION-mac-ARCH.dmg
+          # Rename DMG files (macOS): Rentgen-VERSION-ARCH.dmg -> Rentgen-TAG_NAME-mac-ARCH.dmg
           find artifacts -type f -name "Rentgen-*.dmg" | while read file; do
             dir=$(dirname "$file")
             basename=$(basename "$file")
             # Extract arch from filename (e.g., Rentgen-1.2.1-x64.dmg -> x64)
             arch=$(echo "$basename" | sed -n 's/.*-\(x64\|arm64\)\.dmg$/\1/p')
             if [ -n "$arch" ]; then
-              newname="Rentgen-v${VERSION}-mac-${arch}.dmg"
+              newname="Rentgen-${TAG_NAME}-mac-${arch}.dmg"
               mv "$file" "$dir/$newname"
               echo "Renamed: $basename -> $newname"
             fi
           done
 
-          # Rename EXE files (Windows): Rentgen VERSION Setup.exe -> Rentgen-vVERSION-win-ARCH.exe
+          # Rename EXE files (Windows): Rentgen VERSION Setup.exe -> Rentgen-TAG_NAME-win-ARCH.exe
           find artifacts -type f -name "*.exe" | while read file; do
             dir=$(dirname "$file")
             basename=$(basename "$file")
@@ -220,15 +214,13 @@ jobs:
             arch="x64"
             if echo "$file" | grep -qi "arm64"; then
               arch="arm64"
-            elif echo "$file" | grep -qi "x64"; then
-              arch="x64"
             fi
-            newname="Rentgen-v${VERSION}-win-${arch}.exe"
+            newname="Rentgen-${TAG_NAME}-win-${arch}.exe"
             mv "$file" "$dir/$newname"
             echo "Renamed: $basename -> $newname"
           done
 
-          # Rename DEB files (Linux): rentgen_VERSION_ARCH.deb -> Rentgen-vVERSION-linux-ARCH.deb
+          # Rename DEB files (Linux): rentgen_VERSION_ARCH.deb -> Rentgen-TAG_NAME-linux-ARCH.deb
           find artifacts -type f -name "rentgen_*.deb" | while read file; do
             dir=$(dirname "$file")
             basename=$(basename "$file")
@@ -239,26 +231,27 @@ jobs:
               if [ "$arch" = "amd64" ]; then
                 arch="x64"
               fi
-              newname="Rentgen-v${VERSION}-linux-${arch}.deb"
+              newname="Rentgen-${TAG_NAME}-linux-${arch}.deb"
               mv "$file" "$dir/$newname"
               echo "Renamed: $basename -> $newname"
             fi
           done
 
-          # Rename RPM files (Linux): rentgen-VERSION-REVISION.ARCH.rpm -> Rentgen-vVERSION-linux-ARCH.rpm
+          # Rename RPM files (Linux): rentgen-VERSION-REVISION.ARCH.rpm -> Rentgen-TAG_NAME-linux-ARCH.rpm
           find artifacts -type f -name "rentgen-*.rpm" | while read file; do
             dir=$(dirname "$file")
             basename=$(basename "$file")
             # Extract arch from filename (e.g., rentgen-1.2.1-1.x86_64.rpm -> x86_64)
-            arch=$(echo "$basename" | sed -n 's/.*\.\(x86_64\|aarch64\|arm64\)\.rpm$/\1/p')
+            # RPM uses x86_64 for x64 and aarch64 for ARM 64-bit
+            arch=$(echo "$basename" | sed -n 's/.*\.\(x86_64\|aarch64\)\.rpm$/\1/p')
             if [ -n "$arch" ]; then
-              # Convert x86_64 to x64, aarch64 to arm64 for consistency
+              # Convert x86_64 to x64, aarch64 to arm64 for consistency with other platforms
               if [ "$arch" = "x86_64" ]; then
                 arch="x64"
               elif [ "$arch" = "aarch64" ]; then
                 arch="arm64"
               fi
-              newname="Rentgen-v${VERSION}-linux-${arch}.rpm"
+              newname="Rentgen-${TAG_NAME}-linux-${arch}.rpm"
               mv "$file" "$dir/$newname"
               echo "Renamed: $basename -> $newname"
             fi

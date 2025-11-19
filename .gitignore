@@ -90,5 +90,3 @@ typings/
 
 # Electron-Forge
 out/
-
-.DS_Store
