@@ -12,3 +12,15 @@ export function extractQueryParameters(url: string): Record<string, string> {
     return {};
   }
 }
+
+export function uppercaseDomain(url: string): string {
+  const parsedUrl = new URL(url);
+  const uppercaseHostname = parsedUrl.hostname.toUpperCase();
+  const protocol = parsedUrl.protocol;
+  const port = parsedUrl.port ? `:${parsedUrl.port}` : '';
+  const pathname = parsedUrl.pathname;
+  const search = parsedUrl.search;
+  const hash = parsedUrl.hash;
+
+  return `${protocol}//${uppercaseHostname}${port}${pathname}${search}${hash}`;
+}

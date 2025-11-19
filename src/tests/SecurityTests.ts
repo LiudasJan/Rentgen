@@ -1,9 +1,22 @@
 import { Method } from 'axios';
-import { BaseTests, createErrorTestResult, createTestResult, determineTestStatus, NOT_AVAILABLE_TEST } from '.';
+import {
+  BaseTests,
+  createErrorTestResult,
+  createTestResult,
+  determineTestStatus,
+  NOT_AVAILABLE_TEST,
+  SUCCESS_RESPONSE_EXPECTED,
+} from '.';
 import { getResponseStatusTitle, RESPONSE_STATUS } from '../constants/responseStatus';
 import { Test } from '../decorators';
 import { HttpRequest, HttpResponse, TestResult, TestStatus } from '../types';
-import { createHttpRequest, createTestHttpRequest, extractBodyFromResponse, getHeaderValue } from '../utils';
+import {
+  createHttpRequest,
+  createTestHttpRequest,
+  extractBodyFromResponse,
+  getHeaderValue,
+  uppercaseDomain,
+} from '../utils';
 
 const LARGE_PAYLOAD_SIZE_MB = 10;
 const LARGE_PAYLOAD_SIZE_BYTES = LARGE_PAYLOAD_SIZE_MB * 1024 * 1024;
@@ -14,6 +27,7 @@ const CORS_TEST_NAME = 'CORS Policy Check';
 const CORS_TEST_EXPECTED = 'Public or Private API';
 const CRUD_TEST_NAME = 'CRUD';
 const CRUD_TEST_EXPECTED = 'Discover via OPTIONS';
+const DOMAIN_TEST_NAME = 'Domain Test';
 const LARGE_PAYLOAD_TEST_NAME = `Large Payload → Request Size Limit (${LARGE_PAYLOAD_SIZE_MB} MB)`;
 const LARGE_PAYLOAD_TEST_EXPECTED = `${RESPONSE_STATUS.PAYLOAD_TOO_LARGE} ${getResponseStatusTitle(RESPONSE_STATUS.PAYLOAD_TOO_LARGE)}`;
 const MISSING_ACTUAL = '-';
@@ -74,6 +88,7 @@ export class SecurityTests extends BaseTests {
       await this.testCors(),
       await this.testNotFound(),
       await this.testReflectedPayloadSafety(),
+      await this.testDomain(),
       ...getManualTests(),
     );
 
@@ -417,6 +432,32 @@ export class SecurityTests extends BaseTests {
         String(error),
         modifiedRequest,
       );
+    }
+  }
+
+  @Test(
+    'Tests if the server behaves according to RFC 3986 — specifically, that the domain part is treated as case-insensitive',
+  )
+  private async testDomain(): Promise<TestResult> {
+    this.onTestStart?.();
+
+    const request = createTestHttpRequest(this.options);
+    const modifiedRequest: HttpRequest = { ...request, url: uppercaseDomain(request.url) };
+    console.log(modifiedRequest);
+
+    try {
+      const response = await window.electronAPI.sendHttp(modifiedRequest);
+      const { actual, status } = determineTestStatus(response, (response, statusCode) => {
+        const testStatus = { actual: response.status, status: TestStatus.Fail };
+        if (statusCode >= RESPONSE_STATUS.OK && statusCode < RESPONSE_STATUS.REDIRECT)
+          testStatus.status = TestStatus.Pass;
+
+        return testStatus;
+      });
+
+      return createTestResult(DOMAIN_TEST_NAME, SUCCESS_RESPONSE_EXPECTED, actual, status, modifiedRequest, response);
+    } catch (error) {
+      return createErrorTestResult(DOMAIN_TEST_NAME, SUCCESS_RESPONSE_EXPECTED, String(error), modifiedRequest);
     }
   }
 

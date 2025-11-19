@@ -1,4 +1,11 @@
-import { BaseTests, createErrorTestResult, createTestResult, determineTestStatus } from '.';
+import {
+  BaseTests,
+  CLIENT_ERROR_RESPONSE_EXPECTED,
+  createErrorTestResult,
+  createTestResult,
+  determineTestStatus,
+  SUCCESS_RESPONSE_EXPECTED,
+} from '.';
 import { datasets } from '../constants/datasets';
 import { getResponseStatusTitle, RESPONSE_STATUS } from '../constants/responseStatus';
 import { Test } from '../decorators';
@@ -16,8 +23,6 @@ import {
 } from '../utils';
 
 const VALUE_NORMALIZATION_TEST_EXPECTED = `${RESPONSE_STATUS.BAD_REQUEST} ${getResponseStatusTitle(RESPONSE_STATUS.BAD_REQUEST)}/${RESPONSE_STATUS.UNPROCESSABLE_ENTITY} ${getResponseStatusTitle(RESPONSE_STATUS.UNPROCESSABLE_ENTITY)} or Trimmed/Normalized Value`;
-const SUCCESS_RESPONSE_EXPECTED = '2xx';
-const CLIENT_ERROR_RESPONSE_EXPECTED = '4xx';
 const ORIGINAL_REQUEST_TEST_FIELD_NAME = '[original request]';
 
 export class DataDrivenTests extends BaseTests {
