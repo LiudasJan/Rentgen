@@ -31,4 +31,8 @@
   body {
     @apply m-0 font-segoe-ui bg-body text-text;
   }
+
+  .node-ellipsis {
+    @apply text-sm!;
+  }
 }

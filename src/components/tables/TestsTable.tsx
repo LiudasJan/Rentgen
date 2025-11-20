@@ -1,6 +1,7 @@
+import ReactJson from '@microlink/react-json-view';
 import cn from 'classnames';
 import DataTable, { ExpanderComponentProps, TableColumn, TableProps } from 'react-data-table-component';
-import { TestResult, TestStatus } from '../../types';
+import { HttpRequest, HttpResponse, TestResult, TestStatus } from '../../types';
 import {
   decodeProtobufResponse,
   extractBodyFromResponse,
@@ -75,7 +76,8 @@ export function ExpandedTestComponent({
       : null;
   const modifiedResponse = response ? { ...response } : null;
 
-  if (modifiedResponse) modifiedResponse.body = extractBodyFromResponse(modifiedResponse) as any;
+  if (modifiedResponse && modifiedResponse.body)
+    modifiedResponse.body = extractBodyFromResponse(modifiedResponse) as any;
 
   return (
     <div className="p-4 bg-table-data">
@@ -85,17 +87,9 @@ export function ExpandedTestComponent({
         </CopyButton>
       )}
       <div className="grid grid-cols-2 gap-4 items-stretch">
-        <div className="flex flex-col gap-2.5">
-          <h4 className="m-0">Request</h4>
-          <pre className="max-h-80 flex-auto m-0 p-2.5 bg-white border border-border rounded whitespace-pre-wrap break-all overflow-y-auto">
-            {JSON.stringify(request, null, 2)}
-          </pre>
-        </div>
-        <div className="flex flex-col gap-2.5">
-          <h4 className="m-0">Response</h4>
-          <pre className="max-h-80 flex-auto m-0 p-2.5 bg-white border border-border rounded whitespace-pre-wrap break-all overflow-y-auto">
-            {typeof modifiedResponse === 'string' ? modifiedResponse : JSON.stringify(modifiedResponse, null, 2)}
-          </pre>
+        <div className="relative flex flex-col gap-2.5">{renderSection('Request', request)}</div>
+        <div className="relative flex flex-col gap-2.5">
+          {renderSection('Response', modifiedResponse)}
           {decoded && (
             <>
               <h5 className="m-0">Decoded Protobuf</h5>
@@ -108,6 +102,35 @@ export function ExpandedTestComponent({
       </div>
     </div>
   );
+
+  function renderSection(title: string, content: HttpRequest | HttpResponse) {
+    return (
+      <>
+        <h4 className="m-0">{title}</h4>
+        {content ? (
+          <>
+            <CopyButton className="absolute top-0 right-0 mb-4" textToCopy={JSON.stringify(content, null, 2)}>
+              Copy
+            </CopyButton>
+            <div className="max-h-80 flex-auto m-0 p-2.5 bg-white border border-border rounded overflow-y-auto">
+              <ReactJson
+                displayArrayKey={false}
+                displayDataTypes={false}
+                displayObjectSize={false}
+                enableClipboard={false}
+                indentWidth={2}
+                name={false}
+                src={content}
+                theme="rjv-default"
+              />
+            </div>
+          </>
+        ) : (
+          <pre className="flex-auto m-0 p-2.5 pl-0 text-[#002b36]">{JSON.stringify(content, null, 2)}</pre>
+        )}
+      </>
+    );
+  }
 }
 
 export function getTestsTableColumns(visibleColumns: string[] = []): TableColumn<TestResult>[] {

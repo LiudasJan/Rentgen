@@ -1,10 +1,10 @@
 import { FieldDetector, FieldType } from '../types';
 
-const fieldDetectors: ReadonlyArray<FieldDetector> = [
+const FIELD_DETECTORS: ReadonlyArray<FieldDetector> = [
   { type: 'email', regex: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ },
   { type: 'url', regex: /^https?:\/\/[^\s$.?#].[^\s]*$/i },
   { type: 'ftp_url', regex: /^ftp:\/\/[^\s$.?#].[^\s]*$/i },
-  { type: 'phone', regex: /^\+?\d{7,20}$/ },
+  { type: 'phone', regex: /^\+\d{7,20}$/ },
   { type: 'number', regex: /^-?\d+(\.\d+)?$/ },
   { type: 'boolean', regex: /^(true|false)$/i },
   { type: 'currency', regex: /^[A-Z]{3}$/ },
@@ -16,17 +16,16 @@ export function detectFieldType(value: unknown, strict = false): FieldType {
   if (typeof value === 'boolean') return 'boolean';
   if (typeof value === 'number') return 'number';
   if (typeof value === 'string' && value.length > 0) {
-    if (
-      strict &&
-      !isNaN(Number(value)) &&
-      !fieldDetectors.find((detector) => detector.type === 'phone')?.regex.test(value)
-    )
-      return 'string';
+    if (strict && !isNaN(Number(value)) && !isPhoneNumber(value)) return 'string';
 
-    for (const detector of fieldDetectors) if (detector.regex.test(value)) return detector.type;
+    for (const detector of FIELD_DETECTORS) if (detector.regex.test(value)) return detector.type;
   }
 
   return 'string';
+}
+
+export function isPhoneNumber(value: string): boolean {
+  return FIELD_DETECTORS.find((detector) => detector.type === 'phone')?.regex.test(value);
 }
 
 export function extractFieldsFromJson(obj: unknown, prefix = ''): Record<string, string> {

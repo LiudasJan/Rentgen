@@ -1,3 +1,9 @@
+import { isPhoneNumber } from './validation';
+
+export function isObject(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
 export function setDeepObjectProperty(targetObject: any, propertyPath: string, newValue: any): void {
   const pathParts = propertyPath.replace(/\[(\d+)\]/g, '.$1').split('.');
   let currentObject = targetObject;
@@ -10,39 +16,31 @@ export function setDeepObjectProperty(targetObject: any, propertyPath: string, n
   currentObject[pathParts[pathParts.length - 1]] = newValue;
 }
 
+export function stringifyValue(value: any): string {
+  if (
+    (typeof value === 'string' &&
+      (value === 'false' || value === 'true' || (!isNaN(Number(value)) && !isPhoneNumber(String(value))))) ||
+    isObject(value) ||
+    Array.isArray(value)
+  )
+    return JSON.stringify(value);
+
+  return String(value);
+}
+
 export function truncateValue(value: any, maxLength = 100): string {
-  // Handle null and undefined cases explicitly
   if (value === null) return 'null';
   if (value === undefined) return 'undefined';
 
-  let formattedString: string;
-
-  switch (typeof value) {
-    case 'string':
-      formattedString = `"${value}"`;
-      break;
-    case 'number':
-    case 'boolean':
-      formattedString = String(value);
-      break;
-    case 'object':
-      try {
-        formattedString = JSON.stringify(value);
-      } catch {
-        formattedString = '[object]';
-      }
-      break;
-    default:
-      formattedString = String(value);
-  }
-
-  if (formattedString.length > maxLength) {
+  const stringValue = typeof value === 'string' ? JSON.stringify(value) : stringifyValue(value);
+  if (stringValue.length > maxLength) {
     const truncationSuffix = '...';
     const availableLength = maxLength - truncationSuffix.length;
-    return formattedString.slice(0, Math.max(0, availableLength)) + truncationSuffix;
+
+    return stringValue.slice(0, Math.max(0, availableLength)) + truncationSuffix;
   }
 
-  return formattedString;
+  return stringValue;
 }
 
 export function tryParseJsonObject(value: any): any {
@@ -57,8 +55,4 @@ export function tryParseJsonObject(value: any): any {
   } catch {
     return value;
   }
-}
-
-export function isObject(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }

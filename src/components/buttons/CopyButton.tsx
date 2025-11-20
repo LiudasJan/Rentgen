@@ -19,7 +19,7 @@ export function CopyButton({
 
   return (
     <Button
-      className={cn('min-w-auto! py-0.5! px-2! rounded-sm', className)}
+      className={cn('min-w-auto! py-0.5! px-2!', className)}
       buttonType={buttonType}
       {...otherProps}
       onClick={copyToClipboard}

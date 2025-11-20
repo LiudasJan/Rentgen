@@ -1,7 +1,9 @@
+import ReactJson from '@microlink/react-json-view';
 import { Method } from 'axios';
 import cn from 'classnames';
 import { useEffect, useState } from 'react';
 import Button, { ButtonType } from './components/buttons/Button';
+import { CopyButton } from './components/buttons/CopyButton';
 import Input from './components/inputs/Input';
 import Select, { SelectOption } from './components/inputs/Select';
 import Textarea from './components/inputs/Textarea';
@@ -20,6 +22,7 @@ import {
   createHttpRequest,
   detectFieldType,
   extractBodyFieldMappings,
+  extractBodyFromResponse,
   extractCurl,
   extractQueryParameters,
   extractStatusCode,
@@ -266,19 +269,51 @@ export default function App() {
           <div className="p-4 font-bold bg-body border-t border-border">{httpResponse.status}</div>
           {httpResponse.status !== 'Sending...' && (
             <div className="grid grid-cols-2 items-stretch max-h-[450px] p-4 border-t border-border overflow-y-auto">
-              <div className="flex-1 pr-4">
-                <h4 className="m-0">Headers</h4>
-                <pre className="m-0! mt-4! whitespace-pre-wrap break-all">
-                  {JSON.stringify(httpResponse.headers, null, 2)}
-                </pre>
+              <div className="relative flex-1 pr-4">
+                <h4 className="m-0 mb-4">Headers</h4>
+                <CopyButton
+                  className="absolute top-0 right-4"
+                  textToCopy={JSON.stringify(httpResponse.headers, null, 2)}
+                >
+                  Copy
+                </CopyButton>
+                <ReactJson
+                  displayArrayKey={false}
+                  displayDataTypes={false}
+                  displayObjectSize={false}
+                  enableClipboard={false}
+                  indentWidth={2}
+                  name={false}
+                  src={httpResponse.headers}
+                  theme="rjv-default"
+                />
               </div>
-              <div className="flex-1 pl-4 border-l border-border">
-                <h4 className="m-0">Body</h4>
-                <pre className="m-0! mt-4! whitespace-pre-wrap break-all">
-                  {typeof httpResponse.body === 'string'
-                    ? httpResponse.body
-                    : JSON.stringify(httpResponse.body, null, 2)}
-                </pre>
+              <div className="relative flex-1 pl-4 border-l border-border">
+                <h4 className="m-0 mb-4">Body</h4>
+                {httpResponse.body && (
+                  <>
+                    <CopyButton
+                      className="absolute top-0 right-4"
+                      textToCopy={
+                        typeof httpResponse.body === 'string'
+                          ? httpResponse.body
+                          : JSON.stringify(httpResponse.body, null, 2)
+                      }
+                    >
+                      Copy
+                    </CopyButton>
+                    <ReactJson
+                      displayArrayKey={false}
+                      displayDataTypes={false}
+                      displayObjectSize={false}
+                      enableClipboard={false}
+                      indentWidth={2}
+                      name={false}
+                      src={extractBodyFromResponse(httpResponse)}
+                      theme="rjv-default"
+                    />
+                  </>
+                )}
               </div>
             </div>
           )}

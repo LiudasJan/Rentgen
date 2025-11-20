@@ -1,6 +1,6 @@
 import { Method } from 'axios';
 import { FieldType, HttpRequest, HttpResponse, TestOptions, TestResult } from '../types';
-import { isObject, setDeepObjectProperty, tryParseJsonObject } from './object';
+import { isObject, setDeepObjectProperty, stringifyValue, tryParseJsonObject } from './object';
 import { encodeMessage } from './proto';
 import { getRandomizedValueByFieldType } from './random';
 import { detectFieldType, extractFieldsFromJson } from './validation';
@@ -52,7 +52,8 @@ export function createTestHttpRequest(options: TestOptions): HttpRequest {
 
   if (formEntries.length > 0) {
     // Update the field being tested
-    if (mappingType === 'body' && fieldName && testData) updateFormEntry(formEntries, fieldName, testData.value);
+    if (mappingType === 'body' && fieldName && testData)
+      updateFormEntry(formEntries, fieldName, stringifyValue(testData.value));
 
     // Apply random values to random field types
     for (const [key, type] of Object.entries(bodyMappings)) {
@@ -83,7 +84,8 @@ export function createTestHttpRequest(options: TestOptions): HttpRequest {
   const modifiedUrl = new URL(url);
 
   // Update the field being tested
-  if (mappingType === 'query' && fieldName && testData) modifiedUrl.searchParams.set(fieldName, String(testData.value));
+  if (mappingType === 'query' && fieldName && testData)
+    modifiedUrl.searchParams.set(fieldName, stringifyValue(testData.value));
 
   // Apply random values to random query parameter types
   for (const [queryParameter, fieldType] of Object.entries(queryMappings)) {
