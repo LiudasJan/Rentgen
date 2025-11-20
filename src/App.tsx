@@ -293,7 +293,7 @@ export default function App() {
                 {httpResponse.body && (
                   <>
                     <CopyButton
-                      className="absolute top-0 right-4"
+                      className="absolute top-0 right-0"
                       textToCopy={
                         typeof httpResponse.body === 'string'
                           ? httpResponse.body

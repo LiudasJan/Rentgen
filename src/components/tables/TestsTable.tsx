@@ -126,7 +126,7 @@ export function ExpandedTestComponent({
             </div>
           </>
         ) : (
-          <pre className="flex-auto m-0 p-2.5 pl-0 text-[#002b36]">{JSON.stringify(content, null, 2)}</pre>
+          <pre className="flex-auto m-0 p-2.5 pl-0 text-[#0451a5]">{JSON.stringify(content, null, 2)}</pre>
         )}
       </>
     );

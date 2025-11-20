@@ -21,13 +21,15 @@ export default function Button({
   return (
     <button
       className={cn(
-        'min-w-[110px] m-0 py-2 px-3 text-xs font-bold rounded-sm transition duration-200',
+        'min-w-[110px] m-0 py-2 px-3 text-xs font-bold rounded-sm',
         {
           'bg-button-primary border border-button-primary text-white': buttonType === ButtonType.PRIMARY,
-          'hover:bg-button-primary/80 hover:border-button-primary/80': buttonType === ButtonType.PRIMARY && !disabled,
-          'bg-button-secondary border border-border': buttonType === ButtonType.SECONDARY,
-          'hover:bg-button-secondary/80 hover:border-border/80': buttonType === ButtonType.SECONDARY && !disabled,
-          'opacity-50 cursor-not-allowed': disabled,
+          'hover:bg-button-primary-hover hover:border-button-primary-hover':
+            buttonType === ButtonType.PRIMARY && !disabled,
+          'bg-button-secondary border border-button-secondary text-[#6b6b6b]': buttonType === ButtonType.SECONDARY,
+          'hover:bg-button-secondary-hover hover:border-button-secondary-hover hover:text-[#212121]':
+            buttonType === ButtonType.SECONDARY && !disabled,
+          'opacity-50 cursor-default': disabled,
           'cursor-pointer': !disabled,
         },
         className,
