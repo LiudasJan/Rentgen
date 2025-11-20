@@ -132,7 +132,7 @@ export default function App() {
         {mode === 'HTTP' && (
           <>
             <Button onClick={() => setOpenCurlModal(true)}>Import cURL</Button>
-            <Modal isOpen={openCurlModal} onClose={() => setOpenCurlModal(false)}>
+            <Modal isOpen={openCurlModal} onClose={closeCurlModal}>
               <div className="flex flex-col gap-4">
                 <h3 className="m-0">Import cURL</h3>
                 <Textarea
@@ -282,10 +282,8 @@ export default function App() {
                   displayDataTypes={false}
                   displayObjectSize={false}
                   enableClipboard={false}
-                  indentWidth={2}
                   name={false}
                   src={httpResponse.headers}
-                  theme="rjv-default"
                 />
               </div>
               <div className="relative flex-1 pl-4 border-l border-border">
@@ -307,10 +305,8 @@ export default function App() {
                       displayDataTypes={false}
                       displayObjectSize={false}
                       enableClipboard={false}
-                      indentWidth={2}
                       name={false}
                       src={extractBodyFromResponse(httpResponse)}
-                      theme="rjv-default"
                     />
                   </>
                 )}

@@ -118,10 +118,8 @@ export function ExpandedTestComponent({
                 displayDataTypes={false}
                 displayObjectSize={false}
                 enableClipboard={false}
-                indentWidth={2}
                 name={false}
                 src={content}
-                theme="rjv-default"
               />
             </div>
           </>
