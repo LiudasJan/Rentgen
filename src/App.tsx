@@ -136,6 +136,7 @@ export default function App() {
               <div className="flex flex-col gap-4">
                 <h3 className="m-0">Import cURL</h3>
                 <Textarea
+                  autoFocus={true}
                   className="min-h-40 font-monospace"
                   placeholder="Enter cURL or paste text"
                   value={curl}

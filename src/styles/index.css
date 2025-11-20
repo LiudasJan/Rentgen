@@ -33,38 +33,4 @@
   body {
     @apply m-0 font-segoe-ui bg-body text-text;
   }
-
-  .node-ellipsis {
-    @apply text-xs! text-black! -translate-y-0.5!;
-  }
-
-  .node-ellipsis + .brace-row {
-    @apply block!;
-  }
-
-  .object-key {
-    @apply text-[#a31515]!;
-  }
-
-  .object-key + span {
-    @apply ml-0! text-black!;
-  }
-
-  .string-value {
-    @apply text-[#0451a5]!;
-  }
-
-  .variable-row,
-  .object-key-val,
-  .variable-value {
-    @apply pr-0!;
-  }
-
-  .variable-value > :first-child {
-    @apply text-[#098658]! bg-transparent! text-[13px]! font-normal!;
-  }
-
-  .icon-container svg {
-    @apply text-black/40!;
-  }
 }
