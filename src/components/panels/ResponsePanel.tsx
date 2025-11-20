@@ -1,7 +1,7 @@
 import cn from 'classnames';
 import { HTMLAttributes } from 'react';
 
-interface Props extends HTMLAttributes<HTMLDivElement> {
+export interface Props extends HTMLAttributes<HTMLDivElement> {
   title: string;
 }
 

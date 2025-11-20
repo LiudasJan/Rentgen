@@ -1,6 +1,6 @@
-import { Method } from 'axios';
 import parseCurl from 'parse-curl';
-import { ParsedCurlResult } from '../types';
+import { HttpRequest, ParsedCurlResult } from '../types';
+import { convertUrlEncodedToFormEntries, isUrlEncodedContentType, isUrlEncodedContentTypeString } from './http';
 
 export function extractCurl(curl: string): ParsedCurlResult {
   const trimmedCurl = curl.replace(/\\\n/g, ' ').trim();
@@ -62,6 +62,12 @@ export function extractCurl(curl: string): ParsedCurlResult {
       const key = String(headerKey);
       const value = String(headerValue ?? '');
 
+      if (
+        !isUrlEncodedContentTypeString(trimmedCurl) &&
+        value.toLocaleLowerCase() === 'application/x-www-form-urlencoded'
+      )
+        continue;
+
       if (key.toLowerCase() === 'set-cookie') headers['Cookie'] = value;
       else headers[key] = value;
     }
@@ -90,7 +96,8 @@ export function extractCurl(curl: string): ParsedCurlResult {
   };
 }
 
-export function generateCurl(body: any, headers: any, method: Method | string, url: string): string {
+export function generateCurl(request: HttpRequest): string {
+  const { body, headers, method, url } = request;
   let curl = `curl -X ${method || 'GET'} '${url}'`;
 
   if (headers)
@@ -98,15 +105,18 @@ export function generateCurl(body: any, headers: any, method: Method | string, u
       curl += ` \\\n  -H '${headerName}: ${headerValue}'`;
 
   if (body && body !== 'null' && body !== '{}') {
-    let serializedBody: string;
+    if (isUrlEncodedContentType(headers)) {
+      const formEntries = convertUrlEncodedToFormEntries(body as string);
+      for (const [key, value] of formEntries)
+        curl += ` \\\n  --data-urlencode '${key.replace(/'/g, "'\\''")}=${value.replace(/'/g, "'\\''")}'`;
+    } else {
+      let serializedBody: string;
 
-    if (typeof body === 'string') serializedBody = body;
-    else serializedBody = JSON.stringify(body);
+      if (typeof body === 'string') serializedBody = body;
+      else serializedBody = JSON.stringify(body);
 
-    // Escape single quotes for shell safety
-    serializedBody = serializedBody.replace(/'/g, "'\\''");
-
-    curl += ` \\\n  --data '${serializedBody}'`;
+      curl += ` \\\n  --data '${serializedBody.replace(/'/g, "'\\''")}'`;
+    }
   }
 
   return curl;

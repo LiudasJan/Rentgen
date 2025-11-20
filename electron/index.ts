@@ -12,9 +12,7 @@ declare const MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY: string;
 let ws: WebSocket | null = null;
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
-if (require('electron-squirrel-startup')) {
-  app.quit();
-}
+if (require('electron-squirrel-startup')) app.quit();
 
 const createWindow = (): void => {
   // Create the browser window.
@@ -39,17 +37,13 @@ app.on('ready', createWindow);
 // for applications and their menu bar to stay active until the user quits
 // explicitly with Cmd + Q.
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
+  if (process.platform !== 'darwin') app.quit();
 });
 
 app.on('activate', () => {
   // On OS X it's common to re-create a window in the app when the
   // dock icon is clicked and there are no other windows open.
-  if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
-  }
+  if (BrowserWindow.getAllWindows().length === 0) createWindow();
 });
 
 // Handle HTTP requests
@@ -104,15 +98,15 @@ ipcMain.handle('http-request', async (_event, { url, method, headers, body }) =>
       headers: response.headers,
       body: responseBody,
     };
-  } catch (err: any) {
-    if (err.code === 'EPIPE') {
+  } catch (error) {
+    if (error.code === 'EPIPE') {
       return {
         status: '413 Payload Too Large (EPIPE)',
         headers: {},
         body: '',
       };
     }
-    return { status: 'Error', headers: {}, body: String(err) };
+    return { status: 'Error', headers: {}, body: String(error) };
   }
 });
 

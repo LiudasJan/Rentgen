@@ -12,12 +12,19 @@ const fieldDetectors: ReadonlyArray<FieldDetector> = [
   { type: 'string', regex: /.+/ },
 ];
 
-export function detectFieldType(value: unknown): FieldType {
+export function detectFieldType(value: unknown, strict = false): FieldType {
   if (typeof value === 'boolean') return 'boolean';
   if (typeof value === 'number') return 'number';
-  if (typeof value === 'string' && !isNaN(Number(value))) return 'string';
-  if (typeof value === 'string' && value.length > 0)
+  if (typeof value === 'string' && value.length > 0) {
+    if (
+      strict &&
+      !isNaN(Number(value)) &&
+      !fieldDetectors.find((detector) => detector.type === 'phone')?.regex.test(value)
+    )
+      return 'string';
+
     for (const detector of fieldDetectors) if (detector.regex.test(value)) return detector.type;
+  }
 
   return 'string';
 }

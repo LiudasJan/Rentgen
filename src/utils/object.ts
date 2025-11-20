@@ -60,5 +60,5 @@ export function tryParseJsonObject(value: any): any {
 }
 
 export function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
