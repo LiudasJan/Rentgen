@@ -54,8 +54,12 @@
     @apply text-[#0451a5]!;
   }
 
+  .variable-value {
+    @apply pr-0!;
+  }
+
   .variable-value > :first-child {
-    @apply text-[#098658]!;
+    @apply text-[#098658]! bg-transparent! text-[13px]! font-normal!;
   }
 
   .icon-container svg {
