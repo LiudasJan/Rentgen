@@ -87,11 +87,11 @@ export function ExpandedTestComponent({
         </CopyButton>
       )}
       <div className="grid grid-cols-2 gap-4 items-stretch">
-        <HttpPanel className="relative flex flex-col gap-2.5" title="Request" source={request} />
-        <HttpPanel className="relative flex flex-col gap-2.5" title="Response" source={modifiedResponse}>
+        <HttpPanel title="Request" source={request} />
+        <HttpPanel title="Response" source={modifiedResponse}>
           {decoded && (
             <>
-              <h5 className="m-0">Decoded Protobuf</h5>
+              <h4 className="m-0">Decoded Protobuf</h4>
               <pre className="flex-auto m-0 p-2.5 bg-white border border-border rounded whitespace-pre-wrap break-all">
                 {decoded}
               </pre>

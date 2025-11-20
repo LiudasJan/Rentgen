@@ -268,29 +268,33 @@ export default function App() {
         <ResponsePanel title="Response">
           <div className="p-4 font-bold bg-body border-t border-border">{httpResponse.status}</div>
           {httpResponse.status !== 'Sending...' && (
-            <div className="grid grid-cols-2 items-stretch max-h-[450px] p-4 border-t border-border overflow-y-auto">
-              <div className="relative flex-1 pr-4">
+            <div className="grid grid-cols-2 items-stretch max-h-[450px] py-4 border-t border-border overflow-y-auto">
+              <div className="relative flex-1 px-4">
                 <h4 className="m-0 mb-4">Headers</h4>
-                <CopyButton
-                  className="absolute top-0 right-4"
-                  textToCopy={JSON.stringify(httpResponse.headers, null, 2)}
-                >
-                  Copy
-                </CopyButton>
+                {httpResponse.headers && (
+                  <CopyButton
+                    className="absolute top-0 right-4"
+                    textToCopy={JSON.stringify(httpResponse.headers, null, 2)}
+                  >
+                    Copy
+                  </CopyButton>
+                )}
                 <JsonViewer source={httpResponse.headers} />
               </div>
-              <div className="relative flex-1 pl-4 border-l border-border">
+              <div className="relative flex-1 px-4 border-l border-border">
                 <h4 className="m-0 mb-4">Body</h4>
-                <CopyButton
-                  className="absolute top-0 right-0"
-                  textToCopy={
-                    typeof httpResponse.body === 'string'
-                      ? httpResponse.body
-                      : JSON.stringify(httpResponse.body, null, 2)
-                  }
-                >
-                  Copy
-                </CopyButton>
+                {httpResponse.body && (
+                  <CopyButton
+                    className="absolute top-0 right-4"
+                    textToCopy={
+                      typeof httpResponse.body === 'string'
+                        ? httpResponse.body
+                        : JSON.stringify(httpResponse.body, null, 2)
+                    }
+                  >
+                    Copy
+                  </CopyButton>
+                )}
                 <JsonViewer source={extractBodyFromResponse(httpResponse)} />
               </div>
             </div>

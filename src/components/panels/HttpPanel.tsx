@@ -1,3 +1,4 @@
+import cn from 'classnames';
 import { HttpRequest, HttpResponse } from '../../types';
 import { CopyButton } from '../buttons/CopyButton';
 import { JsonViewer } from '../JsonViewer';
@@ -7,14 +8,21 @@ interface Props extends ResponsePanelProps {
   source: HttpRequest | HttpResponse;
 }
 
-export function HttpPanel({ children, source, title, ...otherProps }: Props) {
+export function HttpPanel({ className, children, source, title, ...otherProps }: Props) {
   return (
-    <div {...otherProps}>
+    <div className={cn('relative flex flex-col gap-2.5', className)} {...otherProps}>
       <h4 className="m-0">{title}</h4>
-      <CopyButton className="absolute top-0 right-0 mb-4" textToCopy={JSON.stringify(source, null, 2)}>
-        Copy
-      </CopyButton>
-      <div className="max-h-80 flex-auto m-0 p-2.5 bg-white border border-border rounded overflow-y-auto">
+      {source && (
+        <CopyButton className="absolute top-0 right-0" textToCopy={JSON.stringify(source, null, 2)}>
+          Copy
+        </CopyButton>
+      )}
+      <div
+        className={cn('max-h-80 flex-auto m-0 p-2.5', {
+          'bg-white border border-border rounded overflow-y-auto': source,
+          'pl-0': !source,
+        })}
+      >
         <JsonViewer source={source} />
       </div>
       {children}

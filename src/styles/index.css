@@ -54,6 +54,8 @@
     @apply text-[#0451a5]!;
   }
 
+  .variable-row,
+  .object-key-val,
   .variable-value {
     @apply pr-0!;
   }
