@@ -1,4 +1,3 @@
-import ReactJson from '@microlink/react-json-view';
 import { Method } from 'axios';
 import cn from 'classnames';
 import { useEffect, useState } from 'react';
@@ -8,6 +7,7 @@ import Input from './components/inputs/Input';
 import Select, { SelectOption } from './components/inputs/Select';
 import Textarea from './components/inputs/Textarea';
 import TextareaAutosize from './components/inputs/TextareaAutosize';
+import { JsonViewer } from './components/JsonViewer';
 import TestRunningLoader from './components/loaders/TestRunningLoader';
 import { LoadTestControls } from './components/LoadTestControls';
 import Modal from './components/modals/Modal';
@@ -277,39 +277,21 @@ export default function App() {
                 >
                   Copy
                 </CopyButton>
-                <ReactJson
-                  displayArrayKey={false}
-                  displayDataTypes={false}
-                  displayObjectSize={false}
-                  enableClipboard={false}
-                  name={false}
-                  src={httpResponse.headers}
-                />
+                <JsonViewer source={httpResponse.headers} />
               </div>
               <div className="relative flex-1 pl-4 border-l border-border">
                 <h4 className="m-0 mb-4">Body</h4>
-                {httpResponse.body && (
-                  <>
-                    <CopyButton
-                      className="absolute top-0 right-0"
-                      textToCopy={
-                        typeof httpResponse.body === 'string'
-                          ? httpResponse.body
-                          : JSON.stringify(httpResponse.body, null, 2)
-                      }
-                    >
-                      Copy
-                    </CopyButton>
-                    <ReactJson
-                      displayArrayKey={false}
-                      displayDataTypes={false}
-                      displayObjectSize={false}
-                      enableClipboard={false}
-                      name={false}
-                      src={extractBodyFromResponse(httpResponse)}
-                    />
-                  </>
-                )}
+                <CopyButton
+                  className="absolute top-0 right-0"
+                  textToCopy={
+                    typeof httpResponse.body === 'string'
+                      ? httpResponse.body
+                      : JSON.stringify(httpResponse.body, null, 2)
+                  }
+                >
+                  Copy
+                </CopyButton>
+                <JsonViewer source={extractBodyFromResponse(httpResponse)} />
               </div>
             </div>
           )}

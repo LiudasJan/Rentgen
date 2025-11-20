@@ -1,7 +1,6 @@
-import ReactJson from '@microlink/react-json-view';
 import cn from 'classnames';
 import DataTable, { ExpanderComponentProps, TableColumn, TableProps } from 'react-data-table-component';
-import { HttpRequest, HttpResponse, TestResult, TestStatus } from '../../types';
+import { TestResult, TestStatus } from '../../types';
 import {
   decodeProtobufResponse,
   extractBodyFromResponse,
@@ -10,6 +9,7 @@ import {
   truncateValue,
 } from '../../utils';
 import { CopyButton } from '../buttons/CopyButton';
+import { HttpPanel } from '../panels/HttpPanel';
 
 export default function TestsTable({ columns, data, className, ...otherProps }: TableProps<TestResult>) {
   return (
@@ -87,9 +87,8 @@ export function ExpandedTestComponent({
         </CopyButton>
       )}
       <div className="grid grid-cols-2 gap-4 items-stretch">
-        <div className="relative flex flex-col gap-2.5">{renderSection('Request', request)}</div>
-        <div className="relative flex flex-col gap-2.5">
-          {renderSection('Response', modifiedResponse)}
+        <HttpPanel className="relative flex flex-col gap-2.5" title="Request" source={request} />
+        <HttpPanel className="relative flex flex-col gap-2.5" title="Response" source={modifiedResponse}>
           {decoded && (
             <>
               <h5 className="m-0">Decoded Protobuf</h5>
@@ -98,37 +97,10 @@ export function ExpandedTestComponent({
               </pre>
             </>
           )}
-        </div>
+        </HttpPanel>
       </div>
     </div>
   );
-
-  function renderSection(title: string, content: HttpRequest | HttpResponse) {
-    return (
-      <>
-        <h4 className="m-0">{title}</h4>
-        {content ? (
-          <>
-            <CopyButton className="absolute top-0 right-0 mb-4" textToCopy={JSON.stringify(content, null, 2)}>
-              Copy
-            </CopyButton>
-            <div className="max-h-80 flex-auto m-0 p-2.5 bg-white border border-border rounded overflow-y-auto">
-              <ReactJson
-                displayArrayKey={false}
-                displayDataTypes={false}
-                displayObjectSize={false}
-                enableClipboard={false}
-                name={false}
-                src={content}
-              />
-            </div>
-          </>
-        ) : (
-          <pre className="flex-auto m-0 p-2.5 pl-0 text-[#0451a5]">{JSON.stringify(content, null, 2)}</pre>
-        )}
-      </>
-    );
-  }
 }
 
 export function getTestsTableColumns(visibleColumns: string[] = []): TableColumn<TestResult>[] {

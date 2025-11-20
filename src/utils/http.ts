@@ -140,12 +140,12 @@ export function extractBodyFieldMappings(body: unknown, headers: Record<string, 
   return mappings;
 }
 
-export function extractBodyFromResponse(response: HttpResponse): Record<string, unknown> {
+export function extractBodyFromResponse(response: HttpResponse): Record<string, unknown> | string {
   try {
     if (typeof response?.body === 'string') return JSON.parse(response.body);
     if (response?.body && typeof response.body === 'object') return response.body;
   } catch {
-    return {};
+    return response.body;
   }
 }
 
