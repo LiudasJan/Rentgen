@@ -487,6 +487,8 @@ export default function App() {
               expandableRowsComponentProps={{ headers: parseHeaders(headers), protoFile, messageType }}
               expandOnRowClicked
               data={dataDrivenTests}
+              fixedHeader={true}
+              fixedHeaderScrollHeight="1000px"
               progressComponent={<TestRunningLoader text="Running Data-Driven Tests..." />}
               progressPending={isDataDrivenRunning}
             />
