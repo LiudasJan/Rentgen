@@ -4,6 +4,7 @@ import { ButtonHTMLAttributes } from 'react';
 export enum ButtonType {
   PRIMARY = 'primary',
   SECONDARY = 'secondary',
+  DANGER = 'danger',
 }
 
 export interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -29,6 +30,9 @@ export default function Button({
           'bg-button-secondary border border-button-secondary text-[#6b6b6b]': buttonType === ButtonType.SECONDARY,
           'hover:bg-button-secondary-hover hover:border-button-secondary-hover hover:text-[#212121]':
             buttonType === ButtonType.SECONDARY && !disabled,
+          'bg-button-danger border border-button-danger text-white': buttonType === ButtonType.DANGER,
+          'hover:bg-button-danger-hover hover:border-button-danger-hover':
+            buttonType === ButtonType.DANGER && !disabled,
           'opacity-50 cursor-default': disabled,
           'cursor-pointer': !disabled,
         },

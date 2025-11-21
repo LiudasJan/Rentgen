@@ -166,9 +166,10 @@ export default function App() {
           <Modal className="[&>div]:w-[400px]!" isOpen={openReloadModal} onClose={closeReloadModal}>
             <div className="flex flex-col gap-4">
               <h4 className="m-0">Reload</h4>
-              <p className="m-0 text-sm">Are you sure you want to reload? All current data will be lost.</p>
+              <p className="m-0 text-sm">All current data will be lost.</p>
               <div className="flex items-center justify-end gap-4">
                 <Button
+                  buttonType={ButtonType.DANGER}
                   onClick={() => {
                     setMode('HTTP');
                     reset();
