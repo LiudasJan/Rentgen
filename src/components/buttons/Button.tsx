@@ -33,7 +33,7 @@ export default function Button({
           'bg-button-danger border border-button-danger text-white': buttonType === ButtonType.DANGER,
           'hover:bg-button-danger-hover hover:border-button-danger-hover':
             buttonType === ButtonType.DANGER && !disabled,
-          'opacity-50 cursor-default': disabled,
+          'opacity-80 cursor-default': disabled,
           'cursor-pointer': !disabled,
         },
         className,
