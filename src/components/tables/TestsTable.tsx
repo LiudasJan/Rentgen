@@ -54,6 +54,8 @@ export default function TestsTable({ columns, data, className, ...otherProps }: 
         },
       }}
       data={data}
+      fixedHeader={true}
+      fixedHeaderScrollHeight="500px"
       {...otherProps}
     />
   );
