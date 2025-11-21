@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import Button from './buttons/Button';
-import Input from './inputs/Input';
-import TestRunningLoader from './loaders/TestRunningLoader';
+import Input from '../inputs/Input';
+import { Controls } from './Controls';
 
 interface Props {
   isRunning: boolean;
@@ -13,7 +12,7 @@ export function LoadTestControls({ isRunning, executeTest }: Props) {
   const [requestCount, setRequestCount] = useState(100);
 
   return (
-    <div className="flex items-end gap-1.5">
+    <Controls isRunning={isRunning} executeTest={() => executeTest(threadCount, requestCount)}>
       <div>
         <label className="block mb-0.5 font-bold text-[10px]">Threads</label>
         <Input
@@ -39,14 +38,6 @@ export function LoadTestControls({ isRunning, executeTest }: Props) {
           onChange={(e) => setRequestCount(Math.min(10000, Math.max(1, Number(e.target.value))))}
         />
       </div>
-
-      <Button
-        className="min-w-auto! py-0.5! px-2!"
-        disabled={isRunning}
-        onClick={() => executeTest(threadCount, requestCount)}
-      >
-        {isRunning ? <TestRunningLoader className="p-0!" /> : 'Run'}
-      </Button>
-    </div>
+    </Controls>
   );
 }

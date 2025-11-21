@@ -3,10 +3,12 @@ import { datasets } from '../constants/datasets';
 import { getTestCount } from '../decorators';
 import {
   DataDrivenTests,
+  LARGE_PAYLOAD_TEST_NAME,
   LOAD_TEST_NAME,
-  runLoadTest,
   PerformanceInsights,
   runDataDrivenTests,
+  runLargePayloadTest,
+  runLoadTest,
   SecurityTests,
 } from '../tests';
 import { FieldType, TestOptions, TestResult } from '../types';
@@ -19,6 +21,8 @@ const useTests = (options: TestOptions) => {
 
   const [dataDrivenTests, setDataDrivenTests] = useState<TestResult[]>([]);
   const [isDataDrivenRunning, setIsDataDrivenRunning] = useState<boolean>(false);
+
+  const [isLargePayloadTestRunning, setIsLargePayloadTestRunning] = useState<boolean>(false);
 
   const [isLoadTestRunning, setIsLoadTestRunning] = useState<boolean>(false);
   const [loadProgress, setLoadProgress] = useState<number>(0);
@@ -58,6 +62,21 @@ const useTests = (options: TestOptions) => {
     setIsDataDrivenRunning(false);
 
     return dataDrivenTestResults;
+  }
+
+  async function executeLargePayloadTest(size: number) {
+    setIsLargePayloadTestRunning(true);
+
+    const largePayloadTest = await runLargePayloadTest(options, size);
+
+    setSecurityTests((prevSecurityTests) => {
+      return prevSecurityTests.map((prevSecurityTest) => {
+        if (prevSecurityTest.name === LARGE_PAYLOAD_TEST_NAME) return largePayloadTest;
+
+        return prevSecurityTest;
+      });
+    });
+    setIsLargePayloadTestRunning(false);
   }
 
   async function executeLoadTest(threadCount: number, requestCount: number) {
@@ -179,6 +198,7 @@ const useTests = (options: TestOptions) => {
     currentTest,
     dataDrivenTests,
     isDataDrivenRunning,
+    isLargePayloadTestRunning,
     isLoadTestRunning,
     isPerformanceRunning,
     isSecurityRunning,
@@ -186,8 +206,9 @@ const useTests = (options: TestOptions) => {
     securityTests,
     testsCount,
     executeAllTests,
-    executeLoadTest,
     executeDataDrivenTests,
+    executeLargePayloadTest,
+    executeLoadTest,
     executeSecurityTests,
     executePerformanceTests,
     setPerformanceTests,

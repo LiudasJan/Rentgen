@@ -26,9 +26,6 @@
   --color-method-head: #279250;
   --color-method-options: #b0307a;
   --color-text: #333333;
-
-  /* Animation */
-  --animate-spin: spin 3s linear infinite;
 }
 
 @layer base {

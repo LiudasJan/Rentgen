@@ -1,7 +1,7 @@
 import { Method } from 'axios';
 import { getResponseStatusTitle, RESPONSE_STATUS } from '../constants/responseStatus';
 import { Test } from '../decorators';
-import { HttpRequest, HttpResponse, TestResult, TestStatus } from '../types';
+import { HttpRequest, HttpResponse, TestOptions, TestResult, TestStatus } from '../types';
 import {
   createHttpRequest,
   createTestHttpRequest,
@@ -19,8 +19,7 @@ import {
   SUCCESS_RESPONSE_EXPECTED,
 } from './BaseTests';
 
-const LARGE_PAYLOAD_SIZE_MB = 10;
-const LARGE_PAYLOAD_SIZE_BYTES = LARGE_PAYLOAD_SIZE_MB * 1024 * 1024;
+export const LARGE_PAYLOAD_TEST_NAME = 'Large Payload Test';
 
 const AUTHORIZATION_TEST_NAME = 'Missing Authorization Cookie/Token';
 const AUTHORIZATION_TEST_EXPECTED = `${RESPONSE_STATUS.UNAUTHORIZED} ${getResponseStatusTitle(RESPONSE_STATUS.UNAUTHORIZED)}`;
@@ -28,7 +27,6 @@ const CORS_TEST_NAME = 'CORS Policy Check';
 const CORS_TEST_EXPECTED = 'Public or Private API';
 const CRUD_TEST_NAME = 'CRUD';
 const CRUD_TEST_EXPECTED = 'Discover via OPTIONS';
-const LARGE_PAYLOAD_TEST_NAME = `Large Payload → Request Size Limit (${LARGE_PAYLOAD_SIZE_MB} MB)`;
 const LARGE_PAYLOAD_TEST_EXPECTED = `${RESPONSE_STATUS.PAYLOAD_TOO_LARGE} ${getResponseStatusTitle(RESPONSE_STATUS.PAYLOAD_TOO_LARGE)}`;
 const MISSING_ACTUAL = '-';
 const NOT_FOUND_TEST_NAME = `${RESPONSE_STATUS.NOT_FOUND} ${getResponseStatusTitle(RESPONSE_STATUS.NOT_FOUND)}`;
@@ -88,7 +86,6 @@ export class SecurityTests extends BaseTests {
     // Run tests that don't depend on initial response
     securityTestResults.push(
       await this.testUnsupportedMethod(),
-      await this.testLargePayload(),
       await this.testMissingAuthorization(),
       await this.testCors(),
       await this.testNotFound(),
@@ -258,47 +255,6 @@ export class SecurityTests extends BaseTests {
         UNSUPPORTED_METHOD_TEST_EXPECTED,
         String(error),
         request,
-      );
-    }
-  }
-
-  @Test('Tests request size limit by sending a large payload')
-  private async testLargePayload(): Promise<TestResult> {
-    this.onTestStart?.();
-
-    const request = createTestHttpRequest({ ...this.options, method: 'POST' });
-    const modifiedRequest: HttpRequest = {
-      ...request,
-      headers: { ...request.headers, 'Content-Type': 'application/json' },
-      body: 'A'.repeat(LARGE_PAYLOAD_SIZE_BYTES),
-    };
-
-    try {
-      const response = await window.electronAPI.sendHttp(modifiedRequest);
-      const { actual, status } = determineTestStatus(response, (response, statusCode) => {
-        const testStatus = { actual: response.status, status: TestStatus.Fail };
-        if (statusCode === RESPONSE_STATUS.PAYLOAD_TOO_LARGE) testStatus.status = TestStatus.Pass;
-
-        return testStatus;
-      });
-
-      return createTestResult(
-        LARGE_PAYLOAD_TEST_NAME,
-        LARGE_PAYLOAD_TEST_EXPECTED,
-        actual,
-        status,
-        {
-          ...modifiedRequest,
-          body: `[${LARGE_PAYLOAD_SIZE_MB} MB string]`,
-        },
-        response,
-      );
-    } catch (error) {
-      return createErrorTestResult(
-        LARGE_PAYLOAD_TEST_NAME,
-        LARGE_PAYLOAD_TEST_EXPECTED,
-        String(error),
-        modifiedRequest,
       );
     }
   }
@@ -567,6 +523,39 @@ export class SecurityTests extends BaseTests {
   }
 }
 
+export async function runLargePayloadTest(options: TestOptions, size: number): Promise<TestResult> {
+  const request = createTestHttpRequest({ ...options, method: 'POST' });
+  const modifiedRequest: HttpRequest = {
+    ...request,
+    headers: { ...request.headers, 'Content-Type': 'application/json' },
+    body: 'A'.repeat(size * 1024 * 1024),
+  };
+
+  try {
+    const response = await window.electronAPI.sendHttp(modifiedRequest);
+    const { actual, status } = determineTestStatus(response, (response, statusCode) => {
+      const testStatus = { actual: response.status, status: TestStatus.Fail };
+      if (statusCode === RESPONSE_STATUS.PAYLOAD_TOO_LARGE) testStatus.status = TestStatus.Pass;
+
+      return testStatus;
+    });
+
+    return createTestResult(
+      LARGE_PAYLOAD_TEST_NAME,
+      LARGE_PAYLOAD_TEST_EXPECTED,
+      actual,
+      status,
+      {
+        ...modifiedRequest,
+        body: `[${size} MB string]`,
+      },
+      response,
+    );
+  } catch (error) {
+    return createErrorTestResult(LARGE_PAYLOAD_TEST_NAME, LARGE_PAYLOAD_TEST_EXPECTED, String(error), modifiedRequest);
+  }
+}
+
 function createNotFoundUrl(url: string): string {
   try {
     const parsedUrl = new URL(url);
@@ -629,6 +618,7 @@ function validateCacheControl(
 
 function getManualTests(): TestResult[] {
   return [
+    createTestResult(LARGE_PAYLOAD_TEST_NAME, LARGE_PAYLOAD_TEST_EXPECTED, '', TestStatus.Manual),
     createTestResult(
       'Invalid Authorization Cookie/Token',
       AUTHORIZATION_TEST_EXPECTED,
