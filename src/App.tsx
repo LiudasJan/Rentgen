@@ -143,7 +143,7 @@ export default function App() {
                   value={curl}
                   onChange={(e) => setCurl(e.target.value)}
                 />
-                {curlError && <div className="text-xs text-red-600">{curlError}</div>}
+                {curlError && <p className="m-0 text-xs text-red-600">{curlError}</p>}
                 <div className="flex items-center justify-end gap-4">
                   <Button onClick={importCurl}>Import</Button>
                   <Button buttonType={ButtonType.SECONDARY} onClick={closeCurlModal}>
@@ -166,7 +166,7 @@ export default function App() {
           <Modal className="[&>div]:w-[400px]!" isOpen={openReloadModal} onClose={closeReloadModal}>
             <div className="flex flex-col gap-4">
               <h4 className="m-0">Reload</h4>
-              <p className="m-0 text-sm">All current data will be lost.</p>
+              <p className="m-0 text-sm">All current data will be lost</p>
               <div className="flex items-center justify-end gap-4">
                 <Button
                   buttonType={ButtonType.DANGER}
@@ -540,7 +540,7 @@ export default function App() {
       closeCurlModal();
     } catch (error) {
       console.error('cURL import failed', error);
-      setCurlError('The cURL command you provided appears to be invalid. Please check it and try again.');
+      setCurlError('The cURL command you provided appears to be invalid. Please check it and try again');
     }
   }
 
