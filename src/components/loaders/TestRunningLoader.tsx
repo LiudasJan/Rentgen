@@ -1,5 +1,6 @@
 import cn from 'classnames';
 import { HTMLAttributes } from 'react';
+import Loader from './Loader';
 
 interface Props extends HTMLAttributes<HTMLDivElement> {
   text?: string;
@@ -8,7 +9,7 @@ interface Props extends HTMLAttributes<HTMLDivElement> {
 export default function TestRunningLoader({ className, text, ...otherProps }: Props) {
   return (
     <div className={cn('w-full p-4 flex items-center gap-2', className)} {...otherProps}>
-      <span className="h-6 w-6 border-4 border-border border-b-button-primary rounded-full box-border animate-spin"></span>
+      <Loader />
       {text}
     </div>
   );

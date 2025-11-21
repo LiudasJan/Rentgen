@@ -109,7 +109,7 @@ export default function App() {
         ]);
       }
 
-      if (event.type === 'error') setMessages((prev) => [{ direction: 'system', data: '❌ ' + event.error }, ...prev]);
+      if (event.type === 'error') setMessages((prev) => [{ direction: 'system', data: '🔴 ' + event.error }, ...prev]);
     };
 
     const ipcRenderer = window.electronAPI.onWssEvent(messagesListener);
@@ -278,12 +278,12 @@ export default function App() {
 
                   setProtoFile(file);
                   setMessages((prevMessages) => [
-                    { direction: 'system', data: '📂 Proto schema loaded' },
+                    { direction: 'system', data: '🟢 Proto schema loaded' },
                     ...prevMessages,
                   ]);
                 } catch (error) {
                   setMessages((prevMessages) => [
-                    { direction: 'system', data: '❌ Failed to parse proto: ' + error },
+                    { direction: 'system', data: '🔴 Failed to parse proto: ' + error },
                     ...prevMessages,
                   ]);
                 }
@@ -344,19 +344,27 @@ export default function App() {
             {messages.map((message, index) => (
               <div
                 key={index}
-                className={cn('pt-2 nth-[2n]:border-b last:border-none border-border', {
-                  'nth-[1n]:border-b': message.direction !== 'sent' && message.direction !== 'received',
-                })}
+                className={cn(
+                  'not-first:pt-3 not-last:pb-3 nth-[2n]:pt-0 nth-[2n]:border-b last:border-none border-border',
+                  {
+                    'not-first:pt-3! nth-[1n]:border-b':
+                      message.direction !== 'sent' && message.direction !== 'received',
+                  },
+                )}
               >
-                <span
-                  className={cn('font-bold', {
-                    'text-blue-500': message.direction === 'sent',
-                    'text-green-500': message.direction === 'received',
-                  })}
-                >
-                  {message.direction === 'sent' ? '➡' : message.direction === 'received' ? '⬅' : '⚠'}
-                </span>
-                <pre className="mt-0 ml-4 whitespace-pre-wrap break-all">{message.data}</pre>
+                {message.direction !== 'system' && (
+                  <span
+                    className={cn('font-bold', {
+                      'text-blue-500': message.direction === 'sent',
+                      'text-green-500': message.direction === 'received',
+                    })}
+                  >
+                    {message.direction === 'sent' ? '➡' : message.direction === 'received' ? '⬅' : ''}
+                  </span>
+                )}
+                <pre className={cn('my-0 whitespace-pre-wrap break-all', { 'ml-5': message.direction !== 'system' })}>
+                  {message.data}
+                </pre>
                 {message.decoded && (
                   <>
                     <div className="font-monospace font-bold text-sm">Decoded Protobuf:</div>
@@ -607,7 +615,7 @@ export default function App() {
   function connectWss() {
     if (!url.startsWith('ws')) {
       setMessages((prevMessages) => [
-        { direction: 'system', data: '❌ Please use ws:// or wss:// URL' },
+        { direction: 'system', data: '🔴 Please use ws:// or wss:// URL' },
         ...prevMessages,
       ]);
       return;
