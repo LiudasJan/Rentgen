@@ -89,21 +89,16 @@ export function ExpandedTestComponent({
       <div className="grid grid-cols-2 gap-4 items-stretch">
         <HttpPanel title="Request" source={request} />
         <HttpPanel title="Response" source={modifiedResponse}>
-          {decoded && (
-            <>
-              <h4 className="m-0">Decoded Protobuf</h4>
-              <pre className="flex-auto m-0 p-2.5 bg-white border border-border rounded whitespace-pre-wrap break-all">
-                {decoded}
-              </pre>
-            </>
-          )}
+          {decoded && <HttpPanel title="Decoded Protobuf" source={decoded} />}
         </HttpPanel>
       </div>
     </div>
   );
 }
 
-export function getTestsTableColumns(visibleColumns: string[] = []): TableColumn<TestResult>[] {
+type TestsTableColumn = 'Field' | 'Value' | 'Check' | 'Method' | 'Expected' | 'Actual' | 'Result';
+
+export function getTestsTableColumns(visibleColumns: TestsTableColumn[] = []): TableColumn<TestResult>[] {
   const columns: TableColumn<TestResult>[] = [
     {
       name: 'Field',
@@ -160,5 +155,5 @@ export function getTestsTableColumns(visibleColumns: string[] = []): TableColumn
     },
   ];
 
-  return columns.map((column) => ({ ...column, omit: !visibleColumns.includes(column.name.toString()) }));
+  return columns.map((column) => ({ ...column, omit: !visibleColumns.includes(column.name as TestsTableColumn) }));
 }
