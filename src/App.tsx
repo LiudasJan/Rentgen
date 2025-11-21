@@ -488,7 +488,7 @@ export default function App() {
               expandOnRowClicked
               data={dataDrivenTests}
               fixedHeader={true}
-              fixedHeaderScrollHeight="1000px"
+              fixedHeaderScrollHeight="720px"
               progressComponent={<TestRunningLoader text="Running Data-Driven Tests..." />}
               progressPending={isDataDrivenRunning}
             />
