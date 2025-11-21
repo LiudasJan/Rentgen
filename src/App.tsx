@@ -302,7 +302,16 @@ export default function App() {
 
       {mode === 'HTTP' && httpResponse && (
         <ResponsePanel title="Response">
-          <div className="p-4 font-bold bg-body border-t border-border">{httpResponse.status}</div>
+          <div
+            className={cn('p-4 font-bold bg-body border-t border-border', {
+              'text-green-500': httpResponse.status.startsWith('2'),
+              'text-blue-500': httpResponse.status.startsWith('3'),
+              'text-orange-500': httpResponse.status.startsWith('4'),
+              'text-red-500': httpResponse.status.startsWith('5'),
+            })}
+          >
+            {httpResponse.status}
+          </div>
           {httpResponse.status !== 'Sending...' && (
             <div className="grid grid-cols-2 items-stretch max-h-[450px] py-4 border-t border-border overflow-y-auto">
               <div className="relative flex-1 px-4">
@@ -338,37 +347,36 @@ export default function App() {
         </ResponsePanel>
       )}
 
-      {mode === 'WSS' && messages.length > 0 && (
+      {messages.length > 0 && (
         <ResponsePanel title="Messages">
           <div className="max-h-[400px] p-4 border-t border-border overflow-y-auto">
-            {messages.map((message, index) => (
+            {messages.map(({ data, decoded, direction }, index) => (
               <div
                 key={index}
                 className={cn(
                   'not-first:pt-3 not-last:pb-3 nth-[2n]:pt-0 nth-[2n]:border-b last:border-none border-border',
                   {
-                    'not-first:pt-3! nth-[1n]:border-b':
-                      message.direction !== 'sent' && message.direction !== 'received',
+                    'not-first:pt-3! nth-[1n]:border-b': direction !== 'sent' && direction !== 'received',
                   },
                 )}
               >
-                {message.direction !== 'system' && (
+                {direction !== 'system' && (
                   <span
                     className={cn('font-bold', {
-                      'text-blue-500': message.direction === 'sent',
-                      'text-green-500': message.direction === 'received',
+                      'text-blue-500': direction === 'sent',
+                      'text-green-500': direction === 'received',
                     })}
                   >
-                    {message.direction === 'sent' ? '➡' : message.direction === 'received' ? '⬅' : ''}
+                    {direction === 'sent' ? '➡' : direction === 'received' ? '⬅' : ''}
                   </span>
                 )}
-                <pre className={cn('my-0 whitespace-pre-wrap break-all', { 'ml-5': message.direction !== 'system' })}>
-                  {message.data}
+                <pre className={cn('my-0 whitespace-pre-wrap break-all', { 'ml-5': direction !== 'system' })}>
+                  {data}
                 </pre>
-                {message.decoded && (
+                {decoded && (
                   <>
                     <div className="font-monospace font-bold text-sm">Decoded Protobuf:</div>
-                    <pre className="whitespace-pre-wrap break-all">{message.decoded}</pre>
+                    <pre className="whitespace-pre-wrap break-all">{decoded}</pre>
                   </>
                 )}
               </div>
