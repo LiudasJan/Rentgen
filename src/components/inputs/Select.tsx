@@ -15,7 +15,7 @@ interface Props extends SelectProps {
 export default function Select({ classNames, isCreatable, ...otherProps }: Props) {
   const selectClassNames: ClassNamesConfig<unknown, boolean, GroupBase<unknown>> = {
     container: () => 'min-w-[110px] text-xs',
-    control: () => 'min-h-auto! border! border-border! rounded-md! shadow-none!',
+    control: () => 'min-h-auto! bg-white! border! border-border! rounded-md! shadow-none!',
     dropdownIndicator: () => 'w-7! p-1.5! text-black/40!',
     indicatorSeparator: () => 'hidden',
     input: () => 'm-0! p-0!',
@@ -24,11 +24,22 @@ export default function Select({ classNames, isCreatable, ...otherProps }: Props
     option: ({ data, isSelected }) =>
       cn(
         'first:rounded-t-md! last:rounded-b-md!',
-        { 'text-white!': isSelected },
+        {
+          'text-white!': isSelected,
+          'text-text!': !(data as SelectOption<unknown>).className,
+        },
         (data as SelectOption<unknown>).className,
       ),
     placeholder: () => 'm-0!',
-    singleValue: ({ data }) => cn('m-0!', (data as SelectOption<unknown>).className),
+    singleValue: ({ data, isDisabled }) =>
+      cn(
+        'm-0!',
+        {
+          'text-text/50!': isDisabled,
+          'text-text!': !(data as SelectOption<unknown>).className,
+        },
+        (data as SelectOption<unknown>).className,
+      ),
     valueContainer: () => 'py-2! px-3!',
     ...classNames,
   };

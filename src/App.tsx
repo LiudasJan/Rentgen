@@ -18,7 +18,7 @@ import TestsTable, { ExpandedTestComponent, getTestsTableColumns } from './compo
 import { RESPONSE_STATUS } from './constants/responseStatus';
 import useTests from './hooks/useTests';
 import { LARGE_PAYLOAD_TEST_NAME, LOAD_TEST_NAME } from './tests';
-import { FieldType, HttpResponse } from './types';
+import { FieldType, HttpResponse, TestOptions } from './types';
 import {
   createHttpRequest,
   detectFieldType,
@@ -73,7 +73,7 @@ export default function App() {
   >([]);
   const [bodyMappings, setBodyMappings] = useState<Record<string, FieldType>>({});
   const [queryMappings, setQueryMappings] = useState<Record<string, FieldType>>({});
-  const [testsRun, setTestsRun] = useState<boolean>(false);
+  const [testOptions, setTestOptions] = useState<TestOptions | null>(null);
   const {
     crudTests,
     currentTest,
@@ -89,7 +89,7 @@ export default function App() {
     executeAllTests,
     executeLoadTest,
     executeLargePayloadTest,
-  } = useTests({ body, headers, method, bodyMappings, queryMappings, messageType, protoFile, url });
+  } = useTests(testOptions);
 
   const isRunningTests = isSecurityRunning || isPerformanceRunning || isDataDrivenRunning;
   const statusCode = extractStatusCode(httpResponse);
@@ -119,11 +119,16 @@ export default function App() {
     };
   }, []);
 
+  useEffect(() => {
+    if (testOptions) executeAllTests();
+  }, [testOptions]);
+
   return (
     <div className="flex flex-col gap-4 py-5 px-7">
       <div className="flex items-center gap-2">
         <Select
           className="font-bold"
+          isDisabled={isRunningTests}
           isSearchable={false}
           options={modeOptions}
           placeholder="MODE"
@@ -189,7 +194,7 @@ export default function App() {
             <Select
               className="font-bold uppercase"
               classNames={{
-                control: () => 'min-h-auto! border! border-border! rounded-none! rounded-l-md! shadow-none!',
+                control: () => 'min-h-auto! bg-white! border! border-border! rounded-none! rounded-l-md! shadow-none!',
                 input: () => 'm-0! p-0! [&>:first-child]:uppercase',
               }}
               isCreatable={true}
@@ -422,13 +427,18 @@ export default function App() {
 
       {mode === 'HTTP' && (
         <div>
-          <Button disabled={disabledRunTests} onClick={disabledRunTests ? undefined : runAllTests}>
+          <Button
+            disabled={disabledRunTests}
+            onClick={() =>
+              setTestOptions({ body, headers, method, bodyMappings, queryMappings, messageType, protoFile, url })
+            }
+          >
             {isRunningTests ? `Running tests... (${currentTest}/${testsCount})` : 'Generate & Run Tests'}
           </Button>
         </div>
       )}
 
-      {testsRun && (
+      {testOptions && (
         <>
           <ResponsePanel title="Security Tests">
             <TestsTable
@@ -532,13 +542,7 @@ export default function App() {
     setMessages([]);
     setBodyMappings({});
     setQueryMappings({});
-    setTestsRun(false);
-  }
-
-  async function runAllTests() {
-    setTestsRun(true);
-
-    await executeAllTests();
+    setTestOptions(null);
   }
 
   function importCurl() {
