@@ -156,3 +156,9 @@ ipcMain.handle('ping-host', async (_event, host: string) => {
     });
   });
 });
+
+// Handle app reload
+ipcMain.on('reload-app', () => {
+  const focusedWindow = BrowserWindow.getFocusedWindow();
+  if (focusedWindow) focusedWindow.reload();
+});

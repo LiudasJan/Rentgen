@@ -171,14 +171,7 @@ export default function App() {
               <h4 className="m-0">Reload</h4>
               <p className="m-0 text-sm">All current data will be lost</p>
               <div className="flex items-center justify-end gap-4">
-                <Button
-                  buttonType={ButtonType.DANGER}
-                  onClick={() => {
-                    setMode('HTTP');
-                    reset();
-                    closeReloadModal();
-                  }}
-                >
+                <Button buttonType={ButtonType.DANGER} onClick={() => window.electronAPI.reloadApp()}>
                   Reload
                 </Button>
                 <Button buttonType={ButtonType.SECONDARY} onClick={closeReloadModal}>
