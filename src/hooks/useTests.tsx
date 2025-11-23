@@ -64,7 +64,7 @@ const useTests = (options: TestOptions) => {
     return dataDrivenTestResults;
   }
 
-  async function executeLargePayloadTest(size: number) {
+  async function executeLargePayloadTest(options: TestOptions, size: number) {
     setIsLargePayloadTestRunning(true);
 
     const largePayloadTest = await runLargePayloadTest(options, size);
@@ -79,7 +79,7 @@ const useTests = (options: TestOptions) => {
     setIsLargePayloadTestRunning(false);
   }
 
-  async function executeLoadTest(threadCount: number, requestCount: number) {
+  async function executeLoadTest(options: TestOptions, threadCount: number, requestCount: number) {
     setIsLoadTestRunning(true);
     setLoadProgress(0);
     setPerformanceTests((prevPerformanceTests) => {

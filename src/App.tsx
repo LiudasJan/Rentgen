@@ -453,7 +453,9 @@ export default function App() {
                       return (
                         <LargePayloadTestControls
                           isRunning={isLargePayloadTestRunning}
-                          executeTest={executeLargePayloadTest}
+                          executeTest={(size: number) =>
+                            executeLargePayloadTest({ ...testOptions, bodyMappings, queryMappings }, size)
+                          }
                         />
                       );
 
@@ -486,7 +488,14 @@ export default function App() {
                   width: '220px',
                   cell: (row) => {
                     if (row.name === LOAD_TEST_NAME)
-                      return <LoadTestControls isRunning={isLoadTestRunning} executeTest={executeLoadTest} />;
+                      return (
+                        <LoadTestControls
+                          isRunning={isLoadTestRunning}
+                          executeTest={(threadCount: number, requestCount: number) =>
+                            executeLoadTest({ ...testOptions, bodyMappings, queryMappings }, threadCount, requestCount)
+                          }
+                        />
+                      );
 
                     return row.status;
                   },
