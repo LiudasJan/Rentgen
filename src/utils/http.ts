@@ -57,6 +57,9 @@ export function createTestHttpRequest(options: TestOptions): HttpRequest {
 
     // Apply random values to random field types
     for (const [key, type] of Object.entries(bodyMappings)) {
+      // Skip the field being tested
+      if (mappingType === 'body' && fieldName === key) continue;
+
       const randomizedValue = getRandomizedValueByFieldType(type);
       if (randomizedValue !== null) updateFormEntry(formEntries, key, randomizedValue);
     }
@@ -68,6 +71,9 @@ export function createTestHttpRequest(options: TestOptions): HttpRequest {
 
     // Apply random values to random field types
     for (const [key, type] of Object.entries(bodyMappings)) {
+      // Skip the field being tested
+      if (mappingType === 'body' && fieldName === key) continue;
+
       const randomizedValue = getRandomizedValueByFieldType(type);
       if (randomizedValue !== null) setDeepObjectProperty(parsedBody, key, randomizedValue);
     }
@@ -88,9 +94,12 @@ export function createTestHttpRequest(options: TestOptions): HttpRequest {
     modifiedUrl.searchParams.set(fieldName, stringifyValue(testData.value));
 
   // Apply random values to random query parameter types
-  for (const [queryParameter, fieldType] of Object.entries(queryMappings)) {
-    const randomizedValue = getRandomizedValueByFieldType(fieldType);
-    if (randomizedValue !== null) modifiedUrl.searchParams.set(queryParameter, randomizedValue);
+  for (const [key, type] of Object.entries(queryMappings)) {
+    // Skip the field being tested
+    if (mappingType === 'query' && fieldName === key) continue;
+
+    const randomizedValue = getRandomizedValueByFieldType(type);
+    if (randomizedValue !== null) modifiedUrl.searchParams.set(key, randomizedValue);
   }
 
   return createHttpRequest(parsedBody, parseHeaders(headers), method, modifiedUrl.toString());
