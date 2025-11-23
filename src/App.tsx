@@ -10,6 +10,7 @@ import Select, { SelectOption } from './components/inputs/Select';
 import Textarea from './components/inputs/Textarea';
 import TextareaAutosize from './components/inputs/TextareaAutosize';
 import { JsonViewer } from './components/JsonViewer';
+import Loader from './components/loaders/Loader';
 import TestRunningLoader from './components/loaders/TestRunningLoader';
 import Modal from './components/modals/Modal';
 import ParametersPanel from './components/panels/ParametersPanel';
@@ -34,6 +35,9 @@ import {
 } from './utils';
 
 type Mode = 'HTTP' | 'WSS';
+
+const SENDING = 'Sending...';
+const NETWORK_ERROR = 'Network Error';
 
 const modeOptions: SelectOption<Mode>[] = [
   { value: 'HTTP', label: 'HTTP' },
@@ -301,16 +305,17 @@ export default function App() {
       {mode === 'HTTP' && httpResponse && (
         <ResponsePanel title="Response">
           <div
-            className={cn('p-4 font-bold bg-body border-t border-border', {
+            className={cn('flex items-center gap-2 p-4 font-bold bg-body border-t border-border', {
               'text-green-500': httpResponse.status.startsWith('2'),
               'text-blue-500': httpResponse.status.startsWith('3'),
               'text-orange-500': httpResponse.status.startsWith('4'),
-              'text-red-500': httpResponse.status.startsWith('5'),
+              'text-red-500': httpResponse.status.startsWith('5') || httpResponse.status === NETWORK_ERROR,
             })}
           >
+            {httpResponse.status === SENDING && <Loader className="h-5! w-5!" />}
             {httpResponse.status}
           </div>
-          {httpResponse.status !== 'Sending...' && (
+          {httpResponse.status !== SENDING && (
             <div className="grid grid-cols-2 items-stretch max-h-[450px] py-4 border-t border-border overflow-y-auto">
               <div className="relative flex-1 px-4">
                 <h4 className="m-0 mb-4">Headers</h4>
@@ -593,7 +598,7 @@ export default function App() {
 
   async function sendHttp() {
     setHttpResponse({
-      status: 'Sending...',
+      status: SENDING,
       body: '',
       headers: {},
     });
@@ -604,7 +609,7 @@ export default function App() {
       const parsedHeaders = parseHeaders(headers);
       const parsedBody = parseBody(body, parsedHeaders, messageType, protoFile);
       const request = createHttpRequest(parsedBody, parsedHeaders, method, url);
-      const response = await window.electronAPI.sendHttp(request);
+      const response: HttpResponse = await window.electronAPI.sendHttp(request);
 
       setHttpResponse(response);
 
@@ -619,7 +624,7 @@ export default function App() {
       setQueryMappings(queryMappings);
     } catch (error) {
       setHttpResponse({
-        status: 'Network Error',
+        status: NETWORK_ERROR,
         body: String(error),
         headers: {},
       });
