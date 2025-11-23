@@ -16,6 +16,13 @@ let ws: WebSocket | null = null;
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) app.quit();
 
+const icon =
+  process.platform === 'win32'
+    ? './assets/icons/rentgen.ico'
+    : process.platform === 'linux'
+      ? './assets/icons/rentgen.png'
+      : undefined;
+
 const createWindow = (): void => {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
@@ -24,6 +31,7 @@ const createWindow = (): void => {
     webPreferences: {
       preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
     },
+    icon,
   });
 
   // and load the index.html of the app.
