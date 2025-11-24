@@ -104,16 +104,22 @@ export default function App() {
     if (!window.electronAPI?.onWssEvent) return;
 
     const messagesListener = (event: any) => {
-      if (event.type === 'open') setWssConnected(true);
-      if (event.type === 'close') setWssConnected(false);
-      if (event.type === 'message') {
+      if (event.type === 'open') {
+        setMessages([{ direction: 'system', data: `🟢 Connected to ${event.data}` }]);
+        setWssConnected(true);
+      } else if (event.type === 'close') {
+        setMessages((prevMessages) => [
+          { direction: 'system', data: `🔵 Disconnected from ${event.data}` },
+          ...prevMessages,
+        ]);
+        setWssConnected(false);
+      } else if (event.type === 'message') {
         setMessages((prevMessages) => [
           { direction: 'received', data: String(event.data), decoded: event.decoded ?? null },
           ...prevMessages,
         ]);
-      }
-
-      if (event.type === 'error') setMessages((prev) => [{ direction: 'system', data: '🔴 ' + event.error }, ...prev]);
+      } else if (event.type === 'error')
+        setMessages((prevMessages) => [{ direction: 'system', data: `🔴 ${event.error}` }, ...prevMessages]);
     };
 
     const ipcRenderer = window.electronAPI.onWssEvent(messagesListener);
@@ -222,10 +228,14 @@ export default function App() {
         )}
         {mode === 'WSS' && (
           <>
-            <Button disabled={wssConnected || !url} onClick={connectWss}>
-              Connect
+            <Button
+              buttonType={wssConnected ? ButtonType.SECONDARY : ButtonType.PRIMARY}
+              disabled={!wssConnected && !url}
+              onClick={wssConnected ? window.electronAPI.disconnectWss : connectWss}
+            >
+              {wssConnected ? 'Disconnect' : 'Connect'}
             </Button>
-            <Button buttonType={ButtonType.SECONDARY} disabled={!wssConnected} onClick={sendWss}>
+            <Button disabled={!wssConnected} onClick={sendWss}>
               Send
             </Button>
           </>
@@ -352,36 +362,30 @@ export default function App() {
 
       {messages.length > 0 && (
         <ResponsePanel title="Messages">
-          <div className="max-h-[400px] p-4 border-t border-border overflow-y-auto">
+          <div className="max-h-[400px] p-4 text-xs border-t border-border overflow-y-auto">
             {messages.map(({ data, decoded, direction }, index) => (
-              <div
-                key={index}
-                className={cn(
-                  'not-first:pt-3 not-last:pb-3 nth-[2n]:pt-0 nth-[2n]:border-b last:border-none border-border',
-                  {
-                    'not-first:pt-3! nth-[1n]:border-b': direction !== 'sent' && direction !== 'received',
-                  },
-                )}
-              >
-                {direction !== 'system' && (
-                  <span
-                    className={cn('font-bold', {
-                      'text-blue-500': direction === 'sent',
-                      'text-green-500': direction === 'received',
-                    })}
-                  >
-                    {direction === 'sent' ? '➡' : direction === 'received' ? '⬅' : ''}
-                  </span>
-                )}
-                <pre className={cn('my-0 whitespace-pre-wrap break-all', { 'ml-5': direction !== 'system' })}>
-                  {data}
-                </pre>
-                {decoded && (
-                  <>
-                    <div className="font-monospace font-bold text-sm">Decoded Protobuf:</div>
-                    <pre className="whitespace-pre-wrap break-all">{decoded}</pre>
-                  </>
-                )}
+              <div key={index} className="not-first:pt-3 not-last:pb-3 border-b last:border-none border-border">
+                <div className="flex items-center gap-4">
+                  {direction !== 'system' && (
+                    <span
+                      className={cn('w-5 h-5 font-bold rounded-xs text-center leading-normal rotate-90', {
+                        'text-method-post bg-method-post/10': direction === 'sent',
+                        'text-method-put bg-method-put/10': direction === 'received',
+                      })}
+                    >
+                      {direction === 'sent' ? '⬅' : direction === 'received' ? '➡' : ''}
+                    </span>
+                  )}
+                  <div>
+                    <pre className="my-0 whitespace-pre-wrap break-all">{data}</pre>
+                    {decoded && (
+                      <>
+                        <div className="mt-2 font-monospace font-bold">Decoded Protobuf:</div>
+                        <pre className="my-0 whitespace-pre-wrap break-all">dfd</pre>
+                      </>
+                    )}
+                  </div>
+                </div>
               </div>
             ))}
           </div>

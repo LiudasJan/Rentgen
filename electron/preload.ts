@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 
 interface ElectronApi {
   connectWss: (payload: any) => void;
+  disconnectWss: () => void;
   onWssEvent: (cb: (data: any) => void) => Electron.IpcRenderer;
   pingHost: (host: string) => Promise<any>;
   reloadApp: () => void;
@@ -11,6 +12,7 @@ interface ElectronApi {
 
 contextBridge.exposeInMainWorld('electronAPI', {
   connectWss: (payload: any): void => ipcRenderer.send('wss-connect', payload),
+  disconnectWss: (): void => ipcRenderer.send('wss-disconnect'),
   onWssEvent: (cb: (data: any) => any): Electron.IpcRenderer => ipcRenderer.on('wss-event', (_, data) => cb(data)),
   pingHost: (host: string): Promise<any> => ipcRenderer.invoke('ping-host', host),
   reloadApp: (): void => ipcRenderer.send('reload-app'),

@@ -129,28 +129,35 @@ ipcMain.on('wss-connect', (event, { url, headers }) => {
 
   ws = new WebSocket(url, { headers });
   ws.on('open', () => {
-    event.sender.send('wss-event', { type: 'open' });
+    event.sender.send('wss-event', { type: 'open', data: url });
   });
 
   ws.on('message', (data) => {
     event.sender.send('wss-event', { type: 'message', data: data.toString() });
   });
 
-  ws.on('error', (err) => {
-    event.sender.send('wss-event', { type: 'error', error: String(err) });
+  ws.on('error', (error) => {
+    event.sender.send('wss-event', { type: 'error', error: String(error) });
   });
 
   ws.on('close', () => {
-    event.sender.send('wss-event', { type: 'close' });
+    event.sender.send('wss-event', { type: 'close', data: url });
   });
 });
 
-ipcMain.on('wss-send', (_event, msg) => {
-  if (ws) ws.send(msg);
+ipcMain.on('wss-disconnect', () => {
+  if (ws) {
+    ws.close();
+    ws = null;
+  }
+});
+
+ipcMain.on('wss-send', (_, message) => {
+  if (ws) ws.send(message);
 });
 
 // Handle ping requests
-ipcMain.handle('ping-host', async (_event, host: string) => {
+ipcMain.handle('ping-host', async (_, host: string) => {
   return new Promise<number>((resolve, reject) => {
     const platform = process.platform;
     const cmd = platform === 'win32' ? `ping -n 1 ${host}` : `ping -c 1 ${host}`;
