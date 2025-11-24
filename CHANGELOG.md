@@ -1,4 +1,4 @@
-## [v1.3.1]
+## [v1.3.0]
 
 ### 🚀 New Features
 
@@ -50,3 +50,6 @@ xattr -d com.apple.quarantine /Applications/Rentgen.app
 ```
 
 After this, you can launch Rentgen from Finder or Spotlight as usual.
+
+[Unreleased]: https://github.com/LiudasJan/Rentgen/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/LiudasJan/Rentgen/releases/tag/v1.2.0
