@@ -305,7 +305,7 @@ export class SecurityTests extends BaseTests {
     const request = createTestHttpRequest(this.options);
     const modifiedRequest: HttpRequest = {
       ...request,
-      headers: { ...request.headers, Origin: 'https://www.qaontime.com/' },
+      headers: { ...request.headers, Origin: 'https://rentgen.io/' },
     };
 
     try {

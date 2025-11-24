@@ -40,7 +40,6 @@ export const datasets: Record<string, TestData[]> = {
     { value: 'email@-qaontime.com', valid: false },
     { value: 'email@.qaontime.com', valid: false },
     { value: 'email@111.222.333.44444', valid: false },
-    { value: 'email@qaontime.com', valid: false },
     { value: 'email@qaontime', valid: false },
     { value: 'email@.com', valid: false },
     { value: 'email@qaontime.', valid: false },
