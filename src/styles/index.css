@@ -26,6 +26,8 @@
   --color-method-head: #279250;
   --color-method-options: #b0307a;
   --color-text: #333333;
+  --color-text-secondary: #6b6b6b;
+  --color-text-secondary-hover: #212121;
 }
 
 @layer base {

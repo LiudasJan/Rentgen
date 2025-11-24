@@ -27,8 +27,8 @@ export default function Button({
           'bg-button-primary border border-button-primary text-white': buttonType === ButtonType.PRIMARY,
           'hover:bg-button-primary-hover hover:border-button-primary-hover':
             buttonType === ButtonType.PRIMARY && !disabled,
-          'bg-button-secondary border border-button-secondary text-[#6b6b6b]': buttonType === ButtonType.SECONDARY,
-          'hover:bg-button-secondary-hover hover:border-button-secondary-hover hover:text-[#212121]':
+          'bg-button-secondary border border-button-secondary text-text-secondary': buttonType === ButtonType.SECONDARY,
+          'hover:bg-button-secondary-hover hover:border-button-secondary-hover hover:text-text-secondary-hover':
             buttonType === ButtonType.SECONDARY && !disabled,
           'bg-button-danger border border-button-danger text-white': buttonType === ButtonType.DANGER,
           'hover:bg-button-danger-hover hover:border-button-danger-hover':
