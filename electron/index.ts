@@ -26,11 +26,11 @@ const icon =
 const createWindow = (): void => {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
+    icon,
     show: false,
     webPreferences: {
       preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
     },
-    icon,
   });
 
   mainWindow.maximize();
