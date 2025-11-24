@@ -3,13 +3,11 @@ import { getResponseStatusTitle, RESPONSE_STATUS } from '../constants/responseSt
 import { Test } from '../decorators';
 import { FieldType, HttpRequest, TestData, TestOptions, TestResult, TestStatus } from '../types';
 import {
-  convertUrlEncodedToFormEntries,
   createHttpRequest,
   createTestHttpRequest,
   executeTimedRequest,
   extractBodyFieldMappings,
   getFieldValueFromBody,
-  isUrlEncodedContentType,
   parseBody,
   parseHeaders,
 } from '../utils';
@@ -70,10 +68,6 @@ export class DataDrivenTests extends BaseTests {
   private async testOriginalRequest(request: HttpRequest): Promise<TestResult> {
     this.onTestStart?.();
 
-    const { body, headers } = request;
-    const formEntries = isUrlEncodedContentType(headers) ? convertUrlEncodedToFormEntries(body as string) : [];
-    const bodyValue = formEntries.length > 0 ? Object.fromEntries(formEntries) : request.body;
-
     return executeTimedRequest(
       request,
       (response, responseTime) => {
@@ -93,7 +87,7 @@ export class DataDrivenTests extends BaseTests {
           request,
           response,
           responseTime,
-          bodyValue,
+          request.body,
         );
       },
       (error) =>
@@ -102,7 +96,7 @@ export class DataDrivenTests extends BaseTests {
           SUCCESS_RESPONSE_EXPECTED,
           String(error),
           request,
-          bodyValue,
+          request.body,
         ),
     );
   }

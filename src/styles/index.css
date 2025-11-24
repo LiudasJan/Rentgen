@@ -9,22 +9,25 @@
   --font-monospace: monospace;
 
   /* Colors */
-  --color-button-primary: #007bff;
-  --color-button-secondary: #ededed;
-  --color-body: #f7f7f7;
+  --color-button-primary: #097bed;
+  --color-button-primary-hover: #0265d2;
+  --color-button-secondary: #f2f2f2;
+  --color-button-secondary-hover: #e6e6e6;
+  --color-button-danger: #eb2013;
+  --color-button-danger-hover: #b02016;
+  --color-body: #fafafa;
   --color-table-data: #f9fbff;
   --color-border: #cccccc;
-  --color-method-get: #21ba45;
-  --color-method-post: #2185d0;
-  --color-method-put: #fbbd08;
-  --color-method-patch: #a333c8;
-  --color-method-delete: #db2828;
-  --color-method-head: #00b5ad;
-  --color-method-options: #767676;
+  --color-method-get: #148941;
+  --color-method-post: #b08010;
+  --color-method-put: #0053b8;
+  --color-method-patch: #623497;
+  --color-method-delete: #8e1a10;
+  --color-method-head: #279250;
+  --color-method-options: #b0307a;
   --color-text: #333333;
-
-  /* Animation */
-  --animate-spin: spin 3s linear infinite;
+  --color-text-secondary: #6b6b6b;
+  --color-text-secondary-hover: #212121;
 }
 
 @layer base {

@@ -44,6 +44,7 @@
     "typescript": "~4.5.4"
   },
   "dependencies": {
+    "@microlink/react-json-view": "^1.27.0",
     "@tailwindcss/postcss": "^4.1.17",
     "axios": "^1.13.2",
     "classnames": "^2.5.1",

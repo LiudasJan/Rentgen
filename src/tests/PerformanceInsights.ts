@@ -5,6 +5,7 @@ import { calculateMedian, calculatePercentile, createTestHttpRequest, extractSta
 import { createErrorTestResult, createTestResult, NOT_AVAILABLE_TEST } from './BaseTests';
 
 export const LOAD_TEST_NAME = 'Load Test';
+
 const PING_LATENCY_TEST_NAME = 'Ping Latency';
 
 const EXCELLENT_RESPONSE_TIME_MS = 500;
@@ -91,8 +92,8 @@ function getManualTests(): TestResult[] {
     createTestResult(
       LOAD_TEST_NAME,
       `Median <${EXCELLENT_RESPONSE_TIME_MS} ms (Pass), <${ACCEPTABLE_RESPONSE_TIME_MS} ms (Warning), ≥${ACCEPTABLE_RESPONSE_TIME_MS} ms (Fail)`,
-      '', // Empty until test is executed
-      TestStatus.Manual, // Requires manual execution
+      '',
+      TestStatus.Manual,
     ),
     createTestResult('Rate Limiting Implementation', EXPECTED_RATE_LIMIT_STATUS, NOT_AVAILABLE_TEST, TestStatus.Manual),
   ];
@@ -158,7 +159,7 @@ export async function runLoadTest(
     responseTimes.length > 0 ? responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length : 0;
   const testStatus =
     server5xxFailures >= MAX_EARLY_ABORT_FAILURES
-      ? TestStatus.Fail
+      ? TestStatus.Bug
       : p50 < EXCELLENT_RESPONSE_TIME_MS
         ? TestStatus.Pass
         : p50 < ACCEPTABLE_RESPONSE_TIME_MS

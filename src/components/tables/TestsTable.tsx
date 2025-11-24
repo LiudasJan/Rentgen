@@ -9,6 +9,7 @@ import {
   truncateValue,
 } from '../../utils';
 import { CopyButton } from '../buttons/CopyButton';
+import { HttpPanel } from '../panels/HttpPanel';
 
 export default function TestsTable({ columns, data, className, ...otherProps }: TableProps<TestResult>) {
   return (
@@ -75,7 +76,8 @@ export function ExpandedTestComponent({
       : null;
   const modifiedResponse = response ? { ...response } : null;
 
-  if (modifiedResponse) modifiedResponse.body = extractBodyFromResponse(modifiedResponse) as any;
+  if (modifiedResponse && modifiedResponse.body)
+    modifiedResponse.body = extractBodyFromResponse(modifiedResponse) as any;
 
   return (
     <div className="p-4 bg-table-data">
@@ -85,32 +87,18 @@ export function ExpandedTestComponent({
         </CopyButton>
       )}
       <div className="grid grid-cols-2 gap-4 items-stretch">
-        <div className="flex flex-col gap-2.5">
-          <h4 className="m-0">Request</h4>
-          <pre className="max-h-80 flex-auto m-0 p-2.5 bg-white border border-border rounded whitespace-pre-wrap break-all overflow-y-auto">
-            {JSON.stringify(request, null, 2)}
-          </pre>
-        </div>
-        <div className="flex flex-col gap-2.5">
-          <h4 className="m-0">Response</h4>
-          <pre className="max-h-80 flex-auto m-0 p-2.5 bg-white border border-border rounded whitespace-pre-wrap break-all overflow-y-auto">
-            {typeof modifiedResponse === 'string' ? modifiedResponse : JSON.stringify(modifiedResponse, null, 2)}
-          </pre>
-          {decoded && (
-            <>
-              <h5 className="m-0">Decoded Protobuf</h5>
-              <pre className="flex-auto m-0 p-2.5 bg-white border border-border rounded whitespace-pre-wrap break-all">
-                {decoded}
-              </pre>
-            </>
-          )}
-        </div>
+        <HttpPanel title="Request" source={request} />
+        <HttpPanel title="Response" source={modifiedResponse}>
+          {decoded && <HttpPanel title="Decoded Protobuf" source={decoded} />}
+        </HttpPanel>
       </div>
     </div>
   );
 }
 
-export function getTestsTableColumns(visibleColumns: string[] = []): TableColumn<TestResult>[] {
+type TestsTableColumn = 'Field' | 'Value' | 'Check' | 'Method' | 'Expected' | 'Actual' | 'Result';
+
+export function getTestsTableColumns(visibleColumns: TestsTableColumn[] = []): TableColumn<TestResult>[] {
   const columns: TableColumn<TestResult>[] = [
     {
       name: 'Field',
@@ -143,7 +131,7 @@ export function getTestsTableColumns(visibleColumns: string[] = []): TableColumn
       omit: true,
       style: {
         'div:first-child': {
-          padding: '0.5rem 0',
+          padding: '0.25rem 0',
           whiteSpace: 'normal !important',
         },
       },
@@ -167,5 +155,5 @@ export function getTestsTableColumns(visibleColumns: string[] = []): TableColumn
     },
   ];
 
-  return columns.map((column) => ({ ...column, omit: !visibleColumns.includes(column.name.toString()) }));
+  return columns.map((column) => ({ ...column, omit: !visibleColumns.includes(column.name as TestsTableColumn) }));
 }

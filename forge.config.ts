@@ -14,9 +14,29 @@ import { rendererConfig } from './webpack.renderer.config';
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
+    executableName: 'Rentgen',
+    icon: './assets/icons/rentgen',
   },
   rebuildConfig: {},
-  makers: [new MakerSquirrel({}), new MakerZIP({}, ['darwin']), new MakerRpm({}), new MakerDeb({})],
+  makers: [
+    new MakerSquirrel({
+      setupIcon: './assets/icons/rentgen.ico',
+      iconUrl: `file://${__dirname}/assets/icons/rentgen.ico`,
+    }),
+    new MakerZIP({}, ['darwin']),
+    new MakerRpm({
+      options: {
+        bin: 'Rentgen',
+        icon: './assets/icons/rentgen.png',
+      },
+    }),
+    new MakerDeb({
+      options: {
+        bin: 'Rentgen',
+        icon: './assets/icons/rentgen.png',
+      },
+    }),
+  ],
   plugins: [
     new AutoUnpackNativesPlugin({}),
     new WebpackPlugin({

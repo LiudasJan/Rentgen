@@ -1,6 +1,6 @@
 import { Method } from 'axios';
 import { FieldType, HttpRequest, HttpResponse, TestOptions, TestResult } from '../types';
-import { isObject, setDeepObjectProperty, tryParseJsonObject } from './object';
+import { isObject, setDeepObjectProperty, stringifyValue, tryParseJsonObject } from './object';
 import { encodeMessage } from './proto';
 import { getRandomizedValueByFieldType } from './random';
 import { detectFieldType, extractFieldsFromJson } from './validation';
@@ -34,11 +34,11 @@ export function createTestHttpRequest(options: TestOptions): HttpRequest {
     body,
     fieldName,
     headers,
-    method,
     bodyMappings,
     queryMappings,
     mappingType,
     messageType,
+    method,
     protoFile,
     testData,
     url,
@@ -52,10 +52,14 @@ export function createTestHttpRequest(options: TestOptions): HttpRequest {
 
   if (formEntries.length > 0) {
     // Update the field being tested
-    if (mappingType === 'body' && fieldName && testData) updateFormEntry(formEntries, fieldName, testData.value);
+    if (mappingType === 'body' && fieldName && testData)
+      updateFormEntry(formEntries, fieldName, stringifyValue(testData.value));
 
     // Apply random values to random field types
     for (const [key, type] of Object.entries(bodyMappings)) {
+      // Skip the field being tested
+      if (mappingType === 'body' && fieldName === key) continue;
+
       const randomizedValue = getRandomizedValueByFieldType(type);
       if (randomizedValue !== null) updateFormEntry(formEntries, key, randomizedValue);
     }
@@ -67,6 +71,9 @@ export function createTestHttpRequest(options: TestOptions): HttpRequest {
 
     // Apply random values to random field types
     for (const [key, type] of Object.entries(bodyMappings)) {
+      // Skip the field being tested
+      if (mappingType === 'body' && fieldName === key) continue;
+
       const randomizedValue = getRandomizedValueByFieldType(type);
       if (randomizedValue !== null) setDeepObjectProperty(parsedBody, key, randomizedValue);
     }
@@ -83,12 +90,16 @@ export function createTestHttpRequest(options: TestOptions): HttpRequest {
   const modifiedUrl = new URL(url);
 
   // Update the field being tested
-  if (mappingType === 'query' && fieldName && testData) modifiedUrl.searchParams.set(fieldName, String(testData.value));
+  if (mappingType === 'query' && fieldName && testData)
+    modifiedUrl.searchParams.set(fieldName, stringifyValue(testData.value));
 
   // Apply random values to random query parameter types
-  for (const [queryParameter, fieldType] of Object.entries(queryMappings)) {
-    const randomizedValue = getRandomizedValueByFieldType(fieldType);
-    if (randomizedValue !== null) modifiedUrl.searchParams.set(queryParameter, randomizedValue);
+  for (const [key, type] of Object.entries(queryMappings)) {
+    // Skip the field being tested
+    if (mappingType === 'query' && fieldName === key) continue;
+
+    const randomizedValue = getRandomizedValueByFieldType(type);
+    if (randomizedValue !== null) modifiedUrl.searchParams.set(key, randomizedValue);
   }
 
   return createHttpRequest(parsedBody, parseHeaders(headers), method, modifiedUrl.toString());
@@ -138,12 +149,12 @@ export function extractBodyFieldMappings(body: unknown, headers: Record<string, 
   return mappings;
 }
 
-export function extractBodyFromResponse(response: HttpResponse): Record<string, unknown> {
+export function extractBodyFromResponse(response: HttpResponse): Record<string, unknown> | string {
   try {
     if (typeof response?.body === 'string') return JSON.parse(response.body);
     if (response?.body && typeof response.body === 'object') return response.body;
   } catch {
-    return {};
+    return response.body;
   }
 }
 

@@ -2,24 +2,29 @@ import { Method } from 'axios';
 import cn from 'classnames';
 import { useEffect, useState } from 'react';
 import Button, { ButtonType } from './components/buttons/Button';
+import { CopyButton } from './components/buttons/CopyButton';
+import { LargePayloadTestControls } from './components/controls/LargePayloadTestControls';
+import { LoadTestControls } from './components/controls/LoadTestControls';
 import Input from './components/inputs/Input';
 import Select, { SelectOption } from './components/inputs/Select';
 import Textarea from './components/inputs/Textarea';
 import TextareaAutosize from './components/inputs/TextareaAutosize';
+import { JsonViewer } from './components/JsonViewer';
+import Loader from './components/loaders/Loader';
 import TestRunningLoader from './components/loaders/TestRunningLoader';
-import { LoadTestControls } from './components/LoadTestControls';
 import Modal from './components/modals/Modal';
 import ParametersPanel from './components/panels/ParametersPanel';
 import ResponsePanel from './components/panels/ResponsePanel';
 import TestsTable, { ExpandedTestComponent, getTestsTableColumns } from './components/tables/TestsTable';
 import { RESPONSE_STATUS } from './constants/responseStatus';
 import useTests from './hooks/useTests';
-import { LOAD_TEST_NAME } from './tests';
-import { FieldType, HttpResponse } from './types';
+import { LARGE_PAYLOAD_TEST_NAME, LOAD_TEST_NAME } from './tests';
+import { FieldType, HttpResponse, TestOptions } from './types';
 import {
   createHttpRequest,
   detectFieldType,
   extractBodyFieldMappings,
+  extractBodyFromResponse,
   extractCurl,
   extractQueryParameters,
   extractStatusCode,
@@ -30,6 +35,9 @@ import {
 } from './utils';
 
 type Mode = 'HTTP' | 'WSS';
+
+const SENDING = 'Sending...';
+const NETWORK_ERROR = 'Network Error';
 
 const modeOptions: SelectOption<Mode>[] = [
   { value: 'HTTP', label: 'HTTP' },
@@ -50,6 +58,7 @@ export default function App() {
   const [mode, setMode] = useState<Mode>('HTTP');
   const [method, setMethod] = useState<Method>('GET');
   const [openCurlModal, setOpenCurlModal] = useState<boolean>(false);
+  const [openReloadModal, setOpenReloadModal] = useState<boolean>(false);
   const [curl, setCurl] = useState<string>('');
   const [curlError, setCurlError] = useState<string>('');
   const [url, setUrl] = useState<string>('');
@@ -68,12 +77,13 @@ export default function App() {
   >([]);
   const [bodyMappings, setBodyMappings] = useState<Record<string, FieldType>>({});
   const [queryMappings, setQueryMappings] = useState<Record<string, FieldType>>({});
-  const [testsRun, setTestsRun] = useState<boolean>(false);
+  const [testOptions, setTestOptions] = useState<TestOptions | null>(null);
   const {
     crudTests,
     currentTest,
     dataDrivenTests,
     isDataDrivenRunning,
+    isLargePayloadTestRunning,
     isLoadTestRunning,
     isSecurityRunning,
     isPerformanceRunning,
@@ -82,7 +92,8 @@ export default function App() {
     testsCount,
     executeAllTests,
     executeLoadTest,
-  } = useTests({ body, headers, method, bodyMappings, queryMappings, messageType, protoFile, url });
+    executeLargePayloadTest,
+  } = useTests(testOptions);
 
   const isRunningTests = isSecurityRunning || isPerformanceRunning || isDataDrivenRunning;
   const statusCode = extractStatusCode(httpResponse);
@@ -93,16 +104,22 @@ export default function App() {
     if (!window.electronAPI?.onWssEvent) return;
 
     const messagesListener = (event: any) => {
-      if (event.type === 'open') setWssConnected(true);
-      if (event.type === 'close') setWssConnected(false);
-      if (event.type === 'message') {
+      if (event.type === 'open') {
+        setMessages([{ direction: 'system', data: `🟢 Connected to ${event.data}` }]);
+        setWssConnected(true);
+      } else if (event.type === 'close') {
+        setMessages((prevMessages) => [
+          { direction: 'system', data: `🔵 Disconnected from ${event.data}` },
+          ...prevMessages,
+        ]);
+        setWssConnected(false);
+      } else if (event.type === 'message') {
         setMessages((prevMessages) => [
           { direction: 'received', data: String(event.data), decoded: event.decoded ?? null },
           ...prevMessages,
         ]);
-      }
-
-      if (event.type === 'error') setMessages((prev) => [{ direction: 'system', data: '❌ ' + event.error }, ...prev]);
+      } else if (event.type === 'error')
+        setMessages((prevMessages) => [{ direction: 'system', data: `🔴 ${event.error}` }, ...prevMessages]);
     };
 
     const ipcRenderer = window.electronAPI.onWssEvent(messagesListener);
@@ -112,11 +129,16 @@ export default function App() {
     };
   }, []);
 
+  useEffect(() => {
+    if (testOptions) executeAllTests();
+  }, [testOptions]);
+
   return (
     <div className="flex flex-col gap-4 py-5 px-7">
       <div className="flex items-center gap-2">
         <Select
           className="font-bold"
+          isDisabled={isRunningTests}
           isSearchable={false}
           options={modeOptions}
           placeholder="MODE"
@@ -129,16 +151,17 @@ export default function App() {
         {mode === 'HTTP' && (
           <>
             <Button onClick={() => setOpenCurlModal(true)}>Import cURL</Button>
-            <Modal isOpen={openCurlModal} onClose={() => setOpenCurlModal(false)}>
+            <Modal isOpen={openCurlModal} onClose={closeCurlModal}>
               <div className="flex flex-col gap-4">
-                <h3 className="m-0">Import cURL</h3>
+                <h4 className="m-0">Import cURL</h4>
                 <Textarea
+                  autoFocus={true}
                   className="min-h-40 font-monospace"
                   placeholder="Enter cURL or paste text"
                   value={curl}
                   onChange={(e) => setCurl(e.target.value)}
                 />
-                {curlError && <div className="text-xs text-red-600">{curlError}</div>}
+                {curlError && <p className="m-0 text-xs text-red-600">{curlError}</p>}
                 <div className="flex items-center justify-end gap-4">
                   <Button onClick={importCurl}>Import</Button>
                   <Button buttonType={ButtonType.SECONDARY} onClick={closeCurlModal}>
@@ -149,6 +172,30 @@ export default function App() {
             </Modal>
           </>
         )}
+        <div className="flex-auto flex items-center justify-end">
+          <Button buttonType={ButtonType.SECONDARY} onClick={() => setOpenReloadModal(true)}>
+            <span className="w-fit flex items-center gap-1 mx-auto">
+              <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3.502 16.6663V13.3333C3.502 12.9661 3.79977 12.6683 4.16704 12.6683H7.50004L7.63383 12.682C7.93691 12.7439 8.16508 13.0119 8.16508 13.3333C8.16508 13.6547 7.93691 13.9227 7.63383 13.9847L7.50004 13.9984H5.47465C6.58682 15.2249 8.21842 16.0013 10 16.0013C13.06 16.0012 15.5859 13.711 15.9551 10.7513L15.9854 10.6195C16.0845 10.3266 16.3785 10.1334 16.6973 10.1732C17.0617 10.2186 17.3198 10.551 17.2745 10.9154L17.2247 11.2523C16.6301 14.7051 13.6224 17.3313 10 17.3314C8.01103 17.3314 6.17188 16.5383 4.83208 15.2474V16.6663C4.83208 17.0335 4.53411 17.3311 4.16704 17.3314C3.79977 17.3314 3.502 17.0336 3.502 16.6663ZM4.04497 9.24935C3.99936 9.61353 3.66701 9.87178 3.30278 9.8265C2.93833 9.78105 2.67921 9.44876 2.72465 9.08431L4.04497 9.24935ZM10 2.66829C11.9939 2.66833 13.8372 3.46551 15.1778 4.76204V3.33333C15.1778 2.96616 15.4757 2.66844 15.8428 2.66829C16.2101 2.66829 16.5079 2.96606 16.5079 3.33333V6.66634C16.5079 7.03361 16.2101 7.33138 15.8428 7.33138H12.5098C12.1425 7.33138 11.8448 7.03361 11.8448 6.66634C11.8449 6.29922 12.1426 6.0013 12.5098 6.0013H14.5254C13.4133 4.77488 11.7816 3.99841 10 3.99837C6.93998 3.99837 4.41406 6.28947 4.04497 9.24935L3.38481 9.16634L2.72465 9.08431C3.17574 5.46702 6.26076 2.66829 10 2.66829Z"></path>
+              </svg>
+              Reload
+            </span>
+          </Button>
+          <Modal className="[&>div]:w-[400px]!" isOpen={openReloadModal} onClose={closeReloadModal}>
+            <div className="flex flex-col gap-4">
+              <h4 className="m-0">Reload</h4>
+              <p className="m-0 text-sm">All current data will be lost</p>
+              <div className="flex items-center justify-end gap-4">
+                <Button buttonType={ButtonType.DANGER} onClick={() => window.electronAPI.reloadApp()}>
+                  Reload
+                </Button>
+                <Button buttonType={ButtonType.SECONDARY} onClick={closeReloadModal}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </Modal>
+        </div>
       </div>
 
       <div className="flex items-center gap-2">
@@ -157,7 +204,7 @@ export default function App() {
             <Select
               className="font-bold uppercase"
               classNames={{
-                control: () => 'min-h-auto! border! border-border! rounded-none! rounded-l-md! shadow-none!',
+                control: () => 'min-h-auto! bg-white! border! border-border! rounded-none! rounded-l-md! shadow-none!',
                 input: () => 'm-0! p-0! [&>:first-child]:uppercase',
               }}
               isCreatable={true}
@@ -181,10 +228,14 @@ export default function App() {
         )}
         {mode === 'WSS' && (
           <>
-            <Button disabled={wssConnected || !url} onClick={connectWss}>
-              Connect
+            <Button
+              buttonType={wssConnected ? ButtonType.SECONDARY : ButtonType.PRIMARY}
+              disabled={!wssConnected && !url}
+              onClick={wssConnected ? window.electronAPI.disconnectWss : connectWss}
+            >
+              {wssConnected ? 'Disconnect' : 'Connect'}
             </Button>
-            <Button buttonType={ButtonType.SECONDARY} disabled={!wssConnected} onClick={sendWss}>
+            <Button disabled={!wssConnected} onClick={sendWss}>
               Send
             </Button>
           </>
@@ -218,7 +269,7 @@ export default function App() {
 
       {mode === 'HTTP' && (
         <div>
-          <label className="block mb-1 font-bold text-sm">Protobuf schema & message type</label>
+          <label className="block mb-1 font-bold text-sm">Protobuf Schema & Message Type</label>
           <div className="mb-3 text-xs text-gray-500/80">
             Experimental and optional section. If used, both fields must be completed
           </div>
@@ -239,12 +290,12 @@ export default function App() {
 
                   setProtoFile(file);
                   setMessages((prevMessages) => [
-                    { direction: 'system', data: '📂 Proto schema loaded' },
+                    { direction: 'system', data: '🟢 Proto schema loaded' },
                     ...prevMessages,
                   ]);
                 } catch (error) {
                   setMessages((prevMessages) => [
-                    { direction: 'system', data: '❌ Failed to parse proto: ' + error },
+                    { direction: 'system', data: '🔴 Failed to parse proto: ' + error },
                     ...prevMessages,
                   ]);
                 }
@@ -263,53 +314,78 @@ export default function App() {
 
       {mode === 'HTTP' && httpResponse && (
         <ResponsePanel title="Response">
-          <div className="p-4 font-bold bg-body border-t border-border">{httpResponse.status}</div>
-          {httpResponse.status !== 'Sending...' && (
-            <div className="grid grid-cols-2 items-stretch max-h-[450px] p-4 border-t border-border overflow-y-auto">
-              <div className="flex-1 pr-4">
-                <h4 className="m-0">Headers</h4>
-                <pre className="m-0! mt-4! whitespace-pre-wrap break-all">
-                  {JSON.stringify(httpResponse.headers, null, 2)}
-                </pre>
+          <div
+            className={cn('flex items-center gap-2 p-4 font-bold bg-body border-t border-border', {
+              'text-green-500': httpResponse.status.startsWith('2'),
+              'text-blue-500': httpResponse.status.startsWith('3'),
+              'text-orange-500': httpResponse.status.startsWith('4'),
+              'text-red-500': httpResponse.status.startsWith('5') || httpResponse.status === NETWORK_ERROR,
+            })}
+          >
+            {httpResponse.status === SENDING && <Loader className="h-5! w-5!" />}
+            {httpResponse.status}
+          </div>
+          {httpResponse.status !== SENDING && (
+            <div className="grid grid-cols-2 items-stretch max-h-[450px] py-4 border-t border-border overflow-y-auto">
+              <div className="relative flex-1 px-4">
+                <h4 className="m-0 mb-4">Headers</h4>
+                {httpResponse.headers && (
+                  <CopyButton
+                    className="absolute top-0 right-4"
+                    textToCopy={JSON.stringify(httpResponse.headers, null, 2)}
+                  >
+                    Copy
+                  </CopyButton>
+                )}
+                <JsonViewer source={httpResponse.headers} />
               </div>
-              <div className="flex-1 pl-4 border-l border-border">
-                <h4 className="m-0">Body</h4>
-                <pre className="m-0! mt-4! whitespace-pre-wrap break-all">
-                  {typeof httpResponse.body === 'string'
-                    ? httpResponse.body
-                    : JSON.stringify(httpResponse.body, null, 2)}
-                </pre>
+              <div className="relative flex-1 px-4 border-l border-border">
+                <h4 className="m-0 mb-4">Body</h4>
+                {httpResponse.body && (
+                  <CopyButton
+                    className="absolute top-0 right-4"
+                    textToCopy={
+                      typeof httpResponse.body === 'string'
+                        ? httpResponse.body
+                        : JSON.stringify(httpResponse.body, null, 2)
+                    }
+                  >
+                    Copy
+                  </CopyButton>
+                )}
+                <JsonViewer source={extractBodyFromResponse(httpResponse)} />
               </div>
             </div>
           )}
         </ResponsePanel>
       )}
 
-      {mode === 'WSS' && messages.length > 0 && (
+      {messages.length > 0 && (
         <ResponsePanel title="Messages">
-          <div className="max-h-[400px] p-4 border-t border-border overflow-y-auto">
-            {messages.map((message, index) => (
-              <div
-                key={index}
-                className={cn('pt-2 nth-[2n]:border-b last:border-none border-border', {
-                  'nth-[1n]:border-b': message.direction !== 'sent' && message.direction !== 'received',
-                })}
-              >
-                <span
-                  className={cn('font-bold', {
-                    'text-blue-500': message.direction === 'sent',
-                    'text-green-500': message.direction === 'received',
-                  })}
-                >
-                  {message.direction === 'sent' ? '➡' : message.direction === 'received' ? '⬅' : '⚠'}
-                </span>
-                <pre className="mt-0 ml-4 whitespace-pre-wrap break-all">{message.data}</pre>
-                {message.decoded && (
-                  <>
-                    <div className="font-monospace font-bold text-sm">Decoded Protobuf:</div>
-                    <pre className="whitespace-pre-wrap break-all">{message.decoded}</pre>
-                  </>
-                )}
+          <div className="max-h-[400px] p-4 text-xs border-t border-border overflow-y-auto">
+            {messages.map(({ data, decoded, direction }, index) => (
+              <div key={index} className="not-first:pt-3 not-last:pb-3 border-b last:border-none border-border">
+                <div className="flex items-center gap-4">
+                  {direction !== 'system' && (
+                    <span
+                      className={cn('w-5 h-5 font-bold rounded-xs text-center leading-normal rotate-90', {
+                        'text-method-post bg-method-post/10': direction === 'sent',
+                        'text-method-put bg-method-put/10': direction === 'received',
+                      })}
+                    >
+                      {direction === 'sent' ? '⬅' : direction === 'received' ? '➡' : ''}
+                    </span>
+                  )}
+                  <div>
+                    <pre className="my-0 whitespace-pre-wrap break-all">{data}</pre>
+                    {decoded && (
+                      <>
+                        <div className="mt-2 font-monospace font-bold">Decoded Protobuf:</div>
+                        <pre className="my-0 whitespace-pre-wrap break-all">dfd</pre>
+                      </>
+                    )}
+                  </div>
+                </div>
               </div>
             ))}
           </div>
@@ -360,17 +436,42 @@ export default function App() {
 
       {mode === 'HTTP' && (
         <div>
-          <Button disabled={disabledRunTests} onClick={disabledRunTests ? undefined : runAllTests}>
+          <Button
+            disabled={disabledRunTests}
+            onClick={() =>
+              setTestOptions({ body, headers, method, bodyMappings, queryMappings, messageType, protoFile, url })
+            }
+          >
             {isRunningTests ? `Running tests... (${currentTest}/${testsCount})` : 'Generate & Run Tests'}
           </Button>
         </div>
       )}
 
-      {testsRun && (
+      {testOptions && (
         <>
           <ResponsePanel title="Security Tests">
             <TestsTable
-              columns={getTestsTableColumns(['Check', 'Expected', 'Actual', 'Result'])}
+              columns={[
+                ...getTestsTableColumns(['Check', 'Expected', 'Actual']),
+                {
+                  name: 'Result',
+                  selector: (row) => row.status,
+                  width: '150px',
+                  cell: (row) => {
+                    if (row.name === LARGE_PAYLOAD_TEST_NAME)
+                      return (
+                        <LargePayloadTestControls
+                          isRunning={isLargePayloadTestRunning}
+                          executeTest={(size: number) =>
+                            executeLargePayloadTest({ ...testOptions, bodyMappings, queryMappings }, size)
+                          }
+                        />
+                      );
+
+                    return row.status;
+                  },
+                },
+              ]}
               expandableRows
               expandableRowsComponent={ExpandedTestComponent}
               expandableRowsComponentProps={{ headers: parseHeaders(headers), protoFile, messageType }}
@@ -384,19 +485,11 @@ export default function App() {
           <ResponsePanel title="Performance Insights">
             <TestsTable
               columns={[
-                {
-                  name: 'Check',
-                  selector: (row) => row.name,
-                },
-                {
-                  name: 'Expected',
-                  selector: (row) => row.expected,
-                  cell: (row) => <div className="py-2">{row.expected}</div>,
-                },
+                ...getTestsTableColumns(['Check', 'Expected']),
                 {
                   name: 'Actual',
                   selector: (row) => row.actual,
-                  cell: (row) => <div className="py-2">{row.actual}</div>,
+                  cell: (row) => <div className="py-1">{row.actual}</div>,
                 },
                 {
                   name: 'Result',
@@ -404,7 +497,14 @@ export default function App() {
                   width: '220px',
                   cell: (row) => {
                     if (row.name === LOAD_TEST_NAME)
-                      return <LoadTestControls isRunning={isLoadTestRunning} executeTest={executeLoadTest} />;
+                      return (
+                        <LoadTestControls
+                          isRunning={isLoadTestRunning}
+                          executeTest={(threadCount: number, requestCount: number) =>
+                            executeLoadTest({ ...testOptions, bodyMappings, queryMappings }, threadCount, requestCount)
+                          }
+                        />
+                      );
 
                     return row.status;
                   },
@@ -424,6 +524,8 @@ export default function App() {
               expandableRowsComponentProps={{ headers: parseHeaders(headers), protoFile, messageType }}
               expandOnRowClicked
               data={dataDrivenTests}
+              fixedHeader={true}
+              fixedHeaderScrollHeight="720px"
               progressComponent={<TestRunningLoader text="Running Data-Driven Tests..." />}
               progressPending={isDataDrivenRunning}
             />
@@ -458,13 +560,7 @@ export default function App() {
     setMessages([]);
     setBodyMappings({});
     setQueryMappings({});
-    setTestsRun(false);
-  }
-
-  async function runAllTests() {
-    setTestsRun(true);
-
-    await executeAllTests();
+    setTestOptions(null);
   }
 
   function importCurl() {
@@ -490,7 +586,7 @@ export default function App() {
       closeCurlModal();
     } catch (error) {
       console.error('cURL import failed', error);
-      setCurlError('The cURL command you provided appears to be invalid. Please check it and try again.');
+      setCurlError('The cURL command you provided appears to be invalid. Please check it and try again');
     }
   }
 
@@ -500,9 +596,13 @@ export default function App() {
     setCurlError('');
   }
 
+  function closeReloadModal() {
+    setOpenReloadModal(false);
+  }
+
   async function sendHttp() {
     setHttpResponse({
-      status: 'Sending...',
+      status: SENDING,
       body: '',
       headers: {},
     });
@@ -513,7 +613,7 @@ export default function App() {
       const parsedHeaders = parseHeaders(headers);
       const parsedBody = parseBody(body, parsedHeaders, messageType, protoFile);
       const request = createHttpRequest(parsedBody, parsedHeaders, method, url);
-      const response = await window.electronAPI.sendHttp(request);
+      const response: HttpResponse = await window.electronAPI.sendHttp(request);
 
       setHttpResponse(response);
 
@@ -528,7 +628,7 @@ export default function App() {
       setQueryMappings(queryMappings);
     } catch (error) {
       setHttpResponse({
-        status: 'Network Error',
+        status: NETWORK_ERROR,
         body: String(error),
         headers: {},
       });
@@ -538,7 +638,7 @@ export default function App() {
   function connectWss() {
     if (!url.startsWith('ws')) {
       setMessages((prevMessages) => [
-        { direction: 'system', data: '❌ Please use ws:// or wss:// URL' },
+        { direction: 'system', data: '🔴 Please use ws:// or wss:// URL' },
         ...prevMessages,
       ]);
       return;
