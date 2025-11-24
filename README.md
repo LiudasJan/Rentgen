@@ -74,16 +74,16 @@ In less than a minute, RENTGEN automatically generated and executed 200+ API tes
 
 Here’s what was found:
 
-1️⃣ **CORS policy wide open** – API accepts requests from any domain (no CORS restriction).  
-2️⃣ **Missing security headers** – no `X-Frame-Options` or `Cache-Control`.  
-3️⃣ **OPTIONS method not supported** – violates API interoperability rules.  
-4️⃣ **Body size handling broken** – server returns 500 instead of 413 Payload Too Large.  
-5️⃣ **Authorization handling inconsistent** – returns 403 instead of expected 401.  
-6️⃣ **Input validation missing** – incorrect field types still return 200 OK.  
-7️⃣ **404 handling correct** – works as expected.  
+1️⃣ **CORS policy wide open** – API accepts requests from any domain (no CORS restriction).
+2️⃣ **Missing security headers** – no `X-Frame-Options` or `Cache-Control`.
+3️⃣ **OPTIONS method not supported** – violates API interoperability rules.
+4️⃣ **Body size handling broken** – server returns 500 instead of 413 Payload Too Large.
+5️⃣ **Authorization handling inconsistent** – returns 403 instead of expected 401.
+6️⃣ **Input validation missing** – incorrect field types still return 200 OK.
+7️⃣ **404 handling correct** – works as expected.
 8️⃣ **Performance solid** – median 184 ms response time.
 
-📖 **Read the full case study here:**  
+📖 **Read the full case study here:**
 👉 [I tested ChatGPT’s backend API using RENTGEN, and found more issues than expected](https://www.linkedin.com/pulse/i-tested-chatgpts-backend-api-using-rentgen-found-more-jankauskas-ixsnf/)
 
 ## 🔧 Installation
