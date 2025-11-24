@@ -27,6 +27,8 @@
 
 ### 🐞 Bug Fixes
 
+- [Lagging UI on Macos](https://github.com/LiudasJan/Rentgen/issues/10)
+
 - Fixed an issue where importing a cURL command could add an extra header:
   - `Content-Type: application/x-www-form-urlencoded`
   - Header is now included **only if explicitly provided by the user**.
