@@ -7,17 +7,10 @@
 #### 🔍 New Test Cases
 
 - **TEST: Domain Case Test**
-  - Converts the domain to UPPERCASE (e.g., `API.STRIPE.COM`)
-  - Expected: `2xx`
-  - Actual: `200/400`
-  - Result: Pass/Fail depending on API behavior
-  - Example: Imported Stripe API (`api.stripe.com`)
+  - Converts the domain to UPPERCASE (e.g., `API.RENTGEN.IO`)
 
 - **TEST: Path Case Test**
   - Converts the last path segment to UPPERCASE (e.g., `/CUSTOMERS`)
-  - Expected: `404`
-  - Actual: `404/200`
-  - Result: Pass/Fail depending on API behavior
   - Example: `/v1/customers` → `/v1/CUSTOMERS`
 
 - **TEST: Reflected Payload Safety**
@@ -41,3 +34,17 @@
 ### 🔧 Other Improvements
 
 - Internal optimizations and stability updates.
+
+# 💻 How to Run on macOS
+
+macOS may block the app (“developer cannot be verified”).
+To run it normally:
+
+Move Rentgen.app to the Applications folder.
+Open Terminal and run the following command:
+
+```
+xattr -d com.apple.quarantine /Applications/Rentgen.app
+```
+
+After this, you can launch Rentgen from Finder or Spotlight as usual.
