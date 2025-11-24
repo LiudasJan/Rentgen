@@ -242,14 +242,12 @@ jobs:
             dir=$(dirname "$file")
             basename=$(basename "$file")
             # Extract arch from filename (e.g., rentgen-1.2.1-1.x86_64.rpm -> x86_64)
-            # RPM uses x86_64 for x64 and aarch64 for ARM 64-bit
-            arch=$(echo "$basename" | sed -n 's/.*\.\(x86_64\|aarch64\)\.rpm$/\1/p')
+            # RPM uses x86_64 for x64 and arm64 for ARM 64-bit
+            arch=$(echo "$basename" | sed -n 's/.*\.\(x86_64\|arm64\)\.rpm$/\1/p')
             if [ -n "$arch" ]; then
-              # Convert x86_64 to x64, aarch64 to arm64 for consistency with other platforms
+              # Convert x86_64 to x64 for consistency
               if [ "$arch" = "x86_64" ]; then
                 arch="x64"
-              elif [ "$arch" = "aarch64" ]; then
-                arch="arm64"
               fi
               newname="Rentgen-${TAG_NAME}-linux-${arch}.rpm"
               mv "$file" "$dir/$newname"
