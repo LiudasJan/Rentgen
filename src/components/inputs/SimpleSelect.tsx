@@ -14,6 +14,7 @@ export default function SimpleSelect({ className, options, placeholder, ...other
     <select
       className={classNames(
         'min-w-[110px] m-0 py-2 px-3 text-xs border border-border rounded-md',
+        'dark:text-white dark:bg-[#343a46] dark:border-[#d0dcdc]/20',
         optionClassName,
         className,
       )}

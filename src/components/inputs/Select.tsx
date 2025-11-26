@@ -15,18 +15,23 @@ interface Props extends SelectProps {
 export default function Select({ classNames, isCreatable, ...otherProps }: Props) {
   const selectClassNames: ClassNamesConfig<unknown, boolean, GroupBase<unknown>> = {
     container: () => 'min-w-[110px] text-xs',
-    control: () => 'min-h-auto! bg-white! border! border-border! rounded-md! shadow-none!',
-    dropdownIndicator: () => 'w-7! p-1.5! text-black/40!',
+    control: () =>
+      cn(
+        'min-h-auto! bg-white! border! border-border! rounded-md! shadow-none!',
+        'dark:bg-[#343a46]! dark:border-[#343a46]!',
+      ),
+    dropdownIndicator: () => 'w-7! p-1.5! text-black/40! dark:text-white/40!',
     indicatorSeparator: () => 'hidden',
-    input: () => 'm-0! p-0!',
-    menu: () => 'm-0! rounded-md!',
+    input: () => 'm-0! p-0! text-black! dark:text-white!',
+    menu: () => 'm-0! rounded-md! dark:bg-[#343a46]!',
     menuList: () => 'p-0!',
     option: ({ data, isSelected }) =>
       cn(
         'first:rounded-t-md! last:rounded-b-md!',
         {
           'text-white!': isSelected,
-          'text-text!': !(data as SelectOption<unknown>).className,
+          'dark:bg-[#343a46]! dark:hover:bg-[#99a1b3]!': !isSelected,
+          'text-black! dark:text-white!': !(data as SelectOption<unknown>).className,
         },
         (data as SelectOption<unknown>).className,
       ),
@@ -35,8 +40,8 @@ export default function Select({ classNames, isCreatable, ...otherProps }: Props
       cn(
         'm-0!',
         {
-          'text-text/50!': isDisabled,
-          'text-text!': !(data as SelectOption<unknown>).className,
+          'text-black/50! dark:text-white/50!': isDisabled,
+          'text-black! dark:text-white!': !(data as SelectOption<unknown>).className,
         },
         (data as SelectOption<unknown>).className,
       ),
