@@ -35,6 +35,8 @@ import {
   parseHeaders,
 } from './utils';
 
+import DarkModeIcon from './assets/icons/dark-mode-icon.svg';
+import LightModeIcon from './assets/icons/light-mode-icon.svg';
 import ReloadIcon from './assets/icons/reload-icon.svg';
 
 type Mode = 'HTTP' | 'WSS';
@@ -104,7 +106,16 @@ export default function App() {
     isRunningTests || !httpResponse || statusCode < RESPONSE_STATUS.OK || statusCode >= RESPONSE_STATUS.BAD_REQUEST;
 
   useEffect(() => {
-    if (!window.electronAPI?.onWssEvent) return;
+    const setTheme = async () => {
+      const theme = await window.themeAPI.getTheme();
+      if (theme === 'dark') document.documentElement.classList.add('dark');
+    };
+
+    setTheme();
+  }, []);
+
+  useEffect(() => {
+    if (!window.electronAPI.onWssEvent) return;
 
     const messagesListener = (event: any) => {
       if (event.type === 'open') {
@@ -175,7 +186,22 @@ export default function App() {
             </Modal>
           </>
         )}
-        <div className="flex-auto flex items-center justify-end">
+        <div className="flex-auto flex items-center justify-end gap-2">
+          <IconButton
+            onClick={async () => {
+              const theme = await window.themeAPI.getTheme();
+              if (theme === 'dark') {
+                document.documentElement.classList.remove('dark');
+                window.themeAPI.setTheme('light');
+              } else {
+                document.documentElement.classList.add('dark');
+                window.themeAPI.setTheme('dark');
+              }
+            }}
+          >
+            <DarkModeIcon className="h-5 w-5 dark:hidden" />
+            <LightModeIcon className="hidden dark:block h-6 w-6" />
+          </IconButton>
           <IconButton onClick={() => setOpenReloadModal(true)}>
             <ReloadIcon className="h-5 w-5" />
           </IconButton>
@@ -184,7 +210,7 @@ export default function App() {
               <h4 className="m-0">Reload</h4>
               <p className="m-0 text-sm dark:text-text-secondary">All current data will be lost</p>
               <div className="flex items-center justify-end gap-4">
-                <Button buttonType={ButtonType.DANGER} onClick={() => window.electronAPI.reloadApp()}>
+                <Button buttonType={ButtonType.DANGER} onClick={() => window.location.reload()}>
                   Reload
                 </Button>
                 <Button buttonType={ButtonType.SECONDARY} onClick={closeReloadModal}>

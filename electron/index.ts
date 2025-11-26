@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { exec } from 'child_process';
 import { app, BrowserWindow, ipcMain } from 'electron';
+import Store from 'electron-store';
 import WebSocket from 'ws';
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
@@ -13,17 +14,21 @@ declare const MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY: string;
 
 let ws: WebSocket | null = null;
 
+const store = new Store<{ theme: 'light' | 'dark' }>({
+  defaults: { theme: 'light' },
+}) as any;
+
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) app.quit();
 
-const icon =
-  process.platform === 'win32'
-    ? './assets/icons/rentgen.ico'
-    : process.platform === 'linux'
-      ? './assets/icons/rentgen.png'
-      : undefined;
-
 const createWindow = (): void => {
+  const icon =
+    process.platform === 'win32'
+      ? './assets/icons/rentgen.ico'
+      : process.platform === 'linux'
+        ? './assets/icons/rentgen.png'
+        : undefined;
+
   // Create the browser window.
   const mainWindow = new BrowserWindow({
     icon,
@@ -174,8 +179,11 @@ ipcMain.handle('ping-host', async (_, host: string) => {
   });
 });
 
-// Handle app reload
-ipcMain.on('reload-app', () => {
-  const focusedWindow = BrowserWindow.getFocusedWindow();
-  if (focusedWindow) focusedWindow.reload();
+// Handle theme requests
+ipcMain.handle('get-theme', async () => {
+  return store.get('theme');
+});
+
+ipcMain.on('set-theme', (_, theme: 'light' | 'dark') => {
+  store.set('theme', theme);
 });
