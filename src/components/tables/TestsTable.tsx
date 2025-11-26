@@ -80,7 +80,7 @@ export function ExpandedTestComponent({
     modifiedResponse.body = extractBodyFromResponse(modifiedResponse) as any;
 
   return (
-    <div className="p-4 bg-[#f9fbff] dark:bg-[#23272f]">
+    <div className="p-4 bg-body dark:bg-dark-body">
       {request && (
         <CopyButton className="mb-4" textToCopy={generateCurl(request)}>
           Copy cURL

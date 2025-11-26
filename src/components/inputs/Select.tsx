@@ -18,20 +18,20 @@ export default function Select({ classNames, isCreatable, ...otherProps }: Props
     control: () =>
       cn(
         'min-h-auto! bg-white! border! border-border! rounded-md! shadow-none!',
-        'dark:bg-[#343a46]! dark:border-[#343a46]!',
+        'dark:bg-dark-input! dark:border-dark-input!',
       ),
-    dropdownIndicator: () => 'w-7! p-1.5! text-black/40! dark:text-white/40!',
+    dropdownIndicator: () => 'w-7! p-1.5! text-text/40! dark:text-dark-text/40!',
     indicatorSeparator: () => 'hidden',
-    input: () => 'm-0! p-0! text-black! dark:text-white!',
-    menu: () => 'm-0! rounded-md! dark:bg-[#343a46]!',
+    input: () => 'm-0! p-0! text-text! dark:text-dark-text!',
+    menu: () => 'm-0! rounded-md! dark:bg-dark-input!',
     menuList: () => 'p-0!',
     option: ({ data, isSelected }) =>
       cn(
         'first:rounded-t-md! last:rounded-b-md!',
         {
           'text-white!': isSelected,
-          'dark:bg-[#343a46]! dark:hover:bg-[#99a1b3]!': !isSelected,
-          'text-black! dark:text-white!': !(data as SelectOption<unknown>).className,
+          'dark:bg-dark-input! dark:hover:bg-[#99a1b3]!': !isSelected,
+          'text-text! dark:text-dark-text!': !(data as SelectOption<unknown>).className,
         },
         (data as SelectOption<unknown>).className,
       ),
@@ -40,8 +40,8 @@ export default function Select({ classNames, isCreatable, ...otherProps }: Props
       cn(
         'm-0!',
         {
-          'text-black/50! dark:text-white/50!': isDisabled,
-          'text-black! dark:text-white!': !(data as SelectOption<unknown>).className,
+          'text-text/50! dark:text-dark-text/50!': isDisabled,
+          'text-text! dark:text-dark-text!': !(data as SelectOption<unknown>).className,
         },
         (data as SelectOption<unknown>).className,
       ),

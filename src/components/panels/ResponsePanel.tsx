@@ -9,12 +9,13 @@ export default function ResponsePanel({ children, className, title, ...otherProp
   return (
     <div
       className={cn(
-        'bg-white dark:bg-[#343a46] border border-border dark:border-[#343a46] rounded-md overflow-hidden',
+        'bg-white border border-border rounded-md overflow-hidden',
+        'dark:bg-dark-input dark:border-dark-input',
         className,
       )}
       {...otherProps}
     >
-      <h4 className="m-0 p-4 dark:text-white">{title}</h4>
+      <h4 className="m-0 p-4">{title}</h4>
       {children}
     </div>
   );

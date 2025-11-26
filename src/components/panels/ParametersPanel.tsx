@@ -1,3 +1,4 @@
+import cn from 'classnames';
 import { FieldType } from '../../types';
 import { SelectOption } from '../inputs/Select';
 import SimpleSelect from '../inputs/SimpleSelect';
@@ -29,7 +30,7 @@ export default function ParametersPanel({ title, mappings, onFieldTypeChange, on
     <ResponsePanel title={title} {...otherProps}>
       {Object.entries(mappings).map(([key, type]) => (
         <div key={key} className="pb-4 first-of-type:pt-4 px-4 flex items-center justify-between gap-4">
-          <span className="flex-1 font-monospace dark:text-white text-ellipsis text-nowrap overflow-hidden">{key}</span>
+          <span className="flex-1 font-monospace text-ellipsis text-nowrap overflow-hidden">{key}</span>
           <div className="flex items-center">
             <SimpleSelect
               className="rounded-none! p-1! outline-none"
@@ -38,7 +39,10 @@ export default function ParametersPanel({ title, mappings, onFieldTypeChange, on
               onChange={(e) => onFieldTypeChange(key, e.target.value as FieldType)}
             />
             <svg
-              className="h-[18px] w-[18px] p-[5px] text-button-text-secondary hover:text-button-text-secondary-hover dark:text-[#99a1b3] dark:hover:text-white cursor-pointer"
+              className={cn(
+                'h-[18px] w-[18px] p-[5px] text-button-text-secondary hover:text-button-text-secondary-hover',
+                'dark:text-text-secondary dark:hover:text-dark-text cursor-pointer',
+              )}
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 24 24"
               onClick={() => onRemoveClick(key)}

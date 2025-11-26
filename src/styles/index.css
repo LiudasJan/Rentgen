@@ -11,6 +11,8 @@
   --font-monospace: monospace;
 
   /* Colors */
+  --color-body: #fafafa;
+  --color-border: #cccccc;
   --color-button-primary: #097bed;
   --color-button-primary-hover: #0265d2;
   --color-button-secondary: #f2f2f2;
@@ -19,19 +21,25 @@
   --color-button-text-secondary-hover: #212121;
   --color-button-danger: #eb2013;
   --color-button-danger-hover: #b02016;
-  --color-body: #fafafa;
-  --color-border: #cccccc;
-  --color-method-get: #148941;
-  --color-method-post: #b08010;
-  --color-method-put: #0053b8;
-  --color-method-patch: #623497;
   --color-method-delete: #8e1a10;
+  --color-method-get: #148941;
   --color-method-head: #279250;
   --color-method-options: #b0307a;
+  --color-method-patch: #623497;
+  --color-method-post: #b08010;
+  --color-method-put: #0053b8;
+  --color-text: black;
+  --color-text-secondary: #99a1b3;
+
+  --color-dark-body: #23272f;
+  --color-dark-button-secondary: #99a1b3;
+  --color-dark-button-secondary-hover: #858d99;
+  --color-dark-input: #343a46;
+  --color-dark-text: white;
 }
 
 @layer base {
   body {
-    @apply m-0 font-segoe-ui bg-body dark:bg-[#23272f];
+    @apply m-0 font-segoe-ui bg-body dark:bg-dark-body text-text dark:text-dark-text;
   }
 }
