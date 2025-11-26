@@ -1,9 +1,13 @@
 import cn from 'classnames';
-import Button, { Props as ButtonProps } from './Button';
+import Button, { Props as ButtonProps, ButtonType } from './Button';
 
-export function CopyButton({ className, children, ...otherProps }: ButtonProps) {
+export function IconButton({ buttonType = ButtonType.SECONDARY, className, children, ...otherProps }: ButtonProps) {
   return (
-    <Button className={cn('h-6! w-6! min-w-auto! p-2! rounded-full', className)} {...otherProps}>
+    <Button
+      buttonType={buttonType}
+      className={cn('flex items-center justify-center h-[34px] w-[34px] min-w-auto! p-0! rounded-full!', className)}
+      {...otherProps}
+    >
       {children}
     </Button>
   );

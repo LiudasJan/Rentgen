@@ -3,6 +3,7 @@ import cn from 'classnames';
 import { useEffect, useState } from 'react';
 import Button, { ButtonType } from './components/buttons/Button';
 import { CopyButton } from './components/buttons/CopyButton';
+import { IconButton } from './components/buttons/IconButton';
 import { LargePayloadTestControls } from './components/controls/LargePayloadTestControls';
 import { LoadTestControls } from './components/controls/LoadTestControls';
 import Input from './components/inputs/Input';
@@ -33,6 +34,8 @@ import {
   parseBody,
   parseHeaders,
 } from './utils';
+
+import ReloadIcon from './assets/icons/reload-icon.svg';
 
 type Mode = 'HTTP' | 'WSS';
 
@@ -173,14 +176,9 @@ export default function App() {
           </>
         )}
         <div className="flex-auto flex items-center justify-end">
-          <Button buttonType={ButtonType.SECONDARY} onClick={() => setOpenReloadModal(true)}>
-            <span className="w-fit flex items-center gap-1 mx-auto">
-              <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                <path d="M3.502 16.6663V13.3333C3.502 12.9661 3.79977 12.6683 4.16704 12.6683H7.50004L7.63383 12.682C7.93691 12.7439 8.16508 13.0119 8.16508 13.3333C8.16508 13.6547 7.93691 13.9227 7.63383 13.9847L7.50004 13.9984H5.47465C6.58682 15.2249 8.21842 16.0013 10 16.0013C13.06 16.0012 15.5859 13.711 15.9551 10.7513L15.9854 10.6195C16.0845 10.3266 16.3785 10.1334 16.6973 10.1732C17.0617 10.2186 17.3198 10.551 17.2745 10.9154L17.2247 11.2523C16.6301 14.7051 13.6224 17.3313 10 17.3314C8.01103 17.3314 6.17188 16.5383 4.83208 15.2474V16.6663C4.83208 17.0335 4.53411 17.3311 4.16704 17.3314C3.79977 17.3314 3.502 17.0336 3.502 16.6663ZM4.04497 9.24935C3.99936 9.61353 3.66701 9.87178 3.30278 9.8265C2.93833 9.78105 2.67921 9.44876 2.72465 9.08431L4.04497 9.24935ZM10 2.66829C11.9939 2.66833 13.8372 3.46551 15.1778 4.76204V3.33333C15.1778 2.96616 15.4757 2.66844 15.8428 2.66829C16.2101 2.66829 16.5079 2.96606 16.5079 3.33333V6.66634C16.5079 7.03361 16.2101 7.33138 15.8428 7.33138H12.5098C12.1425 7.33138 11.8448 7.03361 11.8448 6.66634C11.8449 6.29922 12.1426 6.0013 12.5098 6.0013H14.5254C13.4133 4.77488 11.7816 3.99841 10 3.99837C6.93998 3.99837 4.41406 6.28947 4.04497 9.24935L3.38481 9.16634L2.72465 9.08431C3.17574 5.46702 6.26076 2.66829 10 2.66829Z"></path>
-              </svg>
-              Reload
-            </span>
-          </Button>
+          <IconButton onClick={() => setOpenReloadModal(true)}>
+            <ReloadIcon className="h-5 w-5" />
+          </IconButton>
           <Modal className="[&>div]:w-[400px]!" isOpen={openReloadModal} onClose={closeReloadModal}>
             <div className="flex flex-col gap-4">
               <h4 className="m-0">Reload</h4>
