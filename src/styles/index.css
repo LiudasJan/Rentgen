@@ -35,6 +35,13 @@
   --color-dark-button-secondary: #99a1b3;
   --color-dark-button-secondary-hover: #858d99;
   --color-dark-input: #343a46;
+  --color-dark-method-delete: #ef968a;
+  --color-dark-method-get: #6bdc99;
+  --color-dark-method-head: #68d696;
+  --color-dark-method-options: #e55aa8;
+  --color-dark-method-patch: #ae99cc;
+  --color-dark-method-post: #fae07c;
+  --color-dark-method-put: #6899d6;
   --color-dark-text: white;
 }
 

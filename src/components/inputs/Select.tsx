@@ -33,7 +33,7 @@ export default function Select({ classNames, isCreatable, ...otherProps }: Props
           'dark:bg-dark-input! dark:hover:bg-[#99a1b3]!': !isSelected,
           'text-text! dark:text-dark-text!': !(data as SelectOption<unknown>).className,
         },
-        (data as SelectOption<unknown>).className,
+        !isSelected ? (data as SelectOption<unknown>).className : undefined,
       ),
     placeholder: () => 'm-0!',
     singleValue: ({ data, isDisabled }) =>

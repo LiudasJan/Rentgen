@@ -163,7 +163,7 @@ const useTests = (options: TestOptions) => {
     const width = 20;
     const filled = Math.round((percent / 100) * width);
 
-    return '█'.repeat(filled) + '░'.repeat(width - filled) + ` ${percent}%`;
+    return '▓'.repeat(filled) + '░'.repeat(width - filled) + ` ${percent}%`;
   }
 
   function formatLoadTestProgress(loadBar: string, setRequestCount: number, requestCount: number): string {

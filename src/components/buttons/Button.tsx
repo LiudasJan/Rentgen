@@ -22,7 +22,7 @@ export default function Button({
   return (
     <button
       className={cn(
-        'min-w-[110px] m-0 py-2 px-3 text-xs font-bold border rounded-sm',
+        'min-w-[110px] m-0 py-2 px-3 font-segoe-ui text-xs font-bold border rounded-sm',
         {
           'bg-button-primary border-button-primary text-white': buttonType === ButtonType.PRIMARY,
           'hover:bg-button-primary-hover hover:border-button-primary-hover':

@@ -50,13 +50,13 @@ const modeOptions: SelectOption<Mode>[] = [
 ];
 
 const methodOptions: SelectOption<Method>[] = [
-  { value: 'GET', label: 'GET', className: 'text-method-get!' },
-  { value: 'POST', label: 'POST', className: 'text-method-post!' },
-  { value: 'PUT', label: 'PUT', className: 'text-method-put!' },
-  { value: 'PATCH', label: 'PATCH', className: 'text-method-patch!' },
-  { value: 'DELETE', label: 'DELETE', className: 'text-method-delete!' },
-  { value: 'HEAD', label: 'HEAD', className: 'text-method-head!' },
-  { value: 'OPTIONS', label: 'OPTIONS', className: 'text-method-options!' },
+  { value: 'GET', label: 'GET', className: 'text-method-get! dark:text-dark-method-get!' },
+  { value: 'POST', label: 'POST', className: 'text-method-post! dark:text-dark-method-post!' },
+  { value: 'PUT', label: 'PUT', className: 'text-method-put! dark:text-dark-method-put!' },
+  { value: 'PATCH', label: 'PATCH', className: 'text-method-patch! dark:text-dark-method-patch!' },
+  { value: 'DELETE', label: 'DELETE', className: 'text-method-delete! dark:text-dark-method-delete!' },
+  { value: 'HEAD', label: 'HEAD', className: 'text-method-head! dark:text-dark-method-head!' },
+  { value: 'OPTIONS', label: 'OPTIONS', className: 'text-method-options! dark:text-dark-method-options!' },
 ];
 
 export default function App() {
@@ -170,7 +170,7 @@ export default function App() {
                 <h4 className="m-0">Import cURL</h4>
                 <Textarea
                   autoFocus={true}
-                  className="min-h-40 font-monospace"
+                  className="min-h-40"
                   placeholder="Enter cURL or paste text"
                   value={curl}
                   onChange={(e) => setCurl(e.target.value)}
@@ -243,7 +243,7 @@ export default function App() {
             />
           )}
           <Input
-            className={cn('flex-auto font-monospace', { 'border-l-0! rounded-l-none!': mode === 'HTTP' })}
+            className={cn('flex-auto', { 'border-l-0! rounded-l-none!': mode === 'HTTP' })}
             placeholder="Enter URL or paste text"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
@@ -271,7 +271,6 @@ export default function App() {
       </div>
 
       <TextareaAutosize
-        className="font-monospace"
         maxRows={10}
         placeholder="Header-Key: value"
         value={headers}
@@ -280,7 +279,6 @@ export default function App() {
 
       <div className="relative">
         <TextareaAutosize
-          className="font-monospace"
           maxRows={15}
           placeholder={mode === 'HTTP' ? 'Enter request body (JSON or Form Data)' : 'Message body'}
           value={body}
@@ -304,7 +302,7 @@ export default function App() {
           <div className="flex items-center">
             <Input
               accept=".proto"
-              className="font-monospace rounded-r-none! dark:border-r-dark-body!"
+              className="rounded-r-none! dark:border-r-dark-body!"
               type="file"
               onChange={async (e) => {
                 const file = e.target.files?.[0];
@@ -331,7 +329,7 @@ export default function App() {
             />
 
             <Input
-              className="flex-auto font-monospace border-l-0! rounded-l-none!"
+              className="flex-auto border-l-0! rounded-l-none!"
               placeholder="Message type (e.g. mypackage.MyMessage)"
               value={messageType}
               onChange={(e) => setMessageType(e.target.value)}
