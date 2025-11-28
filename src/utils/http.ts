@@ -1,5 +1,14 @@
 import { Method } from 'axios';
-import { HttpRequest, HttpResponse, RequestParameters, TestOptions, TestResult } from '../types';
+import { initialNumberBounds } from '../constants/datasets';
+import {
+  DataType,
+  DynamicValue,
+  HttpRequest,
+  HttpResponse,
+  RequestParameters,
+  TestOptions,
+  TestResult,
+} from '../types';
 import { isObject, setDeepObjectProperty, stringifyValue, tryParseJsonObject } from './object';
 import { encodeMessage } from './proto';
 import { generateRandomValue } from './random';
@@ -127,7 +136,7 @@ export function extractBodyParameters(body: unknown, headers: Record<string, str
 
   if (isUrlEncodedContentType(headers)) {
     const formEntries = convertUrlEncodedToFormEntries(body as string);
-    for (const [key, value] of formEntries) parameters[key] = { type: detectDataType(value) };
+    for (const [key, value] of formEntries) parameters[key] = getInitialParameterValue(detectDataType(value));
   } else if (isObject(body)) {
     const extractedProperties = extractPropertiesFromJson(body);
     for (const [key, value] of Object.entries(extractedProperties)) {
@@ -142,7 +151,7 @@ export function extractBodyParameters(body: unknown, headers: Record<string, str
           propertyValue = propertyValue[path];
         }
 
-        parameters[key] = { type: detectDataType(propertyValue, true) };
+        parameters[key] = getInitialParameterValue(detectDataType(propertyValue, true));
       }
     }
   }
@@ -205,6 +214,15 @@ export function getBodyParameterValue(body: unknown, parameterName: string, head
   }
 
   return value;
+}
+
+export function getInitialParameterValue(type: DataType): DynamicValue {
+  switch (type) {
+    case 'number':
+      return { type, value: initialNumberBounds };
+    default:
+      return { type };
+  }
 }
 
 export function isUrlEncodedContentType(headers: Record<string, string>): boolean {

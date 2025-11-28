@@ -1,5 +1,10 @@
 import { TestData } from '../types';
 
+export const initialNumberBounds = {
+  from: 0,
+  to: 2147483647,
+};
+
 export const datasets: Record<string, TestData[]> = {
   email: [
     { value: 'email@qaontime.com', valid: true },

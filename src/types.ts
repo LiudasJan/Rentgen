@@ -17,6 +17,11 @@ export type DataType =
 
 export type ParameterType = 'body' | 'query';
 
+export interface DynamicValue {
+  type: DataType;
+  value?: any;
+}
+
 export interface HttpRequest {
   body?: Record<string, unknown> | string | Uint8Array | null;
   headers: Record<string, string>;
@@ -39,10 +44,7 @@ export interface ParsedCurlResult {
 }
 
 export interface RequestParameters {
-  [key: string]: {
-    type: DataType;
-    value?: any;
-  };
+  [key: string]: DynamicValue;
 }
 
 export interface TestData {

@@ -30,6 +30,7 @@ import {
   extractQueryParameters,
   extractStatusCode,
   formatBody,
+  getInitialParameterValue,
   loadProtoSchema,
   parseBody,
   parseHeaders,
@@ -425,7 +426,7 @@ export default function App() {
       )}
 
       {(Object.keys(bodyParameters).length > 0 || Object.keys(queryParameters).length > 0) && (
-        <div className="grid grid-cols-2 gap-4 items-stretch">
+        <div className="grid md:grid-cols-2 gap-4 items-stretch">
           {Object.keys(bodyParameters).length > 0 && (
             <ParametersPanel
               title="Body Parameters"
@@ -654,7 +655,10 @@ export default function App() {
 
       const bodyParameters = extractBodyParameters(parsedBody, parsedHeaders);
       const queryParameters = Object.fromEntries(
-        Object.entries(extractQueryParameters(url)).map(([key, value]) => [key, { type: detectDataType(value) }]),
+        Object.entries(extractQueryParameters(url)).map(([key, value]) => [
+          key,
+          getInitialParameterValue(detectDataType(value)),
+        ]),
       );
 
       setBodyParameters(bodyParameters);
