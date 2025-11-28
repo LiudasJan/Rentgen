@@ -42,24 +42,6 @@ Built for **QA engineers** who need _real testing_, not just “sending requests
 
 ---
 
-## 🏗️ Roadmap
-
-- [ ] Extend **security test suite** (more headers, SSL configs, CORS checks)
-- [ ] Broader **data handling checks** (trimming, limits, encoding issues)
-- [ ] Authentication & authorization scenarios (401 vs 403, token expiry)
-- [ ] Response code validation (empty vs not found, list pagination)
-- [ ] Performance & abuse prevention (rate limits, stress checks, load test)
-- [ ] Tabbed requests / workspaces / save project
-- [ ] Custom data-sets, easy import/export
-- [ ] Generate full integration CRUD tests
-- [ ] Run in CI/CD
-- [ ] Export to Playwrigth, Cypress etc.
-- [ ] gRPC support
-- [ ] Plugins/extensions
-- [ ] Fuzzing & SQLi/XSS payload libraries
-
----
-
 ## 🎬 Demo
 
 ![Rentgen Demo](./public/demo.gif)

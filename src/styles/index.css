@@ -3,35 +3,50 @@
 @import 'tailwindcss/theme.css' layer(theme);
 @import 'tailwindcss/utilities.css' layer(utilities);
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   /* Fonts */
   --font-segoe-ui: 'Segoe UI', Arial, sans-serif;
   --font-monospace: monospace;
 
   /* Colors */
+  --color-body: #fafafa;
+  --color-border: #cccccc;
   --color-button-primary: #097bed;
   --color-button-primary-hover: #0265d2;
   --color-button-secondary: #f2f2f2;
   --color-button-secondary-hover: #e6e6e6;
+  --color-button-text-secondary: #6b6b6b;
+  --color-button-text-secondary-hover: #212121;
   --color-button-danger: #eb2013;
   --color-button-danger-hover: #b02016;
-  --color-body: #fafafa;
-  --color-table-data: #f9fbff;
-  --color-border: #cccccc;
-  --color-method-get: #148941;
-  --color-method-post: #b08010;
-  --color-method-put: #0053b8;
-  --color-method-patch: #623497;
   --color-method-delete: #8e1a10;
+  --color-method-get: #148941;
   --color-method-head: #279250;
   --color-method-options: #b0307a;
-  --color-text: #333333;
-  --color-text-secondary: #6b6b6b;
-  --color-text-secondary-hover: #212121;
+  --color-method-patch: #623497;
+  --color-method-post: #b08010;
+  --color-method-put: #0053b8;
+  --color-text: black;
+  --color-text-secondary: #99a1b3;
+
+  --color-dark-body: #23272f;
+  --color-dark-button-secondary: #99a1b3;
+  --color-dark-button-secondary-hover: #858d99;
+  --color-dark-input: #343a46;
+  --color-dark-method-delete: #ef968a;
+  --color-dark-method-get: #6bdc99;
+  --color-dark-method-head: #68d696;
+  --color-dark-method-options: #e55aa8;
+  --color-dark-method-patch: #ae99cc;
+  --color-dark-method-post: #fae07c;
+  --color-dark-method-put: #6899d6;
+  --color-dark-text: white;
 }
 
 @layer base {
   body {
-    @apply m-0 font-segoe-ui bg-body text-text;
+    @apply m-0 font-segoe-ui bg-body dark:bg-dark-body text-text dark:text-dark-text;
   }
 }

@@ -8,7 +8,14 @@ interface Props extends HTMLAttributes<HTMLDivElement> {
 
 export default function TestRunningLoader({ className, text, ...otherProps }: Props) {
   return (
-    <div className={cn('w-full p-4 flex items-center gap-2 text-sm', className)} {...otherProps}>
+    <div
+      className={cn(
+        'w-full p-4 flex items-center gap-2 text-sm text-text bg-body',
+        'dark:text-dark-text dark:bg-dark-body',
+        className,
+      )}
+      {...otherProps}
+    >
       <Loader />
       {text}
     </div>

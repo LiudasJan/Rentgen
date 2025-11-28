@@ -14,7 +14,7 @@ import { HttpPanel } from '../panels/HttpPanel';
 export default function TestsTable({ columns, data, className, ...otherProps }: TableProps<TestResult>) {
   return (
     <DataTable
-      className={cn('border-t border-border rounded-t-none!', className)}
+      className={cn('border-t border-border dark:border-t-0 rounded-t-none!', className)}
       columns={columns}
       conditionalRowStyles={[
         {
@@ -80,7 +80,7 @@ export function ExpandedTestComponent({
     modifiedResponse.body = extractBodyFromResponse(modifiedResponse) as any;
 
   return (
-    <div className="p-4 bg-table-data">
+    <div className="p-4 bg-body dark:bg-dark-body">
       {request && (
         <CopyButton className="mb-4" textToCopy={generateCurl(request)}>
           Copy cURL

@@ -3,6 +3,7 @@ import cn from 'classnames';
 import { useEffect, useState } from 'react';
 import Button, { ButtonType } from './components/buttons/Button';
 import { CopyButton } from './components/buttons/CopyButton';
+import { IconButton } from './components/buttons/IconButton';
 import { LargePayloadTestControls } from './components/controls/LargePayloadTestControls';
 import { LoadTestControls } from './components/controls/LoadTestControls';
 import Input from './components/inputs/Input';
@@ -34,6 +35,10 @@ import {
   parseHeaders,
 } from './utils';
 
+import DarkModeIcon from './assets/icons/dark-mode-icon.svg';
+import LightModeIcon from './assets/icons/light-mode-icon.svg';
+import ReloadIcon from './assets/icons/reload-icon.svg';
+
 type Mode = 'HTTP' | 'WSS';
 
 const SENDING = 'Sending...';
@@ -45,13 +50,13 @@ const modeOptions: SelectOption<Mode>[] = [
 ];
 
 const methodOptions: SelectOption<Method>[] = [
-  { value: 'GET', label: 'GET', className: 'text-method-get!' },
-  { value: 'POST', label: 'POST', className: 'text-method-post!' },
-  { value: 'PUT', label: 'PUT', className: 'text-method-put!' },
-  { value: 'PATCH', label: 'PATCH', className: 'text-method-patch!' },
-  { value: 'DELETE', label: 'DELETE', className: 'text-method-delete!' },
-  { value: 'HEAD', label: 'HEAD', className: 'text-method-head!' },
-  { value: 'OPTIONS', label: 'OPTIONS', className: 'text-method-options!' },
+  { value: 'GET', label: 'GET', className: 'text-method-get! dark:text-dark-method-get!' },
+  { value: 'POST', label: 'POST', className: 'text-method-post! dark:text-dark-method-post!' },
+  { value: 'PUT', label: 'PUT', className: 'text-method-put! dark:text-dark-method-put!' },
+  { value: 'PATCH', label: 'PATCH', className: 'text-method-patch! dark:text-dark-method-patch!' },
+  { value: 'DELETE', label: 'DELETE', className: 'text-method-delete! dark:text-dark-method-delete!' },
+  { value: 'HEAD', label: 'HEAD', className: 'text-method-head! dark:text-dark-method-head!' },
+  { value: 'OPTIONS', label: 'OPTIONS', className: 'text-method-options! dark:text-dark-method-options!' },
 ];
 
 export default function App() {
@@ -101,7 +106,16 @@ export default function App() {
     isRunningTests || !httpResponse || statusCode < RESPONSE_STATUS.OK || statusCode >= RESPONSE_STATUS.BAD_REQUEST;
 
   useEffect(() => {
-    if (!window.electronAPI?.onWssEvent) return;
+    const setTheme = async () => {
+      const theme = await window.themeAPI.getTheme();
+      if (theme === 'dark') document.documentElement.classList.add('dark');
+    };
+
+    setTheme();
+  }, []);
+
+  useEffect(() => {
+    if (!window.electronAPI.onWssEvent) return;
 
     const messagesListener = (event: any) => {
       if (event.type === 'open') {
@@ -156,7 +170,7 @@ export default function App() {
                 <h4 className="m-0">Import cURL</h4>
                 <Textarea
                   autoFocus={true}
-                  className="min-h-40 font-monospace"
+                  className="min-h-40"
                   placeholder="Enter cURL or paste text"
                   value={curl}
                   onChange={(e) => setCurl(e.target.value)}
@@ -172,21 +186,31 @@ export default function App() {
             </Modal>
           </>
         )}
-        <div className="flex-auto flex items-center justify-end">
-          <Button buttonType={ButtonType.SECONDARY} onClick={() => setOpenReloadModal(true)}>
-            <span className="w-fit flex items-center gap-1 mx-auto">
-              <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                <path d="M3.502 16.6663V13.3333C3.502 12.9661 3.79977 12.6683 4.16704 12.6683H7.50004L7.63383 12.682C7.93691 12.7439 8.16508 13.0119 8.16508 13.3333C8.16508 13.6547 7.93691 13.9227 7.63383 13.9847L7.50004 13.9984H5.47465C6.58682 15.2249 8.21842 16.0013 10 16.0013C13.06 16.0012 15.5859 13.711 15.9551 10.7513L15.9854 10.6195C16.0845 10.3266 16.3785 10.1334 16.6973 10.1732C17.0617 10.2186 17.3198 10.551 17.2745 10.9154L17.2247 11.2523C16.6301 14.7051 13.6224 17.3313 10 17.3314C8.01103 17.3314 6.17188 16.5383 4.83208 15.2474V16.6663C4.83208 17.0335 4.53411 17.3311 4.16704 17.3314C3.79977 17.3314 3.502 17.0336 3.502 16.6663ZM4.04497 9.24935C3.99936 9.61353 3.66701 9.87178 3.30278 9.8265C2.93833 9.78105 2.67921 9.44876 2.72465 9.08431L4.04497 9.24935ZM10 2.66829C11.9939 2.66833 13.8372 3.46551 15.1778 4.76204V3.33333C15.1778 2.96616 15.4757 2.66844 15.8428 2.66829C16.2101 2.66829 16.5079 2.96606 16.5079 3.33333V6.66634C16.5079 7.03361 16.2101 7.33138 15.8428 7.33138H12.5098C12.1425 7.33138 11.8448 7.03361 11.8448 6.66634C11.8449 6.29922 12.1426 6.0013 12.5098 6.0013H14.5254C13.4133 4.77488 11.7816 3.99841 10 3.99837C6.93998 3.99837 4.41406 6.28947 4.04497 9.24935L3.38481 9.16634L2.72465 9.08431C3.17574 5.46702 6.26076 2.66829 10 2.66829Z"></path>
-              </svg>
-              Reload
-            </span>
-          </Button>
+        <div className="flex-auto flex items-center justify-end gap-2">
+          <IconButton
+            onClick={async () => {
+              const theme = await window.themeAPI.getTheme();
+              if (theme === 'dark') {
+                document.documentElement.classList.remove('dark');
+                window.themeAPI.setTheme('light');
+              } else {
+                document.documentElement.classList.add('dark');
+                window.themeAPI.setTheme('dark');
+              }
+            }}
+          >
+            <DarkModeIcon className="h-5 w-5 dark:hidden" />
+            <LightModeIcon className="hidden dark:block h-6 w-6" />
+          </IconButton>
+          <IconButton onClick={() => setOpenReloadModal(true)}>
+            <ReloadIcon className="h-5 w-5" />
+          </IconButton>
           <Modal className="[&>div]:w-[400px]!" isOpen={openReloadModal} onClose={closeReloadModal}>
             <div className="flex flex-col gap-4">
               <h4 className="m-0">Reload</h4>
-              <p className="m-0 text-sm">All current data will be lost</p>
+              <p className="m-0 text-sm dark:text-text-secondary">All current data will be lost</p>
               <div className="flex items-center justify-end gap-4">
-                <Button buttonType={ButtonType.DANGER} onClick={() => window.electronAPI.reloadApp()}>
+                <Button buttonType={ButtonType.DANGER} onClick={() => window.location.reload()}>
                   Reload
                 </Button>
                 <Button buttonType={ButtonType.SECONDARY} onClick={closeReloadModal}>
@@ -204,8 +228,12 @@ export default function App() {
             <Select
               className="font-bold uppercase"
               classNames={{
-                control: () => 'min-h-auto! bg-white! border! border-border! rounded-none! rounded-l-md! shadow-none!',
-                input: () => 'm-0! p-0! [&>:first-child]:uppercase',
+                control: () =>
+                  cn(
+                    'min-h-auto! bg-white! border! border-border! rounded-none! rounded-l-md! shadow-none!',
+                    'dark:bg-dark-input! dark:border-dark-input! dark:border-r-dark-body!',
+                  ),
+                input: () => 'm-0! p-0! [&>:first-child]:uppercase text-text! dark:text-dark-text!',
               }}
               isCreatable={true}
               options={methodOptions}
@@ -215,7 +243,7 @@ export default function App() {
             />
           )}
           <Input
-            className={cn('flex-auto font-monospace', { 'border-l-0! rounded-l-none!': mode === 'HTTP' })}
+            className={cn('flex-auto', { 'border-l-0! rounded-l-none!': mode === 'HTTP' })}
             placeholder="Enter URL or paste text"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
@@ -243,7 +271,6 @@ export default function App() {
       </div>
 
       <TextareaAutosize
-        className="font-monospace"
         maxRows={10}
         placeholder="Header-Key: value"
         value={headers}
@@ -252,7 +279,6 @@ export default function App() {
 
       <div className="relative">
         <TextareaAutosize
-          className="font-monospace"
           maxRows={15}
           placeholder={mode === 'HTTP' ? 'Enter request body (JSON or Form Data)' : 'Message body'}
           value={body}
@@ -270,13 +296,13 @@ export default function App() {
       {mode === 'HTTP' && (
         <div>
           <label className="block mb-1 font-bold text-sm">Protobuf Schema & Message Type</label>
-          <div className="mb-3 text-xs text-gray-500/80">
+          <div className="mb-3 text-xs text-text-secondary">
             Experimental and optional section. If used, both fields must be completed
           </div>
           <div className="flex items-center">
             <Input
               accept=".proto"
-              className="font-monospace rounded-r-none!"
+              className="rounded-r-none! dark:border-r-dark-body!"
               type="file"
               onChange={async (e) => {
                 const file = e.target.files?.[0];
@@ -303,7 +329,7 @@ export default function App() {
             />
 
             <Input
-              className="flex-auto font-monospace border-l-0! rounded-l-none!"
+              className="flex-auto border-l-0! rounded-l-none!"
               placeholder="Message type (e.g. mypackage.MyMessage)"
               value={messageType}
               onChange={(e) => setMessageType(e.target.value)}
@@ -315,18 +341,21 @@ export default function App() {
       {mode === 'HTTP' && httpResponse && (
         <ResponsePanel title="Response">
           <div
-            className={cn('flex items-center gap-2 p-4 font-bold bg-body border-t border-border', {
-              'text-green-500': httpResponse.status.startsWith('2'),
-              'text-blue-500': httpResponse.status.startsWith('3'),
-              'text-orange-500': httpResponse.status.startsWith('4'),
-              'text-red-500': httpResponse.status.startsWith('5') || httpResponse.status === NETWORK_ERROR,
-            })}
+            className={cn(
+              'flex items-center gap-2 p-4 font-bold bg-body dark:bg-dark-body border-t border-border dark:border-dark-body',
+              {
+                'text-green-500': httpResponse.status.startsWith('2'),
+                'text-blue-500': httpResponse.status.startsWith('3'),
+                'text-orange-500': httpResponse.status.startsWith('4'),
+                'text-red-500': httpResponse.status.startsWith('5') || httpResponse.status === NETWORK_ERROR,
+              },
+            )}
           >
             {httpResponse.status === SENDING && <Loader className="h-5! w-5!" />}
             {httpResponse.status}
           </div>
           {httpResponse.status !== SENDING && (
-            <div className="grid grid-cols-2 items-stretch max-h-[450px] py-4 border-t border-border overflow-y-auto">
+            <div className="grid grid-cols-2 items-stretch max-h-[450px] py-4 border-t border-border dark:border-dark-body overflow-y-auto">
               <div className="relative flex-1 px-4">
                 <h4 className="m-0 mb-4">Headers</h4>
                 {httpResponse.headers && (
@@ -339,7 +368,7 @@ export default function App() {
                 )}
                 <JsonViewer source={httpResponse.headers} />
               </div>
-              <div className="relative flex-1 px-4 border-l border-border">
+              <div className="relative flex-1 px-4 border-l border-border dark:border-dark-body">
                 <h4 className="m-0 mb-4">Body</h4>
                 {httpResponse.body && (
                   <CopyButton
@@ -362,9 +391,12 @@ export default function App() {
 
       {messages.length > 0 && (
         <ResponsePanel title="Messages">
-          <div className="max-h-[400px] p-4 text-xs border-t border-border overflow-y-auto">
+          <div className="max-h-[400px] p-4 text-xs border-t border-border dark:border-dark-body overflow-y-auto">
             {messages.map(({ data, decoded, direction }, index) => (
-              <div key={index} className="not-first:pt-3 not-last:pb-3 border-b last:border-none border-border">
+              <div
+                key={index}
+                className="not-first:pt-3 not-last:pb-3 border-b last:border-none border-border dark:border-dark-body"
+              >
                 <div className="flex items-center gap-4">
                   {direction !== 'system' && (
                     <span
