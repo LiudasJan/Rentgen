@@ -63,15 +63,18 @@ export function ParameterControls({ value, onChange }: Props) {
               step={0.01}
               type="number"
               value={dynamicValue.from}
-              onChange={(e) =>
+              onChange={(e) => {
+                const from = Math.min(
+                  initialNumberBounds.to,
+                  Math.max(-initialNumberBounds.to, Number(e.target.value)),
+                );
+                const to = from > dynamicValue.to ? from : dynamicValue.to;
+
                 onChange({
                   type,
-                  value: {
-                    ...dynamicValue,
-                    from: Math.min(initialNumberBounds.to, Math.max(-initialNumberBounds.to, Number(e.target.value))),
-                  },
-                })
-              }
+                  value: { ...dynamicValue, from, to },
+                });
+              }}
             />
             <Input
               className="max-w-24 p-[5px]! rounded-none! dark:border-border/20!"
@@ -81,15 +84,15 @@ export function ParameterControls({ value, onChange }: Props) {
               step={0.01}
               type="number"
               value={dynamicValue.to}
-              onChange={(e) =>
+              onChange={(e) => {
+                const to = Math.min(initialNumberBounds.to, Math.max(-initialNumberBounds.to, Number(e.target.value)));
+                const from = to < dynamicValue.from ? to : dynamicValue.from;
+
                 onChange({
                   type,
-                  value: {
-                    ...dynamicValue,
-                    to: Math.min(initialNumberBounds.to, Math.max(-initialNumberBounds.to, Number(e.target.value))),
-                  },
-                })
-              }
+                  value: { ...dynamicValue, from, to },
+                });
+              }}
             />
           </div>
         );
