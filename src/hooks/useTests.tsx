@@ -11,7 +11,7 @@ import {
   runLoadTest,
   SecurityTests,
 } from '../tests';
-import { FieldType, TestOptions, TestResult } from '../types';
+import { DataType, TestOptions, TestResult } from '../types';
 
 const useTests = (options: TestOptions) => {
   const [currentTest, setCurrentTest] = useState<number>(0);
@@ -182,10 +182,10 @@ const useTests = (options: TestOptions) => {
       async () => {
         dataDrivenTestsCount += 1;
       },
-      async (_, type: FieldType) => {
+      async (_, type: DataType) => {
         dataDrivenTestsCount += (datasets[type] || []).length;
       },
-      async (_, type: FieldType) => {
+      async (_, type: DataType) => {
         dataDrivenTestsCount += (datasets[type] || []).length;
       },
     );

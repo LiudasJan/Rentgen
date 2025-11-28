@@ -1,11 +1,6 @@
 import { Method } from 'axios';
 
-export interface FieldDetector {
-  type: FieldType;
-  regex: RegExp;
-}
-
-export type FieldType =
+export type DataType =
   | 'email'
   | 'url'
   | 'ftp_url'
@@ -20,7 +15,7 @@ export type FieldType =
   | 'randomInt'
   | 'randomEmail';
 
-export type MappingType = 'body' | 'query';
+export type ParameterType = 'body' | 'query';
 
 export interface HttpRequest {
   body?: Record<string, unknown> | string | Uint8Array | null;
@@ -43,6 +38,13 @@ export interface ParsedCurlResult {
   url: string;
 }
 
+export interface RequestParameters {
+  [key: string]: {
+    type: DataType;
+    value?: any;
+  };
+}
+
 export interface TestData {
   value: any;
   valid: boolean;
@@ -50,14 +52,14 @@ export interface TestData {
 
 export interface TestOptions {
   body: string | null;
+  bodyParameters: RequestParameters;
   headers: string;
-  fieldName?: string;
   method: Method | string;
-  bodyMappings: Record<string, FieldType>;
-  queryMappings: Record<string, FieldType>;
-  mappingType?: MappingType;
   messageType: string;
+  parameterName?: string;
+  parameterType?: ParameterType;
   protoFile: File | null;
+  queryParameters: RequestParameters;
   testData?: TestData;
   url: string;
 }

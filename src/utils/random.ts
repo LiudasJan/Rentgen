@@ -1,4 +1,4 @@
-import { FieldType } from '../types';
+import { DataType } from '../types';
 
 const RANDOM_STRING_LENGTH = 32;
 const MAX_RANDOM_INTEGER = 10_000_000;
@@ -29,10 +29,10 @@ export function generateRandomEmail(
   return `${username}@${domain}`;
 }
 
-export function getRandomizedValueByFieldType(fieldType: FieldType): string | null {
-  if (fieldType === 'random32') return generateRandomString();
-  if (fieldType === 'randomInt') return String(generateRandomInteger());
-  if (fieldType === 'randomEmail') return generateRandomEmail();
+export function generateRandomValue(dataType: DataType): string | null {
+  if (dataType === 'random32') return generateRandomString();
+  if (dataType === 'randomInt') return String(generateRandomInteger());
+  if (dataType === 'randomEmail') return generateRandomEmail();
 
   return null;
 }

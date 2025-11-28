@@ -1,9 +1,9 @@
 import { Method } from 'axios';
-import { FieldType, HttpRequest, HttpResponse, TestOptions, TestResult } from '../types';
+import { HttpRequest, HttpResponse, RequestParameters, TestOptions, TestResult } from '../types';
 import { isObject, setDeepObjectProperty, stringifyValue, tryParseJsonObject } from './object';
 import { encodeMessage } from './proto';
-import { getRandomizedValueByFieldType } from './random';
-import { detectFieldType, extractFieldsFromJson } from './validation';
+import { generateRandomValue } from './random';
+import { detectDataType, extractPropertiesFromJson } from './validation';
 
 export function convertFormEntriesToUrlEncoded(formEntries: Array<[string, string]>): string {
   const urlSearchParams = new URLSearchParams();
@@ -32,14 +32,14 @@ export function createHttpRequest(
 export function createTestHttpRequest(options: TestOptions): HttpRequest {
   const {
     body,
-    fieldName,
+    bodyParameters,
     headers,
-    bodyMappings,
-    queryMappings,
-    mappingType,
     messageType,
     method,
+    parameterName,
+    parameterType,
     protoFile,
+    queryParameters,
     testData,
     url,
   } = options;
@@ -51,31 +51,32 @@ export function createTestHttpRequest(options: TestOptions): HttpRequest {
   else parsedBody = tryParseJsonObject(body);
 
   if (formEntries.length > 0) {
-    // Update the field being tested
-    if (mappingType === 'body' && fieldName && testData)
-      updateFormEntry(formEntries, fieldName, stringifyValue(testData.value));
+    // Update the parameter being tested
+    if (parameterType === 'body' && parameterName && testData)
+      updateFormEntry(formEntries, parameterName, stringifyValue(testData.value));
 
-    // Apply random values to random field types
-    for (const [key, type] of Object.entries(bodyMappings)) {
-      // Skip the field being tested
-      if (mappingType === 'body' && fieldName === key) continue;
+    // Apply random values to random parameter types
+    for (const [key, { type }] of Object.entries(bodyParameters)) {
+      // Skip the parameter being tested
+      if (parameterType === 'body' && parameterName === key) continue;
 
-      const randomizedValue = getRandomizedValueByFieldType(type);
-      if (randomizedValue !== null) updateFormEntry(formEntries, key, randomizedValue);
+      const randomValue = generateRandomValue(type);
+      if (randomValue !== null) updateFormEntry(formEntries, key, randomValue);
     }
 
     parsedBody = convertFormEntriesToUrlEncoded(formEntries);
   } else if (isObject(parsedBody)) {
-    // Update the field being tested
-    if (mappingType === 'body' && fieldName && testData) setDeepObjectProperty(parsedBody, fieldName, testData.value);
+    // Update the parameter being tested
+    if (parameterType === 'body' && parameterName && testData)
+      setDeepObjectProperty(parsedBody, parameterName, testData.value);
 
-    // Apply random values to random field types
-    for (const [key, type] of Object.entries(bodyMappings)) {
-      // Skip the field being tested
-      if (mappingType === 'body' && fieldName === key) continue;
+    // Apply random values to random parameter types
+    for (const [key, { type }] of Object.entries(bodyParameters)) {
+      // Skip the parameter being tested
+      if (parameterType === 'body' && parameterName === key) continue;
 
-      const randomizedValue = getRandomizedValueByFieldType(type);
-      if (randomizedValue !== null) setDeepObjectProperty(parsedBody, key, randomizedValue);
+      const randomValue = generateRandomValue(type);
+      if (randomValue !== null) setDeepObjectProperty(parsedBody, key, randomValue);
     }
 
     if (protoFile && messageType) {
@@ -89,17 +90,17 @@ export function createTestHttpRequest(options: TestOptions): HttpRequest {
 
   const modifiedUrl = new URL(url);
 
-  // Update the field being tested
-  if (mappingType === 'query' && fieldName && testData)
-    modifiedUrl.searchParams.set(fieldName, stringifyValue(testData.value));
+  // Update the parameter being tested
+  if (parameterType === 'query' && parameterName && testData)
+    modifiedUrl.searchParams.set(parameterName, stringifyValue(testData.value));
 
   // Apply random values to random query parameter types
-  for (const [key, type] of Object.entries(queryMappings)) {
-    // Skip the field being tested
-    if (mappingType === 'query' && fieldName === key) continue;
+  for (const [key, { type }] of Object.entries(queryParameters)) {
+    // Skip the parameter being tested
+    if (parameterType === 'query' && parameterName === key) continue;
 
-    const randomizedValue = getRandomizedValueByFieldType(type);
-    if (randomizedValue !== null) modifiedUrl.searchParams.set(key, randomizedValue);
+    const randomValue = generateRandomValue(type);
+    if (randomValue !== null) modifiedUrl.searchParams.set(key, randomValue);
   }
 
   return createHttpRequest(parsedBody, parseHeaders(headers), method, modifiedUrl.toString());
@@ -121,38 +122,39 @@ export async function executeTimedRequest(
   }
 }
 
-export function extractBodyFieldMappings(body: unknown, headers: Record<string, string>): Record<string, FieldType> {
-  const mappings: Record<string, FieldType> = {};
+export function extractBodyParameters(body: unknown, headers: Record<string, string>): RequestParameters {
+  const parameters: RequestParameters = {};
 
   if (isUrlEncodedContentType(headers)) {
     const formEntries = convertUrlEncodedToFormEntries(body as string);
-    for (const [key, value] of formEntries) mappings[key] = detectFieldType(value);
+    for (const [key, value] of formEntries) parameters[key] = { type: detectDataType(value) };
   } else if (isObject(body)) {
-    const extractedFields = extractFieldsFromJson(body);
-    for (const [key, value] of Object.entries(extractedFields)) {
-      if (value === 'DO_NOT_TEST') mappings[key] = 'do-not-test';
+    const extractedProperties = extractPropertiesFromJson(body);
+    for (const [key, value] of Object.entries(extractedProperties)) {
+      if (value === 'DO_NOT_TEST') parameters[key] = { type: 'do-not-test' };
       else {
         // Navigate to the actual value in the parsed body
-        const pathParts = key.replace(/\[(\d+)\]/g, '.$1').split('.');
-        let fieldValue: any = body;
+        const paths = key.replace(/\[(\d+)\]/g, '.$1').split('.');
+        let propertyValue: any = body;
 
-        for (const path of pathParts) {
-          if (fieldValue == null) break;
-          fieldValue = fieldValue[path];
+        for (const path of paths) {
+          if (propertyValue == null) break;
+          propertyValue = propertyValue[path];
         }
 
-        mappings[key] = detectFieldType(fieldValue, true);
+        parameters[key] = { type: detectDataType(propertyValue, true) };
       }
     }
   }
 
-  return mappings;
+  return parameters;
 }
 
 export function extractBodyFromResponse(response: HttpResponse): Record<string, unknown> | string {
   try {
     if (typeof response?.body === 'string') return JSON.parse(response.body);
     if (response?.body && typeof response.body === 'object') return response.body;
+    ``;
   } catch {
     return response.body;
   }
@@ -188,21 +190,21 @@ export function getHeaderValue(headers: Record<string, string>, headerName: stri
   return matchingKey ? String(headers[matchingKey]) : '';
 }
 
-export function getFieldValueFromBody(body: unknown, fieldName: string, headers: Record<string, string>): any {
+export function getBodyParameterValue(body: unknown, parameterName: string, headers: Record<string, string>): any {
   if (isUrlEncodedContentType(headers)) {
     const formEntries = convertUrlEncodedToFormEntries(body as string);
-    return formEntries.find(([key]) => key === fieldName)?.[1];
+    return formEntries.find(([key]) => key === parameterName)?.[1];
   }
 
-  const pathParts = fieldName.replace(/\[(\d+)\]/g, '.$1').split('.');
-  let fieldValue: any = body;
+  const paths = parameterName.replace(/\[(\d+)\]/g, '.$1').split('.');
+  let value: any = body;
 
-  for (const path of pathParts) {
-    if (fieldValue == null) return undefined;
-    fieldValue = fieldValue[path];
+  for (const path of paths) {
+    if (value == null) return undefined;
+    value = value[path];
   }
 
-  return fieldValue;
+  return value;
 }
 
 export function isUrlEncodedContentType(headers: Record<string, string>): boolean {
@@ -267,10 +269,10 @@ export function parseHeaders(headers: string): Record<string, string> {
   );
 }
 
-export function updateFormEntry(formEntries: Array<[string, string]>, fieldName: string, value: string): void {
-  for (const formEntry of formEntries) {
-    if (formEntry[0] === fieldName) {
-      formEntry[1] = value;
+export function updateFormEntry(entries: Array<[string, string]>, key: string, value: string): void {
+  for (const entry of entries) {
+    if (entry[0] === key) {
+      entry[1] = value;
       break;
     }
   }

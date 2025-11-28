@@ -20,12 +20,12 @@ import TestsTable, { ExpandedTestComponent, getTestsTableColumns } from './compo
 import { RESPONSE_STATUS } from './constants/responseStatus';
 import useTests from './hooks/useTests';
 import { LARGE_PAYLOAD_TEST_NAME, LOAD_TEST_NAME } from './tests';
-import { FieldType, HttpResponse, TestOptions } from './types';
+import { HttpResponse, RequestParameters, TestOptions } from './types';
 import {
   createHttpRequest,
-  detectFieldType,
-  extractBodyFieldMappings,
+  detectDataType,
   extractBodyFromResponse,
+  extractBodyParameters,
   extractCurl,
   extractQueryParameters,
   extractStatusCode,
@@ -80,8 +80,8 @@ export default function App() {
       decoded?: string | null;
     }[]
   >([]);
-  const [bodyMappings, setBodyMappings] = useState<Record<string, FieldType>>({});
-  const [queryMappings, setQueryMappings] = useState<Record<string, FieldType>>({});
+  const [bodyParameters, setBodyParameters] = useState<RequestParameters>({});
+  const [queryParameters, setQueryParameters] = useState<RequestParameters>({});
   const [testOptions, setTestOptions] = useState<TestOptions | null>(null);
   const {
     crudTests,
@@ -424,41 +424,29 @@ export default function App() {
         </ResponsePanel>
       )}
 
-      {(Object.keys(bodyMappings).length > 0 || Object.keys(queryMappings).length > 0) && (
+      {(Object.keys(bodyParameters).length > 0 || Object.keys(queryParameters).length > 0) && (
         <div className="grid grid-cols-2 gap-4 items-stretch">
-          {Object.keys(bodyMappings).length > 0 && (
+          {Object.keys(bodyParameters).length > 0 && (
             <ParametersPanel
               title="Body Parameters"
-              mappings={bodyMappings}
-              onFieldTypeChange={(key, value) =>
-                setBodyMappings((prevBodyMappings) => ({
-                  ...prevBodyMappings,
-                  [key]: value,
-                }))
-              }
-              onRemoveClick={(key) =>
-                setBodyMappings((prevBodyMappings) => ({
-                  ...prevBodyMappings,
-                  [key]: 'do-not-test',
+              parameters={bodyParameters}
+              onChange={(parameters) =>
+                setBodyParameters((prevBodyParameters) => ({
+                  ...prevBodyParameters,
+                  ...parameters,
                 }))
               }
             />
           )}
 
-          {Object.keys(queryMappings).length > 0 && (
+          {Object.keys(queryParameters).length > 0 && (
             <ParametersPanel
               title="Query Parameters"
-              mappings={queryMappings}
-              onFieldTypeChange={(key, value) =>
-                setQueryMappings((prevQueryMappings) => ({
-                  ...prevQueryMappings,
-                  [key]: value,
-                }))
-              }
-              onRemoveClick={(key) =>
-                setQueryMappings((prevQueryMappings) => ({
-                  ...prevQueryMappings,
-                  [key]: 'do-not-test',
+              parameters={queryParameters}
+              onChange={(parameters) =>
+                setQueryParameters((prevQueryParameters) => ({
+                  ...prevQueryParameters,
+                  ...parameters,
                 }))
               }
             />
@@ -471,7 +459,16 @@ export default function App() {
           <Button
             disabled={disabledRunTests}
             onClick={() =>
-              setTestOptions({ body, headers, method, bodyMappings, queryMappings, messageType, protoFile, url })
+              setTestOptions({
+                body,
+                bodyParameters,
+                headers,
+                method,
+                messageType,
+                protoFile,
+                queryParameters,
+                url,
+              })
             }
           >
             {isRunningTests ? `Running tests... (${currentTest}/${testsCount})` : 'Generate & Run Tests'}
@@ -495,7 +492,7 @@ export default function App() {
                         <LargePayloadTestControls
                           isRunning={isLargePayloadTestRunning}
                           executeTest={(size: number) =>
-                            executeLargePayloadTest({ ...testOptions, bodyMappings, queryMappings }, size)
+                            executeLargePayloadTest({ ...testOptions, bodyParameters, queryParameters }, size)
                           }
                         />
                       );
@@ -533,7 +530,11 @@ export default function App() {
                         <LoadTestControls
                           isRunning={isLoadTestRunning}
                           executeTest={(threadCount: number, requestCount: number) =>
-                            executeLoadTest({ ...testOptions, bodyMappings, queryMappings }, threadCount, requestCount)
+                            executeLoadTest(
+                              { ...testOptions, bodyParameters, queryParameters },
+                              threadCount,
+                              requestCount,
+                            )
                           }
                         />
                       );
@@ -550,7 +551,7 @@ export default function App() {
 
           <ResponsePanel title="Data-Driven Tests">
             <TestsTable
-              columns={getTestsTableColumns(['Field', 'Value', 'Expected', 'Actual', 'Result'])}
+              columns={getTestsTableColumns(['Parameter', 'Value', 'Expected', 'Actual', 'Result'])}
               expandableRows
               expandableRowsComponent={ExpandedTestComponent}
               expandableRowsComponentProps={{ headers: parseHeaders(headers), protoFile, messageType }}
@@ -590,8 +591,8 @@ export default function App() {
     setMessageType('');
     setHttpResponse(null);
     setMessages([]);
-    setBodyMappings({});
-    setQueryMappings({});
+    setBodyParameters({});
+    setQueryParameters({});
     setTestOptions(null);
   }
 
@@ -638,8 +639,8 @@ export default function App() {
       body: '',
       headers: {},
     });
-    setBodyMappings({});
-    setQueryMappings({});
+    setBodyParameters({});
+    setQueryParameters({});
 
     try {
       const parsedHeaders = parseHeaders(headers);
@@ -651,13 +652,13 @@ export default function App() {
 
       if (!response.status.startsWith('2')) return;
 
-      const bodyMappings = extractBodyFieldMappings(parsedBody, parsedHeaders);
-      const queryMappings = Object.fromEntries(
-        Object.entries(extractQueryParameters(url)).map(([key, value]) => [key, detectFieldType(value)]),
+      const bodyParameters = extractBodyParameters(parsedBody, parsedHeaders);
+      const queryParameters = Object.fromEntries(
+        Object.entries(extractQueryParameters(url)).map(([key, value]) => [key, { type: detectDataType(value) }]),
       );
 
-      setBodyMappings(bodyMappings);
-      setQueryMappings(queryMappings);
+      setBodyParameters(bodyParameters);
+      setQueryParameters(queryParameters);
     } catch (error) {
       setHttpResponse({
         status: NETWORK_ERROR,

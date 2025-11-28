@@ -1,13 +1,13 @@
 import { datasets } from '../constants/datasets';
 import { getResponseStatusTitle, RESPONSE_STATUS } from '../constants/responseStatus';
 import { Test } from '../decorators';
-import { FieldType, HttpRequest, TestData, TestOptions, TestResult, TestStatus } from '../types';
+import { DataType, HttpRequest, TestData, TestOptions, TestResult, TestStatus } from '../types';
 import {
   createHttpRequest,
   createTestHttpRequest,
   executeTimedRequest,
-  extractBodyFieldMappings,
-  getFieldValueFromBody,
+  extractBodyParameters,
+  getBodyParameterValue,
   parseBody,
   parseHeaders,
 } from '../utils';
@@ -21,7 +21,7 @@ import {
 } from './BaseTests';
 
 const VALUE_NORMALIZATION_TEST_EXPECTED = `${RESPONSE_STATUS.BAD_REQUEST} ${getResponseStatusTitle(RESPONSE_STATUS.BAD_REQUEST)}/${RESPONSE_STATUS.UNPROCESSABLE_ENTITY} ${getResponseStatusTitle(RESPONSE_STATUS.UNPROCESSABLE_ENTITY)} or Trimmed/Normalized Value`;
-const ORIGINAL_REQUEST_TEST_FIELD_NAME = '[original request]';
+const ORIGINAL_REQUEST_TEST_PARAMETER_NAME = '[original request]';
 
 export class DataDrivenTests extends BaseTests {
   public async run(): Promise<TestResult[]> {
@@ -36,27 +36,30 @@ export class DataDrivenTests extends BaseTests {
 
     await runDataDrivenTests(
       this.options,
-      async (fieldName: string) => {
+      async (parameterName: string) => {
         const testData: TestData = {
-          value: `   ${getFieldValueFromBody(parsedBody, fieldName, parsedHeaders)}   `,
+          value: `   ${getBodyParameterValue(parsedBody, parameterName, parsedHeaders)}   `,
           valid: false,
         };
         results.push(
-          await testValueNormalization({ ...this.options, fieldName, mappingType: 'body', testData }, this.onTestStart),
+          await testValueNormalization(
+            { ...this.options, parameterName, parameterType: 'body', testData },
+            this.onTestStart,
+          ),
         );
       },
-      async (fieldName: string, type: FieldType) => {
+      async (parameterName: string, type: DataType) => {
         const testDataset = datasets[type] || [];
         for (const testData of testDataset)
           results.push(
-            await testMappings({ ...this.options, fieldName, mappingType: 'body', testData }, this.onTestStart),
+            await testParameter({ ...this.options, parameterName, parameterType: 'body', testData }, this.onTestStart),
           );
       },
-      async (fieldName: string, type: FieldType) => {
+      async (parameterName: string, type: DataType) => {
         const testDataset = datasets[type] || [];
         for (const testData of testDataset)
           results.push(
-            await testMappings({ ...this.options, fieldName, mappingType: 'query', testData }, this.onTestStart),
+            await testParameter({ ...this.options, parameterName, parameterType: 'query', testData }, this.onTestStart),
           );
       },
     );
@@ -80,7 +83,7 @@ export class DataDrivenTests extends BaseTests {
         });
 
         return createTestResult(
-          ORIGINAL_REQUEST_TEST_FIELD_NAME,
+          ORIGINAL_REQUEST_TEST_PARAMETER_NAME,
           SUCCESS_RESPONSE_EXPECTED,
           actual,
           status,
@@ -92,7 +95,7 @@ export class DataDrivenTests extends BaseTests {
       },
       (error) =>
         createErrorTestResult(
-          ORIGINAL_REQUEST_TEST_FIELD_NAME,
+          ORIGINAL_REQUEST_TEST_PARAMETER_NAME,
           SUCCESS_RESPONSE_EXPECTED,
           String(error),
           request,
@@ -104,39 +107,39 @@ export class DataDrivenTests extends BaseTests {
 
 export async function runDataDrivenTests(
   options: TestOptions,
-  onValueNormalizationTest: (fieldName: string, type: FieldType) => Promise<void>,
-  onBodyMappingTest: (fieldName: string, type: FieldType) => Promise<void>,
-  onQueryMappingTest: (fieldName: string, type: FieldType) => Promise<void>,
+  onValueNormalizationTest: (key: string, type: DataType) => Promise<void>,
+  onBodyParameterTest: (key: string, type: DataType) => Promise<void>,
+  onQueryParameterTest: (key: string, type: DataType) => Promise<void>,
 ) {
-  const { body, headers, messageType, protoFile, bodyMappings, queryMappings } = options;
+  const { body, headers, messageType, protoFile, bodyParameters, queryParameters } = options;
   const parsedHeaders = parseHeaders(headers);
   const parsedBody = parseBody(body, parsedHeaders, messageType, protoFile);
-  const originalBodyMappings = extractBodyFieldMappings(parsedBody, parsedHeaders);
+  const originalBodyParameters = extractBodyParameters(parsedBody, parsedHeaders);
 
   // Test string value normalization (trimming)
-  for (const [key, type] of Object.entries(bodyMappings)) {
-    const originalType = originalBodyMappings[key];
-    if (shouldSkipFieldType(type) || shouldSkipNormalizationTest(originalType)) continue;
+  for (const [key, { type }] of Object.entries(bodyParameters)) {
+    const originalBodyParameter = originalBodyParameters[key];
+    if (shouldSkipParameterTest(type) || shouldSkipNormalizationTest(originalBodyParameter.type)) continue;
     await onValueNormalizationTest(key, type);
   }
 
-  // Test body fields
-  for (const [key, type] of Object.entries(bodyMappings)) {
-    if (shouldSkipFieldType(type)) continue;
-    await onBodyMappingTest(key, type);
+  // Test body parameters
+  for (const [key, { type }] of Object.entries(bodyParameters)) {
+    if (shouldSkipParameterTest(type)) continue;
+    await onBodyParameterTest(key, type);
   }
 
   // Test query parameters
-  for (const [key, type] of Object.entries(queryMappings)) {
-    if (shouldSkipFieldType(type)) continue;
-    await onQueryMappingTest(key, type);
+  for (const [key, { type }] of Object.entries(queryParameters)) {
+    if (shouldSkipParameterTest(type)) continue;
+    await onQueryParameterTest(key, type);
   }
 }
 
 async function testValueNormalization(options: TestOptions, onTestStart?: () => void): Promise<TestResult> {
   onTestStart?.();
 
-  const { fieldName, mappingType, testData } = options;
+  const { parameterName, parameterType, testData } = options;
   const request = createTestHttpRequest(options);
 
   return executeTimedRequest(
@@ -160,7 +163,7 @@ async function testValueNormalization(options: TestOptions, onTestStart?: () => 
       });
 
       return createTestResult(
-        `${mappingType}.${fieldName}`,
+        `${parameterType}.${parameterName}`,
         VALUE_NORMALIZATION_TEST_EXPECTED,
         actual,
         status,
@@ -172,7 +175,7 @@ async function testValueNormalization(options: TestOptions, onTestStart?: () => 
     },
     (error) =>
       createErrorTestResult(
-        `${mappingType}.${fieldName}`,
+        `${parameterType}.${parameterName}`,
         VALUE_NORMALIZATION_TEST_EXPECTED,
         String(error),
         request,
@@ -181,10 +184,10 @@ async function testValueNormalization(options: TestOptions, onTestStart?: () => 
   );
 }
 
-async function testMappings(options: TestOptions, onTestStart?: () => void): Promise<TestResult> {
+async function testParameter(options: TestOptions, onTestStart?: () => void): Promise<TestResult> {
   onTestStart?.();
 
-  const { fieldName, mappingType, testData } = options;
+  const { parameterName, parameterType, testData } = options;
   const request = createTestHttpRequest(options);
 
   return executeTimedRequest(
@@ -202,7 +205,7 @@ async function testMappings(options: TestOptions, onTestStart?: () => void): Pro
       });
 
       return createTestResult(
-        `${mappingType}.${fieldName}`,
+        `${parameterType}.${parameterName}`,
         testData.valid ? SUCCESS_RESPONSE_EXPECTED : CLIENT_ERROR_RESPONSE_EXPECTED,
         actual,
         status,
@@ -214,7 +217,7 @@ async function testMappings(options: TestOptions, onTestStart?: () => void): Pro
     },
     (error) =>
       createErrorTestResult(
-        `${mappingType}.${fieldName}`,
+        `${parameterType}.${parameterName}`,
         testData.valid ? SUCCESS_RESPONSE_EXPECTED : CLIENT_ERROR_RESPONSE_EXPECTED,
         String(error),
         request,
@@ -223,12 +226,12 @@ async function testMappings(options: TestOptions, onTestStart?: () => void): Pro
   );
 }
 
-export function shouldSkipFieldType(fieldType: FieldType): boolean {
+export function shouldSkipParameterTest(dataType: DataType): boolean {
   return (
-    fieldType === 'do-not-test' || fieldType === 'random32' || fieldType === 'randomInt' || fieldType === 'randomEmail'
+    dataType === 'do-not-test' || dataType === 'random32' || dataType === 'randomInt' || dataType === 'randomEmail'
   );
 }
 
-export function shouldSkipNormalizationTest(fieldType: string | undefined): boolean {
-  return fieldType === 'boolean' || fieldType === 'number';
+export function shouldSkipNormalizationTest(dataType: string | undefined): boolean {
+  return dataType === 'boolean' || dataType === 'number';
 }
