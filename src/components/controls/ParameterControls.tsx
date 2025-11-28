@@ -56,7 +56,7 @@ export function ParameterControls({ value, onChange }: Props) {
         return (
           <div className="flex items-center justify-end flex-wrap gap-2">
             <Input
-              className="max-w-24 p-[5px]! rounded-none! dark:border-border/20!"
+              className="max-w-28 p-[5px]! rounded-none! dark:border-border/20!"
               placeholder="From"
               max={initialNumberBounds.to}
               min={-initialNumberBounds.to}
@@ -77,7 +77,7 @@ export function ParameterControls({ value, onChange }: Props) {
               }}
             />
             <Input
-              className="max-w-24 p-[5px]! rounded-none! dark:border-border/20!"
+              className="max-w-28 p-[5px]! rounded-none! dark:border-border/20!"
               placeholder="To"
               max={initialNumberBounds.to}
               min={-initialNumberBounds.to}
