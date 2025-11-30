@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { clamp } from '../../utils/number';
 import Input from '../inputs/Input';
 import { Controls } from './Controls';
 
@@ -23,7 +24,7 @@ export function LargePayloadTestControls({ isRunning, executeTest }: Props) {
           max={MAX_PAYLOAD_SIZE_MB}
           title={`Size (max ${MAX_PAYLOAD_SIZE_MB} MB)`}
           value={size}
-          onChange={(e) => setSize(Math.min(MAX_PAYLOAD_SIZE_MB, Math.max(1, Number(e.target.value))))}
+          onChange={(e) => setSize(clamp(Number(e.target.value), 1, MAX_PAYLOAD_SIZE_MB))}
         />
       </div>
     </Controls>

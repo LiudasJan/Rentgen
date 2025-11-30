@@ -70,7 +70,7 @@ export function createTestHttpRequest(options: TestOptions): HttpRequest {
       if (parameterType === 'body' && parameterName === key) continue;
 
       const randomValue = generateRandomValue(type);
-      if (randomValue !== null) updateFormEntry(formEntries, key, randomValue);
+      if (randomValue !== null) updateFormEntry(formEntries, key, String(randomValue));
     }
 
     parsedBody = convertFormEntriesToUrlEncoded(formEntries);
@@ -109,7 +109,7 @@ export function createTestHttpRequest(options: TestOptions): HttpRequest {
     if (parameterType === 'query' && parameterName === key) continue;
 
     const randomValue = generateRandomValue(type);
-    if (randomValue !== null) modifiedUrl.searchParams.set(key, randomValue);
+    if (randomValue !== null) modifiedUrl.searchParams.set(key, String(randomValue));
   }
 
   return createHttpRequest(parsedBody, parseHeaders(headers), method, modifiedUrl.toString());

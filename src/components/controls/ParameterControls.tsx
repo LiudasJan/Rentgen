@@ -2,6 +2,7 @@ import cn from 'classnames';
 import { ChangeEvent } from 'react';
 import { initialNumberBounds } from '../../constants/datasets';
 import { DataType, DynamicValue } from '../../types';
+import { clamp, normalizeDecimal } from '../../utils';
 import Input from '../inputs/Input';
 import { SelectOption } from '../inputs/Select';
 import SimpleSelect from '../inputs/SimpleSelect';
@@ -33,7 +34,32 @@ export function ParameterControls({ value, onChange }: Props) {
 
   return (
     <div className="flex items-center justify-end flex-wrap gap-2">
-      {renderValueInput()}
+      {type === 'number' && (
+        <div className="flex items-center justify-end flex-wrap gap-2">
+          <Input
+            className="max-w-28 p-[5px]! rounded-none! dark:border-border/20!"
+            placeholder="From"
+            max={initialNumberBounds.to}
+            min={-initialNumberBounds.to}
+            step={0.01}
+            type="number"
+            value={dynamicValue.from}
+            onBlur={(e) => onFromChange(normalizeDecimal(Number(e.target.value)))}
+            onChange={(e) => onFromChange(Number(e.target.value))}
+          />
+          <Input
+            className="max-w-28 p-[5px]! rounded-none! dark:border-border/20!"
+            placeholder="To"
+            max={initialNumberBounds.to}
+            min={-initialNumberBounds.to}
+            step={0.01}
+            type="number"
+            value={dynamicValue.to}
+            onBlur={(e) => onToChange(normalizeDecimal(Number(e.target.value)))}
+            onChange={(e) => onToChange(Number(e.target.value))}
+          />
+        </div>
+      )}
       <SimpleSelect
         className="p-1! rounded-none! outline-none dark:border-border/20!"
         options={parameterOptions}
@@ -50,66 +76,22 @@ export function ParameterControls({ value, onChange }: Props) {
     </div>
   );
 
-  function renderValueInput() {
-    switch (type) {
-      case 'number':
-        return (
-          <div className="flex items-center justify-end flex-wrap gap-2">
-            <Input
-              className="max-w-28 p-[5px]! rounded-none! dark:border-border/20!"
-              placeholder="From"
-              max={initialNumberBounds.to}
-              min={-initialNumberBounds.to}
-              step={0.01}
-              type="number"
-              value={dynamicValue.from}
-              onChange={(e) => {
-                const from = Math.min(
-                  initialNumberBounds.to,
-                  Math.max(-initialNumberBounds.to, Number(e.target.value)),
-                );
-                const to = from > dynamicValue.to ? from : dynamicValue.to;
+  function onFromChange(value: number) {
+    const from = clamp(value, -initialNumberBounds.to, initialNumberBounds.to);
+    const to = from > dynamicValue.to ? from : dynamicValue.to;
 
-                onChange({
-                  type,
-                  value: { ...dynamicValue, from, to },
-                });
-              }}
-            />
-            <Input
-              className="max-w-28 p-[5px]! rounded-none! dark:border-border/20!"
-              placeholder="To"
-              max={initialNumberBounds.to}
-              min={-initialNumberBounds.to}
-              step={0.01}
-              type="number"
-              value={dynamicValue.to}
-              onChange={(e) => {
-                const to = Math.min(initialNumberBounds.to, Math.max(-initialNumberBounds.to, Number(e.target.value)));
-                const from = to < dynamicValue.from ? to : dynamicValue.from;
+    onChange({ type, value: { ...dynamicValue, from, to: normalizeDecimal(to) } });
+  }
 
-                onChange({
-                  type,
-                  value: { ...dynamicValue, from, to },
-                });
-              }}
-            />
-          </div>
-        );
-      default:
-        return null;
-    }
+  function onToChange(value: number) {
+    const to = clamp(value, -initialNumberBounds.to, initialNumberBounds.to);
+    const from = to < dynamicValue.from ? to : dynamicValue.from;
+
+    onChange({ type, value: { ...dynamicValue, from: normalizeDecimal(from), to } });
   }
 
   function onSelectTypeChange(event: ChangeEvent<HTMLSelectElement>) {
     const type = event.target.value as DataType;
-
-    switch (type) {
-      case 'number':
-        onChange({ type, value: initialNumberBounds });
-        break;
-      default:
-        onChange({ type });
-    }
+    onChange(type === 'number' ? { type, value: initialNumberBounds } : { type });
   }
 }

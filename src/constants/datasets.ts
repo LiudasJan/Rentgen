@@ -180,12 +180,6 @@ export const datasets: Record<string, TestData[]> = {
     { value: 123123, valid: false },
   ],
   number: [
-    { value: -1, valid: true },
-    { value: 1, valid: true },
-    { value: 0, valid: true },
-    { value: 12344532, valid: true },
-    { value: -9999999, valid: true },
-    { value: 90987654321, valid: true },
     { value: '12344532', valid: false },
     { value: '-', valid: false },
     { value: true, valid: false },

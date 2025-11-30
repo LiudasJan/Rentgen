@@ -1,12 +1,13 @@
 import { datasets } from '../constants/datasets';
 import { getResponseStatusTitle, RESPONSE_STATUS } from '../constants/responseStatus';
 import { Test } from '../decorators';
-import { DataType, HttpRequest, TestData, TestOptions, TestResult, TestStatus } from '../types';
+import { DataType, DynamicValue, HttpRequest, TestData, TestOptions, TestResult, TestStatus } from '../types';
 import {
   createHttpRequest,
   createTestHttpRequest,
   executeTimedRequest,
   extractBodyParameters,
+  generateRandomNumber,
   getBodyParameterValue,
   parseBody,
   parseHeaders,
@@ -48,18 +49,24 @@ export class DataDrivenTests extends BaseTests {
           ),
         );
       },
-      async (parameterName: string, type: DataType) => {
-        const testDataset = datasets[type] || [];
+      async (parameterName: string, parameterValue: DynamicValue) => {
+        const testDataset = [...getDynamicDataset(parameterValue), ...(datasets[parameterValue.type] || [])];
         for (const testData of testDataset)
           results.push(
-            await testParameter({ ...this.options, parameterName, parameterType: 'body', testData }, this.onTestStart),
+            await testRequestParameter(
+              { ...this.options, parameterName, parameterType: 'body', testData },
+              this.onTestStart,
+            ),
           );
       },
-      async (parameterName: string, type: DataType) => {
-        const testDataset = datasets[type] || [];
+      async (parameterName: string, parameterValue: DynamicValue) => {
+        const testDataset = [...getDynamicDataset(parameterValue), ...(datasets[parameterValue.type] || [])];
         for (const testData of testDataset)
           results.push(
-            await testParameter({ ...this.options, parameterName, parameterType: 'query', testData }, this.onTestStart),
+            await testRequestParameter(
+              { ...this.options, parameterName, parameterType: 'query', testData },
+              this.onTestStart,
+            ),
           );
       },
     );
@@ -108,8 +115,8 @@ export class DataDrivenTests extends BaseTests {
 export async function runDataDrivenTests(
   options: TestOptions,
   onValueNormalizationTest: (key: string, type: DataType) => Promise<void>,
-  onBodyParameterTest: (key: string, type: DataType) => Promise<void>,
-  onQueryParameterTest: (key: string, type: DataType) => Promise<void>,
+  onBodyParameterTest: (key: string, value: DynamicValue) => Promise<void>,
+  onQueryParameterTest: (key: string, value: DynamicValue) => Promise<void>,
 ) {
   const { body, headers, messageType, protoFile, bodyParameters, queryParameters } = options;
   const parsedHeaders = parseHeaders(headers);
@@ -124,15 +131,15 @@ export async function runDataDrivenTests(
   }
 
   // Test body parameters
-  for (const [key, { type }] of Object.entries(bodyParameters)) {
-    if (shouldSkipParameterTest(type)) continue;
-    await onBodyParameterTest(key, type);
+  for (const [key, value] of Object.entries(bodyParameters)) {
+    if (shouldSkipParameterTest(value.type)) continue;
+    await onBodyParameterTest(key, value);
   }
 
   // Test query parameters
-  for (const [key, { type }] of Object.entries(queryParameters)) {
-    if (shouldSkipParameterTest(type)) continue;
-    await onQueryParameterTest(key, type);
+  for (const [key, value] of Object.entries(queryParameters)) {
+    if (shouldSkipParameterTest(value.type)) continue;
+    await onQueryParameterTest(key, value);
   }
 }
 
@@ -184,7 +191,7 @@ async function testValueNormalization(options: TestOptions, onTestStart?: () => 
   );
 }
 
-async function testParameter(options: TestOptions, onTestStart?: () => void): Promise<TestResult> {
+async function testRequestParameter(options: TestOptions, onTestStart?: () => void): Promise<TestResult> {
   onTestStart?.();
 
   const { parameterName, parameterType, testData } = options;
@@ -224,6 +231,45 @@ async function testParameter(options: TestOptions, onTestStart?: () => void): Pr
         testData.value,
       ),
   );
+}
+
+export function getDynamicDataset({ type, value }: DynamicValue): TestData[] {
+  switch (type) {
+    case 'number':
+      return getNumberDynamicBoundaryDataset(value);
+    default:
+      return [];
+  }
+}
+
+export function getNumberDynamicBoundaryDataset(value: { from: number; to: number }): TestData[] {
+  const dataset: TestData[] = [];
+  if (!value) return dataset;
+
+  const delta = Number.isInteger(value.from) && Number.isInteger(value.to) ? 1 : 0.01;
+  const range = value.to - value.from;
+
+  if (range === 0) dataset.push({ value: value.from, valid: true });
+  else {
+    dataset.push({ value: value.from, valid: true });
+
+    if (range > delta) dataset.push({ value: value.from + delta, valid: true });
+
+    if (range > 3 * delta)
+      dataset.push({ value: generateRandomNumber(value.from + 2 * delta, value.to - 2 * delta), valid: true });
+
+    if (range > 4 * delta)
+      dataset.push({ value: generateRandomNumber(value.from + 2 * delta, value.to - 2 * delta), valid: true });
+
+    if (range >= 3 * delta) dataset.push({ value: value.to - delta, valid: true });
+
+    dataset.push({ value: value.to, valid: true });
+  }
+
+  dataset.push({ value: value.from - delta, valid: false });
+  dataset.push({ value: value.to + delta, valid: false });
+
+  return dataset;
 }
 
 export function shouldSkipParameterTest(dataType: DataType): boolean {

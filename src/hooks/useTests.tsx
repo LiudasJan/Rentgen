@@ -3,6 +3,7 @@ import { datasets } from '../constants/datasets';
 import { getTestCount } from '../decorators';
 import {
   DataDrivenTests,
+  getDynamicDataset,
   LARGE_PAYLOAD_TEST_NAME,
   LOAD_TEST_NAME,
   PerformanceInsights,
@@ -11,7 +12,7 @@ import {
   runLoadTest,
   SecurityTests,
 } from '../tests';
-import { DataType, TestOptions, TestResult } from '../types';
+import { DynamicValue, TestOptions, TestResult } from '../types';
 
 const useTests = (options: TestOptions) => {
   const [currentTest, setCurrentTest] = useState<number>(0);
@@ -182,11 +183,11 @@ const useTests = (options: TestOptions) => {
       async () => {
         dataDrivenTestsCount += 1;
       },
-      async (_, type: DataType) => {
-        dataDrivenTestsCount += (datasets[type] || []).length;
+      async (_, value: DynamicValue) => {
+        dataDrivenTestsCount += [...getDynamicDataset(value), ...(datasets[value.type] || [])].length;
       },
-      async (_, type: DataType) => {
-        dataDrivenTestsCount += (datasets[type] || []).length;
+      async (_, value: DynamicValue) => {
+        dataDrivenTestsCount += [...getDynamicDataset(value), ...(datasets[value.type] || [])].length;
       },
     );
 
