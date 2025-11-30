@@ -9,6 +9,8 @@ import SimpleSelect from '../inputs/SimpleSelect';
 
 import ClearCrossIcon from '../../assets/icons/clear-cross-icon.svg';
 
+const MAX_INT32 = 2147483647;
+
 const parameterOptions: SelectOption<DataType>[] = [
   { value: 'do-not-test', label: 'Do not test' },
   { value: 'random32', label: 'Random string 32' },
@@ -43,23 +45,19 @@ export function ParameterControls({ value, onChange }: Props) {
             <Input
               className="max-w-28 p-[5px]! rounded-none! dark:border-border/20!"
               placeholder="Min"
-              max={initialNumberBounds.max}
-              min={-initialNumberBounds.max}
               step={0.01}
               type="number"
               value={(dynamicValue as Interval).min}
-              onBlur={(e) => onMinChange(normalizeDecimal(Number(e.target.value)))}
+              onBlur={(e) => onMinChange(normalizeDecimal(Number(e.target.value || initialNumberBounds.min)))}
               onChange={(e) => onMinChange(!e.target.value ? null : Number(e.target.value))}
             />
             <Input
               className="max-w-28 p-[5px]! rounded-none! dark:border-border/20!"
               placeholder="Max"
-              max={initialNumberBounds.max}
-              min={-initialNumberBounds.max}
               step={0.01}
               type="number"
               value={(dynamicValue as Interval).max}
-              onBlur={(e) => onMaxChange(normalizeDecimal(Number(e.target.value)))}
+              onBlur={(e) => onMaxChange(normalizeDecimal(Number(e.target.value || initialNumberBounds.max)))}
               onChange={(e) => onMaxChange(!e.target.value ? null : Number(e.target.value))}
             />
           </div>
@@ -89,7 +87,7 @@ export function ParameterControls({ value, onChange }: Props) {
       return;
     }
 
-    const min = clamp(value, -initialNumberBounds.max, initialNumberBounds.max);
+    const min = clamp(value, -MAX_INT32, MAX_INT32);
     const max = min > (dynamicValue as Interval).max ? min : (dynamicValue as Interval).max;
 
     onChange({ type, value: { ...(dynamicValue as Interval), min, max: normalizeDecimal(max) } });
@@ -101,7 +99,7 @@ export function ParameterControls({ value, onChange }: Props) {
       return;
     }
 
-    const max = clamp(value, -initialNumberBounds.max, initialNumberBounds.max);
+    const max = clamp(value, -MAX_INT32, MAX_INT32);
     const min = max < (dynamicValue as Interval).min ? max : (dynamicValue as Interval).min;
 
     onChange({ type, value: { ...(dynamicValue as Interval), min: normalizeDecimal(min), max } });

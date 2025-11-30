@@ -20,8 +20,6 @@ export function LargePayloadTestControls({ isRunning, executeTest }: Props) {
         <Input
           className="w-16! p-0.5! text-center!"
           type="number"
-          min={1}
-          max={MAX_PAYLOAD_SIZE_MB}
           title={`Size (max ${MAX_PAYLOAD_SIZE_MB} MB)`}
           value={size}
           onChange={(e) => setSize(clamp(Number(e.target.value), 1, MAX_PAYLOAD_SIZE_MB))}

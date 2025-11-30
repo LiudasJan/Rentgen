@@ -1,7 +1,7 @@
 import { Interval, TestData } from '../types';
 
 export const initialNumberBounds: Interval = {
-  min: 0,
+  min: -10000,
   max: 10000,
 };
 

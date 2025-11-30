@@ -18,8 +18,6 @@ export function LoadTestControls({ isRunning, executeTest }: Props) {
         <label className="block mb-0.5 font-bold text-[10px]">Threads</label>
         <Input
           className="w-12! p-0.5! text-center!"
-          max={100}
-          min={1}
           title="Threads (max 100)"
           type="number"
           value={threadCount}
@@ -32,8 +30,6 @@ export function LoadTestControls({ isRunning, executeTest }: Props) {
         <Input
           className="w-16! p-0.5! text-center!"
           type="number"
-          min={1}
-          max={10000}
           title="Total requests (max 10 000)"
           value={requestCount}
           onChange={(e) => setRequestCount(clamp(Number(e.target.value), 1, 10000))}
