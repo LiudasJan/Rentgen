@@ -35,9 +35,7 @@ export function ParameterControls({ value, onChange }: Props) {
   return (
     <div>
       {type === 'number' && (
-        <div className="mb-1 text-xs text-text-secondary">
-          Set Min/Max range for boundary test. 0 - integer, 0.00 - decimal
-        </div>
+        <div className="mb-1 text-xs text-text-secondary">Set Min/Max range for boundary test (integer or decimal)</div>
       )}
       <div className="flex items-center justify-end flex-wrap gap-2">
         {type === 'number' && (
