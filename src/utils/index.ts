@@ -1,6 +1,7 @@
 export * from './curl';
 export * from './error';
 export * from './http';
+export * from './number';
 export * from './object';
 export * from './proto';
 export * from './random';

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { clamp } from '../../utils/number';
 import Input from '../inputs/Input';
 import { Controls } from './Controls';
 
@@ -22,7 +23,7 @@ export function LoadTestControls({ isRunning, executeTest }: Props) {
           title="Threads (max 100)"
           type="number"
           value={threadCount}
-          onChange={(e) => setThreadCount(Math.min(100, Math.max(1, Number(e.target.value))))}
+          onChange={(e) => setThreadCount(clamp(Number(e.target.value), 1, 100))}
         />
       </div>
 
@@ -35,7 +36,7 @@ export function LoadTestControls({ isRunning, executeTest }: Props) {
           max={10000}
           title="Total requests (max 10 000)"
           value={requestCount}
-          onChange={(e) => setRequestCount(Math.min(10000, Math.max(1, Number(e.target.value))))}
+          onChange={(e) => setRequestCount(clamp(Number(e.target.value), 1, 10000))}
         />
       </div>
     </Controls>
