@@ -33,46 +33,55 @@ export function ParameterControls({ value, onChange }: Props) {
   const { type, value: dynamicValue } = value;
 
   return (
-    <div className="flex items-center justify-end flex-wrap gap-2">
+    <div>
       {type === 'number' && (
-        <div className="flex items-center justify-end flex-wrap gap-2">
-          <Input
-            className="max-w-28 p-[5px]! rounded-none! dark:border-border/20!"
-            placeholder="From"
-            max={initialNumberBounds.to}
-            min={-initialNumberBounds.to}
-            step={0.01}
-            type="number"
-            value={(dynamicValue as Interval).from}
-            onBlur={(e) => onFromChange(normalizeDecimal(Number(e.target.value)))}
-            onChange={(e) => onFromChange(Number(e.target.value))}
-          />
-          <Input
-            className="max-w-28 p-[5px]! rounded-none! dark:border-border/20!"
-            placeholder="To"
-            max={initialNumberBounds.to}
-            min={-initialNumberBounds.to}
-            step={0.01}
-            type="number"
-            value={(dynamicValue as Interval).to}
-            onBlur={(e) => onToChange(normalizeDecimal(Number(e.target.value)))}
-            onChange={(e) => onToChange(Number(e.target.value))}
-          />
+        <div className="mb-1 text-xs text-text-secondary">
+          Set Min/Max range for boundary test. 0 - integer, 0.00 - decimal
         </div>
       )}
-      <SimpleSelect
-        className="p-1! rounded-none! outline-none dark:border-border/20!"
-        options={parameterOptions}
-        value={type}
-        onChange={onSelectTypeChange}
-      />
-      <ClearCrossIcon
-        className={cn(
-          'h-[18px] w-[18px] p-0.5 text-button-text-secondary hover:text-button-text-secondary-hover',
-          'dark:text-text-secondary dark:hover:text-dark-text cursor-pointer',
+      <div className="flex items-center justify-end flex-wrap gap-2">
+        {type === 'number' && (
+          <div className="flex items-center justify-end flex-wrap gap-2">
+            <Input
+              className="max-w-28 p-[5px]! rounded-none! dark:border-border/20!"
+              placeholder="From"
+              max={initialNumberBounds.to}
+              min={-initialNumberBounds.to}
+              step={0.01}
+              type="number"
+              value={(dynamicValue as Interval).from}
+              onBlur={(e) => onFromChange(normalizeDecimal(Number(e.target.value)))}
+              onChange={(e) => onFromChange(Number(e.target.value))}
+            />
+            <Input
+              className="max-w-28 p-[5px]! rounded-none! dark:border-border/20!"
+              placeholder="To"
+              max={initialNumberBounds.to}
+              min={-initialNumberBounds.to}
+              step={0.01}
+              type="number"
+              value={(dynamicValue as Interval).to}
+              onBlur={(e) => onToChange(normalizeDecimal(Number(e.target.value)))}
+              onChange={(e) => onToChange(Number(e.target.value))}
+            />
+          </div>
         )}
-        onClick={() => onChange({ type: 'do-not-test' })}
-      />
+        <div className="flex items-center justify-end gap-2">
+          <SimpleSelect
+            className="p-1! rounded-none! outline-none dark:border-border/20!"
+            options={parameterOptions}
+            value={type}
+            onChange={onSelectTypeChange}
+          />
+          <ClearCrossIcon
+            className={cn(
+              'h-[18px] w-[18px] p-0.5 text-button-text-secondary hover:text-button-text-secondary-hover',
+              'dark:text-text-secondary dark:hover:text-dark-text cursor-pointer',
+            )}
+            onClick={() => onChange({ type: 'do-not-test' })}
+          />
+        </div>
+      </div>
     </div>
   );
 

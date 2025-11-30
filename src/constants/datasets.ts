@@ -2,7 +2,7 @@ import { Interval, TestData } from '../types';
 
 export const initialNumberBounds: Interval = {
   from: 0,
-  to: 2147483647,
+  to: 10000,
 };
 
 export const datasets: Record<string, TestData[]> = {
