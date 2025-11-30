@@ -9,6 +9,7 @@ import {
   extractBodyParameters,
   generateRandomNumber,
   getBodyParameterValue,
+  normalizeDecimal,
   parseBody,
   parseHeaders,
 } from '../utils';
@@ -253,15 +254,21 @@ export function getNumberDynamicBoundaryDataset(value: Interval): TestData[] {
   else {
     dataset.push({ value: value.from, valid: true });
 
-    if (range > delta) dataset.push({ value: value.from + delta, valid: true });
+    if (range > delta) dataset.push({ value: normalizeDecimal(value.from + delta), valid: true });
 
     if (range > 3 * delta)
-      dataset.push({ value: generateRandomNumber(value.from + 2 * delta, value.to - 2 * delta), valid: true });
+      dataset.push({
+        value: generateRandomNumber(normalizeDecimal(value.from + 2 * delta), normalizeDecimal(value.to - 2 * delta)),
+        valid: true,
+      });
 
     if (range > 4 * delta)
-      dataset.push({ value: generateRandomNumber(value.from + 2 * delta, value.to - 2 * delta), valid: true });
+      dataset.push({
+        value: generateRandomNumber(normalizeDecimal(value.from + 2 * delta), normalizeDecimal(value.to - 2 * delta)),
+        valid: true,
+      });
 
-    if (range >= 3 * delta) dataset.push({ value: value.to - delta, valid: true });
+    if (range >= 3 * delta) dataset.push({ value: normalizeDecimal(value.to - delta), valid: true });
 
     dataset.push({ value: value.to, valid: true });
   }
