@@ -1,7 +1,7 @@
 import cn from 'classnames';
 import { ChangeEvent } from 'react';
 import { initialNumberBounds } from '../../constants/datasets';
-import { DataType, DynamicValue } from '../../types';
+import { DataType, DynamicValue, Interval } from '../../types';
 import { clamp, normalizeDecimal } from '../../utils';
 import Input from '../inputs/Input';
 import { SelectOption } from '../inputs/Select';
@@ -43,7 +43,7 @@ export function ParameterControls({ value, onChange }: Props) {
             min={-initialNumberBounds.to}
             step={0.01}
             type="number"
-            value={dynamicValue.from}
+            value={(dynamicValue as Interval).from}
             onBlur={(e) => onFromChange(normalizeDecimal(Number(e.target.value)))}
             onChange={(e) => onFromChange(Number(e.target.value))}
           />
@@ -54,7 +54,7 @@ export function ParameterControls({ value, onChange }: Props) {
             min={-initialNumberBounds.to}
             step={0.01}
             type="number"
-            value={dynamicValue.to}
+            value={(dynamicValue as Interval).to}
             onBlur={(e) => onToChange(normalizeDecimal(Number(e.target.value)))}
             onChange={(e) => onToChange(Number(e.target.value))}
           />
@@ -78,16 +78,16 @@ export function ParameterControls({ value, onChange }: Props) {
 
   function onFromChange(value: number) {
     const from = clamp(value, -initialNumberBounds.to, initialNumberBounds.to);
-    const to = from > dynamicValue.to ? from : dynamicValue.to;
+    const to = from > (dynamicValue as Interval).to ? from : (dynamicValue as Interval).to;
 
-    onChange({ type, value: { ...dynamicValue, from, to: normalizeDecimal(to) } });
+    onChange({ type, value: { ...(dynamicValue as Interval), from, to: normalizeDecimal(to) } });
   }
 
   function onToChange(value: number) {
     const to = clamp(value, -initialNumberBounds.to, initialNumberBounds.to);
-    const from = to < dynamicValue.from ? to : dynamicValue.from;
+    const from = to < (dynamicValue as Interval).from ? to : (dynamicValue as Interval).from;
 
-    onChange({ type, value: { ...dynamicValue, from: normalizeDecimal(from), to } });
+    onChange({ type, value: { ...(dynamicValue as Interval), from: normalizeDecimal(from), to } });
   }
 
   function onSelectTypeChange(event: ChangeEvent<HTMLSelectElement>) {

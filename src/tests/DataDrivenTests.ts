@@ -1,7 +1,7 @@
 import { datasets } from '../constants/datasets';
 import { getResponseStatusTitle, RESPONSE_STATUS } from '../constants/responseStatus';
 import { Test } from '../decorators';
-import { DataType, DynamicValue, HttpRequest, TestData, TestOptions, TestResult, TestStatus } from '../types';
+import { DataType, DynamicValue, HttpRequest, Interval, TestData, TestOptions, TestResult, TestStatus } from '../types';
 import {
   createHttpRequest,
   createTestHttpRequest,
@@ -236,13 +236,13 @@ async function testRequestParameter(options: TestOptions, onTestStart?: () => vo
 export function getDynamicDataset({ type, value }: DynamicValue): TestData[] {
   switch (type) {
     case 'number':
-      return getNumberDynamicBoundaryDataset(value);
+      return getNumberDynamicBoundaryDataset(value as Interval);
     default:
       return [];
   }
 }
 
-export function getNumberDynamicBoundaryDataset(value: { from: number; to: number }): TestData[] {
+export function getNumberDynamicBoundaryDataset(value: Interval): TestData[] {
   const dataset: TestData[] = [];
   if (!value) return dataset;
 

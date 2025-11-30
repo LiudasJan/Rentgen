@@ -1,6 +1,6 @@
-import { TestData } from '../types';
+import { Interval, TestData } from '../types';
 
-export const initialNumberBounds = {
+export const initialNumberBounds: Interval = {
   from: 0,
   to: 2147483647,
 };

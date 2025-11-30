@@ -19,7 +19,7 @@ export type ParameterType = 'body' | 'query';
 
 export interface DynamicValue {
   type: DataType;
-  value?: any;
+  value?: string | Interval;
 }
 
 export interface HttpRequest {
@@ -33,6 +33,11 @@ export interface HttpResponse {
   body?: string;
   headers: Record<string, string>;
   status: string;
+}
+
+export interface Interval {
+  from: number;
+  to: number;
 }
 
 export interface ParsedCurlResult {
