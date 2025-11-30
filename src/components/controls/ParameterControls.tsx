@@ -44,25 +44,25 @@ export function ParameterControls({ value, onChange }: Props) {
           <div className="flex items-center justify-end flex-wrap gap-2">
             <Input
               className="max-w-28 p-[5px]! rounded-none! dark:border-border/20!"
-              placeholder="From"
-              max={initialNumberBounds.to}
-              min={-initialNumberBounds.to}
+              placeholder="Min"
+              max={initialNumberBounds.max}
+              min={-initialNumberBounds.max}
               step={0.01}
               type="number"
-              value={(dynamicValue as Interval).from}
-              onBlur={(e) => onFromChange(normalizeDecimal(Number(e.target.value)))}
-              onChange={(e) => onFromChange(Number(e.target.value))}
+              value={(dynamicValue as Interval).min}
+              onBlur={(e) => onMinChange(normalizeDecimal(Number(e.target.value)))}
+              onChange={(e) => onMinChange(!e.target.value ? null : Number(e.target.value))}
             />
             <Input
               className="max-w-28 p-[5px]! rounded-none! dark:border-border/20!"
-              placeholder="To"
-              max={initialNumberBounds.to}
-              min={-initialNumberBounds.to}
+              placeholder="Max"
+              max={initialNumberBounds.max}
+              min={-initialNumberBounds.max}
               step={0.01}
               type="number"
-              value={(dynamicValue as Interval).to}
-              onBlur={(e) => onToChange(normalizeDecimal(Number(e.target.value)))}
-              onChange={(e) => onToChange(Number(e.target.value))}
+              value={(dynamicValue as Interval).max}
+              onBlur={(e) => onMaxChange(normalizeDecimal(Number(e.target.value)))}
+              onChange={(e) => onMaxChange(!e.target.value ? null : Number(e.target.value))}
             />
           </div>
         )}
@@ -85,18 +85,28 @@ export function ParameterControls({ value, onChange }: Props) {
     </div>
   );
 
-  function onFromChange(value: number) {
-    const from = clamp(value, -initialNumberBounds.to, initialNumberBounds.to);
-    const to = from > (dynamicValue as Interval).to ? from : (dynamicValue as Interval).to;
+  function onMinChange(value: number | null) {
+    if (value === null) {
+      onChange({ type, value: { ...(dynamicValue as Interval), min: null } });
+      return;
+    }
 
-    onChange({ type, value: { ...(dynamicValue as Interval), from, to: normalizeDecimal(to) } });
+    const min = clamp(value, -initialNumberBounds.max, initialNumberBounds.max);
+    const max = min > (dynamicValue as Interval).max ? min : (dynamicValue as Interval).max;
+
+    onChange({ type, value: { ...(dynamicValue as Interval), min, max: normalizeDecimal(max) } });
   }
 
-  function onToChange(value: number) {
-    const to = clamp(value, -initialNumberBounds.to, initialNumberBounds.to);
-    const from = to < (dynamicValue as Interval).from ? to : (dynamicValue as Interval).from;
+  function onMaxChange(value: number | null) {
+    if (value === null) {
+      onChange({ type, value: { ...(dynamicValue as Interval), max: null } });
+      return;
+    }
 
-    onChange({ type, value: { ...(dynamicValue as Interval), from: normalizeDecimal(from), to } });
+    const max = clamp(value, -initialNumberBounds.max, initialNumberBounds.max);
+    const min = max < (dynamicValue as Interval).min ? max : (dynamicValue as Interval).min;
+
+    onChange({ type, value: { ...(dynamicValue as Interval), min: normalizeDecimal(min), max } });
   }
 
   function onSelectTypeChange(event: ChangeEvent<HTMLSelectElement>) {

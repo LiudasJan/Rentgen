@@ -243,38 +243,36 @@ export function getDynamicDataset({ type, value }: DynamicValue): TestData[] {
   }
 }
 
-export function getNumberDynamicBoundaryDataset(value: Interval): TestData[] {
+export function getNumberDynamicBoundaryDataset({ min, max }: Interval): TestData[] {
   const dataset: TestData[] = [];
-  if (!value) return dataset;
+  const delta = Number.isInteger(min) && Number.isInteger(max) ? 1 : 0.01;
+  const range = max - min;
 
-  const delta = Number.isInteger(value.from) && Number.isInteger(value.to) ? 1 : 0.01;
-  const range = value.to - value.from;
-
-  if (range === 0) dataset.push({ value: value.from, valid: true });
+  if (range === 0) dataset.push({ value: min, valid: true });
   else {
-    dataset.push({ value: value.from, valid: true });
+    dataset.push({ value: min, valid: true });
 
-    if (range > delta) dataset.push({ value: normalizeDecimal(value.from + delta), valid: true });
+    if (range > delta) dataset.push({ value: normalizeDecimal(min + delta), valid: true });
 
     if (range > 3 * delta)
       dataset.push({
-        value: generateRandomNumber(normalizeDecimal(value.from + 2 * delta), normalizeDecimal(value.to - 2 * delta)),
+        value: generateRandomNumber(normalizeDecimal(min + 2 * delta), normalizeDecimal(max - 2 * delta)),
         valid: true,
       });
 
     if (range > 4 * delta)
       dataset.push({
-        value: generateRandomNumber(normalizeDecimal(value.from + 2 * delta), normalizeDecimal(value.to - 2 * delta)),
+        value: generateRandomNumber(normalizeDecimal(min + 2 * delta), normalizeDecimal(max - 2 * delta)),
         valid: true,
       });
 
-    if (range >= 3 * delta) dataset.push({ value: normalizeDecimal(value.to - delta), valid: true });
+    if (range >= 3 * delta) dataset.push({ value: normalizeDecimal(max - delta), valid: true });
 
-    dataset.push({ value: value.to, valid: true });
+    dataset.push({ value: max, valid: true });
   }
 
-  dataset.push({ value: value.from - delta, valid: false });
-  dataset.push({ value: value.to + delta, valid: false });
+  dataset.push({ value: min - delta, valid: false });
+  dataset.push({ value: max + delta, valid: false });
 
   return dataset;
 }

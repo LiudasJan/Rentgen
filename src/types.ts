@@ -36,8 +36,8 @@ export interface HttpResponse {
 }
 
 export interface Interval {
-  from: number;
-  to: number;
+  min: number;
+  max: number;
 }
 
 export interface ParsedCurlResult {
