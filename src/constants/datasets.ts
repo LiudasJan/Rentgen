@@ -1,4 +1,11 @@
-import { TestData } from '../types';
+import { Interval, TestData } from '../types';
+
+export const initialNumberBounds: Interval = {
+  min: -10000,
+  max: 10000,
+};
+
+export const MAX_STRING_LENGTH = 128;
 
 export const datasets: Record<string, TestData[]> = {
   email: [
@@ -51,6 +58,14 @@ export const datasets: Record<string, TestData[]> = {
     { value: 'nill', valid: false },
     { value: true, valid: false },
     { value: false, valid: false },
+  ],
+  enum: [
+    { value: true, valid: false },
+    { value: false, valid: false },
+    { value: null, valid: false },
+    { value: 0, valid: false },
+    { value: -1, valid: false },
+    { value: 123123, valid: false },
   ],
   url: [
     { value: 'https://qaontime.com', valid: true },
@@ -175,12 +190,6 @@ export const datasets: Record<string, TestData[]> = {
     { value: 123123, valid: false },
   ],
   number: [
-    { value: -1, valid: true },
-    { value: 1, valid: true },
-    { value: 0, valid: true },
-    { value: 12344532, valid: true },
-    { value: -9999999, valid: true },
-    { value: 90987654321, valid: true },
     { value: '12344532', valid: false },
     { value: '-', valid: false },
     { value: true, valid: false },

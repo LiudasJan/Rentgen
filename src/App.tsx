@@ -20,16 +20,17 @@ import TestsTable, { ExpandedTestComponent, getTestsTableColumns } from './compo
 import { RESPONSE_STATUS } from './constants/responseStatus';
 import useTests from './hooks/useTests';
 import { LARGE_PAYLOAD_TEST_NAME, LOAD_TEST_NAME } from './tests';
-import { FieldType, HttpResponse, TestOptions } from './types';
+import { HttpResponse, RequestParameters, TestOptions } from './types';
 import {
   createHttpRequest,
-  detectFieldType,
-  extractBodyFieldMappings,
+  detectDataType,
   extractBodyFromResponse,
+  extractBodyParameters,
   extractCurl,
   extractQueryParameters,
   extractStatusCode,
   formatBody,
+  getInitialParameterValue,
   loadProtoSchema,
   parseBody,
   parseHeaders,
@@ -80,8 +81,8 @@ export default function App() {
       decoded?: string | null;
     }[]
   >([]);
-  const [bodyMappings, setBodyMappings] = useState<Record<string, FieldType>>({});
-  const [queryMappings, setQueryMappings] = useState<Record<string, FieldType>>({});
+  const [bodyParameters, setBodyParameters] = useState<RequestParameters>({});
+  const [queryParameters, setQueryParameters] = useState<RequestParameters>({});
   const [testOptions, setTestOptions] = useState<TestOptions | null>(null);
   const {
     crudTests,
@@ -173,7 +174,7 @@ export default function App() {
                   className="min-h-40"
                   placeholder="Enter cURL or paste text"
                   value={curl}
-                  onChange={(e) => setCurl(e.target.value)}
+                  onChange={(event) => setCurl(event.target.value)}
                 />
                 {curlError && <p className="m-0 text-xs text-red-600">{curlError}</p>}
                 <div className="flex items-center justify-end gap-4">
@@ -246,7 +247,7 @@ export default function App() {
             className={cn('flex-auto', { 'border-l-0! rounded-l-none!': mode === 'HTTP' })}
             placeholder="Enter URL or paste text"
             value={url}
-            onChange={(e) => setUrl(e.target.value)}
+            onChange={(event) => setUrl(event.target.value)}
           />
         </div>
         {mode === 'HTTP' && (
@@ -274,7 +275,7 @@ export default function App() {
         maxRows={10}
         placeholder="Header-Key: value"
         value={headers}
-        onChange={(e) => setHeaders(e.target.value)}
+        onChange={(event) => setHeaders(event.target.value)}
       />
 
       <div className="relative">
@@ -282,7 +283,7 @@ export default function App() {
           maxRows={15}
           placeholder={mode === 'HTTP' ? 'Enter request body (JSON or Form Data)' : 'Message body'}
           value={body}
-          onChange={(e) => setBody(e.target.value)}
+          onChange={(event) => setBody(event.target.value)}
         />
         <Button
           className="absolute top-3 right-4 min-w-auto! py-0.5! px-2! rounded-sm"
@@ -304,8 +305,8 @@ export default function App() {
               accept=".proto"
               className="rounded-r-none! dark:border-r-dark-body!"
               type="file"
-              onChange={async (e) => {
-                const file = e.target.files?.[0];
+              onChange={async (event) => {
+                const file = event.target.files?.[0];
                 if (!file) return;
 
                 const fileExtension = file.name.split('.').pop().toLowerCase();
@@ -332,7 +333,7 @@ export default function App() {
               className="flex-auto border-l-0! rounded-l-none!"
               placeholder="Message type (e.g. mypackage.MyMessage)"
               value={messageType}
-              onChange={(e) => setMessageType(e.target.value)}
+              onChange={(event) => setMessageType(event.target.value)}
             />
           </div>
         </div>
@@ -424,41 +425,29 @@ export default function App() {
         </ResponsePanel>
       )}
 
-      {(Object.keys(bodyMappings).length > 0 || Object.keys(queryMappings).length > 0) && (
-        <div className="grid grid-cols-2 gap-4 items-stretch">
-          {Object.keys(bodyMappings).length > 0 && (
+      {(Object.keys(bodyParameters).length > 0 || Object.keys(queryParameters).length > 0) && (
+        <div className="grid md:grid-cols-2 gap-4 items-stretch">
+          {Object.keys(bodyParameters).length > 0 && (
             <ParametersPanel
               title="Body Parameters"
-              mappings={bodyMappings}
-              onFieldTypeChange={(key, value) =>
-                setBodyMappings((prevBodyMappings) => ({
-                  ...prevBodyMappings,
-                  [key]: value,
-                }))
-              }
-              onRemoveClick={(key) =>
-                setBodyMappings((prevBodyMappings) => ({
-                  ...prevBodyMappings,
-                  [key]: 'do-not-test',
+              parameters={bodyParameters}
+              onChange={(parameters) =>
+                setBodyParameters((prevBodyParameters) => ({
+                  ...prevBodyParameters,
+                  ...parameters,
                 }))
               }
             />
           )}
 
-          {Object.keys(queryMappings).length > 0 && (
+          {Object.keys(queryParameters).length > 0 && (
             <ParametersPanel
               title="Query Parameters"
-              mappings={queryMappings}
-              onFieldTypeChange={(key, value) =>
-                setQueryMappings((prevQueryMappings) => ({
-                  ...prevQueryMappings,
-                  [key]: value,
-                }))
-              }
-              onRemoveClick={(key) =>
-                setQueryMappings((prevQueryMappings) => ({
-                  ...prevQueryMappings,
-                  [key]: 'do-not-test',
+              parameters={queryParameters}
+              onChange={(parameters) =>
+                setQueryParameters((prevQueryParameters) => ({
+                  ...prevQueryParameters,
+                  ...parameters,
                 }))
               }
             />
@@ -471,7 +460,16 @@ export default function App() {
           <Button
             disabled={disabledRunTests}
             onClick={() =>
-              setTestOptions({ body, headers, method, bodyMappings, queryMappings, messageType, protoFile, url })
+              setTestOptions({
+                body,
+                bodyParameters,
+                headers,
+                method,
+                messageType,
+                protoFile,
+                queryParameters,
+                url,
+              })
             }
           >
             {isRunningTests ? `Running tests... (${currentTest}/${testsCount})` : 'Generate & Run Tests'}
@@ -495,7 +493,7 @@ export default function App() {
                         <LargePayloadTestControls
                           isRunning={isLargePayloadTestRunning}
                           executeTest={(size: number) =>
-                            executeLargePayloadTest({ ...testOptions, bodyMappings, queryMappings }, size)
+                            executeLargePayloadTest({ ...testOptions, bodyParameters, queryParameters }, size)
                           }
                         />
                       );
@@ -533,7 +531,11 @@ export default function App() {
                         <LoadTestControls
                           isRunning={isLoadTestRunning}
                           executeTest={(threadCount: number, requestCount: number) =>
-                            executeLoadTest({ ...testOptions, bodyMappings, queryMappings }, threadCount, requestCount)
+                            executeLoadTest(
+                              { ...testOptions, bodyParameters, queryParameters },
+                              threadCount,
+                              requestCount,
+                            )
                           }
                         />
                       );
@@ -550,7 +552,7 @@ export default function App() {
 
           <ResponsePanel title="Data-Driven Tests">
             <TestsTable
-              columns={getTestsTableColumns(['Field', 'Value', 'Expected', 'Actual', 'Result'])}
+              columns={getTestsTableColumns(['Parameter', 'Value', 'Expected', 'Actual', 'Result'])}
               expandableRows
               expandableRowsComponent={ExpandedTestComponent}
               expandableRowsComponentProps={{ headers: parseHeaders(headers), protoFile, messageType }}
@@ -590,8 +592,8 @@ export default function App() {
     setMessageType('');
     setHttpResponse(null);
     setMessages([]);
-    setBodyMappings({});
-    setQueryMappings({});
+    setBodyParameters({});
+    setQueryParameters({});
     setTestOptions(null);
   }
 
@@ -638,8 +640,8 @@ export default function App() {
       body: '',
       headers: {},
     });
-    setBodyMappings({});
-    setQueryMappings({});
+    setBodyParameters({});
+    setQueryParameters({});
 
     try {
       const parsedHeaders = parseHeaders(headers);
@@ -651,13 +653,16 @@ export default function App() {
 
       if (!response.status.startsWith('2')) return;
 
-      const bodyMappings = extractBodyFieldMappings(parsedBody, parsedHeaders);
-      const queryMappings = Object.fromEntries(
-        Object.entries(extractQueryParameters(url)).map(([key, value]) => [key, detectFieldType(value)]),
+      const bodyParameters = extractBodyParameters(parsedBody, parsedHeaders);
+      const queryParameters = Object.fromEntries(
+        Object.entries(extractQueryParameters(url)).map(([key, value]) => [
+          key,
+          getInitialParameterValue(detectDataType(value), value),
+        ]),
       );
 
-      setBodyMappings(bodyMappings);
-      setQueryMappings(queryMappings);
+      setBodyParameters(bodyParameters);
+      setQueryParameters(queryParameters);
     } catch (error) {
       setHttpResponse({
         status: NETWORK_ERROR,

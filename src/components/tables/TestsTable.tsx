@@ -96,12 +96,12 @@ export function ExpandedTestComponent({
   );
 }
 
-type TestsTableColumn = 'Field' | 'Value' | 'Check' | 'Method' | 'Expected' | 'Actual' | 'Result';
+type TestsTableColumn = 'Parameter' | 'Value' | 'Check' | 'Method' | 'Expected' | 'Actual' | 'Result';
 
 export function getTestsTableColumns(visibleColumns: TestsTableColumn[] = []): TableColumn<TestResult>[] {
   const columns: TableColumn<TestResult>[] = [
     {
-      name: 'Field',
+      name: 'Parameter',
       selector: (row) => row.name,
       omit: true,
     },

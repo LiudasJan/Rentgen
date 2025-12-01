@@ -1,7 +1,11 @@
-import { FieldDetector, FieldType } from '../types';
+import { DataType } from '../types';
 
-const FIELD_DETECTORS: ReadonlyArray<FieldDetector> = [
+const DATA_TYPE_DETECTORS: ReadonlyArray<{
+  type: DataType;
+  regex: RegExp;
+}> = [
   { type: 'email', regex: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ },
+  { type: 'enum', regex: /^[A-Z_]{1,10}$/ },
   { type: 'url', regex: /^https?:\/\/[^\s$.?#].[^\s]*$/i },
   { type: 'ftp_url', regex: /^ftp:\/\/[^\s$.?#].[^\s]*$/i },
   { type: 'phone', regex: /^\+\d{7,20}$/ },
@@ -12,45 +16,45 @@ const FIELD_DETECTORS: ReadonlyArray<FieldDetector> = [
   { type: 'string', regex: /.+/ },
 ];
 
-export function detectFieldType(value: unknown, strict = false): FieldType {
+export function detectDataType(value: unknown, strict = false): DataType {
   if (typeof value === 'boolean') return 'boolean';
   if (typeof value === 'number') return 'number';
   if (typeof value === 'string' && value.length > 0) {
     if (strict && !isNaN(Number(value)) && !isPhoneNumber(value)) return 'string';
 
-    for (const detector of FIELD_DETECTORS) if (detector.regex.test(value)) return detector.type;
+    for (const detector of DATA_TYPE_DETECTORS) if (detector.regex.test(value)) return detector.type;
   }
 
   return 'string';
 }
 
 export function isPhoneNumber(value: string): boolean {
-  return FIELD_DETECTORS.find((detector) => detector.type === 'phone')?.regex.test(value);
+  return DATA_TYPE_DETECTORS.find((detector) => detector.type === 'phone')?.regex.test(value);
 }
 
-export function extractFieldsFromJson(obj: unknown, prefix = ''): Record<string, string> {
-  const fields: Record<string, string> = {};
+export function extractPropertiesFromJson(obj: unknown, prefix = ''): Record<string, string> {
+  const properties: Record<string, string> = {};
 
   if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
     for (const [key, value] of Object.entries(obj)) {
       const path = prefix ? `${prefix}.${key}` : key;
 
-      if (value === null) fields[path] = 'null';
+      if (value === null) properties[path] = 'null';
       else if (typeof value === 'object') {
-        // Mark this object field as not testable (objects are not tested directly, only their children)
-        fields[path] = 'DO_NOT_TEST';
-        Object.assign(fields, extractFieldsFromJson(value, path));
-      } else fields[path] = typeof value;
+        // Mark this object property as not testable (objects are not tested directly, only their children)
+        properties[path] = 'DO_NOT_TEST';
+        Object.assign(properties, extractPropertiesFromJson(value, path));
+      } else properties[path] = typeof value;
     }
   } else if (Array.isArray(obj)) {
     obj.forEach((item, i) => {
       const path = `${prefix}[${i}]`;
       if (typeof item === 'object') {
-        fields[path] = 'DO_NOT_TEST';
-        Object.assign(fields, extractFieldsFromJson(item, path));
-      } else fields[path] = typeof item;
+        properties[path] = 'DO_NOT_TEST';
+        Object.assign(properties, extractPropertiesFromJson(item, path));
+      } else properties[path] = typeof item;
     });
-  } else fields[prefix] = typeof obj;
+  } else properties[prefix] = typeof obj;
 
-  return fields;
+  return properties;
 }

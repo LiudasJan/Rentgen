@@ -21,9 +21,9 @@ export function extractCurl(curl: string): ParsedCurlResult {
     let pairMatch: RegExpExecArray | null;
 
     while ((pairMatch = keyValuePairRegex.exec(dataLine)) !== null) {
-      const fieldKey = pairMatch[1].trim();
-      const fieldValue = pairMatch[2].trim();
-      parsedFormPairs.push(`${fieldKey}=${fieldValue}`);
+      const key = pairMatch[1].trim();
+      const value = pairMatch[2].trim();
+      parsedFormPairs.push(`${key}=${value}`);
     }
   }
 
