@@ -182,7 +182,7 @@ export default function App() {
   const handleSelectSidebarItem = (id: string) => {
     const item = findRequestById(collection, id);
     if (!item) {
-        return;
+      return;
     }
 
     reset();
@@ -199,435 +199,437 @@ export default function App() {
     <div className="flex">
       <Sidebar items={sidebarItems} onRemove={handleRemoveSidebarItem} onSelect={handleSelectSidebarItem} />
       <div className="flex-1 flex flex-col gap-4 py-5 px-7 min-h-screen overflow-auto">
-      <div className="flex items-center gap-2">
-        <Select
-          className="font-bold"
-          isDisabled={isRunningTests}
-          isSearchable={false}
-          options={modeOptions}
-          placeholder="MODE"
-          value={modeOptions.find((option) => option.value == mode)}
-          onChange={(option: SelectOption<Mode>) => {
-            setMode(option.value);
-            reset();
-          }}
-        />
-        {mode === 'HTTP' && (
-          <>
-            <Button onClick={() => setOpenCurlModal(true)}>Import cURL</Button>
-            <Modal isOpen={openCurlModal} onClose={closeCurlModal}>
+        <div className="flex items-center gap-2">
+          <Select
+            className="font-bold"
+            isDisabled={isRunningTests}
+            isSearchable={false}
+            options={modeOptions}
+            placeholder="MODE"
+            value={modeOptions.find((option) => option.value == mode)}
+            onChange={(option: SelectOption<Mode>) => {
+              setMode(option.value);
+              reset();
+            }}
+          />
+          {mode === 'HTTP' && (
+            <>
+              <Button onClick={() => setOpenCurlModal(true)}>Import cURL</Button>
+              <Modal isOpen={openCurlModal} onClose={closeCurlModal}>
+                <div className="flex flex-col gap-4">
+                  <h4 className="m-0">Import cURL</h4>
+                  <Textarea
+                    autoFocus={true}
+                    className="min-h-40"
+                    placeholder="Enter cURL or paste text"
+                    value={curl}
+                    onChange={(event) => setCurl(event.target.value)}
+                  />
+                  {curlError && <p className="m-0 text-xs text-red-600">{curlError}</p>}
+                  <div className="flex items-center justify-end gap-4">
+                    <Button onClick={importCurl}>Import</Button>
+                    <Button buttonType={ButtonType.SECONDARY} onClick={closeCurlModal}>
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              </Modal>
+            </>
+          )}
+          <div className="flex-auto flex items-center justify-end gap-2">
+            <IconButton
+              onClick={async () => {
+                const theme = await window.themeAPI.getTheme();
+                if (theme === 'dark') {
+                  document.documentElement.classList.remove('dark');
+                  window.themeAPI.setTheme('light');
+                } else {
+                  document.documentElement.classList.add('dark');
+                  window.themeAPI.setTheme('dark');
+                }
+              }}
+            >
+              <DarkModeIcon className="h-5 w-5 dark:hidden" />
+              <LightModeIcon className="hidden dark:block h-6 w-6" />
+            </IconButton>
+            <IconButton onClick={() => setOpenReloadModal(true)}>
+              <ReloadIcon className="h-5 w-5" />
+            </IconButton>
+            <Modal className="[&>div]:w-[400px]!" isOpen={openReloadModal} onClose={closeReloadModal}>
               <div className="flex flex-col gap-4">
-                <h4 className="m-0">Import cURL</h4>
-                <Textarea
-                  autoFocus={true}
-                  className="min-h-40"
-                  placeholder="Enter cURL or paste text"
-                  value={curl}
-                  onChange={(event) => setCurl(event.target.value)}
-                />
-                {curlError && <p className="m-0 text-xs text-red-600">{curlError}</p>}
+                <h4 className="m-0">Reload</h4>
+                <p className="m-0 text-sm dark:text-text-secondary">All current data will be lost</p>
                 <div className="flex items-center justify-end gap-4">
-                  <Button onClick={importCurl}>Import</Button>
-                  <Button buttonType={ButtonType.SECONDARY} onClick={closeCurlModal}>
+                  <Button buttonType={ButtonType.DANGER} onClick={() => window.location.reload()}>
+                    Reload
+                  </Button>
+                  <Button buttonType={ButtonType.SECONDARY} onClick={closeReloadModal}>
                     Cancel
                   </Button>
                 </div>
               </div>
             </Modal>
-          </>
-        )}
-        <div className="flex-auto flex items-center justify-end gap-2">
-          <IconButton
-            onClick={async () => {
-              const theme = await window.themeAPI.getTheme();
-              if (theme === 'dark') {
-                document.documentElement.classList.remove('dark');
-                window.themeAPI.setTheme('light');
-              } else {
-                document.documentElement.classList.add('dark');
-                window.themeAPI.setTheme('dark');
-              }
-            }}
-          >
-            <DarkModeIcon className="h-5 w-5 dark:hidden" />
-            <LightModeIcon className="hidden dark:block h-6 w-6" />
-          </IconButton>
-          <IconButton onClick={() => setOpenReloadModal(true)}>
-            <ReloadIcon className="h-5 w-5" />
-          </IconButton>
-          <Modal className="[&>div]:w-[400px]!" isOpen={openReloadModal} onClose={closeReloadModal}>
-            <div className="flex flex-col gap-4">
-              <h4 className="m-0">Reload</h4>
-              <p className="m-0 text-sm dark:text-text-secondary">All current data will be lost</p>
-              <div className="flex items-center justify-end gap-4">
-                <Button buttonType={ButtonType.DANGER} onClick={() => window.location.reload()}>
-                  Reload
-                </Button>
-                <Button buttonType={ButtonType.SECONDARY} onClick={closeReloadModal}>
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          </Modal>
+          </div>
         </div>
-      </div>
 
-      <div className="flex items-center gap-2">
-        <div className="flex-auto flex items-center">
-          {mode === 'HTTP' && (
-            <Select
-              className="font-bold uppercase"
-              classNames={{
-                control: () =>
-                  cn(
-                    'min-h-auto! bg-white! border! border-border! rounded-none! rounded-l-md! transition-none! shadow-none!',
-                    'dark:bg-dark-input! dark:border-dark-input! dark:border-r-dark-body!',
-                  ),
-                input: () => 'm-0! p-0! [&>:first-child]:uppercase text-text! dark:text-dark-text!',
-              }}
-              isCreatable={true}
-              options={methodOptions}
-              placeholder="METHOD"
-              value={methodOptions.find((option) => option.value == method)}
-              onChange={(option: SelectOption<Method>) => setMethod(option.value)}
+        <div className="flex items-center gap-2">
+          <div className="flex-auto flex items-center">
+            {mode === 'HTTP' && (
+              <Select
+                className="font-bold uppercase"
+                classNames={{
+                  control: () =>
+                    cn(
+                      'min-h-auto! bg-white! border! border-border! rounded-none! rounded-l-md! transition-none! shadow-none!',
+                      'dark:bg-dark-input! dark:border-dark-input! dark:border-r-dark-body!',
+                    ),
+                  input: () => 'm-0! p-0! [&>:first-child]:uppercase text-text! dark:text-dark-text!',
+                }}
+                isCreatable={true}
+                options={methodOptions}
+                placeholder="METHOD"
+                value={methodOptions.find((option) => option.value == method)}
+                onChange={(option: SelectOption<Method>) => setMethod(option.value)}
+              />
+            )}
+            <Input
+              className={cn('flex-auto', { 'border-l-0! rounded-l-none!': mode === 'HTTP' })}
+              placeholder="Enter URL or paste text"
+              value={url}
+              onChange={(event) => setUrl(event.target.value)}
             />
-          )}
-          <Input
-            className={cn('flex-auto', { 'border-l-0! rounded-l-none!': mode === 'HTTP' })}
-            placeholder="Enter URL or paste text"
-            value={url}
-            onChange={(event) => setUrl(event.target.value)}
-          />
-        </div>
-        {mode === 'HTTP' && (
-          <Button disabled={!url || isRunningTests} onClick={sendHttp}>
-            Send
-          </Button>
-        )}
-        {mode === 'WSS' && (
-          <>
-            <Button
-              buttonType={wssConnected ? ButtonType.SECONDARY : ButtonType.PRIMARY}
-              disabled={!wssConnected && !url}
-              onClick={wssConnected ? window.electronAPI.disconnectWss : connectWss}
-            >
-              {wssConnected ? 'Disconnect' : 'Connect'}
-            </Button>
-            <Button disabled={!wssConnected} onClick={sendWss}>
+          </div>
+          {mode === 'HTTP' && (
+            <Button disabled={!url || isRunningTests} onClick={sendHttp}>
               Send
             </Button>
-          </>
-        )}
-      </div>
-
-      <TextareaAutosize
-        maxRows={10}
-        placeholder="Header-Key: value"
-        value={headers}
-        onChange={(event) => setHeaders(event.target.value)}
-      />
-
-      <div className="relative">
-        <TextareaAutosize
-          maxRows={15}
-          placeholder={mode === 'HTTP' ? 'Enter request body (JSON or Form Data)' : 'Message body'}
-          value={body}
-          onChange={(event) => setBody(event.target.value)}
-        />
-        <Button
-          className="absolute top-3 right-4 min-w-auto! py-0.5! px-2! rounded-sm"
-          buttonType={ButtonType.SECONDARY}
-          onClick={() => setBody((prevBody) => formatBody(prevBody, parseHeaders(headers)))}
-        >
-          Beautify
-        </Button>
-      </div>
-
-      {mode === 'HTTP' && (
-        <div>
-          <label className="block mb-1 font-bold text-sm">Protobuf Schema & Message Type</label>
-          <div className="mb-3 text-xs text-text-secondary">
-            Experimental and optional section. If used, both fields must be completed
-          </div>
-          <div className="flex items-center">
-            <Input
-              accept=".proto"
-              className="rounded-r-none! dark:border-r-dark-body!"
-              type="file"
-              onChange={async (event) => {
-                const file = event.target.files?.[0];
-                if (!file) return;
-
-                const fileExtension = file.name.split('.').pop().toLowerCase();
-                if (fileExtension !== 'proto') return;
-
-                try {
-                  await loadProtoSchema(file);
-
-                  setProtoFile(file);
-                  setMessages((prevMessages) => [
-                    { direction: 'system', data: '🟢 Proto schema loaded' },
-                    ...prevMessages,
-                  ]);
-                } catch (error) {
-                  setMessages((prevMessages) => [
-                    { direction: 'system', data: '🔴 Failed to parse proto: ' + error },
-                    ...prevMessages,
-                  ]);
-                }
-              }}
-            />
-
-            <Input
-              className="flex-auto border-l-0! rounded-l-none!"
-              placeholder="Message type (e.g. mypackage.MyMessage)"
-              value={messageType}
-              onChange={(event) => setMessageType(event.target.value)}
-            />
-          </div>
-        </div>
-      )}
-
-      {mode === 'HTTP' && httpResponse && (
-        <ResponsePanel title="Response">
-          <div
-            className={cn(
-              'flex items-center gap-2 p-4 font-bold bg-body dark:bg-dark-body border-t border-border dark:border-dark-body',
-              {
-                'text-green-500': httpResponse.status.startsWith('2'),
-                'text-blue-500': httpResponse.status.startsWith('3'),
-                'text-orange-500': httpResponse.status.startsWith('4'),
-                'text-red-500': httpResponse.status.startsWith('5') || httpResponse.status === NETWORK_ERROR,
-              },
-            )}
-          >
-            {httpResponse.status === SENDING && <Loader className="h-5! w-5!" />}
-            {httpResponse.status}
-          </div>
-          {httpResponse.status !== SENDING && (
-            <div className="grid grid-cols-2 items-stretch max-h-[450px] py-4 border-t border-border dark:border-dark-body overflow-y-auto">
-              <div className="relative flex-1 px-4">
-                <h4 className="m-0 mb-4">Headers</h4>
-                {httpResponse.headers && (
-                  <CopyButton
-                    className="absolute top-0 right-4"
-                    textToCopy={JSON.stringify(httpResponse.headers, null, 2)}
-                  >
-                    Copy
-                  </CopyButton>
-                )}
-                <JsonViewer source={httpResponse.headers} />
-              </div>
-              <div className="relative flex-1 px-4 border-l border-border dark:border-dark-body">
-                <h4 className="m-0 mb-4">Body</h4>
-                {httpResponse.body && (
-                  <CopyButton
-                    className="absolute top-0 right-4"
-                    textToCopy={
-                      typeof httpResponse.body === 'string'
-                        ? httpResponse.body
-                        : JSON.stringify(httpResponse.body, null, 2)
-                    }
-                  >
-                    Copy
-                  </CopyButton>
-                )}
-                <JsonViewer source={extractBodyFromResponse(httpResponse)} />
-              </div>
-            </div>
           )}
-        </ResponsePanel>
-      )}
-
-      {messages.length > 0 && (
-        <ResponsePanel title="Messages">
-          <div className="max-h-[400px] p-4 text-xs border-t border-border dark:border-dark-body overflow-y-auto">
-            {messages.map(({ data, decoded, direction }, index) => (
-              <div
-                key={index}
-                className="not-first:pt-3 not-last:pb-3 border-b last:border-none border-border dark:border-dark-body"
+          {mode === 'WSS' && (
+            <>
+              <Button
+                buttonType={wssConnected ? ButtonType.SECONDARY : ButtonType.PRIMARY}
+                disabled={!wssConnected && !url}
+                onClick={wssConnected ? window.electronAPI.disconnectWss : connectWss}
               >
-                <div className="flex items-center gap-4">
-                  {direction !== 'system' && (
-                    <span
-                      className={cn('w-5 h-5 font-bold rounded-xs text-center leading-normal rotate-90', {
-                        'text-method-post bg-method-post/10': direction === 'sent',
-                        'text-method-put bg-method-put/10': direction === 'received',
-                      })}
-                    >
-                      {direction === 'sent' ? '⬅' : direction === 'received' ? '➡' : ''}
-                    </span>
-                  )}
-                  <div>
-                    <pre className="my-0 whitespace-pre-wrap break-all">{data}</pre>
-                    {decoded && (
-                      <>
-                        <div className="mt-2 font-monospace font-bold">Decoded Protobuf:</div>
-                        <pre className="my-0 whitespace-pre-wrap break-all">dfd</pre>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </ResponsePanel>
-      )}
-
-      {(Object.keys(bodyParameters).length > 0 || Object.keys(queryParameters).length > 0) && (
-        <div className="grid md:grid-cols-2 gap-4 items-stretch">
-          {Object.keys(bodyParameters).length > 0 && (
-            <ParametersPanel
-              title="Body Parameters"
-              parameters={bodyParameters}
-              onChange={(parameters) =>
-                setBodyParameters((prevBodyParameters) => ({
-                  ...prevBodyParameters,
-                  ...parameters,
-                }))
-              }
-            />
-          )}
-
-          {Object.keys(queryParameters).length > 0 && (
-            <ParametersPanel
-              title="Query Parameters"
-              parameters={queryParameters}
-              onChange={(parameters) =>
-                setQueryParameters((prevQueryParameters) => ({
-                  ...prevQueryParameters,
-                  ...parameters,
-                }))
-              }
-            />
+                {wssConnected ? 'Disconnect' : 'Connect'}
+              </Button>
+              <Button disabled={!wssConnected} onClick={sendWss}>
+                Send
+              </Button>
+            </>
           )}
         </div>
-      )}
 
-      {mode === 'HTTP' && (
-        <div>
+        <TextareaAutosize
+          maxRows={10}
+          placeholder="Header-Key: value"
+          value={headers}
+          onChange={(event) => setHeaders(event.target.value)}
+        />
+
+        <div className="relative">
+          <TextareaAutosize
+            maxRows={15}
+            placeholder={mode === 'HTTP' ? 'Enter request body (JSON or Form Data)' : 'Message body'}
+            value={body}
+            onChange={(event) => setBody(event.target.value)}
+          />
           <Button
-            disabled={disabledRunTests}
-            onClick={() =>
-              setTestOptions({
-                body,
-                bodyParameters,
-                headers,
-                method,
-                messageType,
-                protoFile,
-                queryParameters,
-                url,
-              })
-            }
+            className="absolute top-3 right-4 min-w-auto! py-0.5! px-2! rounded-sm"
+            buttonType={ButtonType.SECONDARY}
+            onClick={() => setBody((prevBody) => formatBody(prevBody, parseHeaders(headers)))}
           >
-            {isRunningTests && testsCount ? `Running tests... (${currentTest}/${testsCount})` : 'Generate & Run Tests'}
+            Beautify
           </Button>
         </div>
-      )}
 
-      {testOptions && (
-        <>
-          <ResponsePanel title="Security Tests">
-            <TestsTable
-              columns={[
-                ...getTestsTableColumns(['Check', 'Expected', 'Actual']),
+        {mode === 'HTTP' && (
+          <div>
+            <label className="block mb-1 font-bold text-sm">Protobuf Schema & Message Type</label>
+            <div className="mb-3 text-xs text-text-secondary">
+              Experimental and optional section. If used, both fields must be completed
+            </div>
+            <div className="flex items-center">
+              <Input
+                accept=".proto"
+                className="rounded-r-none! dark:border-r-dark-body!"
+                type="file"
+                onChange={async (event) => {
+                  const file = event.target.files?.[0];
+                  if (!file) return;
+
+                  const fileExtension = file.name.split('.').pop().toLowerCase();
+                  if (fileExtension !== 'proto') return;
+
+                  try {
+                    await loadProtoSchema(file);
+
+                    setProtoFile(file);
+                    setMessages((prevMessages) => [
+                      { direction: 'system', data: '🟢 Proto schema loaded' },
+                      ...prevMessages,
+                    ]);
+                  } catch (error) {
+                    setMessages((prevMessages) => [
+                      { direction: 'system', data: '🔴 Failed to parse proto: ' + error },
+                      ...prevMessages,
+                    ]);
+                  }
+                }}
+              />
+
+              <Input
+                className="flex-auto border-l-0! rounded-l-none!"
+                placeholder="Message type (e.g. mypackage.MyMessage)"
+                value={messageType}
+                onChange={(event) => setMessageType(event.target.value)}
+              />
+            </div>
+          </div>
+        )}
+
+        {mode === 'HTTP' && httpResponse && (
+          <ResponsePanel title="Response">
+            <div
+              className={cn(
+                'flex items-center gap-2 p-4 font-bold bg-body dark:bg-dark-body border-t border-border dark:border-dark-body',
                 {
-                  name: 'Result',
-                  selector: (row) => row.status,
-                  width: '150px',
-                  cell: (row) => {
-                    if (row.name === LARGE_PAYLOAD_TEST_NAME)
-                      return (
-                        <LargePayloadTestControls
-                          isRunning={isLargePayloadTestRunning}
-                          executeTest={(size: number) =>
-                            executeLargePayloadTest({ ...testOptions, bodyParameters, queryParameters }, size)
-                          }
-                        />
-                      );
+                  'text-green-500': httpResponse.status.startsWith('2'),
+                  'text-blue-500': httpResponse.status.startsWith('3'),
+                  'text-orange-500': httpResponse.status.startsWith('4'),
+                  'text-red-500': httpResponse.status.startsWith('5') || httpResponse.status === NETWORK_ERROR,
+                },
+              )}
+            >
+              {httpResponse.status === SENDING && <Loader className="h-5! w-5!" />}
+              {httpResponse.status}
+            </div>
+            {httpResponse.status !== SENDING && (
+              <div className="grid grid-cols-2 items-stretch max-h-[450px] py-4 border-t border-border dark:border-dark-body overflow-y-auto">
+                <div className="relative flex-1 px-4">
+                  <h4 className="m-0 mb-4">Headers</h4>
+                  {httpResponse.headers && (
+                    <CopyButton
+                      className="absolute top-0 right-4"
+                      textToCopy={JSON.stringify(httpResponse.headers, null, 2)}
+                    >
+                      Copy
+                    </CopyButton>
+                  )}
+                  <JsonViewer source={httpResponse.headers} />
+                </div>
+                <div className="relative flex-1 px-4 border-l border-border dark:border-dark-body">
+                  <h4 className="m-0 mb-4">Body</h4>
+                  {httpResponse.body && (
+                    <CopyButton
+                      className="absolute top-0 right-4"
+                      textToCopy={
+                        typeof httpResponse.body === 'string'
+                          ? httpResponse.body
+                          : JSON.stringify(httpResponse.body, null, 2)
+                      }
+                    >
+                      Copy
+                    </CopyButton>
+                  )}
+                  <JsonViewer source={extractBodyFromResponse(httpResponse)} />
+                </div>
+              </div>
+            )}
+          </ResponsePanel>
+        )}
 
-                    return row.status;
+        {messages.length > 0 && (
+          <ResponsePanel title="Messages">
+            <div className="max-h-[400px] p-4 text-xs border-t border-border dark:border-dark-body overflow-y-auto">
+              {messages.map(({ data, decoded, direction }, index) => (
+                <div
+                  key={index}
+                  className="not-first:pt-3 not-last:pb-3 border-b last:border-none border-border dark:border-dark-body"
+                >
+                  <div className="flex items-center gap-4">
+                    {direction !== 'system' && (
+                      <span
+                        className={cn('w-5 h-5 font-bold rounded-xs text-center leading-normal rotate-90', {
+                          'text-method-post bg-method-post/10': direction === 'sent',
+                          'text-method-put bg-method-put/10': direction === 'received',
+                        })}
+                      >
+                        {direction === 'sent' ? '⬅' : direction === 'received' ? '➡' : ''}
+                      </span>
+                    )}
+                    <div>
+                      <pre className="my-0 whitespace-pre-wrap break-all">{data}</pre>
+                      {decoded && (
+                        <>
+                          <div className="mt-2 font-monospace font-bold">Decoded Protobuf:</div>
+                          <pre className="my-0 whitespace-pre-wrap break-all">dfd</pre>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </ResponsePanel>
+        )}
+
+        {(Object.keys(bodyParameters).length > 0 || Object.keys(queryParameters).length > 0) && (
+          <div className="grid md:grid-cols-2 gap-4 items-stretch">
+            {Object.keys(bodyParameters).length > 0 && (
+              <ParametersPanel
+                title="Body Parameters"
+                parameters={bodyParameters}
+                onChange={(parameters) =>
+                  setBodyParameters((prevBodyParameters) => ({
+                    ...prevBodyParameters,
+                    ...parameters,
+                  }))
+                }
+              />
+            )}
+
+            {Object.keys(queryParameters).length > 0 && (
+              <ParametersPanel
+                title="Query Parameters"
+                parameters={queryParameters}
+                onChange={(parameters) =>
+                  setQueryParameters((prevQueryParameters) => ({
+                    ...prevQueryParameters,
+                    ...parameters,
+                  }))
+                }
+              />
+            )}
+          </div>
+        )}
+
+        {mode === 'HTTP' && (
+          <div>
+            <Button
+              disabled={disabledRunTests}
+              onClick={() =>
+                setTestOptions({
+                  body,
+                  bodyParameters,
+                  headers,
+                  method,
+                  messageType,
+                  protoFile,
+                  queryParameters,
+                  url,
+                })
+              }
+            >
+              {isRunningTests && testsCount
+                ? `Running tests... (${currentTest}/${testsCount})`
+                : 'Generate & Run Tests'}
+            </Button>
+          </div>
+        )}
+
+        {testOptions && (
+          <>
+            <ResponsePanel title="Security Tests">
+              <TestsTable
+                columns={[
+                  ...getTestsTableColumns(['Check', 'Expected', 'Actual']),
+                  {
+                    name: 'Result',
+                    selector: (row) => row.status,
+                    width: '150px',
+                    cell: (row) => {
+                      if (row.name === LARGE_PAYLOAD_TEST_NAME)
+                        return (
+                          <LargePayloadTestControls
+                            isRunning={isLargePayloadTestRunning}
+                            executeTest={(size: number) =>
+                              executeLargePayloadTest({ ...testOptions, bodyParameters, queryParameters }, size)
+                            }
+                          />
+                        );
+
+                      return row.status;
+                    },
                   },
-                },
-              ]}
-              expandableRows
-              expandableRowsComponent={ExpandedTestComponent}
-              expandableRowsComponentProps={{ headers: parseHeaders(headers), protoFile, messageType }}
-              expandOnRowClicked
-              data={securityTests}
-              progressComponent={<TestRunningLoader text="Running Security Tests..." />}
-              progressPending={isSecurityRunning}
-            />
-          </ResponsePanel>
+                ]}
+                expandableRows
+                expandableRowsComponent={ExpandedTestComponent}
+                expandableRowsComponentProps={{ headers: parseHeaders(headers), protoFile, messageType }}
+                expandOnRowClicked
+                data={securityTests}
+                progressComponent={<TestRunningLoader text="Running Security Tests..." />}
+                progressPending={isSecurityRunning}
+              />
+            </ResponsePanel>
 
-          <ResponsePanel title="Performance Insights">
-            <TestsTable
-              columns={[
-                ...getTestsTableColumns(['Check', 'Expected']),
-                {
-                  name: 'Actual',
-                  selector: (row) => row.actual,
-                  cell: (row) => <div className="py-1">{row.actual}</div>,
-                },
-                {
-                  name: 'Result',
-                  selector: (row) => row.status,
-                  width: '220px',
-                  cell: (row) => {
-                    if (row.name === LOAD_TEST_NAME)
-                      return (
-                        <LoadTestControls
-                          isRunning={isLoadTestRunning}
-                          executeTest={(threadCount: number, requestCount: number) =>
-                            executeLoadTest(
-                              { ...testOptions, bodyParameters, queryParameters },
-                              threadCount,
-                              requestCount,
-                            )
-                          }
-                        />
-                      );
-
-                    return row.status;
+            <ResponsePanel title="Performance Insights">
+              <TestsTable
+                columns={[
+                  ...getTestsTableColumns(['Check', 'Expected']),
+                  {
+                    name: 'Actual',
+                    selector: (row) => row.actual,
+                    cell: (row) => <div className="py-1">{row.actual}</div>,
                   },
-                },
-              ]}
-              data={performanceTests}
-              progressComponent={<TestRunningLoader text="Running Performance Insights..." />}
-              progressPending={isPerformanceRunning}
-            />
-          </ResponsePanel>
+                  {
+                    name: 'Result',
+                    selector: (row) => row.status,
+                    width: '220px',
+                    cell: (row) => {
+                      if (row.name === LOAD_TEST_NAME)
+                        return (
+                          <LoadTestControls
+                            isRunning={isLoadTestRunning}
+                            executeTest={(threadCount: number, requestCount: number) =>
+                              executeLoadTest(
+                                { ...testOptions, bodyParameters, queryParameters },
+                                threadCount,
+                                requestCount,
+                              )
+                            }
+                          />
+                        );
 
-          <ResponsePanel title="Data-Driven Tests">
-            <TestsTable
-              columns={getTestsTableColumns(['Parameter', 'Value', 'Expected', 'Actual', 'Result'])}
-              expandableRows
-              expandableRowsComponent={ExpandedTestComponent}
-              expandableRowsComponentProps={{ headers: parseHeaders(headers), protoFile, messageType }}
-              expandOnRowClicked
-              data={dataDrivenTests}
-              fixedHeader={true}
-              fixedHeaderScrollHeight="720px"
-              progressComponent={<TestRunningLoader text="Running Data-Driven Tests..." />}
-              progressPending={isDataDrivenRunning}
-            />
-          </ResponsePanel>
+                      return row.status;
+                    },
+                  },
+                ]}
+                data={performanceTests}
+                progressComponent={<TestRunningLoader text="Running Performance Insights..." />}
+                progressPending={isPerformanceRunning}
+              />
+            </ResponsePanel>
 
-          <ResponsePanel title="CRUD">
-            <TestsTable
-              columns={getTestsTableColumns(['Method', 'Expected', 'Actual', 'Result'])}
-              expandableRows
-              expandableRowsComponent={ExpandedTestComponent}
-              expandableRowsComponentProps={{ headers: parseHeaders(headers), protoFile, messageType }}
-              expandOnRowClicked
-              data={crudTests}
-              progressComponent={<TestRunningLoader text="Preparing CRUD…" />}
-              progressPending={crudTests.length === 0}
-            />
-          </ResponsePanel>
-        </>
-      )}
+            <ResponsePanel title="Data-Driven Tests">
+              <TestsTable
+                columns={getTestsTableColumns(['Parameter', 'Value', 'Expected', 'Actual', 'Result'])}
+                expandableRows
+                expandableRowsComponent={ExpandedTestComponent}
+                expandableRowsComponentProps={{ headers: parseHeaders(headers), protoFile, messageType }}
+                expandOnRowClicked
+                data={dataDrivenTests}
+                fixedHeader={true}
+                fixedHeaderScrollHeight="720px"
+                progressComponent={<TestRunningLoader text="Running Data-Driven Tests..." />}
+                progressPending={isDataDrivenRunning}
+              />
+            </ResponsePanel>
+
+            <ResponsePanel title="CRUD">
+              <TestsTable
+                columns={getTestsTableColumns(['Method', 'Expected', 'Actual', 'Result'])}
+                expandableRows
+                expandableRowsComponent={ExpandedTestComponent}
+                expandableRowsComponentProps={{ headers: parseHeaders(headers), protoFile, messageType }}
+                expandOnRowClicked
+                data={crudTests}
+                progressComponent={<TestRunningLoader text="Preparing CRUD…" />}
+                progressPending={crudTests.length === 0}
+              />
+            </ResponsePanel>
+          </>
+        )}
       </div>
     </div>
   );
@@ -721,13 +723,7 @@ export default function App() {
           return prevCollection;
         }
 
-        const updatedCollection = addRequestToCollection(
-          prevCollection,
-          method,
-          url,
-          parsedHeaders,
-          bodyString
-        );
+        const updatedCollection = addRequestToCollection(prevCollection, method, url, parsedHeaders, bodyString);
         window.electronAPI.saveCollection(updatedCollection);
         return updatedCollection;
       });
