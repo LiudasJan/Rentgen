@@ -274,6 +274,7 @@ export function getNumberDynamicBoundaryDataset({ min, max }: Interval): TestDat
       });
 
     if (range >= 3 * delta) dataset.push({ value: normalizeDecimal(normalizedMax - delta), valid: true });
+
     dataset.push({ value: normalizedMax, valid: true });
   }
 
