@@ -1,55 +1,39 @@
-## [v1.3.0]
+## [v1.4.0]
 
-### 🚀 New Features
+### 🔍 New Test Cases:
 
-- **Reload button** added to fully clear and reset the application state.
+- **TEST: Boundary value analysis out of the box**  
+  Automatically detects integer/float and generates valid range tests (min → max) and out-of-range tests.
 
-#### 🔍 New Test Cases
+- **TEST: ENUM field type support**  
+  Detects enum-like values from the original cURL request.  
+  Allows entering all valid ENUM options.  
+  Valid ENUM → expect **2xx**, invalid ENUM → expect **4xx**.
 
-- **TEST: Domain Case Test**
-  - Converts the domain to UPPERCASE (e.g., `API.RENTGEN.IO`)
+- **TEST: String Max Length Test**  
+  New `max length` control.  
+  Up to max → **2xx**.  
+  `max + 1` → **4xx**.
 
-- **TEST: Path Case Test**
-  - Converts the last path segment to UPPERCASE (e.g., `/CUSTOMERS`)
-  - Example: `/v1/customers` → `/v1/CUSTOMERS`
+### 🌙 Dark Mode Arrives
 
-- **TEST: Reflected Payload Safety**
-  - Detects whether the API reflects user input back in responses (potential security risk).
-
-- **TEST: Trimming Test**
-  - Automatically checks whether provided values are normalized (trimmed) before processing.
-
-### 🎨 UI & UX Improvements
-
-- Polished request/response styling for better readability.
-- Animated UI transitions for cleaner user experience.
-- General UI improvements and visual refinement.
+Rentgen now has **full Dark Mode** — clean, minimal and perfect for late-night API debugging.  
+Instant theme switching, no reloads, no tracking.
 
 ### 🐞 Bug Fixes
 
-- [Lagging UI on Macos](https://github.com/LiudasJan/Rentgen/issues/10)
+- Other minor parsing and UI fixes.
 
-- Fixed an issue where importing a cURL command could add an extra header:
-  - `Content-Type: application/x-www-form-urlencoded`
-  - Header is now included **only if explicitly provided by the user**.
+### 💻 How to Run on macOS
 
-### 🔧 Other Improvements
-
-- Internal optimizations and stability updates.
-
-# 💻 How to Run on macOS
-
-macOS may block the app (“developer cannot be verified”).
+macOS may block the app (“developer cannot be verified”).  
 To run it normally:
 
-Move Rentgen.app to the Applications folder.
-Open Terminal and run the following command:
+Move `Rentgen.app` to the Applications folder.  
+Open Terminal and run:
 
 ```
 xattr -d com.apple.quarantine /Applications/Rentgen.app
 ```
 
-After this, you can launch Rentgen from Finder or Spotlight as usual.
-
-[Unreleased]: https://github.com/LiudasJan/Rentgen/compare/v1.2.0...HEAD
-[1.2.0]: https://github.com/LiudasJan/Rentgen/releases/tag/v1.2.0
+Then launch Rentgen as usual.
