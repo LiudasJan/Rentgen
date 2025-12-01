@@ -1,6 +1,6 @@
 import cn from 'classnames';
 import { ChangeEvent } from 'react';
-import { initialNumberBounds, MAX_STRING_LENGTH } from '../../constants/datasets';
+import { initialNumberBounds } from '../../constants/datasets';
 import { DataType, DynamicValue, Interval } from '../../types';
 import { clamp, getInitialParameterValue, normalizeDecimal } from '../../utils';
 import Input from '../inputs/Input';
