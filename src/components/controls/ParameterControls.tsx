@@ -44,7 +44,7 @@ export function ParameterControls({ value, onChange }: Props) {
           <Input
             className="min-w-[232px] p-[5px]! rounded-none! dark:border-border/20!"
             value={dynamicValue as string}
-            onChange={(event) => onChange({ type, value: event.target.value.toUpperCase() })}
+            onChange={(event) => onChange({ type, value: event.target.value })}
           />
         )}
         {type === 'number' && (

@@ -279,7 +279,13 @@ export function generateEnumTestData(value: string): TestData[] {
     .flatMap((value) => [
       { value: value.trim(), valid: true },
       { value: value[0] + ' ' + value.slice(1), valid: false },
-      { value: value.charAt(0).toLowerCase() + value.slice(1), valid: false },
+      {
+        value:
+          value[0].toLowerCase() === value[0]
+            ? value[0].toUpperCase() + value.slice(1)
+            : value[0].toLowerCase() + value.slice(1),
+        valid: false,
+      },
     ]);
 }
 
