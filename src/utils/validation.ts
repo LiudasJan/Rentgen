@@ -5,6 +5,7 @@ const DATA_TYPE_DETECTORS: ReadonlyArray<{
   regex: RegExp;
 }> = [
   { type: 'email', regex: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ },
+  { type: 'enum', regex: /^[A-Z_]{1,10}$/ },
   { type: 'url', regex: /^https?:\/\/[^\s$.?#].[^\s]*$/i },
   { type: 'ftp_url', regex: /^ftp:\/\/[^\s$.?#].[^\s]*$/i },
   { type: 'phone', regex: /^\+\d{7,20}$/ },

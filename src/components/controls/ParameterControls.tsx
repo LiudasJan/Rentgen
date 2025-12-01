@@ -19,6 +19,7 @@ const parameterOptions: SelectOption<DataType>[] = [
   { value: 'randomEmail', label: 'Random email' },
   { value: 'string', label: 'String' },
   { value: 'email', label: 'Email' },
+  { value: 'enum', label: 'Enum' },
   { value: 'phone', label: 'Phone' },
   { value: 'url', label: 'URL' },
   { value: 'number', label: 'Number' },
@@ -37,12 +38,22 @@ export function ParameterControls({ value, onChange }: Props) {
 
   return (
     <div>
+      {type === 'enum' && (
+        <div className="mb-1 text-xs text-text-secondary">Enter all valid values separated by ","</div>
+      )}
       {type === 'number' && (
         <div className="mb-1 text-xs text-text-secondary">
           Set Min/Max range for boundary test. 0 - integer, 0.00 - decimal
         </div>
       )}
       <div className="flex items-center justify-end flex-wrap gap-2">
+        {type === 'enum' && (
+          <Input
+            className="min-w-[232px] p-[5px]! rounded-none! dark:border-border/20!"
+            value={dynamicValue as string}
+            onChange={(event) => onChange({ type, value: event.target.value.toUpperCase() })}
+          />
+        )}
         {type === 'number' && (
           <div className="flex items-center justify-end flex-wrap gap-2">
             <Input
@@ -51,12 +62,12 @@ export function ParameterControls({ value, onChange }: Props) {
               step={0.01}
               type="number"
               value={normalizeDecimal((dynamicValue as Interval).min) ?? ''}
-              onBlur={(e) => {
-                if (e.target.value) return;
+              onBlur={(event) => {
+                if (event.target.value) return;
 
                 onChange({ type, value: { ...(dynamicValue as Interval), min: initialNumberBounds.min } });
               }}
-              onChange={(e) => onMinChange(e.target.value)}
+              onChange={(event) => onMinChange(event.target.value)}
             />
             <Input
               className="max-w-28 p-[5px]! rounded-none! dark:border-border/20!"
@@ -64,12 +75,12 @@ export function ParameterControls({ value, onChange }: Props) {
               step={0.01}
               type="number"
               value={normalizeDecimal((dynamicValue as Interval).max) ?? ''}
-              onBlur={(e) => {
-                if (e.target.value) return;
+              onBlur={(event) => {
+                if (event.target.value) return;
 
                 onChange({ type, value: { ...(dynamicValue as Interval), max: initialNumberBounds.max } });
               }}
-              onChange={(e) => onMaxChange(e.target.value)}
+              onChange={(event) => onMaxChange(event.target.value)}
             />
           </div>
         )}

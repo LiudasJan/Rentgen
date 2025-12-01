@@ -57,6 +57,14 @@ export const datasets: Record<string, TestData[]> = {
     { value: true, valid: false },
     { value: false, valid: false },
   ],
+  enum: [
+    { value: true, valid: false },
+    { value: false, valid: false },
+    { value: null, valid: false },
+    { value: 0, valid: false },
+    { value: -1, valid: false },
+    { value: 123123, valid: false },
+  ],
   url: [
     { value: 'https://qaontime.com', valid: true },
     { value: 'http://qaontime.com', valid: true },

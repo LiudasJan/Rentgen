@@ -21,7 +21,7 @@ export function LoadTestControls({ isRunning, executeTest }: Props) {
           title="Threads (max 100)"
           type="number"
           value={threadCount}
-          onChange={(e) => setThreadCount(clamp(Number(e.target.value), 1, 100))}
+          onChange={(event) => setThreadCount(clamp(Number(event.target.value), 1, 100))}
         />
       </div>
 
@@ -32,7 +32,7 @@ export function LoadTestControls({ isRunning, executeTest }: Props) {
           type="number"
           title="Total requests (max 10 000)"
           value={requestCount}
-          onChange={(e) => setRequestCount(clamp(Number(e.target.value), 1, 10000))}
+          onChange={(event) => setRequestCount(clamp(Number(event.target.value), 1, 10000))}
         />
       </div>
     </Controls>

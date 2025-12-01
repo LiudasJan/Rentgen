@@ -3,7 +3,7 @@ import { datasets } from '../constants/datasets';
 import { getTestCount } from '../decorators';
 import {
   DataDrivenTests,
-  getDynamicDataset,
+  generateDynamicTestData,
   LARGE_PAYLOAD_TEST_NAME,
   LOAD_TEST_NAME,
   PerformanceInsights,
@@ -184,10 +184,10 @@ const useTests = (options: TestOptions) => {
         dataDrivenTestsCount += 1;
       },
       async (_, value: DynamicValue) => {
-        dataDrivenTestsCount += [...getDynamicDataset(value), ...(datasets[value.type] || [])].length;
+        dataDrivenTestsCount += [...generateDynamicTestData(value), ...(datasets[value.type] || [])].length;
       },
       async (_, value: DynamicValue) => {
-        dataDrivenTestsCount += [...getDynamicDataset(value), ...(datasets[value.type] || [])].length;
+        dataDrivenTestsCount += [...generateDynamicTestData(value), ...(datasets[value.type] || [])].length;
       },
     );
 

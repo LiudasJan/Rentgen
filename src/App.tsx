@@ -174,7 +174,7 @@ export default function App() {
                   className="min-h-40"
                   placeholder="Enter cURL or paste text"
                   value={curl}
-                  onChange={(e) => setCurl(e.target.value)}
+                  onChange={(event) => setCurl(event.target.value)}
                 />
                 {curlError && <p className="m-0 text-xs text-red-600">{curlError}</p>}
                 <div className="flex items-center justify-end gap-4">
@@ -247,7 +247,7 @@ export default function App() {
             className={cn('flex-auto', { 'border-l-0! rounded-l-none!': mode === 'HTTP' })}
             placeholder="Enter URL or paste text"
             value={url}
-            onChange={(e) => setUrl(e.target.value)}
+            onChange={(event) => setUrl(event.target.value)}
           />
         </div>
         {mode === 'HTTP' && (
@@ -275,7 +275,7 @@ export default function App() {
         maxRows={10}
         placeholder="Header-Key: value"
         value={headers}
-        onChange={(e) => setHeaders(e.target.value)}
+        onChange={(event) => setHeaders(event.target.value)}
       />
 
       <div className="relative">
@@ -283,7 +283,7 @@ export default function App() {
           maxRows={15}
           placeholder={mode === 'HTTP' ? 'Enter request body (JSON or Form Data)' : 'Message body'}
           value={body}
-          onChange={(e) => setBody(e.target.value)}
+          onChange={(event) => setBody(event.target.value)}
         />
         <Button
           className="absolute top-3 right-4 min-w-auto! py-0.5! px-2! rounded-sm"
@@ -305,8 +305,8 @@ export default function App() {
               accept=".proto"
               className="rounded-r-none! dark:border-r-dark-body!"
               type="file"
-              onChange={async (e) => {
-                const file = e.target.files?.[0];
+              onChange={async (event) => {
+                const file = event.target.files?.[0];
                 if (!file) return;
 
                 const fileExtension = file.name.split('.').pop().toLowerCase();
@@ -333,7 +333,7 @@ export default function App() {
               className="flex-auto border-l-0! rounded-l-none!"
               placeholder="Message type (e.g. mypackage.MyMessage)"
               value={messageType}
-              onChange={(e) => setMessageType(e.target.value)}
+              onChange={(event) => setMessageType(event.target.value)}
             />
           </div>
         </div>
@@ -657,7 +657,7 @@ export default function App() {
       const queryParameters = Object.fromEntries(
         Object.entries(extractQueryParameters(url)).map(([key, value]) => [
           key,
-          getInitialParameterValue(detectDataType(value)),
+          getInitialParameterValue(detectDataType(value), value),
         ]),
       );
 

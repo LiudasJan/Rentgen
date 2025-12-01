@@ -136,7 +136,7 @@ export function extractBodyParameters(body: unknown, headers: Record<string, str
 
   if (isUrlEncodedContentType(headers)) {
     const formEntries = convertUrlEncodedToFormEntries(body as string);
-    for (const [key, value] of formEntries) parameters[key] = getInitialParameterValue(detectDataType(value));
+    for (const [key, value] of formEntries) parameters[key] = getInitialParameterValue(detectDataType(value), value);
   } else if (isObject(body)) {
     const extractedProperties = extractPropertiesFromJson(body);
     for (const [key, value] of Object.entries(extractedProperties)) {
@@ -151,7 +151,7 @@ export function extractBodyParameters(body: unknown, headers: Record<string, str
           propertyValue = propertyValue[path];
         }
 
-        parameters[key] = getInitialParameterValue(detectDataType(propertyValue, true));
+        parameters[key] = getInitialParameterValue(detectDataType(propertyValue, true), propertyValue);
       }
     }
   }
@@ -216,8 +216,10 @@ export function getBodyParameterValue(body: unknown, parameterName: string, head
   return value;
 }
 
-export function getInitialParameterValue(type: DataType): DynamicValue {
+export function getInitialParameterValue(type: DataType, value: string): DynamicValue {
   switch (type) {
+    case 'enum':
+      return { type, value };
     case 'number':
       return { type, value: initialNumberBounds };
     default:

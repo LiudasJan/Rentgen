@@ -1,7 +1,17 @@
 import { datasets } from '../constants/datasets';
 import { getResponseStatusTitle, RESPONSE_STATUS } from '../constants/responseStatus';
 import { Test } from '../decorators';
-import { DataType, DynamicValue, HttpRequest, Interval, TestData, TestOptions, TestResult, TestStatus } from '../types';
+import {
+  DataType,
+  DynamicValue,
+  HttpRequest,
+  HttpResponse,
+  Interval,
+  TestData,
+  TestOptions,
+  TestResult,
+  TestStatus,
+} from '../types';
 import {
   createHttpRequest,
   createTestHttpRequest,
@@ -38,34 +48,42 @@ export class DataDrivenTests extends BaseTests {
 
     await runDataDrivenTests(
       this.options,
-      async (parameterName: string) => {
+      async (parameterName: string, parameterValue: DynamicValue) => {
         const testData: TestData = {
           value: `   ${getBodyParameterValue(parsedBody, parameterName, parsedHeaders)}   `,
           valid: false,
         };
         results.push(
-          await testValueNormalization(
+          await testRequestParameter(
             { ...this.options, parameterName, parameterType: 'body', testData },
+            parameterValue.type === 'enum' ? CLIENT_ERROR_RESPONSE_EXPECTED : VALUE_NORMALIZATION_TEST_EXPECTED,
+            parameterValue.type === 'enum'
+              ? determineRequestParameterTestStatus
+              : determineValueNormalizationTestStatus,
             this.onTestStart,
           ),
         );
       },
       async (parameterName: string, parameterValue: DynamicValue) => {
-        const testDataset = [...getDynamicDataset(parameterValue), ...(datasets[parameterValue.type] || [])];
+        const testDataset = [...generateDynamicTestData(parameterValue), ...(datasets[parameterValue.type] || [])];
         for (const testData of testDataset)
           results.push(
             await testRequestParameter(
               { ...this.options, parameterName, parameterType: 'body', testData },
+              testData.valid ? SUCCESS_RESPONSE_EXPECTED : CLIENT_ERROR_RESPONSE_EXPECTED,
+              determineRequestParameterTestStatus,
               this.onTestStart,
             ),
           );
       },
       async (parameterName: string, parameterValue: DynamicValue) => {
-        const testDataset = [...getDynamicDataset(parameterValue), ...(datasets[parameterValue.type] || [])];
+        const testDataset = [...generateDynamicTestData(parameterValue), ...(datasets[parameterValue.type] || [])];
         for (const testData of testDataset)
           results.push(
             await testRequestParameter(
               { ...this.options, parameterName, parameterType: 'query', testData },
+              testData.valid ? SUCCESS_RESPONSE_EXPECTED : CLIENT_ERROR_RESPONSE_EXPECTED,
+              determineRequestParameterTestStatus,
               this.onTestStart,
             ),
           );
@@ -75,7 +93,7 @@ export class DataDrivenTests extends BaseTests {
     return results;
   }
 
-  @Test('Tests the original request to establish a baseline for comparison')
+  @Test('Validates the original request succeeds as a baseline')
   private async testOriginalRequest(request: HttpRequest): Promise<TestResult> {
     this.onTestStart?.();
 
@@ -115,7 +133,7 @@ export class DataDrivenTests extends BaseTests {
 
 export async function runDataDrivenTests(
   options: TestOptions,
-  onValueNormalizationTest: (key: string, type: DataType) => Promise<void>,
+  onValueNormalizationTest: (key: string, value: DynamicValue) => Promise<void>,
   onBodyParameterTest: (key: string, value: DynamicValue) => Promise<void>,
   onQueryParameterTest: (key: string, value: DynamicValue) => Promise<void>,
 ) {
@@ -125,26 +143,31 @@ export async function runDataDrivenTests(
   const originalBodyParameters = extractBodyParameters(parsedBody, parsedHeaders);
 
   // Test string value normalization (trimming)
-  for (const [key, { type }] of Object.entries(bodyParameters)) {
+  for (const [key, value] of Object.entries(bodyParameters)) {
     const originalBodyParameter = originalBodyParameters[key];
-    if (shouldSkipParameterTest(type) || shouldSkipNormalizationTest(originalBodyParameter.type)) continue;
-    await onValueNormalizationTest(key, type);
+    if (isParameterTestSkipped(value.type) || isNormalizationTestSkipped(originalBodyParameter.type)) continue;
+    await onValueNormalizationTest(key, value);
   }
 
   // Test body parameters
   for (const [key, value] of Object.entries(bodyParameters)) {
-    if (shouldSkipParameterTest(value.type)) continue;
+    if (isParameterTestSkipped(value.type)) continue;
     await onBodyParameterTest(key, value);
   }
 
   // Test query parameters
   for (const [key, value] of Object.entries(queryParameters)) {
-    if (shouldSkipParameterTest(value.type)) continue;
+    if (isParameterTestSkipped(value.type)) continue;
     await onQueryParameterTest(key, value);
   }
 }
 
-async function testValueNormalization(options: TestOptions, onTestStart?: () => void): Promise<TestResult> {
+async function testRequestParameter(
+  options: TestOptions,
+  expected: string,
+  determine: (response: HttpResponse, statusCode: number, testData: TestData) => { actual: string; status: TestStatus },
+  onTestStart?: () => void,
+): Promise<TestResult> {
   onTestStart?.();
 
   const { parameterName, parameterType, testData } = options;
@@ -153,26 +176,13 @@ async function testValueNormalization(options: TestOptions, onTestStart?: () => 
   return executeTimedRequest(
     request,
     (response, responseTime) => {
-      const { actual, status } = determineTestStatus(response, (response, statusCode) => {
-        if (statusCode === RESPONSE_STATUS.BAD_REQUEST || statusCode === RESPONSE_STATUS.UNPROCESSABLE_ENTITY)
-          return { actual: response.status, status: TestStatus.Pass };
-
-        const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
-        if (!responseBody)
-          return {
-            actual: `${response.status} → Check Manually via GET Method or Database`,
-            status: TestStatus.Info,
-          };
-
-        if (!responseBody.includes(String(testData.value)))
-          return { actual: `${response.status} + Trimmed/Normalized Value`, status: TestStatus.Pass };
-
-        return { actual: `${response.status} + Not Trimmed/Normalized Value`, status: TestStatus.Fail };
-      });
+      const { actual, status } = determineTestStatus(response, (response, statusCode) =>
+        determine(response, statusCode, testData),
+      );
 
       return createTestResult(
         `${parameterType}.${parameterName}`,
-        VALUE_NORMALIZATION_TEST_EXPECTED,
+        expected,
         actual,
         status,
         request,
@@ -182,68 +192,69 @@ async function testValueNormalization(options: TestOptions, onTestStart?: () => 
       );
     },
     (error) =>
-      createErrorTestResult(
-        `${parameterType}.${parameterName}`,
-        VALUE_NORMALIZATION_TEST_EXPECTED,
-        String(error),
-        request,
-        testData.value,
-      ),
+      createErrorTestResult(`${parameterType}.${parameterName}`, expected, String(error), request, testData.value),
   );
 }
 
-async function testRequestParameter(options: TestOptions, onTestStart?: () => void): Promise<TestResult> {
-  onTestStart?.();
+function determineValueNormalizationTestStatus(
+  response: HttpResponse,
+  statusCode: number,
+  testData: TestData,
+): { actual: string; status: TestStatus } {
+  if (statusCode === RESPONSE_STATUS.BAD_REQUEST || statusCode === RESPONSE_STATUS.UNPROCESSABLE_ENTITY)
+    return { actual: response.status, status: TestStatus.Pass };
 
-  const { parameterName, parameterType, testData } = options;
-  const request = createTestHttpRequest(options);
+  const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
+  if (!responseBody)
+    return {
+      actual: `${response.status} → Check Manually via GET Method or Database`,
+      status: TestStatus.Info,
+    };
 
-  return executeTimedRequest(
-    request,
-    (response, responseTime) => {
-      const { actual, status } = determineTestStatus(response, (response, statusCode) => {
-        const testStatus = { actual: response.status, status: TestStatus.Fail };
-        if (
-          (testData.valid && statusCode >= RESPONSE_STATUS.OK && statusCode < RESPONSE_STATUS.REDIRECT) ||
-          (!testData.valid && statusCode >= RESPONSE_STATUS.BAD_REQUEST && statusCode < RESPONSE_STATUS.SERVER_ERROR)
-        )
-          testStatus.status = TestStatus.Pass;
+  if (!responseBody.includes(String(testData.value)))
+    return { actual: `${response.status} + Trimmed/Normalized Value`, status: TestStatus.Pass };
 
-        return testStatus;
-      });
-
-      return createTestResult(
-        `${parameterType}.${parameterName}`,
-        testData.valid ? SUCCESS_RESPONSE_EXPECTED : CLIENT_ERROR_RESPONSE_EXPECTED,
-        actual,
-        status,
-        request,
-        response,
-        responseTime,
-        testData.value,
-      );
-    },
-    (error) =>
-      createErrorTestResult(
-        `${parameterType}.${parameterName}`,
-        testData.valid ? SUCCESS_RESPONSE_EXPECTED : CLIENT_ERROR_RESPONSE_EXPECTED,
-        String(error),
-        request,
-        testData.value,
-      ),
-  );
+  return { actual: `${response.status} + Not Trimmed/Normalized Value`, status: TestStatus.Fail };
 }
 
-export function getDynamicDataset({ type, value }: DynamicValue): TestData[] {
+function determineRequestParameterTestStatus(
+  response: HttpResponse,
+  statusCode: number,
+  testData: TestData,
+): { actual: string; status: TestStatus } {
+  const testStatus = { actual: response.status, status: TestStatus.Fail };
+  if (
+    (testData.valid && statusCode >= RESPONSE_STATUS.OK && statusCode < RESPONSE_STATUS.REDIRECT) ||
+    (!testData.valid && statusCode >= RESPONSE_STATUS.BAD_REQUEST && statusCode < RESPONSE_STATUS.SERVER_ERROR)
+  )
+    testStatus.status = TestStatus.Pass;
+
+  return testStatus;
+}
+
+export function generateDynamicTestData({ type, value }: DynamicValue): TestData[] {
   switch (type) {
+    case 'enum':
+      return generateEnumTestData(value as string);
     case 'number':
-      return getNumberDynamicBoundaryDataset(value as Interval);
+      return generateNumberBoundaryTestData(value as Interval);
     default:
       return [];
   }
 }
 
-export function getNumberDynamicBoundaryDataset({ min, max }: Interval): TestData[] {
+export function generateEnumTestData(value: string): TestData[] {
+  return value
+    .split(',')
+    .map((value) => value.trim())
+    .flatMap((value) => [
+      { value: value.trim(), valid: true },
+      { value: value[0] + ' ' + value.slice(1), valid: false },
+      { value: value.charAt(0).toLowerCase() + value.slice(1), valid: false },
+    ]);
+}
+
+export function generateNumberBoundaryTestData({ min, max }: Interval): TestData[] {
   const dataset: TestData[] = [];
   const delta = Number.isInteger(min) && Number.isInteger(max) ? 1 : 0.01;
   const normalizedMin = normalizeDecimal(min);
@@ -284,12 +295,12 @@ export function getNumberDynamicBoundaryDataset({ min, max }: Interval): TestDat
   return dataset;
 }
 
-export function shouldSkipParameterTest(dataType: DataType): boolean {
+export function isParameterTestSkipped(dataType: DataType): boolean {
   return (
     dataType === 'do-not-test' || dataType === 'random32' || dataType === 'randomInt' || dataType === 'randomEmail'
   );
 }
 
-export function shouldSkipNormalizationTest(dataType: string | undefined): boolean {
+export function isNormalizationTestSkipped(dataType: string | undefined): boolean {
   return dataType === 'boolean' || dataType === 'number';
 }

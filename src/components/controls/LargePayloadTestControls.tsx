@@ -22,7 +22,7 @@ export function LargePayloadTestControls({ isRunning, executeTest }: Props) {
           type="number"
           title={`Size (max ${MAX_PAYLOAD_SIZE_MB} MB)`}
           value={size}
-          onChange={(e) => setSize(clamp(Number(e.target.value), 1, MAX_PAYLOAD_SIZE_MB))}
+          onChange={(event) => setSize(clamp(Number(event.target.value), 1, MAX_PAYLOAD_SIZE_MB))}
         />
       </div>
     </Controls>

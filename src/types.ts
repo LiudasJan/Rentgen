@@ -2,6 +2,7 @@ import { Method } from 'axios';
 
 export type DataType =
   | 'email'
+  | 'enum'
   | 'url'
   | 'ftp_url'
   | 'phone'
