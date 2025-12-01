@@ -83,7 +83,7 @@ export function ParameterControls({ value, onChange }: Props) {
             step={1}
             type="number"
             value={dynamicValue as number}
-            onChange={(event) => onChange({ type, value: clamp(Number(event.target.value), 1, 104857600) })}
+            onChange={(event) => onChange({ type, value: clamp(Number(event.target.value), 1, 1000000) })}
           />
         )}
         <div className="flex items-center justify-end gap-2">
