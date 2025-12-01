@@ -244,6 +244,8 @@ export function generateDynamicTestData({ type, value }: DynamicValue): TestData
 }
 
 export function generateEnumTestData(value: string): TestData[] {
+  if (!value) return [];
+
   return value
     .split(',')
     .map((value) => value.trim())
