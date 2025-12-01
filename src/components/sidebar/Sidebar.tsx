@@ -1,0 +1,33 @@
+import cn from 'classnames';
+import { useState } from 'react';
+import SidebarIconRail from './SidebarIconRail';
+import SidebarPanel from './SidebarPanel';
+import { SidebarItemData } from './SidebarItem';
+
+export type { SidebarItemData as SidebarItem };
+
+interface SidebarProps {
+  items: SidebarItemData[];
+  onRemove: (id: string) => void;
+  onSelect: (id: string) => void;
+}
+
+export default function Sidebar({ items, onRemove, onSelect }: SidebarProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  return (
+    <div
+      className={cn(
+        'h-screen sticky top-0 flex border-r border-border dark:border-dark-input bg-body dark:bg-dark-body transition-all duration-300 shrink-0',
+        {
+          'w-[80px]': !isExpanded,
+          'w-[400px]': isExpanded,
+        },
+      )}
+    >
+      <SidebarIconRail onToggle={() => setIsExpanded(!isExpanded)} />
+
+      {isExpanded && <SidebarPanel items={items} onRemove={onRemove} onSelect={onSelect} />}
+    </div>
+  );
+}

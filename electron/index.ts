@@ -3,6 +3,7 @@ import { exec } from 'child_process';
 import { app, BrowserWindow, ipcMain } from 'electron';
 import Store from 'electron-store';
 import WebSocket from 'ws';
+import { registerCollectionHandlers } from './collection';
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
@@ -43,6 +44,11 @@ const createWindow = (): void => {
 
   // and load the index.html of the app.
   mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
+
+  // Open DevTools in dev mode
+  if (process.env.DEV_MODE === 'true') {
+    mainWindow.webContents.openDevTools();
+  }
 };
 
 // This method will be called when Electron has finished
@@ -187,3 +193,6 @@ ipcMain.handle('get-theme', async () => {
 ipcMain.on('set-theme', (_, theme: 'light' | 'dark') => {
   store.set('theme', theme);
 });
+
+// Collection handlers
+registerCollectionHandlers();

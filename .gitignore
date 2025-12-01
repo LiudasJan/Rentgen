@@ -88,5 +88,9 @@ typings/
 # Vite
 .vite/
 
+# IDEs and editors
+/.idea
+.project
+
 # Electron-Forge
 out/

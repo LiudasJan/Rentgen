@@ -1,6 +1,6 @@
 import { Method } from 'axios';
 import cn from 'classnames';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Button, { ButtonType } from './components/buttons/Button';
 import { CopyButton } from './components/buttons/CopyButton';
 import { IconButton } from './components/buttons/IconButton';
@@ -16,11 +16,13 @@ import TestRunningLoader from './components/loaders/TestRunningLoader';
 import Modal from './components/modals/Modal';
 import ParametersPanel from './components/panels/ParametersPanel';
 import ResponsePanel from './components/panels/ResponsePanel';
+import Sidebar from './components/sidebar/Sidebar';
 import TestsTable, { ExpandedTestComponent, getTestsTableColumns } from './components/tables/TestsTable';
 import { RESPONSE_STATUS } from './constants/responseStatus';
 import useTests from './hooks/useTests';
 import { LARGE_PAYLOAD_TEST_NAME, LOAD_TEST_NAME } from './tests';
 import { HttpResponse, RequestParameters, TestOptions } from './types';
+import { PostmanCollection } from './types/postman';
 import {
   createHttpRequest,
   detectDataType,
@@ -35,6 +37,16 @@ import {
   parseBody,
   parseHeaders,
 } from './utils';
+import {
+  addRequestToCollection,
+  collectionToSidebarItems,
+  createEmptyCollection,
+  findRequestById,
+  headersRecordToString,
+  isDuplicateRequest,
+  postmanHeadersToRecord,
+  removeRequestFromCollection,
+} from './utils/collection';
 
 import DarkModeIcon from './assets/icons/dark-mode-icon.svg';
 import LightModeIcon from './assets/icons/light-mode-icon.svg';
@@ -61,6 +73,7 @@ const methodOptions: SelectOption<Method>[] = [
 ];
 
 export default function App() {
+  const [collection, setCollection] = useState<PostmanCollection>(createEmptyCollection());
   const [mode, setMode] = useState<Mode>('HTTP');
   const [method, setMethod] = useState<Method>('GET');
   const [openCurlModal, setOpenCurlModal] = useState<boolean>(false);
@@ -99,12 +112,24 @@ export default function App() {
     executeAllTests,
     executeLoadTest,
     executeLargePayloadTest,
+    resetTests,
   } = useTests(testOptions);
 
   const isRunningTests = isSecurityRunning || isPerformanceRunning || isDataDrivenRunning;
   const statusCode = extractStatusCode(httpResponse);
   const disabledRunTests =
     isRunningTests || !httpResponse || statusCode < RESPONSE_STATUS.OK || statusCode >= RESPONSE_STATUS.BAD_REQUEST;
+
+  const sidebarItems = useMemo(() => collectionToSidebarItems(collection), [collection]);
+
+  useEffect(() => {
+    const loadCollection = async () => {
+      const loadedCollection = await window.electronAPI.loadCollection();
+      setCollection(loadedCollection);
+    };
+
+    loadCollection();
+  }, []);
 
   useEffect(() => {
     const setTheme = async () => {
@@ -148,8 +173,32 @@ export default function App() {
     if (testOptions) executeAllTests();
   }, [testOptions]);
 
+  const handleRemoveSidebarItem = async (id: string) => {
+    const updatedCollection = removeRequestFromCollection(collection, id);
+    setCollection(updatedCollection);
+    await window.electronAPI.saveCollection(updatedCollection);
+  };
+
+  const handleSelectSidebarItem = (id: string) => {
+    const item = findRequestById(collection, id);
+    if (!item) {
+        return;
+    }
+
+    reset();
+    resetTests();
+
+    const { request } = item;
+    setMethod(request.method as Method);
+    setUrl(request.url);
+    setHeaders(headersRecordToString(postmanHeadersToRecord(request.header)));
+    setBody(request.body?.raw || '{}');
+  };
+
   return (
-    <div className="flex flex-col gap-4 py-5 px-7">
+    <div className="flex">
+      <Sidebar items={sidebarItems} onRemove={handleRemoveSidebarItem} onSelect={handleSelectSidebarItem} />
+      <div className="flex-1 flex flex-col gap-4 py-5 px-7 min-h-screen overflow-auto">
       <div className="flex items-center gap-2">
         <Select
           className="font-bold"
@@ -472,7 +521,7 @@ export default function App() {
               })
             }
           >
-            {isRunningTests ? `Running tests... (${currentTest}/${testsCount})` : 'Generate & Run Tests'}
+            {isRunningTests && testsCount ? `Running tests... (${currentTest}/${testsCount})` : 'Generate & Run Tests'}
           </Button>
         </div>
       )}
@@ -579,6 +628,7 @@ export default function App() {
           </ResponsePanel>
         </>
       )}
+      </div>
     </div>
   );
 
@@ -663,6 +713,24 @@ export default function App() {
 
       setBodyParameters(bodyParameters);
       setQueryParameters(queryParameters);
+
+      // Save request to collection (skip duplicates) - use functional update to avoid race condition
+      const bodyString = typeof parsedBody === 'string' ? parsedBody : JSON.stringify(parsedBody);
+      setCollection((prevCollection) => {
+        if (isDuplicateRequest(prevCollection, method, url, bodyString)) {
+          return prevCollection;
+        }
+
+        const updatedCollection = addRequestToCollection(
+          prevCollection,
+          method,
+          url,
+          parsedHeaders,
+          bodyString
+        );
+        window.electronAPI.saveCollection(updatedCollection);
+        return updatedCollection;
+      });
     } catch (error) {
       setHttpResponse({
         status: NETWORK_ERROR,
