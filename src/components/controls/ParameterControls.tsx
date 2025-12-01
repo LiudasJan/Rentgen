@@ -2,7 +2,7 @@ import cn from 'classnames';
 import { ChangeEvent } from 'react';
 import { initialNumberBounds, MAX_STRING_LENGTH } from '../../constants/datasets';
 import { DataType, DynamicValue, Interval } from '../../types';
-import { clamp, normalizeDecimal } from '../../utils';
+import { clamp, getInitialParameterValue, normalizeDecimal } from '../../utils';
 import Input from '../inputs/Input';
 import { SelectOption } from '../inputs/Select';
 import SimpleSelect from '../inputs/SimpleSelect';
@@ -14,18 +14,18 @@ const TRAILING_ZEROS_PATTERN = /^-?\d+[.,]0+$/;
 
 const parameterOptions: SelectOption<DataType>[] = [
   { value: 'do-not-test', label: 'Do not test' },
-  { value: 'random32', label: 'Random string 32' },
-  { value: 'randomInt', label: 'Random integer' },
   { value: 'randomEmail', label: 'Random email' },
-  { value: 'string', label: 'String' },
-  { value: 'email', label: 'Email' },
-  { value: 'enum', label: 'Enum' },
-  { value: 'phone', label: 'Phone' },
-  { value: 'url', label: 'URL' },
-  { value: 'number', label: 'Number' },
+  { value: 'randomInt', label: 'Random integer' },
+  { value: 'random32', label: 'Random string 32' },
   { value: 'boolean', label: 'Boolean' },
   { value: 'currency', label: 'Currency' },
   { value: 'date_yyyy_mm_dd', label: 'Date (YYYY-MM-DD)' },
+  { value: 'email', label: 'Email' },
+  { value: 'enum', label: 'Enum' },
+  { value: 'number', label: 'Number' },
+  { value: 'phone', label: 'Phone' },
+  { value: 'string', label: 'String' },
+  { value: 'url', label: 'Url' },
 ];
 
 interface Props {
@@ -152,6 +152,6 @@ export function ParameterControls({ value, onChange }: Props) {
 
   function onSelectTypeChange(event: ChangeEvent<HTMLSelectElement>) {
     const type = event.target.value as DataType;
-    onChange(type === 'number' ? { type, value: initialNumberBounds } : { type });
+    onChange(getInitialParameterValue(type, ''));
   }
 }
