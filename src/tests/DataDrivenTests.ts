@@ -246,33 +246,39 @@ export function getDynamicDataset({ type, value }: DynamicValue): TestData[] {
 export function getNumberDynamicBoundaryDataset({ min, max }: Interval): TestData[] {
   const dataset: TestData[] = [];
   const delta = Number.isInteger(min) && Number.isInteger(max) ? 1 : 0.01;
-  const range = max - min;
+  const normalizedMin = normalizeDecimal(min);
+  const normalizedMax = normalizeDecimal(max);
+  const range = normalizedMax - normalizedMin;
 
-  if (range === 0) dataset.push({ value: min, valid: true });
-  else {
-    dataset.push({ value: min, valid: true });
+  dataset.push({ value: normalizedMin, valid: true });
 
-    if (range > delta) dataset.push({ value: normalizeDecimal(min + delta), valid: true });
+  if (range > 0) {
+    if (range > delta) dataset.push({ value: normalizeDecimal(normalizedMin + delta), valid: true });
 
     if (range > 3 * delta)
       dataset.push({
-        value: generateRandomNumber(normalizeDecimal(min + 2 * delta), normalizeDecimal(max - 2 * delta)),
+        value: generateRandomNumber(
+          normalizeDecimal(normalizedMin + 2 * delta),
+          normalizeDecimal(normalizedMax - 2 * delta),
+        ),
         valid: true,
       });
 
     if (range > 4 * delta)
       dataset.push({
-        value: generateRandomNumber(normalizeDecimal(min + 2 * delta), normalizeDecimal(max - 2 * delta)),
+        value: generateRandomNumber(
+          normalizeDecimal(normalizedMin + 2 * delta),
+          normalizeDecimal(normalizedMax - 2 * delta),
+        ),
         valid: true,
       });
 
-    if (range >= 3 * delta) dataset.push({ value: normalizeDecimal(max - delta), valid: true });
-
-    dataset.push({ value: max, valid: true });
+    if (range >= 3 * delta) dataset.push({ value: normalizeDecimal(normalizedMax - delta), valid: true });
+    dataset.push({ value: normalizedMax, valid: true });
   }
 
-  dataset.push({ value: min - delta, valid: false });
-  dataset.push({ value: max + delta, valid: false });
+  dataset.push({ value: normalizeDecimal(normalizedMin - delta), valid: false });
+  dataset.push({ value: normalizeDecimal(normalizedMax + delta), valid: false });
 
   return dataset;
 }

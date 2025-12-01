@@ -10,6 +10,7 @@ import SimpleSelect from '../inputs/SimpleSelect';
 import ClearCrossIcon from '../../assets/icons/clear-cross-icon.svg';
 
 const MAX_INT32 = 2147483647;
+const TRAILING_ZEROS_PATTERN = /^-?\d+[.,]0+$/;
 
 const parameterOptions: SelectOption<DataType>[] = [
   { value: 'do-not-test', label: 'Do not test' },
@@ -37,7 +38,9 @@ export function ParameterControls({ value, onChange }: Props) {
   return (
     <div>
       {type === 'number' && (
-        <div className="mb-1 text-xs text-text-secondary">Set Min/Max range for boundary test (integer or decimal)</div>
+        <div className="mb-1 text-xs text-text-secondary">
+          Set Min/Max range for boundary test. 0 - integer, 0.00 - decimal
+        </div>
       )}
       <div className="flex items-center justify-end flex-wrap gap-2">
         {type === 'number' && (
@@ -47,18 +50,26 @@ export function ParameterControls({ value, onChange }: Props) {
               placeholder="Min"
               step={0.01}
               type="number"
-              value={(dynamicValue as Interval).min}
-              onBlur={(e) => onMinChange(normalizeDecimal(Number(e.target.value || initialNumberBounds.min)))}
-              onChange={(e) => onMinChange(!e.target.value ? null : Number(e.target.value))}
+              value={normalizeDecimal((dynamicValue as Interval).min) ?? ''}
+              onBlur={(e) => {
+                if (e.target.value) return;
+
+                onChange({ type, value: { ...(dynamicValue as Interval), min: initialNumberBounds.min } });
+              }}
+              onChange={(e) => onMinChange(e.target.value)}
             />
             <Input
               className="max-w-28 p-[5px]! rounded-none! dark:border-border/20!"
               placeholder="Max"
               step={0.01}
               type="number"
-              value={(dynamicValue as Interval).max}
-              onBlur={(e) => onMaxChange(normalizeDecimal(Number(e.target.value || initialNumberBounds.max)))}
-              onChange={(e) => onMaxChange(!e.target.value ? null : Number(e.target.value))}
+              value={normalizeDecimal((dynamicValue as Interval).max) ?? ''}
+              onBlur={(e) => {
+                if (e.target.value) return;
+
+                onChange({ type, value: { ...(dynamicValue as Interval), max: initialNumberBounds.max } });
+              }}
+              onChange={(e) => onMaxChange(e.target.value)}
             />
           </div>
         )}
@@ -81,28 +92,30 @@ export function ParameterControls({ value, onChange }: Props) {
     </div>
   );
 
-  function onMinChange(value: number | null) {
-    if (value === null) {
+  function onMinChange(value: string) {
+    if (!value) {
       onChange({ type, value: { ...(dynamicValue as Interval), min: null } });
       return;
     }
 
-    const min = clamp(value, -MAX_INT32, MAX_INT32);
-    const max = min > (dynamicValue as Interval).max ? min : (dynamicValue as Interval).max;
+    let min = clamp(Number(value), -MAX_INT32, MAX_INT32);
+    if (TRAILING_ZEROS_PATTERN.test(value)) min += 0.001; // to preserve trailing zeros in decimals
 
-    onChange({ type, value: { ...(dynamicValue as Interval), min, max: normalizeDecimal(max) } });
+    const max = Math.max(min, (dynamicValue as Interval).max);
+    onChange({ type, value: { min, max } });
   }
 
-  function onMaxChange(value: number | null) {
-    if (value === null) {
+  function onMaxChange(value: string) {
+    if (!value) {
       onChange({ type, value: { ...(dynamicValue as Interval), max: null } });
       return;
     }
 
-    const max = clamp(value, -MAX_INT32, MAX_INT32);
-    const min = max < (dynamicValue as Interval).min ? max : (dynamicValue as Interval).min;
+    let max = clamp(Number(value), -MAX_INT32, MAX_INT32);
+    if (TRAILING_ZEROS_PATTERN.test(value)) max += 0.001; // to preserve trailing zeros in decimals
 
-    onChange({ type, value: { ...(dynamicValue as Interval), min: normalizeDecimal(min), max } });
+    const min = Math.min(max, (dynamicValue as Interval).min);
+    onChange({ type, value: { min, max } });
   }
 
   function onSelectTypeChange(event: ChangeEvent<HTMLSelectElement>) {
