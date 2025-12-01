@@ -18,6 +18,7 @@ import {
   executeTimedRequest,
   extractBodyParameters,
   generateRandomNumber,
+  generateRandomString,
   getBodyParameterValue,
   normalizeDecimal,
   parseBody,
@@ -48,7 +49,7 @@ export class DataDrivenTests extends BaseTests {
 
     await runDataDrivenTests(
       this.options,
-      async (parameterName: string, parameterValue: DynamicValue) => {
+      async (parameterName: string, { type }: DynamicValue) => {
         const testData: TestData = {
           value: `   ${getBodyParameterValue(parsedBody, parameterName, parsedHeaders)}   `,
           valid: false,
@@ -56,37 +57,29 @@ export class DataDrivenTests extends BaseTests {
         results.push(
           await testRequestParameter(
             { ...this.options, parameterName, parameterType: 'body', testData },
-            parameterValue.type === 'enum' ? CLIENT_ERROR_RESPONSE_EXPECTED : VALUE_NORMALIZATION_TEST_EXPECTED,
-            parameterValue.type === 'enum'
-              ? determineRequestParameterTestStatus
-              : determineValueNormalizationTestStatus,
+            type === 'enum' ? CLIENT_ERROR_RESPONSE_EXPECTED : VALUE_NORMALIZATION_TEST_EXPECTED,
+            type === 'enum' ? determineRequestParameterTestStatus : determineValueNormalizationTestStatus,
             this.onTestStart,
           ),
         );
       },
       async (parameterName: string, parameterValue: DynamicValue) => {
-        const testDataset = [...generateDynamicTestData(parameterValue), ...(datasets[parameterValue.type] || [])];
-        for (const testData of testDataset)
-          results.push(
-            await testRequestParameter(
-              { ...this.options, parameterName, parameterType: 'body', testData },
-              testData.valid ? SUCCESS_RESPONSE_EXPECTED : CLIENT_ERROR_RESPONSE_EXPECTED,
-              determineRequestParameterTestStatus,
-              this.onTestStart,
-            ),
-          );
+        results.push(
+          ...(await testRequestParameterWithDataset(
+            { ...this.options, parameterName, parameterType: 'body' },
+            parameterValue,
+            this.onTestStart,
+          )),
+        );
       },
       async (parameterName: string, parameterValue: DynamicValue) => {
-        const testDataset = [...generateDynamicTestData(parameterValue), ...(datasets[parameterValue.type] || [])];
-        for (const testData of testDataset)
-          results.push(
-            await testRequestParameter(
-              { ...this.options, parameterName, parameterType: 'query', testData },
-              testData.valid ? SUCCESS_RESPONSE_EXPECTED : CLIENT_ERROR_RESPONSE_EXPECTED,
-              determineRequestParameterTestStatus,
-              this.onTestStart,
-            ),
-          );
+        results.push(
+          ...(await testRequestParameterWithDataset(
+            { ...this.options, parameterName, parameterType: 'query' },
+            parameterValue,
+            this.onTestStart,
+          )),
+        );
       },
     );
 
@@ -160,6 +153,38 @@ export async function runDataDrivenTests(
     if (isParameterTestSkipped(value.type)) continue;
     await onQueryParameterTest(key, value);
   }
+}
+
+async function testRequestParameterWithDataset(
+  options: TestOptions,
+  parameterValue: DynamicValue,
+  onTestStart?: () => void,
+): Promise<TestResult[]> {
+  const { type, value } = parameterValue;
+  const results: TestResult[] = [];
+  const dataset = [
+    ...generateDynamicTestData(parameterValue),
+    ...(datasets[type] || []).map((dataset) => {
+      if (type !== 'string' || !dataset.valid) return dataset;
+
+      return {
+        ...dataset,
+        value: (dataset.value as string).substring(0, value as number),
+      };
+    }),
+  ];
+
+  for (const data of dataset)
+    results.push(
+      await testRequestParameter(
+        { ...options, testData: data },
+        data.valid ? SUCCESS_RESPONSE_EXPECTED : CLIENT_ERROR_RESPONSE_EXPECTED,
+        determineRequestParameterTestStatus,
+        onTestStart,
+      ),
+    );
+
+  return results;
 }
 
 async function testRequestParameter(
@@ -238,6 +263,8 @@ export function generateDynamicTestData({ type, value }: DynamicValue): TestData
       return generateEnumTestData(value as string);
     case 'number':
       return generateNumberBoundaryTestData(value as Interval);
+    case 'string':
+      return [{ value: generateRandomString((value as number) + 1), valid: false }];
     default:
       return [];
   }

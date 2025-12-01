@@ -5,6 +5,8 @@ export const initialNumberBounds: Interval = {
   max: 10000,
 };
 
+export const MAX_STRING_LENGTH = 128;
+
 export const datasets: Record<string, TestData[]> = {
   email: [
     { value: 'email@qaontime.com', valid: true },

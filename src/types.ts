@@ -20,7 +20,7 @@ export type ParameterType = 'body' | 'query';
 
 export interface DynamicValue {
   type: DataType;
-  value?: string | Interval;
+  value?: number | string | Interval;
 }
 
 export interface HttpRequest {

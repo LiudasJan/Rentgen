@@ -1,5 +1,5 @@
 import { Method } from 'axios';
-import { initialNumberBounds } from '../constants/datasets';
+import { initialNumberBounds, MAX_STRING_LENGTH } from '../constants/datasets';
 import {
   DataType,
   DynamicValue,
@@ -222,6 +222,8 @@ export function getInitialParameterValue(type: DataType, value: string): Dynamic
       return { type, value };
     case 'number':
       return { type, value: initialNumberBounds };
+    case 'string':
+      return { type, value: MAX_STRING_LENGTH };
     default:
       return { type };
   }

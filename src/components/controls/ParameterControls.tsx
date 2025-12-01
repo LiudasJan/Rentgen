@@ -1,6 +1,6 @@
 import cn from 'classnames';
 import { ChangeEvent } from 'react';
-import { initialNumberBounds } from '../../constants/datasets';
+import { initialNumberBounds, MAX_STRING_LENGTH } from '../../constants/datasets';
 import { DataType, DynamicValue, Interval } from '../../types';
 import { clamp, normalizeDecimal } from '../../utils';
 import Input from '../inputs/Input';
@@ -38,14 +38,7 @@ export function ParameterControls({ value, onChange }: Props) {
 
   return (
     <div>
-      {type === 'enum' && (
-        <div className="mb-1 text-xs text-text-secondary">Enter all valid values separated by ","</div>
-      )}
-      {type === 'number' && (
-        <div className="mb-1 text-xs text-text-secondary">
-          Set Min/Max range for boundary test. 0 - integer, 0.00 - decimal
-        </div>
-      )}
+      {renderLabel()}
       <div className="flex items-center justify-end flex-wrap gap-2">
         {type === 'enum' && (
           <Input
@@ -84,6 +77,15 @@ export function ParameterControls({ value, onChange }: Props) {
             />
           </div>
         )}
+        {type === 'string' && (
+          <Input
+            className="min-w-[232px] p-[5px]! rounded-none! dark:border-border/20!"
+            step={1}
+            type="number"
+            value={dynamicValue as number}
+            onChange={(event) => onChange({ type, value: clamp(Number(event.target.value), 1, MAX_STRING_LENGTH) })}
+          />
+        )}
         <div className="flex items-center justify-end gap-2">
           <SimpleSelect
             className="p-1! rounded-none! outline-none dark:border-border/20!"
@@ -102,6 +104,25 @@ export function ParameterControls({ value, onChange }: Props) {
       </div>
     </div>
   );
+
+  function renderLabel() {
+    let label: string | null = null;
+    switch (type) {
+      case 'enum':
+        label = 'Enter all valid values separated by ","';
+        break;
+      case 'number':
+        label = 'Set Min/Max range for boundary test. 0 - integer, 0.00 - decimal';
+        break;
+      case 'string':
+        label = 'Value max length';
+        break;
+    }
+
+    if (!label) return null;
+
+    return <div className="mb-1 text-xs text-text-secondary">{label}</div>;
+  }
 
   function onMinChange(value: string) {
     if (!value) {
