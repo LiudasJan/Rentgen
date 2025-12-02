@@ -51,7 +51,7 @@ export default function SidebarItem({ item, isSelected, onRemove, onSelect }: Si
       </span>
 
       <ClearCrossIcon
-        className="h-[18px] w-[18px] p-0.5 text-text-secondary hover:text-button-danger shrink-0 cursor-pointer"
+        className="h-4.5 w-4.5 p-0.5 text-text-secondary hover:text-button-danger shrink-0 cursor-pointer"
         onClick={(e: React.MouseEvent) => {
           e.stopPropagation();
           onRemove(item.id);

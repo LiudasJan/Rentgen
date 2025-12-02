@@ -39,7 +39,7 @@ export default function SidebarPanel({ items, selectedId, onRemove, onSelect, on
   };
 
   return (
-    <div className="py-4.5 min-h-[100vh] min-w-[320px] flex flex-col border-l border-border dark:border-dark-input overflow-hidden">
+    <div className="py-4.5 min-h-[100vh] max-h-[100vh] min-w-80 flex flex-col border-l border-border dark:border-dark-input overflow-hidden">
       <div className="flex-1 overflow-y-auto">
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={items.map((item) => item.id)} strategy={verticalListSortingStrategy}>
@@ -56,9 +56,7 @@ export default function SidebarPanel({ items, selectedId, onRemove, onSelect, on
         </DndContext>
 
         {items.length === 0 && (
-          <div className="px-3 py-4 text-xs text-text-secondary text-center whitespace-nowrap">
-            No saved requests
-          </div>
+          <div className="px-3 py-4 text-xs text-text-secondary text-center whitespace-nowrap">No saved requests</div>
         )}
       </div>
     </div>

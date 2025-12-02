@@ -6,9 +6,9 @@ interface SidebarIconRailProps {
 
 export default function SidebarIconRail({ onToggle }: SidebarIconRailProps) {
   return (
-    <div className="w-[80px] shrink-0 flex flex-col py-4.5">
+    <div className="w-20 shrink-0 flex flex-col py-4.5">
       <div
-        className="flex items-center justify-center h-[50px] cursor-pointer hover:bg-button-secondary dark:hover:bg-dark-input"
+        className="flex items-center justify-center h-12.5 cursor-pointer hover:bg-button-secondary dark:hover:bg-dark-input"
         onClick={onToggle}
       >
         <div className="flex flex-col items-center justify-center gap-1 text-center p-1">

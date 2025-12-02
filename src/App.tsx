@@ -1,7 +1,7 @@
 import { Method } from 'axios';
 import cn from 'classnames';
 import { useEffect, useMemo, useState } from 'react';
-import Button, {ButtonSize, ButtonType} from './components/buttons/Button';
+import Button, { ButtonSize, ButtonType } from './components/buttons/Button';
 import { CopyButton } from './components/buttons/CopyButton';
 import { IconButton } from './components/buttons/IconButton';
 import { LargePayloadTestControls } from './components/controls/LargePayloadTestControls';
@@ -100,6 +100,7 @@ export default function App() {
   const [queryParameters, setQueryParameters] = useState<RequestParameters>({});
   const [testOptions, setTestOptions] = useState<TestOptions | null>(null);
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
+  const [showSavedFeedback, setShowSavedFeedback] = useState(false);
   const {
     crudTests,
     currentTest,
@@ -207,7 +208,13 @@ export default function App() {
 
   return (
     <div className="flex">
-      <Sidebar items={sidebarItems} selectedId={selectedRequestId} onRemove={handleRemoveSidebarItem} onSelect={handleSelectSidebarItem} onReorder={handleReorderSidebarItem} />
+      <Sidebar
+        items={sidebarItems}
+        selectedId={selectedRequestId}
+        onRemove={handleRemoveSidebarItem}
+        onSelect={handleSelectSidebarItem}
+        onReorder={handleReorderSidebarItem}
+      />
       <div className="flex-1 flex flex-col gap-4 py-5 px-7 min-h-screen overflow-auto">
         <div className="flex items-center gap-2">
           <Select
@@ -320,7 +327,7 @@ export default function App() {
                 disabled={!url || isRunningTests}
                 onClick={saveRequest}
               >
-                Save
+                {showSavedFeedback ? 'Saved ✓' : 'Save'}
               </Button>
             </>
           )}
@@ -337,14 +344,14 @@ export default function App() {
                 Send
               </Button>
 
-                <Button
-                    buttonType={ButtonType.SECONDARY}
-                    size={ButtonSize.small}
-                    disabled={!url || isRunningTests}
-                    onClick={saveRequest}
-                >
-                    Save
-                </Button>
+              <Button
+                buttonType={ButtonType.SECONDARY}
+                size={ButtonSize.small}
+                disabled={!url || isRunningTests}
+                onClick={saveRequest}
+              >
+                {showSavedFeedback ? 'Saved ✓' : 'Save'}
+              </Button>
             </>
           )}
         </div>
@@ -790,6 +797,9 @@ export default function App() {
         setSelectedRequestId(newItem.id);
       }
     }
+
+    setShowSavedFeedback(true);
+    setTimeout(() => setShowSavedFeedback(false), 1000);
   }
 
   function connectWss() {

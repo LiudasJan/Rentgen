@@ -19,7 +19,7 @@ export interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 export default function Button({
   buttonType = ButtonType.PRIMARY,
-  size = ButtonSize.small,
+  size = ButtonSize.medium,
   children,
   className,
   disabled,
@@ -31,8 +31,8 @@ export default function Button({
       className={cn(
         'm-0 py-2 px-3 font-segoe-ui text-xs font-bold border rounded-md',
         {
-          'min-w-[70px]': size === ButtonSize.small,
-          'min-w-[110px]': size === ButtonSize.medium,
+          'min-w-17.5': size === ButtonSize.small,
+          'min-w-27.5': size === ButtonSize.medium,
           'bg-button-primary border-button-primary text-white': buttonType === ButtonType.PRIMARY,
           'hover:bg-button-primary-hover hover:border-button-primary-hover':
             buttonType === ButtonType.PRIMARY && !disabled,

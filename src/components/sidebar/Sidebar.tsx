@@ -22,19 +22,21 @@ export default function Sidebar({ items, selectedId, onRemove, onSelect, onReord
       className={cn(
         'h-screen sticky top-0 flex border-r border-border dark:border-dark-input bg-body dark:bg-dark-body transition-all duration-300 shrink-0',
         {
-          'w-[80px]': !isExpanded,
-          'w-[400px]': isExpanded,
+          'w-20': !isExpanded,
+          'w-100': isExpanded,
         },
       )}
     >
       <SidebarIconRail onToggle={() => setIsExpanded(!isExpanded)} />
 
-      <div
-        className={cn(
-          'transition-all duration-300 overflow-hidden',
-        )}
-      >
-        <SidebarPanel items={items} selectedId={selectedId} onRemove={onRemove} onSelect={onSelect} onReorder={onReorder} />
+      <div className={cn('transition-all duration-300 overflow-hidden')}>
+        <SidebarPanel
+          items={items}
+          selectedId={selectedId}
+          onRemove={onRemove}
+          onSelect={onSelect}
+          onReorder={onReorder}
+        />
       </div>
     </div>
   );
