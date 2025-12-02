@@ -1,4 +1,6 @@
 import cn from 'classnames';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import ClearCrossIcon from '../../assets/icons/clear-cross-icon.svg';
 import MethodBadge from './MethodBadge';
 
@@ -18,13 +20,29 @@ interface SidebarItemProps {
 }
 
 export default function SidebarItem({ item, isSelected, onRemove, onSelect }: SidebarItemProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: item.id,
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
   return (
     <div
+      ref={setNodeRef}
+      style={style}
       className={cn(
         'flex items-center gap-2 px-3 py-2 border-b border-border dark:border-dark-input hover:bg-button-secondary dark:hover:bg-dark-input cursor-pointer',
-        { 'bg-button-secondary dark:bg-dark-input': isSelected },
+        {
+          'bg-button-secondary dark:bg-dark-input': isSelected,
+          'opacity-50 shadow-lg z-50': isDragging,
+        },
       )}
-      onClick={() => onSelect(item.id)}
+      onClick={() => !isDragging && onSelect(item.id)}
+      {...attributes}
+      {...listeners}
     >
       <MethodBadge method={item.method} />
 

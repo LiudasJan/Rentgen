@@ -46,6 +46,7 @@ import {
   isDuplicateRequest,
   postmanHeadersToRecord,
   removeRequestFromCollection,
+  reorderRequestInCollection,
   updateRequestInCollection,
 } from './utils/collection';
 
@@ -198,9 +199,15 @@ export default function App() {
     setBody(request.body?.raw || '{}');
   };
 
+  const handleReorderSidebarItem = async (activeId: string, overId: string) => {
+    const updatedCollection = reorderRequestInCollection(collection, activeId, overId);
+    setCollection(updatedCollection);
+    await window.electronAPI.saveCollection(updatedCollection);
+  };
+
   return (
     <div className="flex">
-      <Sidebar items={sidebarItems} selectedId={selectedRequestId} onRemove={handleRemoveSidebarItem} onSelect={handleSelectSidebarItem} />
+      <Sidebar items={sidebarItems} selectedId={selectedRequestId} onRemove={handleRemoveSidebarItem} onSelect={handleSelectSidebarItem} onReorder={handleReorderSidebarItem} />
       <div className="flex-1 flex flex-col gap-4 py-5 px-7 min-h-screen overflow-auto">
         <div className="flex items-center gap-2">
           <Select

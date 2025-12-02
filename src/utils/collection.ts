@@ -216,3 +216,30 @@ export function collectionToSidebarItems(collection: PostmanCollection): Sidebar
   }
   return items;
 }
+
+export function reorderRequestInCollection(
+  collection: PostmanCollection,
+  activeId: string,
+  overId: string,
+): PostmanCollection {
+  const updatedCollection = {
+    ...collection,
+    item: collection.item.map((folder) => ({
+      ...folder,
+      item: [...folder.item],
+    })),
+  };
+
+  for (const folder of updatedCollection.item) {
+    const activeIndex = folder.item.findIndex((item) => item.id === activeId);
+    const overIndex = folder.item.findIndex((item) => item.id === overId);
+
+    if (activeIndex !== -1 && overIndex !== -1) {
+      const [movedItem] = folder.item.splice(activeIndex, 1);
+      folder.item.splice(overIndex, 0, movedItem);
+      break;
+    }
+  }
+
+  return updatedCollection;
+}

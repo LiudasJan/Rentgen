@@ -11,9 +11,10 @@ interface SidebarProps {
   selectedId: string | null;
   onRemove: (id: string) => void;
   onSelect: (id: string) => void;
+  onReorder: (activeId: string, overId: string) => void;
 }
 
-export default function Sidebar({ items, selectedId, onRemove, onSelect }: SidebarProps) {
+export default function Sidebar({ items, selectedId, onRemove, onSelect, onReorder }: SidebarProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
@@ -33,7 +34,7 @@ export default function Sidebar({ items, selectedId, onRemove, onSelect }: Sideb
           'transition-all duration-300 overflow-hidden',
         )}
       >
-        <SidebarPanel items={items} selectedId={selectedId} onRemove={onRemove} onSelect={onSelect} />
+        <SidebarPanel items={items} selectedId={selectedId} onRemove={onRemove} onSelect={onSelect} onReorder={onReorder} />
       </div>
     </div>
   );
