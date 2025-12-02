@@ -190,6 +190,8 @@ export default function App() {
     setSelectedRequestId(id);
 
     const { request } = item;
+    const isWssUrl = request.url.startsWith('ws://') || request.url.startsWith('wss://');
+    setMode(isWssUrl ? 'WSS' : 'HTTP');
     setMethod(request.method as Method);
     setUrl(request.url);
     setHeaders(headersRecordToString(postmanHeadersToRecord(request.header)));
@@ -327,6 +329,15 @@ export default function App() {
               <Button disabled={!wssConnected} onClick={sendWss}>
                 Send
               </Button>
+
+                <Button
+                    buttonType={ButtonType.SECONDARY}
+                    size={ButtonSize.small}
+                    disabled={!url || isRunningTests}
+                    onClick={saveRequest}
+                >
+                    Save
+                </Button>
             </>
           )}
         </div>
