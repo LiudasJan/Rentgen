@@ -95,7 +95,7 @@ export function ParameterControls({ dynamicValue, onChange }: Props) {
           />
           <ClearCrossIcon
             className={cn(
-              'h-[18px] w-[18px] text-button-text-secondary hover:text-button-text-secondary-hover',
+              'h-4.5 w-4.5 text-button-text-secondary hover:text-button-text-secondary-hover',
               'dark:text-text-secondary dark:hover:text-dark-text cursor-pointer',
             )}
             onClick={() => onChange({ type: 'do-not-test' })}
