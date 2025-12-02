@@ -217,15 +217,17 @@ export function getBodyParameterValue(body: unknown, parameterName: string, head
 }
 
 export function getInitialParameterValue(type: DataType, value: string): DynamicValue {
+  const dynamicValue: DynamicValue = { type, mandatory: true };
+
   switch (type) {
     case 'enum':
-      return { type, value };
+      return { ...dynamicValue, value };
     case 'number':
-      return { type, value: initialNumberBounds };
+      return { ...dynamicValue, value: initialNumberBounds };
     case 'string':
-      return { type, value: MAX_STRING_LENGTH };
+      return { ...dynamicValue, value: MAX_STRING_LENGTH };
     default:
-      return { type };
+      return dynamicValue;
   }
 }
 

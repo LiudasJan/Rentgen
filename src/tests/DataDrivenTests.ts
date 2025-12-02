@@ -257,17 +257,27 @@ function determineRequestParameterTestStatus(
   return testStatus;
 }
 
-export function generateDynamicTestData({ type, value }: DynamicValue): TestData[] {
+export function generateDynamicTestData({ mandatory, type, value }: DynamicValue): TestData[] {
+  const results: TestData[] = [];
+  if (mandatory !== undefined) {
+    if (mandatory) results.push({ value: null, valid: false });
+    else results.push({ value: null, valid: true });
+  }
+
   switch (type) {
     case 'enum':
-      return generateEnumTestData(value as string);
+      results.push(...generateEnumTestData(value as string));
+      break;
     case 'number':
-      return generateNumberBoundaryTestData(value as Interval);
+      results.push(...generateNumberBoundaryTestData(value as Interval));
+      break;
     case 'string':
-      return [{ value: generateRandomString((value as number) + 1), valid: false }];
+      results.push({ value: generateRandomString((value as number) + 1), valid: false });
+      break;
     default:
-      return [];
   }
+
+  return results;
 }
 
 export function generateEnumTestData(value: string): TestData[] {
