@@ -27,7 +27,13 @@ export default function Sidebar({ items, onRemove, onSelect }: SidebarProps) {
     >
       <SidebarIconRail onToggle={() => setIsExpanded(!isExpanded)} />
 
-      {isExpanded && <SidebarPanel items={items} onRemove={onRemove} onSelect={onSelect} />}
+      <div
+        className={cn(
+          'transition-all duration-300 overflow-hidden',
+        )}
+      >
+        <SidebarPanel items={items} onRemove={onRemove} onSelect={onSelect} />
+      </div>
     </div>
   );
 }

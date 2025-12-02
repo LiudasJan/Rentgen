@@ -1,3 +1,4 @@
+import ClearCrossIcon from '../../assets/icons/clear-cross-icon.svg';
 import MethodBadge from './MethodBadge';
 
 export interface SidebarItemData {
@@ -26,15 +27,13 @@ export default function SidebarItem({ item, onRemove, onSelect }: SidebarItemPro
         {item.url}
       </span>
 
-      <button
-        className="flex items-center justify-center w-5 h-5 text-text-secondary hover:text-button-danger shrink-0 cursor-pointer bg-transparent border-none"
-        onClick={(e) => {
+      <ClearCrossIcon
+        className="h-[18px] w-[18px] p-0.5 text-text-secondary hover:text-button-danger shrink-0 cursor-pointer"
+        onClick={(e: React.MouseEvent) => {
           e.stopPropagation();
           onRemove(item.id);
         }}
-      >
-        X
-      </button>
+      />
     </div>
   );
 }
