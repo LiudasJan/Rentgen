@@ -709,6 +709,7 @@ export default function App() {
         setBody(trimmedBody !== '' ? trimmedBody : '{}');
       }
 
+      setSelectedRequestId(null);
       closeCurlModal();
     } catch (error) {
       console.error('cURL import failed', error);
