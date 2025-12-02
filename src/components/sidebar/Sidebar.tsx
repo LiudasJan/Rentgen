@@ -8,11 +8,12 @@ export type { SidebarItemData as SidebarItem };
 
 interface SidebarProps {
   items: SidebarItemData[];
+  selectedId: string | null;
   onRemove: (id: string) => void;
   onSelect: (id: string) => void;
 }
 
-export default function Sidebar({ items, onRemove, onSelect }: SidebarProps) {
+export default function Sidebar({ items, selectedId, onRemove, onSelect }: SidebarProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
@@ -32,7 +33,7 @@ export default function Sidebar({ items, onRemove, onSelect }: SidebarProps) {
           'transition-all duration-300 overflow-hidden',
         )}
       >
-        <SidebarPanel items={items} onRemove={onRemove} onSelect={onSelect} />
+        <SidebarPanel items={items} selectedId={selectedId} onRemove={onRemove} onSelect={onSelect} />
       </div>
     </div>
   );

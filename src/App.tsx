@@ -200,7 +200,7 @@ export default function App() {
 
   return (
     <div className="flex">
-      <Sidebar items={sidebarItems} onRemove={handleRemoveSidebarItem} onSelect={handleSelectSidebarItem} />
+      <Sidebar items={sidebarItems} selectedId={selectedRequestId} onRemove={handleRemoveSidebarItem} onSelect={handleSelectSidebarItem} />
       <div className="flex-1 flex flex-col gap-4 py-5 px-7 min-h-screen overflow-auto">
         <div className="flex items-center gap-2">
           <Select

@@ -1,3 +1,4 @@
+import cn from 'classnames';
 import ClearCrossIcon from '../../assets/icons/clear-cross-icon.svg';
 import MethodBadge from './MethodBadge';
 
@@ -11,14 +12,18 @@ export interface SidebarItemData {
 
 interface SidebarItemProps {
   item: SidebarItemData;
+  isSelected?: boolean;
   onRemove: (id: string) => void;
   onSelect: (id: string) => void;
 }
 
-export default function SidebarItem({ item, onRemove, onSelect }: SidebarItemProps) {
+export default function SidebarItem({ item, isSelected, onRemove, onSelect }: SidebarItemProps) {
   return (
     <div
-      className="flex items-center gap-2 px-3 py-2 border-b border-border dark:border-dark-input hover:bg-button-secondary dark:hover:bg-dark-input cursor-pointer"
+      className={cn(
+        'flex items-center gap-2 px-3 py-2 border-b border-border dark:border-dark-input hover:bg-button-secondary dark:hover:bg-dark-input cursor-pointer',
+        { 'bg-button-secondary dark:bg-dark-input': isSelected },
+      )}
       onClick={() => onSelect(item.id)}
     >
       <MethodBadge method={item.method} />
