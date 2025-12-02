@@ -13,6 +13,12 @@ interface Props extends SelectProps {
 }
 
 export default function Select({ classNames, isCreatable, ...otherProps }: Props) {
+  const selectStyles = {
+    control: (base: object) => ({ ...base, transition: 'none' }),
+    menu: (base: object) => ({ ...base, transition: 'none' }),
+    option: (base: object) => ({ ...base, transition: 'none' }),
+  };
+
   const selectClassNames: ClassNamesConfig<unknown, boolean, GroupBase<unknown>> = {
     container: () => 'min-w-[110px] text-xs',
     control: () =>
@@ -50,7 +56,7 @@ export default function Select({ classNames, isCreatable, ...otherProps }: Props
   };
 
   if (isCreatable)
-    return <CreatableSelect {...otherProps} classNames={selectClassNames} formatCreateLabel={(value) => value} />;
+    return <CreatableSelect {...otherProps} styles={selectStyles} classNames={selectClassNames} formatCreateLabel={(value) => value} />;
 
-  return <ReactSelect {...otherProps} classNames={selectClassNames} />;
+  return <ReactSelect {...otherProps} styles={selectStyles} classNames={selectClassNames} />;
 }
