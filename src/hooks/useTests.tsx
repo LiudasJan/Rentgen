@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { datasets } from '../constants/datasets';
 import { getTestCount } from '../decorators';
 import {
@@ -15,7 +15,6 @@ import {
 import { DynamicValue, TestOptions, TestResult } from '../types';
 
 const useTests = (options: TestOptions) => {
-  const testSessionRef = useRef(0);
   const [currentTest, setCurrentTest] = useState<number>(0);
   const [testsCount, setTestsCount] = useState<number>(0);
 
@@ -36,18 +35,10 @@ const useTests = (options: TestOptions) => {
   const [isSecurityRunning, setIsSecurityRunning] = useState<boolean>(false);
 
   async function executeAllTests() {
-    const sessionId = ++testSessionRef.current;
-    const safeIncrement = () => {
-      if (sessionId === testSessionRef.current) {
-        setCurrentTest((prev) => prev + 1);
-      }
-    };
-
-    resetTests();
-    testSessionRef.current = sessionId;
     setIsDataDrivenRunning(true);
     setIsPerformanceRunning(true);
     setIsSecurityRunning(true);
+    resetTests();
 
     setTestsCount(
       (await calculateDataDrivenTestsCount()) +
@@ -56,16 +47,16 @@ const useTests = (options: TestOptions) => {
         getTestCount(PerformanceInsights),
     );
 
-    await executeSecurityTests(safeIncrement);
-    const dataDrivenTestResults = await executeDataDrivenTests(safeIncrement);
-    await executePerformanceTests(dataDrivenTestResults, safeIncrement);
+    await executeSecurityTests();
+    const dataDrivenTestResults = await executeDataDrivenTests();
+    await executePerformanceTests(dataDrivenTestResults);
   }
 
-  async function executeDataDrivenTests(increment: () => void = incrementCurrentTest): Promise<TestResult[]> {
+  async function executeDataDrivenTests(): Promise<TestResult[]> {
     setIsDataDrivenRunning(true);
     setDataDrivenTests([]);
 
-    const dataDrivenTests = new DataDrivenTests(options, increment);
+    const dataDrivenTests = new DataDrivenTests(options, incrementCurrentTest);
     const dataDrivenTestResults = await dataDrivenTests.run();
 
     setDataDrivenTests(dataDrivenTestResults);
@@ -116,25 +107,25 @@ const useTests = (options: TestOptions) => {
     setIsLoadTestRunning(false);
   }
 
-  async function executePerformanceTests(testResults: TestResult[] = [], increment: () => void = incrementCurrentTest) {
+  async function executePerformanceTests(testResults: TestResult[] = []) {
     const { url } = options;
 
     setIsPerformanceRunning(true);
     setPerformanceTests([]);
 
-    const performanceInsights = new PerformanceInsights(url, testResults, increment);
+    const performanceInsights = new PerformanceInsights(url, testResults, incrementCurrentTest);
     const performanceTestResults = await performanceInsights.run();
 
     setPerformanceTests(performanceTestResults);
     setIsPerformanceRunning(false);
   }
 
-  async function executeSecurityTests(increment: () => void = incrementCurrentTest) {
+  async function executeSecurityTests() {
     setIsSecurityRunning(true);
     setSecurityTests([]);
     setCrudTests([]);
 
-    const securityTests = new SecurityTests(options, increment);
+    const securityTests = new SecurityTests(options, incrementCurrentTest);
     const { securityTestResults, crudTestResults } = await securityTests.run();
 
     setSecurityTests(securityTestResults);
@@ -143,18 +134,12 @@ const useTests = (options: TestOptions) => {
   }
 
   function resetTests() {
-    testSessionRef.current += 1; // Invalidate old test callbacks
     setCrudTests([]);
     setDataDrivenTests([]);
     setPerformanceTests([]);
     setSecurityTests([]);
     setCurrentTest(0);
     setTestsCount(0);
-    setIsDataDrivenRunning(false);
-    setIsSecurityRunning(false);
-    setIsPerformanceRunning(false);
-    setIsLargePayloadTestRunning(false);
-    setIsLoadTestRunning(false);
   }
 
   function updateLoadProgress(setRequestCount: number, requestCount: number) {
@@ -228,7 +213,6 @@ const useTests = (options: TestOptions) => {
     executeSecurityTests,
     executePerformanceTests,
     setPerformanceTests,
-    resetTests,
   };
 };
 

@@ -1,7 +1,7 @@
 import { Method } from 'axios';
 import cn from 'classnames';
 import { useEffect, useMemo, useState } from 'react';
-import Button, { ButtonType } from './components/buttons/Button';
+import Button, {ButtonSize, ButtonType} from './components/buttons/Button';
 import { CopyButton } from './components/buttons/CopyButton';
 import { IconButton } from './components/buttons/IconButton';
 import { LargePayloadTestControls } from './components/controls/LargePayloadTestControls';
@@ -46,6 +46,7 @@ import {
   isDuplicateRequest,
   postmanHeadersToRecord,
   removeRequestFromCollection,
+  updateRequestInCollection,
 } from './utils/collection';
 
 import DarkModeIcon from './assets/icons/dark-mode-icon.svg';
@@ -97,6 +98,7 @@ export default function App() {
   const [bodyParameters, setBodyParameters] = useState<RequestParameters>({});
   const [queryParameters, setQueryParameters] = useState<RequestParameters>({});
   const [testOptions, setTestOptions] = useState<TestOptions | null>(null);
+  const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const {
     crudTests,
     currentTest,
@@ -112,7 +114,6 @@ export default function App() {
     executeAllTests,
     executeLoadTest,
     executeLargePayloadTest,
-    resetTests,
   } = useTests(testOptions);
 
   const isRunningTests = isSecurityRunning || isPerformanceRunning || isDataDrivenRunning;
@@ -185,8 +186,8 @@ export default function App() {
       return;
     }
 
-    reset();
-    resetTests();
+    reset(false);
+    setSelectedRequestId(id);
 
     const { request } = item;
     setMethod(request.method as Method);
@@ -300,9 +301,19 @@ export default function App() {
             />
           </div>
           {mode === 'HTTP' && (
-            <Button disabled={!url || isRunningTests} onClick={sendHttp}>
-              Send
-            </Button>
+            <>
+              <Button disabled={!url || isRunningTests} onClick={sendHttp}>
+                Send
+              </Button>
+              <Button
+                buttonType={ButtonType.SECONDARY}
+                size={ButtonSize.small}
+                disabled={!url || isRunningTests}
+                onClick={saveRequest}
+              >
+                Save
+              </Button>
+            </>
           )}
           {mode === 'WSS' && (
             <>
@@ -634,7 +645,7 @@ export default function App() {
     </div>
   );
 
-  function reset() {
+  function reset(resetTestState = true) {
     setMethod('GET');
     setUrl('');
     setWssConnected(false);
@@ -646,7 +657,11 @@ export default function App() {
     setMessages([]);
     setBodyParameters({});
     setQueryParameters({});
-    setTestOptions(null);
+    setSelectedRequestId(null);
+
+    if (resetTestState) {
+      setTestOptions(null);
+    }
   }
 
   function importCurl() {
@@ -715,24 +730,47 @@ export default function App() {
 
       setBodyParameters(bodyParameters);
       setQueryParameters(queryParameters);
-
-      // Save request to collection (skip duplicates) - use functional update to avoid race condition
-      const bodyString = typeof parsedBody === 'string' ? parsedBody : JSON.stringify(parsedBody);
-      setCollection((prevCollection) => {
-        if (isDuplicateRequest(prevCollection, method, url, bodyString)) {
-          return prevCollection;
-        }
-
-        const updatedCollection = addRequestToCollection(prevCollection, method, url, parsedHeaders, bodyString);
-        window.electronAPI.saveCollection(updatedCollection);
-        return updatedCollection;
-      });
     } catch (error) {
       setHttpResponse({
         status: NETWORK_ERROR,
         body: String(error),
         headers: {},
       });
+    }
+  }
+
+  async function saveRequest() {
+    const parsedHeaders = parseHeaders(headers);
+    const parsedBody = parseBody(body, parsedHeaders, messageType, protoFile);
+    const bodyString = typeof parsedBody === 'string' ? parsedBody : JSON.stringify(parsedBody);
+
+    if (selectedRequestId && findRequestById(collection, selectedRequestId)) {
+      // Update existing request
+      const updatedCollection = updateRequestInCollection(
+        collection,
+        selectedRequestId,
+        method,
+        url,
+        parsedHeaders,
+        bodyString,
+      );
+      setCollection(updatedCollection);
+      await window.electronAPI.saveCollection(updatedCollection);
+    } else {
+      // Add new request (skip if duplicate)
+      if (isDuplicateRequest(collection, method, url, bodyString)) {
+        return;
+      }
+      const updatedCollection = addRequestToCollection(collection, method, url, parsedHeaders, bodyString);
+      setCollection(updatedCollection);
+      await window.electronAPI.saveCollection(updatedCollection);
+
+      // Set the newly created request as selected
+      const defaultFolder = updatedCollection.item.find((f) => f.id === 'default');
+      const newItem = defaultFolder?.item[defaultFolder.item.length - 1];
+      if (newItem) {
+        setSelectedRequestId(newItem.id);
+      }
     }
   }
 

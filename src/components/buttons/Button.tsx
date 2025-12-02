@@ -7,12 +7,19 @@ export enum ButtonType {
   DANGER = 'danger',
 }
 
+export enum ButtonSize {
+  small = 's',
+  medium = 'm',
+}
+
 export interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
   buttonType?: ButtonType;
+  size?: 's' | 'm';
 }
 
 export default function Button({
   buttonType = ButtonType.PRIMARY,
+  size = ButtonSize.small,
   children,
   className,
   disabled,
@@ -22,8 +29,10 @@ export default function Button({
   return (
     <button
       className={cn(
-        'min-w-[110px] m-0 py-2 px-3 font-segoe-ui text-xs font-bold border rounded-md',
+        'm-0 py-2 px-3 font-segoe-ui text-xs font-bold border rounded-md',
         {
+          'min-w-[70px]': size === ButtonSize.small,
+          'min-w-[110px]': size === ButtonSize.medium,
           'bg-button-primary border-button-primary text-white': buttonType === ButtonType.PRIMARY,
           'hover:bg-button-primary-hover hover:border-button-primary-hover':
             buttonType === ButtonType.PRIMARY && !disabled,

@@ -135,6 +135,51 @@ export function addRequestToCollection(
   return { ...collection };
 }
 
+export function updateRequestInCollection(
+  collection: PostmanCollection,
+  requestId: string,
+  method: string,
+  url: string,
+  headers: Record<string, string>,
+  body: string | null,
+): PostmanCollection {
+  const updatedCollection = { ...collection, item: [...collection.item] };
+
+  for (let i = 0; i < updatedCollection.item.length; i++) {
+    const folder = updatedCollection.item[i];
+    const itemIndex = folder.item.findIndex((item) => item.id === requestId);
+
+    if (itemIndex !== -1) {
+      updatedCollection.item[i] = {
+        ...folder,
+        item: [...folder.item],
+      };
+
+      const request: PostmanRequest = {
+        method: method.toUpperCase(),
+        url,
+        header: headersToPostmanFormat(headers),
+      };
+
+      if (body && !['GET', 'HEAD'].includes(method.toUpperCase())) {
+        request.body = {
+          mode: 'raw',
+          raw: body,
+        };
+      }
+
+      updatedCollection.item[i].item[itemIndex] = {
+        ...folder.item[itemIndex],
+        name: generateRequestName(method, url),
+        request,
+      };
+      return updatedCollection;
+    }
+  }
+
+  return collection;
+}
+
 export function removeRequestFromCollection(collection: PostmanCollection, requestId: string): PostmanCollection {
   for (const folder of collection.item) {
     const index = folder.item.findIndex((item) => item.id === requestId);
