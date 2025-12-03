@@ -18,16 +18,16 @@ export default function Select({ classNames, isCreatable, ...otherProps }: Props
     control: () =>
       cn(
         'min-h-auto! bg-white! border! border-border! rounded-md! shadow-none!',
-        'dark:bg-dark-input! dark:border-dark-input!',
+        'dark:bg-dark-input! dark:border-dark-input! transition-none!',
       ),
     dropdownIndicator: () => 'w-7! p-1.5! text-text/40! dark:text-dark-text/40!',
     indicatorSeparator: () => 'hidden',
     input: () => 'm-0! p-0! text-text! dark:text-dark-text!',
-    menu: () => 'm-0! rounded-md! dark:bg-dark-input!',
+    menu: () => 'm-0! rounded-md! dark:bg-dark-input! transition-none!',
     menuList: () => 'p-0!',
     option: ({ data, isSelected }) =>
       cn(
-        'first:rounded-t-md! last:rounded-b-md!',
+        'first:rounded-t-md! last:rounded-b-md! transition-none!',
         {
           'text-white!': isSelected,
           'dark:bg-dark-input! dark:hover:bg-[#99a1b3]!': !isSelected,
@@ -38,7 +38,7 @@ export default function Select({ classNames, isCreatable, ...otherProps }: Props
     placeholder: () => 'm-0!',
     singleValue: ({ data, isDisabled }) =>
       cn(
-        'm-0!',
+        'm-0! transition-none!',
         {
           'text-text/50! dark:text-dark-text/50!': isDisabled,
           'text-text! dark:text-dark-text!': !(data as SelectOption<unknown>).className,
