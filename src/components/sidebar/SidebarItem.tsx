@@ -26,7 +26,7 @@ export default function SidebarItem({ item, isSelected, onRemove, onSelect }: Pr
         transition,
       }}
       className={cn(
-        'flex items-center gap-2 px-3 py-2 border-b border-border dark:border-dark-input hover:bg-button-secondary dark:hover:bg-dark-input',
+        'flex items-center gap-2 px-3 py-2 border-b border-border dark:border-dark-border hover:bg-button-secondary dark:hover:bg-dark-input',
         'cursor-pointer outline-none',
         {
           'bg-button-secondary dark:bg-dark-input': isSelected,

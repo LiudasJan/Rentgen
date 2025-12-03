@@ -18,7 +18,7 @@ export default function Select({ classNames, isCreatable, ...otherProps }: Props
     control: () =>
       cn(
         'min-h-auto! bg-white! border! border-border! rounded-md! shadow-none!',
-        'dark:bg-dark-input! dark:border-dark-input! transition-none!',
+        'dark:bg-dark-input! dark:border-dark-border! transition-none!',
       ),
     dropdownIndicator: () => 'w-7! p-1.5! text-text/40! dark:text-dark-text/40!',
     indicatorSeparator: () => 'hidden',

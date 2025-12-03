@@ -1,40 +1,89 @@
 import cn from 'classnames';
 import { useEffect, useState } from 'react';
+import { Environment } from '../../types';
 import { SidebarItemData } from '../../utils/collection';
+import EnvironmentSidebarPanel from './EnvironmentSidebarPanel';
 import SidebarButton from './SidebarButton';
 import SidebarPanel from './SidebarPanel';
 
 import CollectionIcon from '../../assets/icons/collection-icon.svg';
+import EnvironmentIcon from '../../assets/icons/environment-icon.svg';
 import UpgradeStarIcon from '../../assets/icons/upgrade-star-icon.svg';
+
+type SidebarTab = 'collections' | 'environments' | null;
 
 interface Props {
   items: SidebarItemData[];
   selectedId: string | null;
+  environments: Environment[];
+  selectedEnvironmentId: string | null;
   onRemove: (id: string) => void;
   onSelect: (id: string) => void;
   onReorder: (activeId: string, overId: string) => void;
+  onSelectEnvironment: (id: string | null) => void;
+  onEditEnvironment: (id: string | null) => void;
+  onAddEnvironment: () => void;
+  onReorderEnvironment: (activeId: string, overId: string) => void;
 }
 
-export default function Sidebar({ items, selectedId, onRemove, onSelect, onReorder }: Props) {
+export default function Sidebar({
+  items,
+  selectedId,
+  environments,
+  selectedEnvironmentId,
+  onRemove,
+  onSelect,
+  onReorder,
+  onSelectEnvironment,
+  onEditEnvironment,
+  onAddEnvironment,
+  onReorderEnvironment,
+}: Props) {
   const [appVersion, setAppVersion] = useState<string>('');
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [activeTab, setActiveTab] = useState<SidebarTab>(null);
+
+  const isExpanded = activeTab !== null;
 
   useEffect(() => {
     const fetchAppVersion = async () => setAppVersion(await window.electronAPI.getAppVersion());
     fetchAppVersion();
   }, []);
 
+  const handleCollectionClick = () => {
+    setActiveTab((prev) => (prev === 'collections' ? null : 'collections'));
+  };
+
+  const handleEnvironmentClick = () => {
+    setActiveTab((prev) => (prev === 'environments' ? null : 'environments'));
+  };
+
+  const handleSelectCollection = (id: string) => {
+    onSelect(id);
+    onEditEnvironment(null);
+  };
+
   return (
     <div
       className={cn(
-        'h-screen sticky top-0 flex border-r border-border dark:border-dark-input transition-[width] duration-300',
-        { 'w-20': !isExpanded, 'w-100': isExpanded },
+        'h-screen sticky top-0 flex border-r border-border dark:border-dark-border transition-[width] duration-300',
+        { 'w-22': !isExpanded, 'w-100': isExpanded },
       )}
     >
-      <div className="w-20 shrink-0 flex flex-col justify-between">
+      <div className="w-22 shrink-0 flex flex-col justify-between">
         <div>
-          <SidebarButton label="Collections" onClick={() => setIsExpanded((prevIsExpanded) => !prevIsExpanded)}>
+          <SidebarButton
+            label="Collections"
+            className={activeTab === 'collections' ? 'bg-button-secondary dark:bg-dark-input' : ''}
+            onClick={handleCollectionClick}
+          >
             <CollectionIcon className="w-5 h-5" />
+          </SidebarButton>
+          <SidebarButton
+            label="Environments"
+            className={activeTab === 'environments' ? 'bg-button-secondary dark:bg-dark-input' : ''}
+            onClick={handleEnvironmentClick}
+          >
+            <EnvironmentIcon className="w-5 h-5" />
           </SidebarButton>
         </div>
         <SidebarButton
@@ -46,14 +95,26 @@ export default function Sidebar({ items, selectedId, onRemove, onSelect, onReord
           <UpgradeStarIcon className="w-5 h-5" />
         </SidebarButton>
       </div>
-      <div className="overflow-hidden border-l border-border dark:border-dark-input">
-        <SidebarPanel
-          items={items}
-          selectedId={selectedId}
-          onRemove={onRemove}
-          onSelect={onSelect}
-          onReorder={onReorder}
-        />
+      <div className="overflow-hidden border-l border-border dark:border-dark-border">
+        {activeTab === 'collections' && (
+          <SidebarPanel
+            items={items}
+            selectedId={selectedId}
+            onRemove={onRemove}
+            onSelect={handleSelectCollection}
+            onReorder={onReorder}
+          />
+        )}
+        {activeTab === 'environments' && (
+          <EnvironmentSidebarPanel
+            environments={environments}
+            selectedEnvironmentId={selectedEnvironmentId}
+            onSelect={onSelectEnvironment}
+            onEdit={onEditEnvironment}
+            onAdd={onAddEnvironment}
+            onReorder={onReorderEnvironment}
+          />
+        )}
       </div>
     </div>
   );

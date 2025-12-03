@@ -4,6 +4,7 @@ import Store from 'electron-store';
 import { writeFileSync } from 'fs';
 import {
   registerCollectionHandlers,
+  registerEnvironmentHandlers,
   registerHttpHandlers,
   registerThemeHandlers,
   registerWssHandlers,
@@ -76,26 +77,30 @@ registerHttpHandlers();
 registerWssHandlers();
 registerThemeHandlers(store);
 registerCollectionHandlers();
+registerEnvironmentHandlers();
 
 ipcMain.handle('get-app-version', () => app.getVersion());
 ipcMain.on('open-external', (_, url: string) => shell.openExternal(url));
 
 // Save report
-ipcMain.handle('save-report', async (_, payload: { defaultPath?: string; content: string; filters?: Electron.FileFilter[] }) => {
-  const { defaultPath = 'rentgen-report.json', content, filters } = payload || {};
+ipcMain.handle(
+  'save-report',
+  async (_, payload: { defaultPath?: string; content: string; filters?: Electron.FileFilter[] }) => {
+    const { defaultPath = 'rentgen-report.json', content, filters } = payload || {};
 
-  const result = await dialog.showSaveDialog({
-    defaultPath,
-    filters: filters ?? [{ name: 'Report', extensions: ['json'] }],
-  });
+    const result = await dialog.showSaveDialog({
+      defaultPath,
+      filters: filters ?? [{ name: 'Report', extensions: ['json'] }],
+    });
 
-  if (result.canceled || !result.filePath) return { canceled: true };
+    if (result.canceled || !result.filePath) return { canceled: true };
 
-  try {
-    writeFileSync(result.filePath, content, 'utf-8');
-  } catch (error) {
-    return { canceled: false, error: String(error) };
-  }
+    try {
+      writeFileSync(result.filePath, content, 'utf-8');
+    } catch (error) {
+      return { canceled: false, error: String(error) };
+    }
 
-  return { canceled: false, filePath: result.filePath };
-});
+    return { canceled: false, filePath: result.filePath };
+  },
+);
