@@ -1,10 +1,12 @@
-import axios from 'axios';
-import { exec } from 'child_process';
 import dotenv from 'dotenv';
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow } from 'electron';
 import Store from 'electron-store';
-import WebSocket from 'ws';
-import { registerCollectionHandlers } from './collection';
+import {
+  registerCollectionHandlers,
+  registerHttpHandlers,
+  registerThemeHandlers,
+  registerWssHandlers,
+} from './handlers';
 
 dotenv.config();
 
@@ -15,8 +17,6 @@ process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 // whether you're running in development or production).
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
 declare const MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY: string;
-
-let ws: WebSocket | null = null;
 
 const store = new Store<{ theme: 'light' | 'dark' }>({
   defaults: { theme: 'light' },
@@ -49,9 +49,7 @@ const createWindow = (): void => {
   mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
 
   // Open DevTools in dev mode
-  if (process.env.MODE === 'development') {
-    mainWindow.webContents.openDevTools();
-  }
+  if (process.env.MODE === 'development') mainWindow.webContents.openDevTools();
 };
 
 // This method will be called when Electron has finished
@@ -72,130 +70,8 @@ app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow();
 });
 
-// Handle HTTP requests
-ipcMain.handle('http-request', async (_event, { url, method, headers, body }) => {
-  try {
-    const response = await axios({
-      url,
-      method,
-      headers,
-      data: body,
-      maxBodyLength: Infinity,
-      maxContentLength: Infinity,
-      responseType: 'arraybuffer',
-      validateStatus: () => true,
-    });
-
-    const contentType =
-      (response.headers && (response.headers['content-type'] || response.headers['Content-Type'])) || '';
-    const data = response.data;
-    let responseBody: string;
-
-    try {
-      if (
-        data instanceof ArrayBuffer ||
-        (data && typeof data === 'object' && typeof (data as any).byteLength === 'number')
-      ) {
-        const uint8 = new Uint8Array(data as any);
-        responseBody = new TextDecoder().decode(uint8);
-
-        if (contentType.includes('application/json')) {
-          try {
-            responseBody = JSON.stringify(JSON.parse(responseBody), null, 2);
-          } catch {
-            // Keep as plain text if JSON parsing fails
-          }
-        }
-      } else if (typeof data === 'string') {
-        responseBody = data;
-      } else {
-        responseBody = typeof data === 'object' ? JSON.stringify(data, null, 2) : String(data);
-      }
-    } catch {
-      try {
-        responseBody = String(data);
-      } catch {
-        responseBody = '[unprintable response]';
-      }
-    }
-
-    return {
-      status: `${response.status} ${response.statusText}`,
-      headers: response.headers,
-      body: responseBody,
-    };
-  } catch (error) {
-    if (error.code === 'EPIPE') {
-      return {
-        status: '413 Payload Too Large (EPIPE)',
-        headers: {},
-        body: '',
-      };
-    }
-    return { status: 'Error', headers: {}, body: String(error) };
-  }
-});
-
-// Handle WebSocket connections
-ipcMain.on('wss-connect', (event, { url, headers }) => {
-  if (ws) {
-    ws.close();
-    ws = null;
-  }
-
-  ws = new WebSocket(url, { headers });
-  ws.on('open', () => {
-    event.sender.send('wss-event', { type: 'open', data: url });
-  });
-
-  ws.on('message', (data) => {
-    event.sender.send('wss-event', { type: 'message', data: data.toString() });
-  });
-
-  ws.on('error', (error) => {
-    event.sender.send('wss-event', { type: 'error', error: String(error) });
-  });
-
-  ws.on('close', () => {
-    event.sender.send('wss-event', { type: 'close', data: url });
-  });
-});
-
-ipcMain.on('wss-disconnect', () => {
-  if (ws) {
-    ws.close();
-    ws = null;
-  }
-});
-
-ipcMain.on('wss-send', (_, message) => {
-  if (ws) ws.send(message);
-});
-
-// Handle ping requests
-ipcMain.handle('ping-host', async (_, host: string) => {
-  return new Promise<number>((resolve, reject) => {
-    const platform = process.platform;
-    const cmd = platform === 'win32' ? `ping -n 1 ${host}` : `ping -c 1 ${host}`;
-    const start = Date.now();
-
-    exec(cmd, (error) => {
-      if (error) return reject(error);
-
-      const time = Date.now() - start;
-      resolve(time);
-    });
-  });
-});
-
-// Handle theme requests
-ipcMain.handle('get-theme', async () => {
-  return store.get('theme');
-});
-
-ipcMain.on('set-theme', (_, theme: 'light' | 'dark') => {
-  store.set('theme', theme);
-});
-
-// Collection handlers
+// Register handlers
+registerHttpHandlers();
+registerWssHandlers();
+registerThemeHandlers(store);
 registerCollectionHandlers();

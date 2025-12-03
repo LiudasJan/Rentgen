@@ -1,24 +1,25 @@
 import {
-  DndContext,
   closestCenter,
+  DndContext,
+  DragEndEvent,
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
-  DragEndEvent,
 } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import SidebarItem, { SidebarItemData } from './SidebarItem';
+import { SidebarItemData } from '../../utils/collection';
+import SidebarItem from './SidebarItem';
 
-interface SidebarPanelProps {
+interface Props {
   items: SidebarItemData[];
   selectedId: string | null;
-  onRemove: (id: string) => void;
-  onSelect: (id: string) => void;
-  onReorder: (activeId: string, overId: string) => void;
+  onRemove(id: string): void;
+  onReorder(activeId: string, overId: string): void;
+  onSelect(id: string): void;
 }
 
-export default function SidebarPanel({ items, selectedId, onRemove, onSelect, onReorder }: SidebarPanelProps) {
+export default function SidebarPanel({ items, selectedId, onRemove, onReorder, onSelect }: Props) {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -39,26 +40,28 @@ export default function SidebarPanel({ items, selectedId, onRemove, onSelect, on
   };
 
   return (
-    <div className="py-4.5 min-h-[100vh] max-h-[100vh] min-w-80 flex flex-col border-l border-border dark:border-dark-input overflow-hidden">
-      <div className="flex-1 overflow-y-auto pb-6">
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={items.map((item) => item.id)} strategy={verticalListSortingStrategy}>
-            {items.map((item) => (
-              <SidebarItem
-                key={item.id}
-                item={item}
-                isSelected={item.id === selectedId}
-                onRemove={onRemove}
-                onSelect={onSelect}
-              />
-            ))}
-          </SortableContext>
-        </DndContext>
-
-        {items.length === 0 && (
-          <div className="px-3 py-4 text-xs text-text-secondary text-center whitespace-nowrap">No saved requests</div>
-        )}
-      </div>
+    <div className="max-h-screen h-full w-80 flex flex-col overflow-hidden">
+      {items.length > 0 ? (
+        <div className="h-full overflow-x-hidden overflow-y-auto">
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={items.map((item) => item.id)} strategy={verticalListSortingStrategy}>
+              {items.map((item) => (
+                <SidebarItem
+                  key={item.id}
+                  item={item}
+                  isSelected={item.id === selectedId}
+                  onRemove={onRemove}
+                  onSelect={onSelect}
+                />
+              ))}
+            </SortableContext>
+          </DndContext>
+        </div>
+      ) : (
+        <div className="flex items-center justify-center h-full w-full p-5 text-xs text-text-secondary">
+          No saved requests
+        </div>
+      )}
     </div>
   );
 }
