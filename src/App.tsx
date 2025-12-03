@@ -182,7 +182,7 @@ export default function App() {
         onReorder={onReorderSidebarItem}
         onSelect={onSelectSidebarItem}
       />
-      <div className="flex-1 flex flex-col gap-4 py-5 px-7">
+      <div className="flex-1 flex flex-col gap-4 py-5 px-7 overflow-y-auto">
         <div className="flex items-center gap-2">
           <Select
             className="font-bold"
