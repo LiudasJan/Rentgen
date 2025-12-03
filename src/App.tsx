@@ -1,7 +1,7 @@
 import { Method } from 'axios';
 import cn from 'classnames';
 import { useEffect, useMemo, useState } from 'react';
-import Button, { ButtonSize, ButtonType } from './components/buttons/Button';
+import Button, { ButtonType } from './components/buttons/Button';
 import { CopyButton } from './components/buttons/CopyButton';
 import { IconButton } from './components/buttons/IconButton';
 import { LargePayloadTestControls } from './components/controls/LargePayloadTestControls';
@@ -214,7 +214,7 @@ export default function App() {
         onSelect={handleSelectSidebarItem}
         onReorder={handleReorderSidebarItem}
       />
-      <div className="flex-1 flex flex-col gap-4 py-5 px-7 min-h-screen overflow-auto">
+      <div className="flex-1 flex flex-col gap-4 py-5 px-7">
         <div className="flex items-center gap-2">
           <Select
             className="font-bold"
@@ -321,8 +321,8 @@ export default function App() {
                 Send
               </Button>
               <Button
+                className="min-w-17.5!"
                 buttonType={ButtonType.SECONDARY}
-                size={ButtonSize.small}
                 disabled={!url || isRunningTests}
                 onClick={saveRequest}
               >
@@ -341,15 +341,6 @@ export default function App() {
               </Button>
               <Button disabled={!wssConnected} onClick={sendWss}>
                 Send
-              </Button>
-
-              <Button
-                buttonType={ButtonType.SECONDARY}
-                size={ButtonSize.small}
-                disabled={!url || isRunningTests}
-                onClick={saveRequest}
-              >
-                {showSavedFeedback ? 'Saved ✓' : 'Save'}
               </Button>
             </>
           )}

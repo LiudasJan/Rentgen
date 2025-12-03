@@ -1,24 +1,9 @@
 import { app, ipcMain } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
-import { PostmanCollection } from '../src/types/postman';
+import { createEmptyCollection } from '../src/utils/collection';
 
 const getCollectionPath = () => path.join(app.getPath('userData'), 'collection.json');
-
-const createDefaultCollection = (): PostmanCollection => ({
-  info: {
-    name: 'Rentgen Collection',
-    description: 'Saved HTTP requests from Rentgen',
-    schema: 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json',
-  },
-  item: [
-    {
-      id: 'default',
-      name: 'default',
-      item: [],
-    },
-  ],
-});
 
 export function registerCollectionHandlers(): void {
   ipcMain.handle('load-collection', async () => {
@@ -31,7 +16,7 @@ export function registerCollectionHandlers(): void {
     } catch (error) {
       console.error('Error loading collection:', error);
     }
-    return createDefaultCollection();
+    return createEmptyCollection();
   });
 
   ipcMain.handle('save-collection', async (_, collection) => {

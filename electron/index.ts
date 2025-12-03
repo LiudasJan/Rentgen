@@ -1,9 +1,12 @@
 import axios from 'axios';
 import { exec } from 'child_process';
+import dotenv from 'dotenv';
 import { app, BrowserWindow, ipcMain } from 'electron';
 import Store from 'electron-store';
 import WebSocket from 'ws';
 import { registerCollectionHandlers } from './collection';
+
+dotenv.config();
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
@@ -46,7 +49,7 @@ const createWindow = (): void => {
   mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
 
   // Open DevTools in dev mode
-  if (process.env.DEV_MODE === 'true') {
+  if (process.env.MODE === 'development') {
     mainWindow.webContents.openDevTools();
   }
 };
