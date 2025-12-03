@@ -272,7 +272,7 @@ export default function App() {
                 isCreatable={true}
                 options={methodOptions}
                 placeholder="METHOD"
-                value={methodOptions.find((option) => option.value == method)}
+                value={methodOptions.find((option) => option.value == method) || { value: method, label: method }}
                 onChange={(option: SelectOption<Method>) => setMethod(option.value)}
               />
             )}
