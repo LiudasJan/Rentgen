@@ -623,7 +623,7 @@ export default function App() {
     </div>
   );
 
-  function reset(resetTestState = true) {
+  function reset(resetTestOptions = true) {
     setMethod('GET');
     setUrl('');
     setWssConnected(false);
@@ -637,9 +637,7 @@ export default function App() {
     setQueryParameters({});
     setSelectedRequestId(null);
 
-    if (resetTestState) {
-      setTestOptions(null);
-    }
+    if (resetTestOptions) setTestOptions(null);
   }
 
   function importCurl() {
