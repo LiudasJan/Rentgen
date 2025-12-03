@@ -64,13 +64,13 @@ const modeOptions: SelectOption<Mode>[] = [
 ];
 
 const methodOptions: SelectOption<Method>[] = [
-  { value: 'GET', label: 'GET', className: 'text-method-get! dark:text-dark-method-get!' },
-  { value: 'POST', label: 'POST', className: 'text-method-post! dark:text-dark-method-post!' },
-  { value: 'PUT', label: 'PUT', className: 'text-method-put! dark:text-dark-method-put!' },
-  { value: 'PATCH', label: 'PATCH', className: 'text-method-patch! dark:text-dark-method-patch!' },
-  { value: 'DELETE', label: 'DELETE', className: 'text-method-delete! dark:text-dark-method-delete!' },
-  { value: 'HEAD', label: 'HEAD', className: 'text-method-head! dark:text-dark-method-head!' },
-  { value: 'OPTIONS', label: 'OPTIONS', className: 'text-method-options! dark:text-dark-method-options!' },
+  { value: 'GET', label: 'GET', className: 'text-method-get!' },
+  { value: 'POST', label: 'POST', className: 'text-method-post!' },
+  { value: 'PUT', label: 'PUT', className: 'text-method-put!' },
+  { value: 'PATCH', label: 'PATCH', className: 'text-method-patch!' },
+  { value: 'DELETE', label: 'DELETE', className: 'text-method-delete!' },
+  { value: 'HEAD', label: 'HEAD', className: 'text-method-head!' },
+  { value: 'OPTIONS', label: 'OPTIONS', className: 'text-method-options!' },
 ];
 
 export default function App() {
@@ -241,7 +241,7 @@ export default function App() {
                     value={curl}
                     onChange={(event) => setCurl(event.target.value)}
                   />
-                  {curlError && <p className="m-0 text-xs text-red-600">{curlError}</p>}
+                  {curlError && <p className="m-0 text-xs text-status-error">{curlError}</p>}
                   <div className="flex items-center justify-end gap-4">
                     <Button onClick={importCurl}>Import</Button>
                     <Button buttonType={ButtonType.SECONDARY} onClick={closeCurlModal}>
@@ -296,10 +296,9 @@ export default function App() {
                 classNames={{
                   control: () =>
                     cn(
-                      'min-h-auto! bg-white! border! border-border! rounded-none! rounded-l-md! transition-none! shadow-none!',
-                      'dark:bg-dark-input! dark:border-dark-input! dark:border-r-dark-body!',
+                      'min-h-auto! bg-input-bg! border! border-border! rounded-none! rounded-l-md! transition-none! shadow-none! border-r-body!',
                     ),
-                  input: () => 'm-0! p-0! [&>:first-child]:uppercase text-text! dark:text-dark-text!',
+                  input: () => 'm-0! p-0! [&>:first-child]:uppercase text-text!',
                 }}
                 isCreatable={true}
                 options={methodOptions}
@@ -378,7 +377,7 @@ export default function App() {
             <div className="flex items-center">
               <Input
                 accept=".proto"
-                className="rounded-r-none! dark:border-r-dark-body!"
+                className="rounded-r-none! border-r-body!"
                 type="file"
                 onChange={async (event) => {
                   const file = event.target.files?.[0];
@@ -417,21 +416,18 @@ export default function App() {
         {mode === 'HTTP' && httpResponse && (
           <ResponsePanel title="Response">
             <div
-              className={cn(
-                'flex items-center gap-2 p-4 font-bold bg-body dark:bg-dark-body border-t border-border dark:border-dark-body',
-                {
-                  'text-green-500': httpResponse.status.startsWith('2'),
-                  'text-blue-500': httpResponse.status.startsWith('3'),
-                  'text-orange-500': httpResponse.status.startsWith('4'),
-                  'text-red-500': httpResponse.status.startsWith('5') || httpResponse.status === NETWORK_ERROR,
-                },
-              )}
+              className={cn('flex items-center gap-2 p-4 font-bold bg-body border-t border-border dark:border-body', {
+                'text-status-success': httpResponse.status.startsWith('2'),
+                'text-status-info': httpResponse.status.startsWith('3'),
+                'text-status-warning': httpResponse.status.startsWith('4'),
+                'text-status-error': httpResponse.status.startsWith('5') || httpResponse.status === NETWORK_ERROR,
+              })}
             >
               {httpResponse.status === SENDING && <Loader className="h-5! w-5!" />}
               {httpResponse.status}
             </div>
             {httpResponse.status !== SENDING && (
-              <div className="grid grid-cols-2 items-stretch max-h-[450px] py-4 border-t border-border dark:border-dark-body overflow-y-auto">
+              <div className="grid grid-cols-2 items-stretch max-h-[450px] py-4 border-t border-border dark:border-body overflow-y-auto">
                 <div className="relative flex-1 px-4">
                   <h4 className="m-0 mb-4">Headers</h4>
                   {httpResponse.headers && (
@@ -444,7 +440,7 @@ export default function App() {
                   )}
                   <JsonViewer source={httpResponse.headers} />
                 </div>
-                <div className="relative flex-1 px-4 border-l border-border dark:border-dark-body">
+                <div className="relative flex-1 px-4 border-l border-border dark:border-body">
                   <h4 className="m-0 mb-4">Body</h4>
                   {httpResponse.body && (
                     <CopyButton
@@ -467,11 +463,11 @@ export default function App() {
 
         {messages.length > 0 && (
           <ResponsePanel title="Messages">
-            <div className="max-h-[400px] p-4 text-xs border-t border-border dark:border-dark-body overflow-y-auto">
+            <div className="max-h-[400px] p-4 text-xs border-t border-border dark:border-body overflow-y-auto">
               {messages.map(({ data, decoded, direction }, index) => (
                 <div
                   key={index}
-                  className="not-first:pt-3 not-last:pb-3 border-b last:border-none border-border dark:border-dark-body"
+                  className="not-first:pt-3 not-last:pb-3 border-b last:border-none border-border dark:border-body"
                 >
                   <div className="flex items-center gap-4">
                     {direction !== 'system' && (

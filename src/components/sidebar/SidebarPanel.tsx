@@ -39,7 +39,7 @@ export default function SidebarPanel({ items, selectedId, onRemove, onSelect, on
   };
 
   return (
-    <div className="py-4.5 min-h-[100vh] max-h-[100vh] min-w-80 flex flex-col border-l border-border dark:border-dark-input overflow-hidden">
+    <div className="py-4.5 min-h-[100vh] max-h-[100vh] min-w-80 flex flex-col border-l border-border overflow-hidden">
       <div className="flex-1 overflow-y-auto pb-6">
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={items.map((item) => item.id)} strategy={verticalListSortingStrategy}>

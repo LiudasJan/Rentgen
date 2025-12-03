@@ -34,9 +34,9 @@ export default function SidebarItem({ item, isSelected, onRemove, onSelect }: Si
       ref={setNodeRef}
       style={style}
       className={cn(
-        'flex items-center gap-2 px-3 py-2 border-b border-border dark:border-dark-input hover:bg-button-secondary dark:hover:bg-dark-input cursor-pointer',
+        'flex items-center gap-2 px-3 py-2 border-b border-border hover:bg-button-secondary dark:hover:bg-input-bg cursor-pointer',
         {
-          'bg-button-secondary dark:bg-dark-input': isSelected,
+          'bg-button-secondary dark:bg-input-bg': isSelected,
           'opacity-50 shadow-lg z-50': isDragging,
         },
       )}
@@ -46,7 +46,7 @@ export default function SidebarItem({ item, isSelected, onRemove, onSelect }: Si
     >
       <MethodBadge method={item.method} />
 
-      <span className="flex-1 text-xs text-text dark:text-dark-text truncate" title={item.url}>
+      <span className="flex-1 text-xs text-text truncate" title={item.url}>
         {item.url}
       </span>
 

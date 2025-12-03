@@ -19,27 +19,27 @@ export default function TestsTable({ columns, data, className, ...otherProps }: 
       conditionalRowStyles={[
         {
           when: (row) => row.status === TestStatus.Pass,
-          style: { backgroundColor: '#d4edda' },
+          style: { backgroundColor: 'var(--color-test-pass)' },
         },
         {
           when: (row) => row.status === TestStatus.Fail || row.status === TestStatus.FailNoResponse,
-          style: { backgroundColor: '#f8d7da' },
+          style: { backgroundColor: 'var(--color-test-fail)' },
         },
         {
           when: (row) => row.status === TestStatus.Manual,
-          style: { backgroundColor: '#e2e3e5' },
+          style: { backgroundColor: 'var(--color-test-skip)' },
         },
         {
           when: (row) => row.status === TestStatus.Warning,
-          style: { backgroundColor: '#fff3cd' },
+          style: { backgroundColor: 'var(--color-test-warn)' },
         },
         {
           when: (row) => row.status === TestStatus.Info,
-          style: { backgroundColor: '#e6f0ff' },
+          style: { backgroundColor: 'var(--color-test-info)' },
         },
         {
           when: (row) => row.status === TestStatus.Bug,
-          style: { backgroundColor: '#f3e8ff' },
+          style: { backgroundColor: 'var(--color-test-debug)' },
         },
       ]}
       customStyles={{
@@ -80,7 +80,7 @@ export function ExpandedTestComponent({
     modifiedResponse.body = extractBodyFromResponse(modifiedResponse) as any;
 
   return (
-    <div className="p-4 bg-body dark:bg-dark-body">
+    <div className="p-4 bg-body">
       {request && (
         <CopyButton className="mb-4" textToCopy={generateCurl(request)}>
           Copy cURL

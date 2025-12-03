@@ -7,25 +7,18 @@ interface Props extends Omit<ReactJsonViewProps, 'src'> {
 
 export function JsonViewer({ source, ...otherProps }: Props) {
   if (!source || typeof source === 'string')
-    return (
-      <pre className="m-0! text-[#0451a5] dark:text-[#c3612f] whitespace-pre-wrap break-all">{String(source)}</pre>
-    );
+    return <pre className="m-0! text-json-string whitespace-pre-wrap break-all">{String(source)}</pre>;
 
   return (
     <div
       className={cn(
-        '[&_.node-ellipsis]:text-xs! [&_.node-ellipsis]:text-black! [&_.node-ellipsis]:-translate-y-0.5! [&_.node-ellipsis+.brace-row]:block!',
-        'dark:[&_.node-ellipsis]:text-white!',
-        '[&_.object-key]:text-[#a31515]! [&_.object-key+span]:ml-0! [&_.object-key+span]:text-black!',
-        'dark:[&_.object-key]:text-[#9cdcfe]! dark:[&_.object-key+span]:text-white!',
-        '[&_.string-value]:text-[#0451a5]!',
-        'dark:[&_.string-value]:text-[#c3612f]!',
+        '[&_.node-ellipsis]:text-xs! [&_.node-ellipsis]:text-text! [&_.node-ellipsis]:-translate-y-0.5! [&_.node-ellipsis+.brace-row]:block!',
+        '[&_.object-key]:text-json-key! [&_.object-key+span]:ml-0! [&_.object-key+span]:text-text!',
+        '[&_.string-value]:text-json-string!',
         '[&_.variable-row]:pr-0! [&_.variable-row]:border-l-border/20! [&_.object-key-val]:pr-0! [&_.object-key-val]:border-l-border/20! [&_.variable-value]:pr-0! [&_.variable-value]:border-l-border/20!',
-        '[&_.variable-value>:first-child]:text-[#098658]! [&_.variable-value>:first-child]:bg-transparent! [&_.variable-value>:first-child]:text-[13px]! [&_.variable-value>:first-child]:font-normal!',
-        'dark:[&_.variable-value>:first-child]:text-[#81c09b]!',
-        '[&_.icon-container_svg]:text-black/40!',
-        'dark:[&_.icon-container_svg]:text-white! dark:[&_.icon-container+span+span]:text-white!',
-        'dark:[&_.brace-row>span]:text-white! dark:[&_.brace-row+span]:text-white! dark:[&_.variable-value+span]:text-white!',
+        '[&_.variable-value>:first-child]:text-json-number! [&_.variable-value>:first-child]:bg-transparent! [&_.variable-value>:first-child]:text-[13px]! [&_.variable-value>:first-child]:font-normal!',
+        '[&_.icon-container_svg]:text-text/40!',
+        '[&_.icon-container+span+span]:text-text! [&_.brace-row>span]:text-text! [&_.brace-row+span]:text-text! [&_.variable-value+span]:text-text!',
       )}
     >
       <ReactJson

@@ -10,8 +10,7 @@ export default function Input({
   return (
     <input
       className={cn(
-        'm-0 py-2 px-3 text-xs font-monospace text-text border border-border rounded-md box-border outline-none',
-        'dark:text-dark-text dark:bg-dark-input dark:border-dark-input dark:placeholder:text-text-secondary',
+        'm-0 py-2 px-3 text-xs font-monospace text-text bg-input-bg border border-border rounded-md box-border outline-none placeholder:text-text-secondary',
         { 'p-1.5!': type === 'file' },
         className,
       )}

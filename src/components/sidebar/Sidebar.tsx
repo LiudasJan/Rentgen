@@ -20,7 +20,7 @@ export default function Sidebar({ items, selectedId, onRemove, onSelect, onReord
   return (
     <div
       className={cn(
-        'h-screen sticky top-0 flex border-r border-border dark:border-dark-input bg-body dark:bg-dark-body transition-[width] duration-300 shrink-0',
+        'h-screen sticky top-0 flex border-r border-border bg-body transition-[width] duration-300 shrink-0',
         {
           'w-20': !isExpanded,
           'w-100': isExpanded,
