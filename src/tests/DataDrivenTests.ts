@@ -260,8 +260,9 @@ function determineRequestParameterTestStatus(
 export function generateDynamicTestData({ mandatory, type, value }: DynamicValue): TestData[] {
   const results: TestData[] = [];
   if (mandatory !== undefined) {
-    if (mandatory) results.push({ value: null, valid: false });
-    else results.push({ value: null, valid: true });
+    results.push({ value: null, valid: !mandatory });
+
+    if (!isNormalizationTestSkipped(type)) ['', '   '].forEach((value) => results.push({ value, valid: !mandatory }));
   }
 
   switch (type) {

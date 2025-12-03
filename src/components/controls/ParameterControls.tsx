@@ -1,6 +1,7 @@
 import cn from 'classnames';
 import { ChangeEvent } from 'react';
 import { initialNumberBounds } from '../../constants/datasets';
+import { isParameterTestSkipped } from '../../tests';
 import { DataType, DynamicValue, Interval } from '../../types';
 import { clamp, getInitialParameterValue, normalizeDecimal } from '../../utils';
 import Input from '../inputs/Input';
@@ -102,8 +103,12 @@ export function ParameterControls({ dynamicValue, onChange }: Props) {
           />
           <input
             checked={mandatory}
-            disabled={type === 'do-not-test'}
-            title="Mandatory"
+            disabled={isParameterTestSkipped(type)}
+            title={
+              !isParameterTestSkipped(type)
+                ? 'Checked = Mandatory → Rentgen generates tests based on this setting'
+                : undefined
+            }
             type="checkbox"
             onChange={(e) => onChange({ ...dynamicValue, mandatory: e.target.checked })}
           />
