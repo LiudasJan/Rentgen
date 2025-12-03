@@ -89,27 +89,6 @@ export function requestToPostmanItem(
   };
 }
 
-export function isDuplicateRequest(
-  collection: PostmanCollection,
-  method: string,
-  url: string,
-  body: string | null,
-): boolean {
-  for (const folder of collection.item) {
-    for (const item of folder.item) {
-      const req = item.request;
-      if (
-        req.method.toUpperCase() === method.toUpperCase() &&
-        req.url === url &&
-        ((req.body?.raw || null) === (body || null) || (req.body?.raw || '{}') === (body || '{}'))
-      ) {
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
 export function addRequestToCollection(
   collection: PostmanCollection,
   method: string,

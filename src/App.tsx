@@ -43,7 +43,6 @@ import {
   createEmptyCollection,
   findRequestById,
   headersRecordToString,
-  isDuplicateRequest,
   postmanHeadersToRecord,
   removeRequestFromCollection,
   reorderRequestInCollection,
@@ -783,10 +782,6 @@ export default function App() {
       setCollection(updatedCollection);
       await window.electronAPI.saveCollection(updatedCollection);
     } else {
-      // Add new request (skip if duplicate)
-      if (isDuplicateRequest(collection, method, url, bodyString)) {
-        return;
-      }
       const updatedCollection = addRequestToCollection(collection, method, url, parsedHeaders, bodyString);
       setCollection(updatedCollection);
       await window.electronAPI.saveCollection(updatedCollection);
