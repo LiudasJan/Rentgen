@@ -55,6 +55,8 @@ import ReloadIcon from './assets/icons/reload-icon.svg';
 
 type Mode = 'HTTP' | 'WSS';
 
+let savedTimeout: NodeJS.Timeout;
+
 const SENDING = 'Sending...';
 const NETWORK_ERROR = 'Network Error';
 
@@ -99,7 +101,7 @@ export default function App() {
   const [queryParameters, setQueryParameters] = useState<RequestParameters>({});
   const [testOptions, setTestOptions] = useState<TestOptions | null>(null);
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
-  const [showSavedFeedback, setShowSavedFeedback] = useState(false);
+  const [saved, setSaved] = useState(false);
   const {
     crudTests,
     currentTest,
@@ -116,19 +118,15 @@ export default function App() {
     executeLoadTest,
     executeLargePayloadTest,
   } = useTests(testOptions);
+  const statusCode = useMemo(() => extractStatusCode(httpResponse), [httpResponse]);
+  const sidebarItems = useMemo(() => collectionToSidebarItems(collection), [collection]);
 
   const isRunningTests = isSecurityRunning || isPerformanceRunning || isDataDrivenRunning;
-  const statusCode = extractStatusCode(httpResponse);
   const disabledRunTests =
     isRunningTests || !httpResponse || statusCode < RESPONSE_STATUS.OK || statusCode >= RESPONSE_STATUS.BAD_REQUEST;
 
-  const sidebarItems = useMemo(() => collectionToSidebarItems(collection), [collection]);
-
   useEffect(() => {
-    const loadCollection = async () => {
-      const loadedCollection = await window.electronAPI.loadCollection();
-      setCollection(loadedCollection);
-    };
+    const loadCollection = async () => setCollection(await window.electronAPI.loadCollection());
 
     loadCollection();
   }, []);
@@ -175,46 +173,16 @@ export default function App() {
     if (testOptions) executeAllTests();
   }, [testOptions]);
 
-  const handleRemoveSidebarItem = async (id: string) => {
-    const updatedCollection = removeRequestFromCollection(collection, id);
-    setCollection(updatedCollection);
-    await window.electronAPI.saveCollection(updatedCollection);
-  };
-
-  const handleSelectSidebarItem = (id: string) => {
-    const item = findRequestById(collection, id);
-    if (!item) {
-      return;
-    }
-
-    reset(false);
-    setSelectedRequestId(id);
-
-    const { request } = item;
-    const isWssUrl = request.url.startsWith('ws://') || request.url.startsWith('wss://');
-    setMode(isWssUrl ? 'WSS' : 'HTTP');
-    setMethod(request.method as Method);
-    setUrl(request.url);
-    setHeaders(headersRecordToString(postmanHeadersToRecord(request.header)));
-    setBody(request.body?.raw || '{}');
-  };
-
-  const handleReorderSidebarItem = async (activeId: string, overId: string) => {
-    const updatedCollection = reorderRequestInCollection(collection, activeId, overId);
-    setCollection(updatedCollection);
-    await window.electronAPI.saveCollection(updatedCollection);
-  };
-
   return (
     <div className="flex">
       <Sidebar
         items={sidebarItems}
         selectedId={selectedRequestId}
-        onRemove={handleRemoveSidebarItem}
-        onSelect={handleSelectSidebarItem}
-        onReorder={handleReorderSidebarItem}
+        onRemove={onRemoveSidebarItem}
+        onReorder={onReorderSidebarItem}
+        onSelect={onSelectSidebarItem}
       />
-      <div className="flex-1 flex flex-col gap-4 py-5 px-7">
+      <div className="flex-1 min-w-0 flex flex-col gap-4 py-5 px-7 overflow-y-auto">
         <div className="flex items-center gap-2">
           <Select
             className="font-bold"
@@ -274,7 +242,7 @@ export default function App() {
             <Modal className="[&>div]:w-[400px]!" isOpen={openReloadModal} onClose={closeReloadModal}>
               <div className="flex flex-col gap-4">
                 <h4 className="m-0">Reload</h4>
-                <p className="m-0 text-sm dark:text-text-secondary">All current data will be lost</p>
+                <p className="m-0 text-sm dark:text-text-secondary">Only current tests results will be lost</p>
                 <div className="flex items-center justify-end gap-4">
                   <Button buttonType={ButtonType.DANGER} onClick={() => window.location.reload()}>
                     Reload
@@ -304,7 +272,7 @@ export default function App() {
                 isCreatable={true}
                 options={methodOptions}
                 placeholder="METHOD"
-                value={methodOptions.find((option) => option.value == method)}
+                value={methodOptions.find((option) => option.value == method) || { value: method, label: method }}
                 onChange={(option: SelectOption<Method>) => setMethod(option.value)}
               />
             )}
@@ -320,13 +288,8 @@ export default function App() {
               <Button disabled={!url || isRunningTests} onClick={sendHttp}>
                 Send
               </Button>
-              <Button
-                className="min-w-17.5!"
-                buttonType={ButtonType.SECONDARY}
-                disabled={!url || isRunningTests}
-                onClick={saveRequest}
-              >
-                {showSavedFeedback ? 'Saved ✓' : 'Save'}
+              <Button buttonType={ButtonType.SECONDARY} disabled={!url || isRunningTests} onClick={saveRequest}>
+                {saved ? 'Saved ✅' : 'Save'}
               </Button>
             </>
           )}
@@ -660,7 +623,7 @@ export default function App() {
     </div>
   );
 
-  function reset(resetTestState = true) {
+  function reset(resetTestOptions = true) {
     setMethod('GET');
     setUrl('');
     setWssConnected(false);
@@ -674,9 +637,7 @@ export default function App() {
     setQueryParameters({});
     setSelectedRequestId(null);
 
-    if (resetTestState) {
-      setTestOptions(null);
-    }
+    if (resetTestOptions) setTestOptions(null);
   }
 
   function importCurl() {
@@ -780,13 +741,12 @@ export default function App() {
       // Set the newly created request as selected
       const defaultFolder = updatedCollection.item.find((f) => f.id === 'default');
       const newItem = defaultFolder?.item[defaultFolder.item.length - 1];
-      if (newItem) {
-        setSelectedRequestId(newItem.id);
-      }
+      if (newItem) setSelectedRequestId(newItem.id);
     }
 
-    setShowSavedFeedback(true);
-    setTimeout(() => setShowSavedFeedback(false), 1000);
+    setSaved(true);
+    clearTimeout(savedTimeout);
+    savedTimeout = setTimeout(() => setSaved(false), 2000);
   }
 
   function connectWss() {
@@ -804,5 +764,35 @@ export default function App() {
   function sendWss() {
     setMessages((prevMessages) => [{ direction: 'sent', data: body }, ...prevMessages]);
     window.electronAPI.sendWss(body);
+  }
+
+  async function onRemoveSidebarItem(id: string) {
+    const updatedCollection = removeRequestFromCollection(collection, id);
+    setCollection(updatedCollection);
+    await window.electronAPI.saveCollection(updatedCollection);
+  }
+
+  async function onReorderSidebarItem(activeId: string, overId: string) {
+    const updatedCollection = reorderRequestInCollection(collection, activeId, overId);
+    setCollection(updatedCollection);
+    await window.electronAPI.saveCollection(updatedCollection);
+  }
+
+  function onSelectSidebarItem(id: string) {
+    const item = findRequestById(collection, id);
+    if (!item) {
+      return;
+    }
+
+    reset(false);
+    setSelectedRequestId(id);
+
+    const { request } = item;
+    const isWssUrl = request.url.startsWith('ws://') || request.url.startsWith('wss://');
+    setMode(isWssUrl ? 'WSS' : 'HTTP');
+    setMethod(request.method as Method);
+    setUrl(request.url);
+    setHeaders(headersRecordToString(postmanHeadersToRecord(request.header)));
+    setBody(request.body?.raw || '{}');
   }
 }

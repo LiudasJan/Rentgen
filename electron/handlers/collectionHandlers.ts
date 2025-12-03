@@ -1,7 +1,7 @@
 import { app, ipcMain } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
-import { createEmptyCollection } from '../src/utils/collection';
+import { createEmptyCollection } from '../../src/utils/collection';
 
 const getCollectionPath = () => path.join(app.getPath('userData'), 'collection.json');
 

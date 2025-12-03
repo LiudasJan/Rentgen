@@ -10,18 +10,13 @@ const methodColorMap: Record<string, string> = {
   OPTIONS: 'text-method-options dark:text-dark-method-options bg-method-options/10',
 };
 
-interface MethodBadgeProps {
+interface Props {
   method: string;
 }
 
-export default function MethodBadge({ method }: MethodBadgeProps) {
+export default function MethodBadge({ method }: Props) {
   return (
-    <span
-      className={cn(
-        'px-1.5 py-0.5 text-xs font-bold rounded shrink-0',
-        methodColorMap[method.toUpperCase()] || 'text-text dark:text-dark-text',
-      )}
-    >
+    <span className={cn('px-1.5 py-0.5 text-xs font-bold rounded ', methodColorMap[method.toUpperCase()])}>
       {method}
     </span>
   );

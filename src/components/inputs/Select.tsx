@@ -30,7 +30,7 @@ export default function Select({ classNames, isCreatable, ...otherProps }: Props
         'first:rounded-t-md! last:rounded-b-md! transition-none!',
         {
           'text-white!': isSelected,
-          'dark:bg-dark-input! dark:hover:bg-[#99a1b3]!': !isSelected,
+          'dark:bg-dark-input! dark:hover:bg-dark-button-secondary!': !isSelected,
           'text-text! dark:text-dark-text!': !(data as SelectOption<unknown>).className,
         },
         !isSelected ? (data as SelectOption<unknown>).className : undefined,
@@ -38,7 +38,7 @@ export default function Select({ classNames, isCreatable, ...otherProps }: Props
     placeholder: () => 'm-0!',
     singleValue: ({ data, isDisabled }) =>
       cn(
-        'm-0! transition-none!',
+        'm-0!',
         {
           'text-text/50! dark:text-dark-text/50!': isDisabled,
           'text-text! dark:text-dark-text!': !(data as SelectOption<unknown>).className,

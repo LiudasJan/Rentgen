@@ -13,7 +13,7 @@ export default function ParametersPanel({ title, parameters, onChange, ...otherP
       {Object.entries(parameters).map(([key, value]) => (
         <div key={key} className="pb-4 first-of-type:pt-4 px-4 flex items-end justify-between gap-4">
           <span className="flex-1 mb-2 font-monospace">{key}</span>
-          <ParameterControls value={value} onChange={(value) => onChange({ ...parameters, [key]: value })} />
+          <ParameterControls dynamicValue={value} onChange={(value) => onChange({ ...parameters, [key]: value })} />
         </div>
       ))}
     </ResponsePanel>

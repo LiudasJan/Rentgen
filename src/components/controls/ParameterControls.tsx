@@ -1,6 +1,7 @@
 import cn from 'classnames';
 import { ChangeEvent } from 'react';
 import { initialNumberBounds } from '../../constants/datasets';
+import { isParameterTestSkipped } from '../../tests';
 import { DataType, DynamicValue, Interval } from '../../types';
 import { clamp, getInitialParameterValue, normalizeDecimal } from '../../utils';
 import Input from '../inputs/Input';
@@ -29,12 +30,12 @@ const parameterOptions: SelectOption<DataType>[] = [
 ];
 
 interface Props {
-  value: DynamicValue;
+  dynamicValue: DynamicValue;
   onChange: (value: DynamicValue) => void;
 }
 
-export function ParameterControls({ value, onChange }: Props) {
-  const { type, value: dynamicValue } = value;
+export function ParameterControls({ dynamicValue, onChange }: Props) {
+  const { mandatory, type, value } = dynamicValue;
 
   return (
     <div>
@@ -43,8 +44,8 @@ export function ParameterControls({ value, onChange }: Props) {
         {type === 'enum' && (
           <Input
             className="min-w-[232px] p-[5px]! rounded-none! dark:border-border/20!"
-            value={dynamicValue as string}
-            onChange={(event) => onChange({ type, value: event.target.value })}
+            value={value as string}
+            onChange={(event) => onChange({ ...dynamicValue, value: event.target.value })}
           />
         )}
         {type === 'number' && (
@@ -54,11 +55,11 @@ export function ParameterControls({ value, onChange }: Props) {
               placeholder="Min"
               step={0.01}
               type="number"
-              value={normalizeDecimal((dynamicValue as Interval).min) ?? ''}
+              value={normalizeDecimal((value as Interval).min) ?? ''}
               onBlur={(event) => {
                 if (event.target.value) return;
 
-                onChange({ type, value: { ...(dynamicValue as Interval), min: initialNumberBounds.min } });
+                onChange({ ...dynamicValue, value: { ...(value as Interval), min: initialNumberBounds.min } });
               }}
               onChange={(event) => onMinChange(event.target.value)}
             />
@@ -67,11 +68,11 @@ export function ParameterControls({ value, onChange }: Props) {
               placeholder="Max"
               step={0.01}
               type="number"
-              value={normalizeDecimal((dynamicValue as Interval).max) ?? ''}
+              value={normalizeDecimal((value as Interval).max) ?? ''}
               onBlur={(event) => {
                 if (event.target.value) return;
 
-                onChange({ type, value: { ...(dynamicValue as Interval), max: initialNumberBounds.max } });
+                onChange({ ...dynamicValue, value: { ...(value as Interval), max: initialNumberBounds.max } });
               }}
               onChange={(event) => onMaxChange(event.target.value)}
             />
@@ -82,8 +83,8 @@ export function ParameterControls({ value, onChange }: Props) {
             className="min-w-[232px] p-[5px]! rounded-none! dark:border-border/20!"
             step={1}
             type="number"
-            value={dynamicValue as number}
-            onChange={(event) => onChange({ type, value: clamp(Number(event.target.value), 1, 1000000) })}
+            value={value as number}
+            onChange={(event) => onChange({ ...dynamicValue, value: clamp(Number(event.target.value), 1, 1000000) })}
           />
         )}
         <div className="flex items-center justify-end gap-2">
@@ -95,10 +96,21 @@ export function ParameterControls({ value, onChange }: Props) {
           />
           <ClearCrossIcon
             className={cn(
-              'h-[18px] w-[18px] p-0.5 text-button-text-secondary hover:text-button-text-secondary-hover',
+              'h-4.5 w-4.5 text-button-text-secondary hover:text-button-text-secondary-hover',
               'dark:text-text-secondary dark:hover:text-dark-text cursor-pointer',
             )}
             onClick={() => onChange({ type: 'do-not-test' })}
+          />
+          <input
+            checked={mandatory}
+            disabled={isParameterTestSkipped(type)}
+            title={
+              !isParameterTestSkipped(type)
+                ? 'Checked = Mandatory → Rentgen generates tests based on this setting'
+                : undefined
+            }
+            type="checkbox"
+            onChange={(e) => onChange({ ...dynamicValue, mandatory: e.target.checked })}
           />
         </div>
       </div>
@@ -126,27 +138,27 @@ export function ParameterControls({ value, onChange }: Props) {
 
   function onMinChange(value: string) {
     if (!value) {
-      onChange({ type, value: { ...(dynamicValue as Interval), min: null } });
+      onChange({ ...dynamicValue, value: { ...(dynamicValue.value as Interval), min: null } });
       return;
     }
 
     let min = clamp(Number(value), -MAX_INT32, MAX_INT32);
     if (TRAILING_ZEROS_PATTERN.test(value)) min += 0.001; // to preserve trailing zeros in decimals
 
-    const max = Math.max(min, (dynamicValue as Interval).max);
+    const max = Math.max(min, (dynamicValue.value as Interval).max);
     onChange({ type, value: { min, max } });
   }
 
   function onMaxChange(value: string) {
     if (!value) {
-      onChange({ type, value: { ...(dynamicValue as Interval), max: null } });
+      onChange({ ...dynamicValue, value: { ...(dynamicValue.value as Interval), max: null } });
       return;
     }
 
     let max = clamp(Number(value), -MAX_INT32, MAX_INT32);
     if (TRAILING_ZEROS_PATTERN.test(value)) max += 0.001; // to preserve trailing zeros in decimals
 
-    const min = Math.min(max, (dynamicValue as Interval).min);
+    const min = Math.min(max, (dynamicValue.value as Interval).min);
     onChange({ type, value: { min, max } });
   }
 

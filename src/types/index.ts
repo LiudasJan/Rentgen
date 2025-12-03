@@ -19,6 +19,7 @@ export type DataType =
 export type ParameterType = 'body' | 'query';
 
 export interface DynamicValue {
+  mandatory?: boolean;
   type: DataType;
   value?: number | string | Interval;
 }
