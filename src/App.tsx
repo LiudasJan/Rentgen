@@ -231,7 +231,7 @@ export default function App() {
               classNames={{
                 control: () =>
                   cn(
-                    'min-h-auto! bg-white! border! border-border! rounded-none! rounded-l-md! shadow-none!',
+                    'min-h-auto! bg-white! border! border-border! rounded-none! rounded-l-md! transition-none! shadow-none!',
                     'dark:bg-dark-input! dark:border-dark-input! dark:border-r-dark-body!',
                   ),
                 input: () => 'm-0! p-0! [&>:first-child]:uppercase text-text! dark:text-dark-text!',
