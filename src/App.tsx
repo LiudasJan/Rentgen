@@ -6,6 +6,7 @@ import { CopyButton } from './components/buttons/CopyButton';
 import { IconButton } from './components/buttons/IconButton';
 import { LargePayloadTestControls } from './components/controls/LargePayloadTestControls';
 import { LoadTestControls } from './components/controls/LoadTestControls';
+import FileInput from './components/inputs/FileInput';
 import Input from './components/inputs/Input';
 import Select, { SelectOption } from './components/inputs/Select';
 import Textarea from './components/inputs/Textarea';
@@ -347,16 +348,14 @@ export default function App() {
             <div className="mb-3 text-xs text-text-secondary">
               Experimental and optional section. If used, both fields must be completed
             </div>
-            <div className="flex items-center">
-              <Input
+            <div className="flex items-center gap-2">
+              <FileInput
                 accept=".proto"
-                className="rounded-r-none! dark:border-r-dark-body!"
-                type="file"
                 onChange={async (event) => {
                   const file = event.target.files?.[0];
                   if (!file) return;
 
-                  const fileExtension = file.name.split('.').pop().toLowerCase();
+                  const fileExtension = file.name.split('.').pop()?.toLowerCase();
                   if (fileExtension !== 'proto') return;
 
                   try {
@@ -377,7 +376,7 @@ export default function App() {
               />
 
               <Input
-                className="flex-auto border-l-0! rounded-l-none!"
+                className="flex-auto"
                 placeholder="Message type (e.g. mypackage.MyMessage)"
                 value={messageType}
                 onChange={(event) => setMessageType(event.target.value)}
@@ -563,21 +562,21 @@ export default function App() {
                   {
                     name: 'Result',
                     selector: (row) => row.status,
-                  width: '150px',
-                  cell: (row) => {
-                    if (row.name === LARGE_PAYLOAD_TEST_NAME)
-                      return (
-                        <LargePayloadTestControls
-                          isRunning={isLargePayloadTestRunning}
-                          executeTest={(size: number) =>
-                            executeLargePayloadTest({ ...testOptions, bodyParameters, queryParameters }, size)
-                          }
-                        />
-                      );
-                    return row.status;
+                    width: '150px',
+                    cell: (row) => {
+                      if (row.name === LARGE_PAYLOAD_TEST_NAME)
+                        return (
+                          <LargePayloadTestControls
+                            isRunning={isLargePayloadTestRunning}
+                            executeTest={(size: number) =>
+                              executeLargePayloadTest({ ...testOptions, bodyParameters, queryParameters }, size)
+                            }
+                          />
+                        );
+                      return row.status;
+                    },
                   },
-                },
-              ]}
+                ]}
                 expandableRows
                 expandableRowsComponent={ExpandedTestComponent}
                 expandableRowsComponentProps={{ headers: parseHeaders(headers), protoFile, messageType }}
