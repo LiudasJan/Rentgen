@@ -4,7 +4,9 @@ interface ElectronApi {
   connectWss: (payload: any) => void;
   disconnectWss: () => void;
   loadCollection: () => Promise<any>;
+  getAppVersion: () => Promise<string>;
   onWssEvent: (callback: (data: any) => void) => Electron.IpcRenderer;
+  openExternal: (url: string) => void;
   pingHost: (host: string) => Promise<any>;
   saveCollection: (collection: any) => Promise<{ success: boolean; error?: string }>;
   sendHttp: (payload: any) => Promise<any>;
@@ -20,7 +22,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   connectWss: (payload: any): void => ipcRenderer.send('wss-connect', payload),
   disconnectWss: (): void => ipcRenderer.send('wss-disconnect'),
   loadCollection: (): Promise<any> => ipcRenderer.invoke('load-collection'),
+  getAppVersion: (): Promise<string> => ipcRenderer.invoke('get-app-version'),
   onWssEvent: (callback): Electron.IpcRenderer => ipcRenderer.on('wss-event', (_, data) => callback(data)),
+  openExternal: (url: string) => ipcRenderer.send('open-external', url),
   pingHost: (host: string): Promise<any> => ipcRenderer.invoke('ping-host', host),
   saveCollection: (collection: any): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke('save-collection', collection),

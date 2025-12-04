@@ -464,7 +464,7 @@ export default function App() {
         )}
 
         {(Object.keys(bodyParameters).length > 0 || Object.keys(queryParameters).length > 0) && (
-          <div className="grid md:grid-cols-2 gap-4 items-stretch">
+          <div className="grid lg:grid-cols-2 gap-4 items-stretch">
             {Object.keys(bodyParameters).length > 0 && (
               <ParametersPanel
                 title="Body Parameters"
