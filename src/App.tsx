@@ -21,7 +21,7 @@ import TestsTable, { ExpandedTestComponent, getTestsTableColumns } from './compo
 import { RESPONSE_STATUS } from './constants/responseStatus';
 import useTests from './hooks/useTests';
 import { LARGE_PAYLOAD_TEST_NAME, LOAD_TEST_NAME } from './tests';
-import { HttpResponse, RequestParameters, TestOptions } from './types';
+import { HttpResponse, RequestParameters, TestOptions, TestResult } from './types';
 import { PostmanCollection } from './types/postman';
 import {
   createHttpRequest,
@@ -65,6 +65,12 @@ const modeOptions: SelectOption<Mode>[] = [
   { value: 'WSS', label: 'WSS' },
 ];
 
+const exportFormatOptions: SelectOption<'json' | 'md' | 'csv'>[] = [
+  { value: 'json', label: 'JSON (.json)' },
+  { value: 'md', label: 'Markdown (.md)' },
+  { value: 'csv', label: 'CSV (.csv)' },
+];
+
 const methodOptions: SelectOption<Method>[] = [
   { value: 'GET', label: 'GET', className: 'text-method-get! dark:text-dark-method-get!' },
   { value: 'POST', label: 'POST', className: 'text-method-post! dark:text-dark-method-post!' },
@@ -102,6 +108,9 @@ export default function App() {
   const [testOptions, setTestOptions] = useState<TestOptions | null>(null);
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [runTimestamp, setRunTimestamp] = useState<string | null>(null);
+  const [exportNotice, setExportNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [exportFormat, setExportFormat] = useState<'json' | 'md' | 'csv'>('json');
   const {
     crudTests,
     currentTest,
@@ -497,7 +506,9 @@ export default function App() {
           <div>
             <Button
               disabled={disabledRunTests}
-              onClick={() =>
+              onClick={() => {
+                setExportNotice(null);
+                setRunTimestamp(new Date().toISOString());
                 setTestOptions({
                   body,
                   bodyParameters,
@@ -507,8 +518,8 @@ export default function App() {
                   protoFile,
                   queryParameters,
                   url,
-                })
-              }
+                });
+              }}
             >
               {isRunningTests && testsCount
                 ? `Running tests... (${currentTest}/${testsCount})`
@@ -519,6 +530,32 @@ export default function App() {
 
         {testOptions && (
           <>
+            <div className="flex items-center justify-end gap-3">
+              {exportNotice && (
+                <span
+                  className={cn(
+                    'text-xs',
+                    exportNotice.type === 'success'
+                      ? 'text-green-700 dark:text-green-400'
+                      : 'text-red-700 dark:text-red-400',
+                  )}
+                >
+                  {exportNotice.message}
+                </span>
+              )}
+              <div className="min-w-[180px]">
+                <Select
+                  isSearchable={false}
+                  options={exportFormatOptions}
+                  placeholder="Format"
+                  value={exportFormatOptions.find((opt) => opt.value === exportFormat)}
+                  onChange={(option: SelectOption<'json' | 'md' | 'csv'>) => setExportFormat(option.value)}
+                />
+              </div>
+              <Button buttonType={ButtonType.SECONDARY} disabled={isRunningTests} onClick={exportReport}>
+                Export report
+              </Button>
+            </div>
             <ResponsePanel title="Security Tests">
               <TestsTable
                 columns={[
@@ -526,22 +563,21 @@ export default function App() {
                   {
                     name: 'Result',
                     selector: (row) => row.status,
-                    width: '150px',
-                    cell: (row) => {
-                      if (row.name === LARGE_PAYLOAD_TEST_NAME)
-                        return (
-                          <LargePayloadTestControls
-                            isRunning={isLargePayloadTestRunning}
-                            executeTest={(size: number) =>
-                              executeLargePayloadTest({ ...testOptions, bodyParameters, queryParameters }, size)
-                            }
-                          />
-                        );
-
-                      return row.status;
-                    },
+                  width: '150px',
+                  cell: (row) => {
+                    if (row.name === LARGE_PAYLOAD_TEST_NAME)
+                      return (
+                        <LargePayloadTestControls
+                          isRunning={isLargePayloadTestRunning}
+                          executeTest={(size: number) =>
+                            executeLargePayloadTest({ ...testOptions, bodyParameters, queryParameters }, size)
+                          }
+                        />
+                      );
+                    return row.status;
                   },
-                ]}
+                },
+              ]}
                 expandableRows
                 expandableRowsComponent={ExpandedTestComponent}
                 expandableRowsComponentProps={{ headers: parseHeaders(headers), protoFile, messageType }}
@@ -636,6 +672,8 @@ export default function App() {
     setBodyParameters({});
     setQueryParameters({});
     setSelectedRequestId(null);
+    setRunTimestamp(null);
+    setExportNotice(null);
 
     if (resetTestOptions) setTestOptions(null);
   }
@@ -676,6 +714,69 @@ export default function App() {
 
   function closeReloadModal() {
     setOpenReloadModal(false);
+  }
+
+  async function exportReport() {
+    if (!testOptions) return;
+
+    try {
+      const report = buildReport();
+      const { content, defaultPath, filters } = formatReport(report, exportFormat);
+      const result = await window.electronAPI.saveReport({ defaultPath, content, filters });
+
+      if (result?.error) {
+        console.error('Failed to write report', result.error);
+        setExportNotice({ type: 'error', message: 'Failed to write report. Please check permissions.' });
+        return;
+      }
+
+      if (result?.canceled) {
+        setExportNotice(null);
+        return;
+      }
+
+      setExportNotice({ type: 'success', message: `Saved report to ${result.filePath ?? 'selected path'}` });
+    } catch (error) {
+      console.error('Failed to export report', error);
+      setExportNotice({ type: 'error', message: 'Failed to export report. See console for details.' });
+    }
+  }
+
+  function buildReport(): ExportReport {
+    if (!testOptions) throw new Error('No test options to export');
+
+    const suites = [
+      buildSuite('Security Tests', securityTests),
+      buildSuite('Performance Insights', performanceTests),
+      buildSuite('Data-Driven Tests', dataDrivenTests),
+      buildSuite('CRUD', crudTests),
+    ];
+
+    return {
+      generatedAt: runTimestamp ?? new Date().toISOString(),
+      target: {
+        url: testOptions.url,
+        method: testOptions.method,
+        headers: parseHeaders(testOptions.headers),
+        body: safeParseBody(testOptions.body),
+        messageType: testOptions.messageType,
+        protoFileName: testOptions.protoFile?.name ?? null,
+      },
+      lastHttpResponse: httpResponse,
+      suites,
+    };
+  }
+
+  function safeParseBody(rawBody: string | null) {
+    if (rawBody === null) return null;
+    const trimmed = rawBody.trim();
+    if (!trimmed) return '';
+
+    try {
+      return JSON.parse(trimmed);
+    } catch {
+      return rawBody;
+    }
   }
 
   async function sendHttp() {
@@ -795,4 +896,153 @@ export default function App() {
     setHeaders(headersRecordToString(postmanHeadersToRecord(request.header)));
     setBody(request.body?.raw || '{}');
   }
+}
+
+type ReportSuiteTest = {
+  name?: string;
+  status: TestResult['status'];
+  expected: string;
+  actual: string;
+  responseTime?: number;
+  request?: TestResult['request'];
+  response?: TestResult['response'];
+  value?: any;
+};
+
+type ReportSuite = {
+  name: string;
+  summary: { total: number; byStatus: Record<string, number> };
+  tests: ReportSuiteTest[];
+};
+
+type ExportReport = {
+  generatedAt: string;
+  target: {
+    url: string;
+    method: Method | string;
+    headers: Record<string, string>;
+    body: any;
+    messageType: string;
+    protoFileName: string | null;
+  };
+  lastHttpResponse: HttpResponse | null;
+  suites: ReportSuite[];
+};
+
+function buildSuite(name: string, tests: TestResult[]): ReportSuite {
+  return {
+    name,
+    summary: summarizeSuite(tests),
+    tests: tests.map((test) => ({
+      name: test.name,
+      status: test.status,
+      expected: test.expected,
+      actual: test.actual,
+      responseTime: test.responseTime,
+      request: test.request,
+      response: test.response,
+      value: test.value,
+    })),
+  };
+}
+
+function summarizeSuite(tests: TestResult[]) {
+  return tests.reduce(
+    (acc, test) => {
+      acc.total += 1;
+      acc.byStatus[test.status] = (acc.byStatus[test.status] ?? 0) + 1;
+      return acc;
+    },
+    { total: 0, byStatus: {} as Record<string, number> },
+  );
+}
+
+function formatReport(
+  report: ExportReport,
+  format: 'json' | 'md' | 'csv',
+): { content: string; defaultPath: string; filters: { name: string; extensions: string[] }[] } {
+  if (format === 'md') {
+    return {
+      content: toMarkdown(report),
+      defaultPath: 'rentgen-report.md',
+      filters: [{ name: 'Markdown', extensions: ['md'] }],
+    };
+  }
+
+  if (format === 'csv') {
+    return {
+      content: toCsv(report),
+      defaultPath: 'rentgen-report.csv',
+      filters: [{ name: 'CSV', extensions: ['csv'] }],
+    };
+  }
+
+  return {
+    content: JSON.stringify(report, null, 2),
+    defaultPath: 'rentgen-report.json',
+    filters: [{ name: 'JSON', extensions: ['json'] }],
+  };
+}
+
+function toMarkdown(report: ExportReport) {
+  const lines: string[] = [];
+  lines.push(`# Rentgen Report`);
+  lines.push(`Generated: ${report.generatedAt}`);
+  lines.push('');
+  lines.push(`## Target`);
+  lines.push(`- URL: ${report.target.url}`);
+  lines.push(`- Method: ${report.target.method}`);
+  lines.push(`- Proto file: ${report.target.protoFileName ?? 'n/a'}`);
+  lines.push('');
+
+  for (const suite of report.suites) {
+    lines.push(`### ${suite.name}`);
+    lines.push(`- Total: ${suite.summary.total}`);
+    lines.push(
+      `- Statuses: ${Object.entries(suite.summary.byStatus)
+        .map(([status, count]) => `${status} (${count})`)
+        .join(', ')}`,
+    );
+    lines.push('');
+    lines.push(`| Check | Expected | Actual | Status |`);
+    lines.push(`| --- | --- | --- | --- |`);
+    for (const test of suite.tests) {
+      lines.push(
+        `| ${escapeMd(test.name ?? '')} | ${escapeMd(test.expected ?? '')} | ${escapeMd(test.actual ?? '')} | ${escapeMd(test.status)} |`,
+      );
+    }
+    lines.push('');
+  }
+
+  return lines.join('\n');
+}
+
+function toCsv(report: ExportReport) {
+  const rows: string[][] = [['suite', 'check', 'status', 'expected', 'actual', 'responseTimeMs']];
+
+  report.suites.forEach((suite) => {
+    suite.tests.forEach((test) => {
+      rows.push([
+        suite.name,
+        test.name ?? '',
+        test.status,
+        test.expected ?? '',
+        test.actual ?? '',
+        test.responseTime !== undefined ? String(test.responseTime) : '',
+      ]);
+    });
+  });
+
+  return rows.map((row) => row.map(csvEscape).join(',')).join('\n');
+}
+
+function csvEscape(value: string) {
+  if (value.includes('"') || value.includes(',') || value.includes('\n')) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+  return value;
+}
+
+function escapeMd(value: string) {
+  return value.replace(/\|/g, '\\|').replace(/\n/g, ' ');
 }

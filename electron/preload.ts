@@ -9,6 +9,11 @@ interface ElectronApi {
   openExternal: (url: string) => void;
   pingHost: (host: string) => Promise<any>;
   saveCollection: (collection: any) => Promise<{ success: boolean; error?: string }>;
+  saveReport: (payload: {
+    defaultPath?: string;
+    content: string;
+    filters?: Electron.FileFilter[];
+  }) => Promise<{ canceled: boolean; filePath?: string; error?: string }>;
   sendHttp: (payload: any) => Promise<any>;
   sendWss: (message: string) => void;
 }
@@ -28,6 +33,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   pingHost: (host: string): Promise<any> => ipcRenderer.invoke('ping-host', host),
   saveCollection: (collection: any): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke('save-collection', collection),
+  saveReport: (payload: { defaultPath?: string; content: string; filters?: Electron.FileFilter[] }) =>
+    ipcRenderer.invoke('save-report', payload),
   sendHttp: (payload: any): Promise<any> => ipcRenderer.invoke('http-request', payload),
   sendWss: (message: string): void => ipcRenderer.send('wss-send', message),
 } as ElectronApi);
