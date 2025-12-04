@@ -38,20 +38,20 @@ export function ParameterControls({ dynamicValue, onChange }: Props) {
   const { mandatory, type, value } = dynamicValue;
 
   return (
-    <div>
+    <div className="w-full max-w-[440px]">
       {renderLabel()}
-      <div className="flex items-center justify-end flex-wrap gap-2">
+      <div className="grid grid-cols-2 gap-2">
         {type === 'enum' && (
           <Input
-            className="min-w-[232px] p-[5px]! rounded-none! dark:border-border/20!"
+            className="w-full p-[5px]! rounded-none! dark:border-border/20!"
             value={value as string}
             onChange={(event) => onChange({ ...dynamicValue, value: event.target.value })}
           />
         )}
         {type === 'number' && (
-          <div className="flex items-center justify-end flex-wrap gap-2">
+          <div className="flex items-center gap-2">
             <Input
-              className="max-w-28 p-[5px]! rounded-none! dark:border-border/20!"
+              className="w-full p-[5px]! rounded-none! dark:border-border/20!"
               placeholder="Min"
               step={0.01}
               type="number"
@@ -64,7 +64,7 @@ export function ParameterControls({ dynamicValue, onChange }: Props) {
               onChange={(event) => onMinChange(event.target.value)}
             />
             <Input
-              className="max-w-28 p-[5px]! rounded-none! dark:border-border/20!"
+              className="w-full p-[5px]! rounded-none! dark:border-border/20!"
               placeholder="Max"
               step={0.01}
               type="number"
@@ -80,23 +80,23 @@ export function ParameterControls({ dynamicValue, onChange }: Props) {
         )}
         {type === 'string' && (
           <Input
-            className="min-w-[232px] p-[5px]! rounded-none! dark:border-border/20!"
+            className="w-full p-[5px]! rounded-none! dark:border-border/20!"
             step={1}
             type="number"
             value={value as number}
             onChange={(event) => onChange({ ...dynamicValue, value: clamp(Number(event.target.value), 1, 1000000) })}
           />
         )}
-        <div className="flex items-center justify-end gap-2">
+        <div className="col-start-2 flex items-center gap-1">
           <SimpleSelect
-            className="p-1! rounded-none! outline-none dark:border-border/20!"
+            className="w-full p-1! rounded-none! outline-none dark:border-border/20!"
             options={parameterOptions}
             value={type}
             onChange={onSelectTypeChange}
           />
           <ClearCrossIcon
             className={cn(
-              'h-4.5 w-4.5 text-button-text-secondary hover:text-button-text-secondary-hover',
+              'h-4.5 w-4.5 shrink-0 text-button-text-secondary hover:text-button-text-secondary-hover',
               'dark:text-text-secondary dark:hover:text-dark-text cursor-pointer',
             )}
             onClick={() => onChange({ type: 'do-not-test' })}

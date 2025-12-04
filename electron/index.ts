@@ -1,5 +1,5 @@
 import dotenv from 'dotenv';
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import Store from 'electron-store';
 import {
   registerCollectionHandlers,
@@ -75,3 +75,6 @@ registerHttpHandlers();
 registerWssHandlers();
 registerThemeHandlers(store);
 registerCollectionHandlers();
+
+ipcMain.handle('get-app-version', () => app.getVersion());
+ipcMain.on('open-external', (_, url: string) => shell.openExternal(url));
