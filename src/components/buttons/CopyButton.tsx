@@ -1,30 +1,34 @@
 import cn from 'classnames';
-import { useState } from 'react';
-import Button, { Props as ButtonProps, ButtonType } from './Button';
+import { ReactNode, useRef, useState } from 'react';
+import { twMerge } from 'tailwind-merge';
+import Button, { Props as ButtonProps, ButtonSize, ButtonType } from './Button';
 
 interface Props extends ButtonProps {
+  copiedFallback?: ReactNode;
   textToCopy: string;
 }
 
-let copiedTimeout: NodeJS.Timeout;
-
 export function CopyButton({
-  className,
   buttonType = ButtonType.SECONDARY,
+  buttonSize = ButtonSize.SMALL,
   children,
+  className,
+  copiedFallback,
   textToCopy,
   ...otherProps
 }: Props) {
   const [copied, setCopied] = useState<boolean>(false);
+  const copiedTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   return (
     <Button
-      className={cn('min-w-auto! py-0.5! px-2!', className)}
+      className={twMerge(cn('min-w-auto whitespace-nowrap', className))}
       buttonType={buttonType}
+      buttonSize={buttonSize}
       {...otherProps}
       onClick={copyToClipboard}
     >
-      {copied ? 'Copied ✅' : children}
+      {copied ? (copiedFallback ?? 'Copied ✅') : children}
     </Button>
   );
 
@@ -33,8 +37,8 @@ export function CopyButton({
       .writeText(textToCopy)
       .then(() => {
         setCopied(true);
-        clearTimeout(copiedTimeout);
-        copiedTimeout = setTimeout(() => setCopied(false), 2000);
+        if (copiedTimeoutRef.current) clearTimeout(copiedTimeoutRef.current);
+        copiedTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
       })
       .catch((error) => {
         console.error('Failed to copy clipboard', error);

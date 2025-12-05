@@ -19,26 +19,31 @@ import {
   SUCCESS_RESPONSE_EXPECTED,
 } from './BaseTests';
 
+export const AUTHORIZATION_TEST_NAME = 'Missing Authorization Cookie/Token';
 export const LARGE_PAYLOAD_TEST_NAME = 'Large Payload Test';
+export const CACHE_CONTROL_PRIVATE_API_TEST_NAME = 'Cache-Control for Private API';
+export const CLICKJACKING_PROTECTION_TEST_NAME = 'Clickjacking Protection';
+export const CORS_TEST_NAME = 'CORS Policy Check';
+export const CRUD_TEST_NAME = 'CRUD';
+export const HSTS_STRICT_TRANSPORT_SECURITY_TEST_NAME = 'HSTS (Strict-Transport-Security)';
+export const MIME_SNIFFING_PROTECTION_TEST_NAME = 'MIME Sniffing Protection';
+export const NO_SENSITIVE_SERVER_HEADERS_TEST_NAME = 'No Sensitive Server Headers';
+export const NOT_FOUND_TEST_NAME = `${RESPONSE_STATUS.NOT_FOUND} ${getResponseStatusTitle(RESPONSE_STATUS.NOT_FOUND)}`;
+export const OPTIONS_METHOD_HANDLING_TEST_NAME = 'OPTIONS Method Handling';
+export const REFLECTED_PAYLOAD_SAFETY_TEST_NAME = 'Reflected Payload Safety';
+export const UPPERCASE_DOMAIN_TEST_NAME = 'Uppercase Domain Test';
+export const UPPERCASE_PATH_TEST_NAME = 'Uppercase Path Test';
+export const UNSUPPORTED_METHOD_TEST_NAME = 'Unsupported HTTP Method Handling';
 
-const AUTHORIZATION_TEST_NAME = 'Missing Authorization Cookie/Token';
 const AUTHORIZATION_TEST_EXPECTED = `${RESPONSE_STATUS.UNAUTHORIZED} ${getResponseStatusTitle(RESPONSE_STATUS.UNAUTHORIZED)}`;
-const CORS_TEST_NAME = 'CORS Policy Check';
 const CORS_TEST_EXPECTED = 'Public or Private API';
-const CRUD_TEST_NAME = 'CRUD';
 const CRUD_TEST_EXPECTED = 'Discover via OPTIONS';
 const LARGE_PAYLOAD_TEST_EXPECTED = `${RESPONSE_STATUS.PAYLOAD_TOO_LARGE} ${getResponseStatusTitle(RESPONSE_STATUS.PAYLOAD_TOO_LARGE)}`;
 const MISSING_ACTUAL = '-';
-const NOT_FOUND_TEST_NAME = `${RESPONSE_STATUS.NOT_FOUND} ${getResponseStatusTitle(RESPONSE_STATUS.NOT_FOUND)}`;
 const NOT_FOUND_TEST_EXPECTED = `${RESPONSE_STATUS.NOT_FOUND} ${getResponseStatusTitle(RESPONSE_STATUS.NOT_FOUND)}`;
-const OPTIONS_METHOD_HANDLING_TEST_NAME = 'OPTIONS Method Handling';
 const OPTIONS_METHOD_HANDLING_TEST_EXPECTED = `${RESPONSE_STATUS.OK} ${getResponseStatusTitle(RESPONSE_STATUS.OK)} or ${RESPONSE_STATUS.NO_CONTENT} ${getResponseStatusTitle(RESPONSE_STATUS.NO_CONTENT)} + Allow Header`;
-const REFLECTED_PAYLOAD_SAFETY_TEST_NAME = 'Reflected Payload Safety';
 const REFLECTED_PAYLOAD_SAFETY_TEST_EXPECTED = `${RESPONSE_STATUS.BAD_REQUEST} ${getResponseStatusTitle(RESPONSE_STATUS.BAD_REQUEST)} or ${RESPONSE_STATUS.UNPROCESSABLE_ENTITY} ${getResponseStatusTitle(RESPONSE_STATUS.UNPROCESSABLE_ENTITY)} + No Mirrored Content`;
-const UPPERCASE_DOMAIN_TEST_NAME = 'Uppercase Domain Test';
-const UPPERCASE_PATH_TEST_NAME = 'Uppercase Path Test';
 const UPPERCASE_PATH_TEST_EXPECTED = `${RESPONSE_STATUS.NOT_FOUND} ${getResponseStatusTitle(RESPONSE_STATUS.NOT_FOUND)}`;
-const UNSUPPORTED_METHOD_TEST_NAME = 'Unsupported HTTP Method Handling';
 const UNSUPPORTED_METHOD_TEST_EXPECTED = `${RESPONSE_STATUS.METHOD_NOT_ALLOWED} ${getResponseStatusTitle(RESPONSE_STATUS.METHOD_NOT_ALLOWED)} or ${RESPONSE_STATUS.NOT_IMPLEMENTED} ${getResponseStatusTitle(RESPONSE_STATUS.NOT_IMPLEMENTED)}`;
 
 export class SecurityTests extends BaseTests {
@@ -105,7 +110,7 @@ export class SecurityTests extends BaseTests {
     const serverHeader = getHeaderValue(response.headers, 'server');
 
     return createTestResult(
-      'No Sensitive Server Headers',
+      NO_SENSITIVE_SERVER_HEADERS_TEST_NAME,
       'Server Header Does Not Expose Version',
       serverHeader || 'No Server Header',
       /\d/.test(serverHeader) ? TestStatus.Fail : TestStatus.Pass,
@@ -123,7 +128,7 @@ export class SecurityTests extends BaseTests {
     const { actual, status } = validateClickjackingProtection(xFrameOptions, contentSecurityPolicy);
 
     return createTestResult(
-      'Clickjacking Protection',
+      CLICKJACKING_PROTECTION_TEST_NAME,
       'X-Frame-Options DENY/SAMEORIGIN or CSP frame-ancestors',
       actual,
       status,
@@ -139,7 +144,7 @@ export class SecurityTests extends BaseTests {
     const hsts = getHeaderValue(response.headers, 'strict-transport-security');
 
     return createTestResult(
-      'HSTS (Strict-Transport-Security)',
+      HSTS_STRICT_TRANSPORT_SECURITY_TEST_NAME,
       'Header Present on HTTPS Endpoints',
       hsts || MISSING_ACTUAL,
       hsts ? TestStatus.Pass : TestStatus.Warning,
@@ -156,7 +161,7 @@ export class SecurityTests extends BaseTests {
     const { actual, status } = validateMimeSniffing(xContentTypeOptions);
 
     return createTestResult(
-      'MIME sniffing protection',
+      MIME_SNIFFING_PROTECTION_TEST_NAME,
       'X-Content-Type-Options: nosniff',
       actual,
       status,
@@ -173,7 +178,7 @@ export class SecurityTests extends BaseTests {
     const { actual, status } = validateCacheControl(cacheControl, request.method);
 
     return createTestResult(
-      'Cache-Control for Private API',
+      CACHE_CONTROL_PRIVATE_API_TEST_NAME,
       'Cache-Control: no-store/private',
       actual,
       status,
@@ -545,10 +550,7 @@ export async function runLargePayloadTest(options: TestOptions, size: number): P
       LARGE_PAYLOAD_TEST_EXPECTED,
       actual,
       status,
-      {
-        ...modifiedRequest,
-        body: `[${size} MB string]`,
-      },
+      modifiedRequest,
       response,
     );
   } catch (error) {

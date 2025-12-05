@@ -1,7 +1,7 @@
 import { Method } from 'axios';
 import cn from 'classnames';
 import { useEffect, useMemo, useState } from 'react';
-import Button, { ButtonType } from './components/buttons/Button';
+import Button, { ButtonSize, ButtonType } from './components/buttons/Button';
 import { CopyButton } from './components/buttons/CopyButton';
 import { IconButton } from './components/buttons/IconButton';
 import { LargePayloadTestControls } from './components/controls/LargePayloadTestControls';
@@ -22,7 +22,7 @@ import TestsTable, { ExpandedTestComponent, getTestsTableColumns } from './compo
 import { RESPONSE_STATUS } from './constants/responseStatus';
 import useTests from './hooks/useTests';
 import { LARGE_PAYLOAD_TEST_NAME, LOAD_TEST_NAME } from './tests';
-import { HttpResponse, RequestParameters, TestOptions, TestResult } from './types';
+import { HttpResponse, RequestParameters, TestOptions, TestResult, TestStatus } from './types';
 import { PostmanCollection } from './types/postman';
 import {
   createHttpRequest,
@@ -53,6 +53,7 @@ import {
 import DarkModeIcon from './assets/icons/dark-mode-icon.svg';
 import LightModeIcon from './assets/icons/light-mode-icon.svg';
 import ReloadIcon from './assets/icons/reload-icon.svg';
+import { TestResultControls } from './components/controls/TestResultControls';
 
 type Mode = 'HTTP' | 'WSS';
 type ReportFormat = 'json' | 'md' | 'csv';
@@ -288,7 +289,7 @@ export default function App() {
               />
             )}
             <Input
-              className={cn('flex-auto', { 'border-l-0! rounded-l-none!': mode === 'HTTP' })}
+              className={cn('flex-auto', { 'border-l-0 rounded-l-none': mode === 'HTTP' })}
               placeholder="Enter URL or paste text"
               value={url}
               onChange={(event) => setUrl(event.target.value)}
@@ -335,8 +336,9 @@ export default function App() {
             onChange={(event) => setBody(event.target.value)}
           />
           <Button
-            className="absolute top-3 right-4 min-w-auto! py-0.5! px-2! rounded-sm"
+            className="absolute top-3 right-4"
             buttonType={ButtonType.SECONDARY}
+            buttonSize={ButtonSize.SMALL}
             onClick={() => setBody((prevBody) => formatBody(prevBody, parseHeaders(headers)))}
           >
             Beautify
@@ -399,7 +401,7 @@ export default function App() {
                 },
               )}
             >
-              {httpResponse.status === SENDING && <Loader className="h-5! w-5!" />}
+              {httpResponse.status === SENDING && <Loader className="h-5 w-5" />}
               {httpResponse.status}
             </div>
             {httpResponse.status !== SENDING && (
@@ -553,18 +555,29 @@ export default function App() {
                   {
                     name: 'Result',
                     selector: (row) => row.status,
-                    width: '150px',
+                    width: securityTests.find((test) =>
+                      [TestStatus.Bug, TestStatus.Fail, TestStatus.Warning].includes(test.status),
+                    )
+                      ? '190px'
+                      : '150px',
                     cell: (row) => {
-                      if (row.name === LARGE_PAYLOAD_TEST_NAME)
-                        return (
-                          <LargePayloadTestControls
-                            isRunning={isLargePayloadTestRunning}
-                            executeTest={(size: number) =>
-                              executeLargePayloadTest({ ...testOptions, bodyParameters, queryParameters }, size)
-                            }
-                          />
-                        );
-                      return row.status;
+                      return (
+                        <TestResultControls
+                          className={cn('py-1', { 'items-end': row.name === LARGE_PAYLOAD_TEST_NAME })}
+                          testResult={row}
+                        >
+                          {row.name === LARGE_PAYLOAD_TEST_NAME ? (
+                            <LargePayloadTestControls
+                              isRunning={isLargePayloadTestRunning}
+                              executeTest={(size: number) =>
+                                executeLargePayloadTest({ ...testOptions, bodyParameters, queryParameters }, size)
+                              }
+                            />
+                          ) : (
+                            <p className="m-0 mr-2 whitespace-nowrap">{row.status}</p>
+                          )}
+                        </TestResultControls>
+                      );
                     },
                   },
                 ]}

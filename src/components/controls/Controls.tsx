@@ -1,6 +1,6 @@
 import cn from 'classnames';
 import { HTMLAttributes } from 'react';
-import Button from '../buttons/Button';
+import Button, { ButtonSize } from '../buttons/Button';
 import Loader from '../loaders/Loader';
 
 interface Props extends HTMLAttributes<HTMLDivElement> {
@@ -13,12 +13,13 @@ export function Controls({ className, children, isRunning, executeTest, ...other
     <div className={cn('flex items-end gap-1.5', className)} {...otherProps}>
       {children}
       <Button
-        className="min-w-auto! flex justify-center items-center w-12! py-0.5! px-2!"
+        buttonSize={ButtonSize.SMALL}
+        className="min-w-auto flex justify-center items-center w-12"
         disabled={isRunning}
         onClick={executeTest}
       >
         {isRunning ? (
-          <Loader className="h-3! w-3! my-0.5! [&>span]:border-2! [&>span]:border-white! [&>span]:border-b-button-primary!" />
+          <Loader className="h-3 w-3 my-0.5 [&>span]:border-2! [&>span]:border-white! [&>span]:border-b-button-primary!" />
         ) : (
           'Run'
         )}

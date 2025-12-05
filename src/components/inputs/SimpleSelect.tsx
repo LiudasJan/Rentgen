@@ -1,5 +1,6 @@
-import classNames from 'classnames';
+import cn from 'classnames';
 import { SelectHTMLAttributes } from 'react';
+import { twMerge } from 'tailwind-merge';
 import { SelectOption } from './Select';
 
 interface Props extends SelectHTMLAttributes<HTMLSelectElement> {
@@ -12,11 +13,13 @@ export default function SimpleSelect({ className, options, placeholder, ...other
 
   return (
     <select
-      className={classNames(
-        'm-0 py-2 px-3 font-segoe-ui text-xs text-text border border-border rounded-md',
-        'dark:text-dark-text dark:bg-dark-input dark:border-dark-input',
-        optionClassName,
-        className,
+      className={twMerge(
+        cn(
+          'm-0 py-2 px-3 font-segoe-ui text-xs text-text border border-border rounded-md',
+          'dark:text-dark-text dark:bg-dark-input dark:border-dark-input',
+          optionClassName,
+          className,
+        ),
       )}
       {...otherProps}
     >
