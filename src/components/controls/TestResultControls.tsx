@@ -28,7 +28,7 @@ function renderControl({ name, request, response, status }: TestResult) {
     case TestStatus.Warning:
       return (
         <CopyButton
-          className="h-6 w-6 p-0 leading-0 text-button-text-secondary hover:text-button-text-secondary-hover bg-transparent hover:bg-transparent  border-0"
+          className="h-6 w-6 p-0 leading-0 text-button-text-secondary! hover:text-button-text-secondary-hover! bg-transparent! border-0"
           copiedFallback="✅"
           textToCopy={fillTemplate(securityTemplates[name], {
             CURL: generateCurl(request),
