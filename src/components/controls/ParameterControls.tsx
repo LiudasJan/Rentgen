@@ -36,6 +36,7 @@ interface Props {
 
 export function ParameterControls({ dynamicValue, onChange }: Props) {
   const { mandatory, type, value } = dynamicValue;
+  const inputClassName = 'w-full p-[5px] rounded-none dark:border-border/20';
 
   return (
     <div className="w-full max-w-[440px]">
@@ -43,7 +44,7 @@ export function ParameterControls({ dynamicValue, onChange }: Props) {
       <div className="grid grid-cols-2 gap-2">
         {type === 'enum' && (
           <Input
-            className="w-full p-[5px] rounded-none dark:border-border/20"
+            className={inputClassName}
             value={value as string}
             onChange={(event) => onChange({ ...dynamicValue, value: event.target.value })}
           />
@@ -51,7 +52,7 @@ export function ParameterControls({ dynamicValue, onChange }: Props) {
         {type === 'number' && (
           <div className="flex items-center gap-2">
             <Input
-              className="w-full p-[5px] rounded-none dark:border-border/20"
+              className={inputClassName}
               placeholder="Min"
               step={0.01}
               type="number"
@@ -64,7 +65,7 @@ export function ParameterControls({ dynamicValue, onChange }: Props) {
               onChange={(event) => onMinChange(event.target.value)}
             />
             <Input
-              className="w-full p-[5px] rounded-none dark:border-border/20"
+              className={inputClassName}
               placeholder="Max"
               step={0.01}
               type="number"
@@ -80,7 +81,7 @@ export function ParameterControls({ dynamicValue, onChange }: Props) {
         )}
         {type === 'string' && (
           <Input
-            className="w-full p-[5px] rounded-none dark:border-border/20"
+            className={inputClassName}
             step={1}
             type="number"
             value={value as number}

@@ -560,25 +560,28 @@ export default function App() {
                     )
                       ? '190px'
                       : '150px',
-                    cell: (row) => {
-                      return (
-                        <TestResultControls
-                          className={cn('py-1', { 'items-end': row.name === LARGE_PAYLOAD_TEST_NAME })}
-                          testResult={row}
-                        >
-                          {row.name === LARGE_PAYLOAD_TEST_NAME ? (
-                            <LargePayloadTestControls
-                              isRunning={isLargePayloadTestRunning}
-                              executeTest={(size: number) =>
-                                executeLargePayloadTest({ ...testOptions, bodyParameters, queryParameters }, size)
-                              }
-                            />
-                          ) : (
-                            <p className="m-0 mr-2 whitespace-nowrap">{row.status}</p>
-                          )}
-                        </TestResultControls>
-                      );
-                    },
+                    cell: (row, id) => (
+                      <TestResultControls
+                        className={cn('py-1', { 'items-end': row.name === LARGE_PAYLOAD_TEST_NAME })}
+                        data-column-id={id}
+                        data-tag="allowRowEvents"
+                        testResult={row}
+                        testType="security"
+                      >
+                        {row.name === LARGE_PAYLOAD_TEST_NAME ? (
+                          <LargePayloadTestControls
+                            isRunning={isLargePayloadTestRunning}
+                            executeTest={(size: number) =>
+                              executeLargePayloadTest({ ...testOptions, bodyParameters, queryParameters }, size)
+                            }
+                          />
+                        ) : (
+                          <p className="m-0 mr-2 whitespace-nowrap" data-column-id={id} data-tag="allowRowEvents">
+                            {row.status}
+                          </p>
+                        )}
+                      </TestResultControls>
+                    ),
                   },
                 ]}
                 expandableRows
@@ -603,10 +606,18 @@ export default function App() {
                   {
                     name: 'Result',
                     selector: (row) => row.status,
-                    width: '220px',
-                    cell: (row) => {
-                      if (row.name === LOAD_TEST_NAME)
-                        return (
+                    width: performanceTests.find((test) =>
+                      [TestStatus.Bug, TestStatus.Fail, TestStatus.Warning].includes(test.status),
+                    )
+                      ? '240px'
+                      : '220px',
+                    cell: (row) => (
+                      <TestResultControls
+                        className={cn('py-1', { 'items-end': row.name === LOAD_TEST_NAME })}
+                        testResult={row}
+                        testType="performance"
+                      >
+                        {row.name === LOAD_TEST_NAME ? (
                           <LoadTestControls
                             isRunning={isLoadTestRunning}
                             executeTest={(threadCount: number, requestCount: number) =>
@@ -617,10 +628,11 @@ export default function App() {
                               )
                             }
                           />
-                        );
-
-                      return row.status;
-                    },
+                        ) : (
+                          <p className="m-0 mr-2 whitespace-nowrap">{row.status}</p>
+                        )}
+                      </TestResultControls>
+                    ),
                   },
                 ]}
                 data={performanceTests}

@@ -5,8 +5,9 @@ import { calculateMedian, calculatePercentile, createTestHttpRequest, extractSta
 import { createErrorTestResult, createTestResult, NOT_AVAILABLE_TEST } from './BaseTests';
 
 export const LOAD_TEST_NAME = 'Load Test';
-
-const PING_LATENCY_TEST_NAME = 'Ping Latency';
+export const MEDIAN_RESPONSE_TIME_TEST_NAME = 'Median Response Time';
+export const NETWORK_LATENCY_DOMINATES_RESPONSE_TIME_TEST_NAME = 'Network Latency Dominates Response Time';
+export const PING_LATENCY_TEST_NAME = 'Ping Latency';
 
 const EXCELLENT_RESPONSE_TIME_MS = 500;
 const ACCEPTABLE_RESPONSE_TIME_MS = 1000;
@@ -51,7 +52,7 @@ export class PerformanceInsights {
     else if (medianResponseTime <= ACCEPTABLE_RESPONSE_TIME_MS) responseTimeStatus = TestStatus.Warning;
 
     return createTestResult(
-      'Median Response Time',
+      MEDIAN_RESPONSE_TIME_TEST_NAME,
       `<= ${EXCELLENT_RESPONSE_TIME_MS} ms`,
       `${medianResponseTime.toFixed(0)} ms`,
       responseTimeStatus,
