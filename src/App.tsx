@@ -6,6 +6,7 @@ import { CopyButton } from './components/buttons/CopyButton';
 import { IconButton } from './components/buttons/IconButton';
 import { LargePayloadTestControls } from './components/controls/LargePayloadTestControls';
 import { LoadTestControls } from './components/controls/LoadTestControls';
+import FileInput from './components/inputs/FileInput';
 import Input from './components/inputs/Input';
 import Select, { SelectOption } from './components/inputs/Select';
 import Textarea from './components/inputs/Textarea';
@@ -54,8 +55,10 @@ import LightModeIcon from './assets/icons/light-mode-icon.svg';
 import ReloadIcon from './assets/icons/reload-icon.svg';
 
 type Mode = 'HTTP' | 'WSS';
+type ReportFormat = 'json' | 'md' | 'csv';
 
 let savedTimeout: NodeJS.Timeout;
+let exportedTimeout: NodeJS.Timeout;
 
 const SENDING = 'Sending...';
 const NETWORK_ERROR = 'Network Error';
@@ -65,7 +68,7 @@ const modeOptions: SelectOption<Mode>[] = [
   { value: 'WSS', label: 'WSS' },
 ];
 
-const exportFormatOptions: SelectOption<'json' | 'md' | 'csv'>[] = [
+const exportFormatOptions: SelectOption<ReportFormat>[] = [
   { value: 'json', label: 'JSON (.json)' },
   { value: 'md', label: 'Markdown (.md)' },
   { value: 'csv', label: 'CSV (.csv)' },
@@ -107,10 +110,9 @@ export default function App() {
   const [queryParameters, setQueryParameters] = useState<RequestParameters>({});
   const [testOptions, setTestOptions] = useState<TestOptions | null>(null);
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
-  const [runTimestamp, setRunTimestamp] = useState<string | null>(null);
-  const [exportNotice, setExportNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-  const [exportFormat, setExportFormat] = useState<'json' | 'md' | 'csv'>('json');
+  const [saved, setSaved] = useState<boolean>(false);
+  const [exported, setExported] = useState<boolean>(false);
+  const [exportFormat, setExportFormat] = useState<ReportFormat>('json');
   const {
     crudTests,
     currentTest,
@@ -347,16 +349,14 @@ export default function App() {
             <div className="mb-3 text-xs text-text-secondary">
               Experimental and optional section. If used, both fields must be completed
             </div>
-            <div className="flex items-center">
-              <Input
+            <div className="flex items-center gap-2">
+              <FileInput
                 accept=".proto"
-                className="rounded-r-none! dark:border-r-dark-body!"
-                type="file"
                 onChange={async (event) => {
                   const file = event.target.files?.[0];
                   if (!file) return;
 
-                  const fileExtension = file.name.split('.').pop().toLowerCase();
+                  const fileExtension = file.name.split('.').pop()?.toLowerCase();
                   if (fileExtension !== 'proto') return;
 
                   try {
@@ -377,7 +377,7 @@ export default function App() {
               />
 
               <Input
-                className="flex-auto border-l-0! rounded-l-none!"
+                className="flex-auto"
                 placeholder="Message type (e.g. mypackage.MyMessage)"
                 value={messageType}
                 onChange={(event) => setMessageType(event.target.value)}
@@ -503,12 +503,10 @@ export default function App() {
         )}
 
         {mode === 'HTTP' && (
-          <div>
+          <div className="flex justify-between">
             <Button
               disabled={disabledRunTests}
               onClick={() => {
-                setExportNotice(null);
-                setRunTimestamp(new Date().toISOString());
                 setTestOptions({
                   body,
                   bodyParameters,
@@ -521,41 +519,33 @@ export default function App() {
                 });
               }}
             >
-              {isRunningTests && testsCount
-                ? `Running tests... (${currentTest}/${testsCount})`
-                : 'Generate & Run Tests'}
+              {isRunningTests ? `Running tests... (${currentTest}/${testsCount})` : 'Generate & Run Tests'}
             </Button>
+
+            {testOptions && (
+              <div className="flex items-center justify-end gap-2">
+                <Select
+                  isSearchable={false}
+                  options={exportFormatOptions}
+                  placeholder="Format"
+                  value={exportFormatOptions.find((option) => option.value === exportFormat)}
+                  onChange={(option: SelectOption<ReportFormat>) => setExportFormat(option.value)}
+                />
+                <Button
+                  buttonType={ButtonType.SECONDARY}
+                  className="min-w-28"
+                  disabled={isRunningTests}
+                  onClick={exportReport}
+                >
+                  {exported ? 'Exported ✅' : 'Export'}
+                </Button>
+              </div>
+            )}
           </div>
         )}
 
         {testOptions && (
           <>
-            <div className="flex items-center justify-end gap-3">
-              {exportNotice && (
-                <span
-                  className={cn(
-                    'text-xs',
-                    exportNotice.type === 'success'
-                      ? 'text-green-700 dark:text-green-400'
-                      : 'text-red-700 dark:text-red-400',
-                  )}
-                >
-                  {exportNotice.message}
-                </span>
-              )}
-              <div className="min-w-[180px]">
-                <Select
-                  isSearchable={false}
-                  options={exportFormatOptions}
-                  placeholder="Format"
-                  value={exportFormatOptions.find((opt) => opt.value === exportFormat)}
-                  onChange={(option: SelectOption<'json' | 'md' | 'csv'>) => setExportFormat(option.value)}
-                />
-              </div>
-              <Button buttonType={ButtonType.SECONDARY} disabled={isRunningTests} onClick={exportReport}>
-                Export report
-              </Button>
-            </div>
             <ResponsePanel title="Security Tests">
               <TestsTable
                 columns={[
@@ -563,21 +553,21 @@ export default function App() {
                   {
                     name: 'Result',
                     selector: (row) => row.status,
-                  width: '150px',
-                  cell: (row) => {
-                    if (row.name === LARGE_PAYLOAD_TEST_NAME)
-                      return (
-                        <LargePayloadTestControls
-                          isRunning={isLargePayloadTestRunning}
-                          executeTest={(size: number) =>
-                            executeLargePayloadTest({ ...testOptions, bodyParameters, queryParameters }, size)
-                          }
-                        />
-                      );
-                    return row.status;
+                    width: '150px',
+                    cell: (row) => {
+                      if (row.name === LARGE_PAYLOAD_TEST_NAME)
+                        return (
+                          <LargePayloadTestControls
+                            isRunning={isLargePayloadTestRunning}
+                            executeTest={(size: number) =>
+                              executeLargePayloadTest({ ...testOptions, bodyParameters, queryParameters }, size)
+                            }
+                          />
+                        );
+                      return row.status;
+                    },
                   },
-                },
-              ]}
+                ]}
                 expandableRows
                 expandableRowsComponent={ExpandedTestComponent}
                 expandableRowsComponentProps={{ headers: parseHeaders(headers), protoFile, messageType }}
@@ -672,8 +662,6 @@ export default function App() {
     setBodyParameters({});
     setQueryParameters({});
     setSelectedRequestId(null);
-    setRunTimestamp(null);
-    setExportNotice(null);
 
     if (resetTestOptions) setTestOptions(null);
   }
@@ -720,30 +708,22 @@ export default function App() {
     if (!testOptions) return;
 
     try {
-      const report = buildReport();
-      const { content, defaultPath, filters } = formatReport(report, exportFormat);
-      const result = await window.electronAPI.saveReport({ defaultPath, content, filters });
+      const report = formatReport(buildReport(), exportFormat);
+      const result = await window.electronAPI.saveReport(report);
 
-      if (result?.error) {
-        console.error('Failed to write report', result.error);
-        setExportNotice({ type: 'error', message: 'Failed to write report. Please check permissions.' });
-        return;
-      }
+      if (result?.error) throw new Error(result.error);
+      if (result?.canceled) return;
 
-      if (result?.canceled) {
-        setExportNotice(null);
-        return;
-      }
-
-      setExportNotice({ type: 'success', message: `Saved report to ${result.filePath ?? 'selected path'}` });
+      setExported(true);
+      clearTimeout(exportedTimeout);
+      exportedTimeout = setTimeout(() => setExported(false), 2000);
     } catch (error) {
       console.error('Failed to export report', error);
-      setExportNotice({ type: 'error', message: 'Failed to export report. See console for details.' });
     }
   }
 
   function buildReport(): ExportReport {
-    if (!testOptions) throw new Error('No test options to export');
+    if (!testOptions) throw new Error('No test results to export');
 
     const suites = [
       buildSuite('Security Tests', securityTests),
@@ -753,7 +733,7 @@ export default function App() {
     ];
 
     return {
-      generatedAt: runTimestamp ?? new Date().toISOString(),
+      generatedAt: new Date().toISOString(),
       target: {
         url: testOptions.url,
         method: testOptions.method,
@@ -959,7 +939,7 @@ function summarizeSuite(tests: TestResult[]) {
 
 function formatReport(
   report: ExportReport,
-  format: 'json' | 'md' | 'csv',
+  format: ReportFormat,
 ): { content: string; defaultPath: string; filters: { name: string; extensions: string[] }[] } {
   if (format === 'md') {
     return {
