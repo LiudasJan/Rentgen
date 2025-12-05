@@ -226,7 +226,6 @@ export default function App() {
             environment={environments.find((e) => e.id === editingEnvironmentId) || null}
             isNew={editingEnvironmentId === null}
             onSave={handleSaveEnvironment}
-            onCancel={handleCancelEditEnvironment}
           />
         ) : (
           <>
@@ -397,7 +396,6 @@ export default function App() {
                 <div className="flex items-center gap-2">
                   <FileInput
                     accept=".proto"
-
                     onChange={async (event) => {
                       const file = event.target.files?.[0];
                       if (!file) return;
@@ -554,7 +552,6 @@ export default function App() {
                 <Button
                   disabled={disabledRunTests}
                   onClick={() => {
-
                     setTestOptions({
                       body,
                       bodyParameters,
@@ -567,14 +564,11 @@ export default function App() {
                     });
                   }}
                 >
-                  {isRunningTests
-                    ? `Running tests... (${currentTest}/${testsCount})`
-                    : 'Generate & Run Tests'}
+                  {isRunningTests ? `Running tests... (${currentTest}/${testsCount})` : 'Generate & Run Tests'}
                 </Button>
 
-
-            {testOptions && (
-              <div className="flex items-center justify-end gap-2">
+                {testOptions && (
+                  <div className="flex items-center justify-end gap-2">
                     <Select
                       isSearchable={false}
                       options={exportFormatOptions}
@@ -582,20 +576,21 @@ export default function App() {
                       value={exportFormatOptions.find((option) => option.value === exportFormat)}
                       onChange={(option: SelectOption<ReportFormat>) => setExportFormat(option.value)}
                     />
-                  <Button
-                   buttonType={ButtonType.SECONDARY}
-                  className="min-w-28"
-                  disabled={isRunningTests}
-                  onClick={exportReport}
+                    <Button
+                      buttonType={ButtonType.SECONDARY}
+                      className="min-w-28"
+                      disabled={isRunningTests}
+                      onClick={exportReport}
                     >
-                  {exported ? 'Exported ✅' : 'Export'}
-                  </Button>
-                </div>)}
-          </div>
-        )}
+                      {exported ? 'Exported ✅' : 'Export'}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
 
-        {testOptions && (
-          <>
+            {testOptions && (
+              <>
                 <ResponsePanel title="Security Tests">
                   <TestsTable
                     columns={[
@@ -722,16 +717,10 @@ export default function App() {
           </>
         )}
       </div>
-      <Modal
-        className="[&>div]:w-[400px]!"
-        isOpen={!!environmentToDelete}
-        onClose={() => setEnvironmentToDelete(null)}
-      >
+      <Modal className="[&>div]:w-[400px]!" isOpen={!!environmentToDelete} onClose={() => setEnvironmentToDelete(null)}>
         <div className="flex flex-col gap-4">
           <h4 className="m-0">Delete Environment</h4>
-          <p className="m-0 text-sm dark:text-text-secondary">
-            Are you sure you want to delete this environment?
-          </p>
+          <p className="m-0 text-sm dark:text-text-secondary">Are you sure you want to delete this environment?</p>
           <div className="flex items-center justify-end gap-4">
             <Button
               buttonType={ButtonType.DANGER}
@@ -802,11 +791,6 @@ export default function App() {
       setSelectedEnvironmentId(null);
     }
 
-    setIsEditingEnvironment(false);
-    setEditingEnvironmentId(null);
-  }
-
-  function handleCancelEditEnvironment() {
     setIsEditingEnvironment(false);
     setEditingEnvironmentId(null);
   }

@@ -54,13 +54,13 @@ export default function EnvironmentSidebarPanel({
   return (
     <div className="max-h-screen h-full w-80 flex flex-col overflow-hidden">
       {/* Add New Env Button - Always visible at top */}
-        <div
-            className="flex items-center gap-2 px-3 py-2 border-b border-border dark:border-dark-border cursor-pointer hover:bg-button-secondary dark:hover:bg-dark-input"
-            onClick={onAdd}
-        >
-            <AddIcon className="w-4 h-4 text-text-secondary dark:text-dark-text-secondary" />
-            <span className="text-xs text-text-secondary dark:text-dark-text-secondary">New Environment</span>
-        </div>
+      <div
+        className="flex items-center gap-2 px-3 py-2 border-b border-border dark:border-dark-border cursor-pointer hover:bg-button-secondary dark:hover:bg-dark-input"
+        onClick={onAdd}
+      >
+        <AddIcon className="w-4 h-4 text-text-secondary dark:text-dark-text-secondary" />
+        <span className="text-xs text-text-secondary dark:text-dark-text-secondary">New Environment</span>
+      </div>
 
       {/* Environment List */}
       {environments.length > 0 ? (
@@ -81,7 +81,7 @@ export default function EnvironmentSidebarPanel({
           </DndContext>
         </div>
       ) : (
-        <div className="flex items-center justify-center h-full w-full p-5 text-xs text-text-secondary dark:text-dark-text-secondary">
+        <div className="flex items-center justify-center h-full w-full p-0 text-xs text-text-secondary dark:text-dark-text-secondary">
           No environments created
         </div>
       )}

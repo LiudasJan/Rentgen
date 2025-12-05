@@ -6,7 +6,7 @@ import { Environment } from '../../types';
 const DEFAULT_HIGHLIGHT_COLOR = '#6B7280';
 
 interface HighlightedInputProps extends InputHTMLAttributes<HTMLInputElement> {
-    environment?: Environment | null;
+  environment?: Environment | null;
 }
 
 export default function HighlightedInput({

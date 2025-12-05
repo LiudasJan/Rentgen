@@ -2,49 +2,78 @@ import cn from 'classnames';
 import { useEffect, useRef, useState } from 'react';
 import { Environment, EnvironmentVariable } from '../../types';
 import { generateEnvironmentId } from '../../utils';
-import Button, { ButtonType } from '../buttons/Button';
+import Button from '../buttons/Button';
 import Input from '../inputs/Input';
 import ResponsePanel from '../panels/ResponsePanel';
 
 const COLOR_OPTIONS = ['#EF4444', '#F97316', '#EAB308', '#22C55E', '#3B82F6', '#8B5CF6', '#EC4899', '#6B7280'];
 
-// Generate 30 empty variable rows
-const EMPTY_VARIABLES_COUNT = 30;
-
 interface Props {
   environment: Environment | null;
   isNew: boolean;
   onSave: (environment: Environment) => void;
-  onCancel: () => void;
 }
 
-export default function EnvironmentEditor({ environment, isNew, onSave, onCancel }: Props) {
+export default function EnvironmentEditor({ environment, isNew, onSave }: Props) {
   const [title, setTitle] = useState('');
   const [color, setColor] = useState(COLOR_OPTIONS[4]); // Default blue
   const [variables, setVariables] = useState<EnvironmentVariable[]>([]);
   const [saved, setSaved] = useState(false);
   const savedTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
-  // Initialize form when environment changes
+  // Check if current state differs from environment prop
+  const hasChanges = () => {
+    if (!environment) return false;
+    if (title !== environment.title) return true;
+    if (color !== environment.color) return true;
+
+    const nonEmptyVars = variables.filter((v) => v.key.trim() !== '');
+    if (nonEmptyVars.length !== environment.variables.length) return true;
+
+    return nonEmptyVars.some((v, i) => {
+      const envVar = environment.variables[i];
+      return !envVar || v.key !== envVar.key || v.value !== envVar.value;
+    });
+  };
+
+  // Autosave for existing environments only
+  useEffect(() => {
+    if (isNew) return;
+    if (!environment?.id) return;
+    if (!hasChanges()) return;
+
+    const timeoutId = setTimeout(() => {
+      const nonEmptyVariables = variables.filter((v) => v.key.trim() !== '');
+      onSave({
+        id: environment.id,
+        title: title.trim() || 'Untitled',
+        color,
+        variables: nonEmptyVariables,
+      });
+      setSaved(true);
+      clearTimeout(savedTimeoutRef.current);
+      savedTimeoutRef.current = setTimeout(() => setSaved(false), 1000);
+    }, 50);
+
+    return () => clearTimeout(timeoutId);
+  }, [title, color, variables, isNew, environment, onSave]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      clearTimeout(savedTimeoutRef.current);
+    };
+  }, []);
+
   useEffect(() => {
     if (environment) {
       setTitle(environment.title);
       setColor(environment.color);
-      // Pad variables to ensure 30 rows
-      const paddedVariables = [...environment.variables];
-      while (paddedVariables.length < EMPTY_VARIABLES_COUNT) {
-        paddedVariables.push({ key: '', value: '' });
-      }
-      setVariables(paddedVariables);
+      setVariables([...environment.variables, { key: '', value: '' }]);
     } else {
-      // New environment
       setTitle('');
       setColor(COLOR_OPTIONS[4]);
-      setVariables(
-        Array(EMPTY_VARIABLES_COUNT)
-          .fill(null)
-          .map(() => ({ key: '', value: '' })),
-      );
+      setVariables([{ key: '', value: '' }]);
     }
   }, [environment]);
 
@@ -52,7 +81,23 @@ export default function EnvironmentEditor({ environment, isNew, onSave, onCancel
     setVariables((prev) => {
       const updated = [...prev];
       updated[index] = { ...updated[index], [field]: newValue };
-      return updated;
+
+      const result = updated.filter((v, i) => {
+        const isEmpty = v.key.trim() === '' && v.value.trim() === '';
+        if (!isEmpty) {
+          return true;
+        }
+
+        return i === index;
+      });
+
+      const lastRow = result[result.length - 1];
+      const lastIsEmpty = lastRow && lastRow.key.trim() === '' && lastRow.value.trim() === '';
+      if (!lastIsEmpty) {
+        result.push({ key: '', value: '' });
+      }
+
+      return result;
     });
   };
 
@@ -71,7 +116,7 @@ export default function EnvironmentEditor({ environment, isNew, onSave, onCancel
     if (!isNew) {
       clearTimeout(savedTimeoutRef.current);
       setSaved(true);
-      savedTimeoutRef.current = setTimeout(() => setSaved(false), 2000);
+      savedTimeoutRef.current = setTimeout(() => setSaved(false), 1000);
     }
   };
 
@@ -151,13 +196,19 @@ export default function EnvironmentEditor({ environment, isNew, onSave, onCancel
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-2">
-            <Button buttonType={ButtonType.SECONDARY} onClick={onCancel}>
-              Cancel
-            </Button>
-            <Button onClick={handleSave}>{isNew ? 'Create' : saved ? 'Saved ✅' : 'Save'}</Button>
-          </div>
+          {/* Action Buttons - only show Create for new environments */}
+          {isNew && (
+            <div className="flex items-center justify-end gap-2">
+              <Button onClick={handleSave}>Create</Button>
+            </div>
+          )}
+
+          {/* Saved indicator for existing environments */}
+          {!isNew && saved && (
+            <div className="flex items-center justify-end">
+              <span className="text-xs text-green-500">Saved</span>
+            </div>
+          )}
         </div>
       </ResponsePanel>
     </div>
