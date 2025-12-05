@@ -10,7 +10,6 @@ import { LoadTestControls } from './components/controls/LoadTestControls';
 import HighlightedInput from './components/inputs/HighlightedInput';
 import HighlightedTextarea from './components/inputs/HighlightedTextarea';
 import FileInput from './components/inputs/FileInput';
-import Input from './components/inputs/Input';
 import Select, { SelectOption } from './components/inputs/Select';
 import Textarea from './components/inputs/Textarea';
 import { JsonViewer } from './components/JsonViewer';

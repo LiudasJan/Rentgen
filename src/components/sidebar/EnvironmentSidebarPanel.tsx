@@ -9,7 +9,8 @@ import {
 } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { Environment } from '../../types';
-import Button from '../buttons/Button';
+import AddIcon from '../../assets/icons/add-icon.svg';
+
 import EnvironmentSidebarItem from './EnvironmentSidebarItem';
 
 interface Props {
@@ -51,11 +52,13 @@ export default function EnvironmentSidebarPanel({
   return (
     <div className="max-h-screen h-full w-80 flex flex-col overflow-hidden">
       {/* Add New Env Button - Always visible at top */}
-      <div className="p-3 border-b border-border dark:border-dark-border">
-        <Button className="w-full" onClick={onAdd}>
-          Add New Environment
-        </Button>
-      </div>
+        <div
+            className="flex items-center gap-2 px-3 py-2 border-b border-border dark:border-dark-border cursor-pointer hover:bg-button-secondary dark:hover:bg-dark-input"
+            onClick={onAdd}
+        >
+            <AddIcon className="w-4 h-4 text-text-secondary dark:text-dark-text-secondary" />
+            <span className="text-xs text-text-secondary dark:text-dark-text-secondary">New Environment</span>
+        </div>
 
       {/* Environment List */}
       {environments.length > 0 ? (
