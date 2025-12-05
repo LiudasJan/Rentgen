@@ -24,6 +24,7 @@ interface Props {
   onEditEnvironment: (id: string | null) => void;
   onAddEnvironment: () => void;
   onReorderEnvironment: (activeId: string, overId: string) => void;
+  onRemoveEnvironment: (id: string) => void;
 }
 
 export default function Sidebar({
@@ -38,6 +39,7 @@ export default function Sidebar({
   onEditEnvironment,
   onAddEnvironment,
   onReorderEnvironment,
+  onRemoveEnvironment,
 }: Props) {
   const [appVersion, setAppVersion] = useState<string>('');
   const [activeTab, setActiveTab] = useState<SidebarTab>(null);
@@ -113,6 +115,7 @@ export default function Sidebar({
             onEdit={onEditEnvironment}
             onAdd={onAddEnvironment}
             onReorder={onReorderEnvironment}
+            onRemove={onRemoveEnvironment}
           />
         )}
       </div>

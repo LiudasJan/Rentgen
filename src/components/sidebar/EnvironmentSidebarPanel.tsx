@@ -20,6 +20,7 @@ interface Props {
   onEdit: (id: string | null) => void;
   onAdd: () => void;
   onReorder: (activeId: string, overId: string) => void;
+  onRemove: (id: string) => void;
 }
 
 export default function EnvironmentSidebarPanel({
@@ -29,6 +30,7 @@ export default function EnvironmentSidebarPanel({
   onEdit,
   onAdd,
   onReorder,
+  onRemove,
 }: Props) {
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -72,6 +74,7 @@ export default function EnvironmentSidebarPanel({
                   isSelected={env.id === selectedEnvironmentId}
                   onSelect={onSelect}
                   onEdit={onEdit}
+                  onRemove={onRemove}
                 />
               ))}
             </SortableContext>

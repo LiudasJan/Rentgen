@@ -95,6 +95,7 @@ export default function App() {
   const [method, setMethod] = useState<Method>('GET');
   const [openCurlModal, setOpenCurlModal] = useState<boolean>(false);
   const [openReloadModal, setOpenReloadModal] = useState<boolean>(false);
+  const [environmentToDelete, setEnvironmentToDelete] = useState<string | null>(null);
   const [curl, setCurl] = useState<string>('');
   const [curlError, setCurlError] = useState<string>('');
   const [url, setUrl] = useState<string>('');
@@ -217,6 +218,7 @@ export default function App() {
         onEditEnvironment={handleEditEnvironment}
         onAddEnvironment={handleAddEnvironment}
         onReorderEnvironment={handleReorderEnvironment}
+        onRemoveEnvironment={setEnvironmentToDelete}
       />
       <div className="flex-1 min-w-0 flex flex-col gap-4 py-5 px-7 overflow-y-auto">
         {isEditingEnvironment ? (
@@ -224,7 +226,6 @@ export default function App() {
             environment={environments.find((e) => e.id === editingEnvironmentId) || null}
             isNew={editingEnvironmentId === null}
             onSave={handleSaveEnvironment}
-            onDelete={handleDeleteEnvironment}
             onCancel={handleCancelEditEnvironment}
           />
         ) : (
@@ -393,7 +394,7 @@ export default function App() {
                 <div className="mb-3 text-xs text-text-secondary">
                   Experimental and optional section. If used, both fields must be completed
                 </div>
-                <div className="flex items-centergap-2">
+                <div className="flex items-center gap-2">
                   <FileInput
                     accept=".proto"
 
@@ -721,6 +722,34 @@ export default function App() {
           </>
         )}
       </div>
+      <Modal
+        className="[&>div]:w-[400px]!"
+        isOpen={!!environmentToDelete}
+        onClose={() => setEnvironmentToDelete(null)}
+      >
+        <div className="flex flex-col gap-4">
+          <h4 className="m-0">Delete Environment</h4>
+          <p className="m-0 text-sm dark:text-text-secondary">
+            Are you sure you want to delete this environment?
+          </p>
+          <div className="flex items-center justify-end gap-4">
+            <Button
+              buttonType={ButtonType.DANGER}
+              onClick={() => {
+                if (environmentToDelete) {
+                  handleDeleteEnvironment(environmentToDelete);
+                }
+                setEnvironmentToDelete(null);
+              }}
+            >
+              Delete
+            </Button>
+            <Button buttonType={ButtonType.SECONDARY} onClick={() => setEnvironmentToDelete(null)}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 

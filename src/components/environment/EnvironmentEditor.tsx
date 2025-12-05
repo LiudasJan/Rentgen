@@ -15,11 +15,10 @@ interface Props {
   environment: Environment | null;
   isNew: boolean;
   onSave: (environment: Environment) => void;
-  onDelete: (id: string) => void;
   onCancel: () => void;
 }
 
-export default function EnvironmentEditor({ environment, isNew, onSave, onDelete, onCancel }: Props) {
+export default function EnvironmentEditor({ environment, isNew, onSave, onCancel }: Props) {
   const [title, setTitle] = useState('');
   const [color, setColor] = useState(COLOR_OPTIONS[4]); // Default blue
   const [variables, setVariables] = useState<EnvironmentVariable[]>([]);
@@ -73,12 +72,6 @@ export default function EnvironmentEditor({ environment, isNew, onSave, onDelete
       clearTimeout(savedTimeoutRef.current);
       setSaved(true);
       savedTimeoutRef.current = setTimeout(() => setSaved(false), 2000);
-    }
-  };
-
-  const handleDelete = () => {
-    if (environment && window.confirm('Are you sure you want to delete this environment?')) {
-      onDelete(environment.id);
     }
   };
 
@@ -159,20 +152,11 @@ export default function EnvironmentEditor({ environment, isNew, onSave, onDelete
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              {!isNew && (
-                <Button buttonType={ButtonType.DANGER} onClick={handleDelete}>
-                  Delete
-                </Button>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <Button buttonType={ButtonType.SECONDARY} onClick={onCancel}>
-                Cancel
-              </Button>
-              <Button onClick={handleSave}>{isNew ? 'Create' : saved ? 'Saved ✅' : 'Save'}</Button>
-            </div>
+          <div className="flex items-center justify-end gap-2">
+            <Button buttonType={ButtonType.SECONDARY} onClick={onCancel}>
+              Cancel
+            </Button>
+            <Button onClick={handleSave}>{isNew ? 'Create' : saved ? 'Saved ✅' : 'Save'}</Button>
           </div>
         </div>
       </ResponsePanel>
