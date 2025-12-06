@@ -100,7 +100,7 @@ export function ParameterControls({ dynamicValue, onChange }: Props) {
               'h-4.5 w-4.5 shrink-0 text-button-text-secondary hover:text-button-text-secondary-hover',
               'dark:text-text-secondary dark:hover:text-dark-text cursor-pointer',
             )}
-            onClick={() => onChange({ type: 'do-not-test' })}
+            onClick={() => onChange({ type: 'do-not-test', value: '', mandatory: false })}
           />
           <input
             checked={mandatory}
@@ -165,6 +165,7 @@ export function ParameterControls({ dynamicValue, onChange }: Props) {
 
   function onSelectTypeChange(event: ChangeEvent<HTMLSelectElement>) {
     const type = event.target.value as DataType;
-    onChange(getInitialParameterValue(type, ''));
+    if (isParameterTestSkipped(type)) onChange({ type, value: '', mandatory: false });
+    else onChange(getInitialParameterValue(type, ''));
   }
 }

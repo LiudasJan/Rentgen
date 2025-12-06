@@ -24,14 +24,29 @@ export function TestResultControls({ children, className, testResult, testType, 
   );
 }
 
-function renderControl({ name, request, response, status }: TestResult, testType: TestType) {
+function renderControl({ actual, name, request, response, status, value }: TestResult, testType: TestType) {
   const templates: Record<string, Record<string, string>> = {
     security: securityTemplates,
     performance: performanceTemplates,
   };
   const template = templates[testType]?.[name];
-
   if (!template) return null;
+
+  let filledTemplate = '';
+  if (testType === 'security')
+    filledTemplate = fillTemplate(template, {
+      CURL: request ? generateCurl(request) : '',
+      RESPONSE_HEADERS_BLOCK: response?.headers ? JSON.stringify(response.headers, null, 2) : '',
+    });
+
+  if (testType === 'performance')
+    filledTemplate = fillTemplate(template, {
+      MEDIAN_MS: actual || '',
+      YELLOW_OR_RED: status === TestStatus.Warning ? 'YELLOW' : 'RED',
+      PING: value && Array.isArray(value) ? (value as number[]).join(', ') : '',
+    });
+
+  if (!filledTemplate) return null;
 
   switch (status) {
     case TestStatus.Bug:
@@ -41,10 +56,7 @@ function renderControl({ name, request, response, status }: TestResult, testType
         <CopyButton
           className="h-6 w-6 p-0 leading-0 text-button-text-secondary! hover:text-button-text-secondary-hover! bg-transparent! border-0"
           copiedFallback="✅"
-          textToCopy={fillTemplate(template, {
-            CURL: request ? generateCurl(request) : '',
-            RESPONSE_HEADERS_BLOCK: response?.headers ? JSON.stringify(response.headers, null, 2) : '',
-          })}
+          textToCopy={filledTemplate}
           title="Copy Bug Report"
         >
           <BugIcon className="h-4 w-4" />

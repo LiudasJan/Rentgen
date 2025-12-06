@@ -81,6 +81,10 @@ export class PerformanceInsights {
         `<= ${MAX_PING_LATENCY_MS} ms (${MAX_ACCEPTABLE_BAD_PINGS}/${PING_TEST_COUNT} rule)`,
         `${averagePingTime.toFixed(0)} ms (high latency ${highLatencyCount}/${PING_TEST_COUNT})`,
         pingLatencyStatus,
+        null,
+        null,
+        0,
+        pingResults,
       );
     } catch (error) {
       return createErrorTestResult(PING_LATENCY_TEST_NAME, 'Ping Succeeds', String(error));

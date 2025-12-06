@@ -38,7 +38,7 @@ Request Pattern:
 Sequential single requests were executed against the same endpoint (not a load test).
 
 Observed:
-Median Response Time: {{MEDIAN_MS}} ms
+Median Response Time: {{MEDIAN_MS}}
 Threshold Breached: {{YELLOW_OR_RED}}
 
 Expected:
@@ -97,7 +97,7 @@ Request:
 n/a — this test uses 5 raw ICMP-equivalent probes (no payload processing).
 
 Results:
-Ping samples: {{PING_1}}, {{PING_2}}, {{PING_3}}, {{PING_4}}, {{PING_5}} ms
+Ping samples: {{PING}} ms
 At least 3 were > 100 ms → threshold breached.
 
 Expected:
