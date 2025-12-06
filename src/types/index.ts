@@ -93,3 +93,5 @@ export enum TestStatus {
   Pass = '🟢 Pass',
   Warning = '🟠 Warning',
 }
+
+export * from './environment';

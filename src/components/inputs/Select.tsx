@@ -12,14 +12,15 @@ interface Props extends SelectProps {
   isCreatable?: boolean;
 }
 
-export default function Select({ classNames, isCreatable, ...otherProps }: Props) {
+export default function Select({ classNames, styles, isCreatable, ...otherProps }: Props) {
+  const hasCustomControlStyle = !!styles?.control;
+
   const selectClassNames: ClassNamesConfig<unknown, boolean, GroupBase<unknown>> = {
     container: () => 'min-w-[110px] text-xs',
     control: () =>
-      cn(
-        'min-h-auto! bg-white! border! border-border! rounded-md! shadow-none!',
-        'dark:bg-dark-input! dark:border-dark-input! transition-none!',
-      ),
+      cn('min-h-auto! border! border-border! rounded-md! shadow-none!', 'dark:border-dark-border! transition-none!', {
+        'bg-white! dark:bg-dark-input!': !hasCustomControlStyle,
+      }),
     dropdownIndicator: () => 'w-7! p-1.5! text-text/40! dark:text-dark-text/40!',
     indicatorSeparator: () => 'hidden',
     input: () => 'm-0! p-0! text-text! dark:text-dark-text!',
@@ -50,7 +51,14 @@ export default function Select({ classNames, isCreatable, ...otherProps }: Props
   };
 
   if (isCreatable)
-    return <CreatableSelect {...otherProps} classNames={selectClassNames} formatCreateLabel={(value) => value} />;
+    return (
+      <CreatableSelect
+        {...otherProps}
+        styles={styles}
+        classNames={selectClassNames}
+        formatCreateLabel={(value) => value}
+      />
+    );
 
-  return <ReactSelect {...otherProps} classNames={selectClassNames} />;
+  return <ReactSelect {...otherProps} styles={styles} classNames={selectClassNames} />;
 }

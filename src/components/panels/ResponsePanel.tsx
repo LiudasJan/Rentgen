@@ -10,7 +10,7 @@ export default function ResponsePanel({ children, className, title, ...otherProp
     <div
       className={cn(
         'bg-white border border-border rounded-md overflow-hidden',
-        'dark:bg-dark-input dark:border-dark-input',
+        'dark:bg-dark-input dark:border-dark-border',
         className,
       )}
       {...otherProps}
