@@ -39,29 +39,25 @@ export default function SidebarPanel({ items, selectedId, onRemove, onReorder, o
     }
   };
 
-  return (
-    <div className="max-h-screen h-full w-80 flex flex-col overflow-hidden">
-      {items.length > 0 ? (
-        <div className="h-full overflow-x-hidden overflow-y-auto">
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <SortableContext items={items.map((item) => item.id)} strategy={verticalListSortingStrategy}>
-              {items.map((item) => (
-                <SidebarItem
-                  key={item.id}
-                  item={item}
-                  isSelected={item.id === selectedId}
-                  onRemove={onRemove}
-                  onSelect={onSelect}
-                />
-              ))}
-            </SortableContext>
-          </DndContext>
-        </div>
-      ) : (
-        <div className="flex items-center justify-center h-full w-full p-5 text-xs text-text-secondary">
-          No saved requests
-        </div>
-      )}
+  return items.length > 0 ? (
+    <div className="h-full overflow-x-hidden overflow-y-auto">
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={items.map((item) => item.id)} strategy={verticalListSortingStrategy}>
+          {items.map((item) => (
+            <SidebarItem
+              key={item.id}
+              item={item}
+              isSelected={item.id === selectedId}
+              onRemove={onRemove}
+              onSelect={onSelect}
+            />
+          ))}
+        </SortableContext>
+      </DndContext>
+    </div>
+  ) : (
+    <div className="flex items-center justify-center h-full w-full p-5 text-xs text-text-secondary">
+      No saved requests
     </div>
   );
 }

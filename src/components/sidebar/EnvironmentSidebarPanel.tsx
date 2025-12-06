@@ -52,7 +52,7 @@ export default function EnvironmentSidebarPanel({
   };
 
   return (
-    <div className="max-h-screen h-full w-80 flex flex-col overflow-hidden">
+    <>
       {/* Add New Env Button - Always visible at top */}
       <div
         className="flex items-center gap-2 px-3 py-2 border-b border-border dark:border-dark-border cursor-pointer hover:bg-button-secondary dark:hover:bg-dark-input"
@@ -85,6 +85,6 @@ export default function EnvironmentSidebarPanel({
           No environments created
         </div>
       )}
-    </div>
+    </>
   );
 }

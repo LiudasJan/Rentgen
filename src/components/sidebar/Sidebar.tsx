@@ -97,27 +97,29 @@ export default function Sidebar({
           <UpgradeStarIcon className="w-5 h-5" />
         </SidebarButton>
       </div>
-      <div className="overflow-hidden border-l border-border dark:border-dark-border">
-        {activeTab === 'collections' && (
-          <SidebarPanel
-            items={items}
-            selectedId={selectedId}
-            onRemove={onRemove}
-            onSelect={handleSelectCollection}
-            onReorder={onReorder}
-          />
-        )}
-        {activeTab === 'environments' && (
-          <EnvironmentSidebarPanel
-            environments={environments}
-            selectedEnvironmentId={selectedEnvironmentId}
-            onSelect={onSelectEnvironment}
-            onEdit={onEditEnvironment}
-            onAdd={onAddEnvironment}
-            onReorder={onReorderEnvironment}
-            onRemove={onRemoveEnvironment}
-          />
-        )}
+      <div className="border-l border-border dark:border-dark-border overflow-hidden">
+        <div className="max-h-screen h-full w-[calc(25rem-5.5rem)] flex flex-col overflow-hidden">
+          {activeTab === 'collections' && (
+            <SidebarPanel
+              items={items}
+              selectedId={selectedId}
+              onRemove={onRemove}
+              onSelect={handleSelectCollection}
+              onReorder={onReorder}
+            />
+          )}
+          {activeTab === 'environments' && (
+            <EnvironmentSidebarPanel
+              environments={environments}
+              selectedEnvironmentId={selectedEnvironmentId}
+              onSelect={onSelectEnvironment}
+              onEdit={onEditEnvironment}
+              onAdd={onAddEnvironment}
+              onReorder={onReorderEnvironment}
+              onRemove={onRemoveEnvironment}
+            />
+          )}
+        </div>
       </div>
     </div>
   );
