@@ -16,6 +16,7 @@ interface Props {
 export default function SidebarItem({ item, isSelected, onRemove, onSelect }: Props) {
   const { attributes, isDragging, listeners, transform, transition, setNodeRef } = useSortable({
     id: item.id,
+    data: { type: 'item', folderId: item.folderId },
   });
 
   return (

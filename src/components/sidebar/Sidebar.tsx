@@ -1,6 +1,6 @@
 import cn from 'classnames';
 import { useEffect, useState } from 'react';
-import { SidebarItemData } from '../../utils/collection';
+import { SidebarFolderData } from '../../utils/collection';
 import SidebarButton from './SidebarButton';
 import SidebarPanel from './SidebarPanel';
 
@@ -8,14 +8,34 @@ import CollectionIcon from '../../assets/icons/collection-icon.svg';
 import UpgradeStarIcon from '../../assets/icons/upgrade-star-icon.svg';
 
 interface Props {
-  items: SidebarItemData[];
+  folders: SidebarFolderData[];
   selectedId: string | null;
-  onRemove: (id: string) => void;
-  onSelect: (id: string) => void;
-  onReorder: (activeId: string, overId: string) => void;
+  selectedFolderId: string | null;
+  onRemoveItem: (id: string) => void;
+  onSelectItem: (id: string) => void;
+  onReorderItem: (activeId: string, overId: string) => void;
+  onMoveItem: (itemId: string, targetFolderId: string, targetIndex?: number) => void;
+  onSelectFolder: (folderId: string) => void;
+  onAddFolder: () => void;
+  onRenameFolder: (folderId: string, newName: string) => void;
+  onRemoveFolder: (folderId: string, itemCount: number) => void;
+  onReorderFolder: (activeId: string, overId: string) => void;
 }
 
-export default function Sidebar({ items, selectedId, onRemove, onSelect, onReorder }: Props) {
+export default function Sidebar({
+  folders,
+  selectedId,
+  selectedFolderId,
+  onRemoveItem,
+  onSelectItem,
+  onReorderItem,
+  onMoveItem,
+  onSelectFolder,
+  onAddFolder,
+  onRenameFolder,
+  onRemoveFolder,
+  onReorderFolder,
+}: Props) {
   const [appVersion, setAppVersion] = useState<string>('');
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -27,7 +47,7 @@ export default function Sidebar({ items, selectedId, onRemove, onSelect, onReord
   return (
     <div
       className={cn(
-        'h-screen sticky top-0 flex border-r border-border dark:border-dark-input transition-[width] duration-300',
+        'h-screen sticky top-0 flex border-r border-border dark:border-dark-input bg-body dark:bg-dark-body transition-[width] duration-300',
         { 'w-20': !isExpanded, 'w-100': isExpanded },
       )}
     >
@@ -46,13 +66,20 @@ export default function Sidebar({ items, selectedId, onRemove, onSelect, onReord
           <UpgradeStarIcon className="w-5 h-5" />
         </SidebarButton>
       </div>
-      <div className="overflow-hidden border-l border-border dark:border-dark-input">
+      <div className="overflow-hidden border-l border-border dark:border-dark-input bg-body dark:bg-dark-body">
         <SidebarPanel
-          items={items}
+          folders={folders}
           selectedId={selectedId}
-          onRemove={onRemove}
-          onSelect={onSelect}
-          onReorder={onReorder}
+          selectedFolderId={selectedFolderId}
+          onRemoveItem={onRemoveItem}
+          onSelectItem={onSelectItem}
+          onReorderItem={onReorderItem}
+          onMoveItem={onMoveItem}
+          onSelectFolder={onSelectFolder}
+          onAddFolder={onAddFolder}
+          onRenameFolder={onRenameFolder}
+          onRemoveFolder={onRemoveFolder}
+          onReorderFolder={onReorderFolder}
         />
       </div>
     </div>
