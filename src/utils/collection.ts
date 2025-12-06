@@ -109,7 +109,7 @@ export function addRequestToCollection(
   }
 
   const newItem = requestToPostmanItem(method, url, headers, body);
-  folder.item.push(newItem);
+  folder.item.unshift(newItem);
 
   return { ...collection };
 }
