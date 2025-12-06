@@ -39,13 +39,19 @@ import {
   parseHeaders,
 } from './utils';
 import {
+  addFolderToCollection,
   addRequestToCollection,
-  collectionToSidebarItems,
+  collectionToGroupedSidebarData,
   createEmptyCollection,
+  findFolderIdByRequestId,
   findRequestById,
   headersRecordToString,
+  moveRequestToFolder,
   postmanHeadersToRecord,
   removeRequestFromCollection,
+  removeFolderFromCollection,
+  renameFolderInCollection,
+  reorderFolderInCollection,
   reorderRequestInCollection,
   updateRequestInCollection,
 } from './utils/collection';
@@ -91,6 +97,10 @@ export default function App() {
   const [method, setMethod] = useState<Method>('GET');
   const [openCurlModal, setOpenCurlModal] = useState<boolean>(false);
   const [openReloadModal, setOpenReloadModal] = useState<boolean>(false);
+  const [deleteFolderModal, setDeleteFolderModal] = useState<{ isOpen: boolean; folderId: string | null }>({
+    isOpen: false,
+    folderId: null,
+  });
   const [curl, setCurl] = useState<string>('');
   const [curlError, setCurlError] = useState<string>('');
   const [url, setUrl] = useState<string>('');
@@ -111,6 +121,7 @@ export default function App() {
   const [queryParameters, setQueryParameters] = useState<RequestParameters>({});
   const [testOptions, setTestOptions] = useState<TestOptions | null>(null);
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
+  const [selectedFolderId, setSelectedFolderId] = useState<string>('default');
   const [saved, setSaved] = useState<boolean>(false);
   const [exported, setExported] = useState<boolean>(false);
   const [exportFormat, setExportFormat] = useState<ReportFormat>('json');
@@ -131,7 +142,7 @@ export default function App() {
     executeLargePayloadTest,
   } = useTests(testOptions);
   const statusCode = useMemo(() => extractStatusCode(httpResponse), [httpResponse]);
-  const sidebarItems = useMemo(() => collectionToSidebarItems(collection), [collection]);
+  const sidebarFolders = useMemo(() => collectionToGroupedSidebarData(collection), [collection]);
 
   const isRunningTests = isSecurityRunning || isPerformanceRunning || isDataDrivenRunning;
   const disabledRunTests =
@@ -188,11 +199,18 @@ export default function App() {
   return (
     <div className="flex">
       <Sidebar
-        items={sidebarItems}
+        folders={sidebarFolders}
         selectedId={selectedRequestId}
-        onRemove={onRemoveSidebarItem}
-        onReorder={onReorderSidebarItem}
-        onSelect={onSelectSidebarItem}
+        selectedFolderId={selectedFolderId}
+        onRemoveItem={onRemoveSidebarItem}
+        onReorderItem={onReorderSidebarItem}
+        onMoveItem={handleMoveItem}
+        onSelectItem={onSelectSidebarItem}
+        onSelectFolder={handleSelectFolder}
+        onAddFolder={handleAddFolder}
+        onRenameFolder={handleRenameFolder}
+        onRemoveFolder={handleRemoveFolder}
+        onReorderFolder={handleReorderFolder}
       />
       <div className="flex-1 min-w-0 flex flex-col gap-4 py-5 px-7 overflow-y-auto">
         <div className="flex items-center gap-2">
@@ -260,6 +278,22 @@ export default function App() {
                     Reload
                   </Button>
                   <Button buttonType={ButtonType.SECONDARY} onClick={closeReloadModal}>
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            </Modal>
+            <Modal className="[&>div]:w-[400px]!" isOpen={deleteFolderModal.isOpen} onClose={closeDeleteFolderModal}>
+              <div className="flex flex-col gap-4">
+                <h4 className="m-0">Delete Folder</h4>
+                <p className="m-0 text-sm dark:text-text-secondary">
+                  This folder contains requests. Are you sure you want to delete it?
+                </p>
+                <div className="flex items-center justify-end gap-4">
+                  <Button buttonType={ButtonType.DANGER} onClick={confirmDeleteFolder}>
+                    Delete
+                  </Button>
+                  <Button buttonType={ButtonType.SECONDARY} onClick={closeDeleteFolderModal}>
                     Cancel
                   </Button>
                 </div>
@@ -840,13 +874,13 @@ export default function App() {
       setCollection(updatedCollection);
       await window.electronAPI.saveCollection(updatedCollection);
     } else {
-      const updatedCollection = addRequestToCollection(collection, method, url, parsedHeaders, bodyString);
+      const updatedCollection = addRequestToCollection(collection, method, url, parsedHeaders, bodyString, selectedFolderId);
       setCollection(updatedCollection);
       await window.electronAPI.saveCollection(updatedCollection);
 
       // Set the newly created request as selected
-      const defaultFolder = updatedCollection.item.find((f) => f.id === 'default');
-      const newItem = defaultFolder?.item[defaultFolder.item.length - 1];
+      const targetFolder = updatedCollection.item.find((f) => f.id === selectedFolderId);
+      const newItem = targetFolder?.item[targetFolder.item.length - 1];
       if (newItem) setSelectedRequestId(newItem.id);
     }
 
@@ -893,6 +927,12 @@ export default function App() {
     reset(false);
     setSelectedRequestId(id);
 
+    // Also select the folder containing this item
+    const folderId = findFolderIdByRequestId(collection, id);
+    if (folderId) {
+      setSelectedFolderId(folderId);
+    }
+
     const { request } = item;
     const isWssUrl = request.url.startsWith('ws://') || request.url.startsWith('wss://');
     setMode(isWssUrl ? 'WSS' : 'HTTP');
@@ -900,6 +940,58 @@ export default function App() {
     setUrl(request.url);
     setHeaders(headersRecordToString(postmanHeadersToRecord(request.header)));
     setBody(request.body?.raw || '{}');
+  }
+
+  function handleSelectFolder(folderId: string) {
+    setSelectedFolderId(folderId);
+  }
+
+  async function handleAddFolder() {
+    const updatedCollection = addFolderToCollection(collection, 'New Folder');
+    setCollection(updatedCollection);
+    await window.electronAPI.saveCollection(updatedCollection);
+  }
+
+  async function handleRenameFolder(folderId: string, newName: string) {
+    const updatedCollection = renameFolderInCollection(collection, folderId, newName);
+    setCollection(updatedCollection);
+    await window.electronAPI.saveCollection(updatedCollection);
+  }
+
+  async function handleRemoveFolder(folderId: string, itemCount: number) {
+    if (itemCount > 0) {
+      setDeleteFolderModal({ isOpen: true, folderId });
+    } else {
+      const updatedCollection = removeFolderFromCollection(collection, folderId);
+      setCollection(updatedCollection);
+      await window.electronAPI.saveCollection(updatedCollection);
+    }
+  }
+
+  async function confirmDeleteFolder() {
+    if (deleteFolderModal.folderId) {
+      const updatedCollection = removeFolderFromCollection(collection, deleteFolderModal.folderId);
+      setCollection(updatedCollection);
+      await window.electronAPI.saveCollection(updatedCollection);
+    }
+    setDeleteFolderModal({ isOpen: false, folderId: null });
+  }
+
+  function closeDeleteFolderModal() {
+    setDeleteFolderModal({ isOpen: false, folderId: null });
+  }
+
+  async function handleReorderFolder(activeId: string, overId: string) {
+    const updatedCollection = reorderFolderInCollection(collection, activeId, overId);
+    setCollection(updatedCollection);
+    await window.electronAPI.saveCollection(updatedCollection);
+  }
+
+  async function handleMoveItem(itemId: string, targetFolderId: string, targetIndex?: number) {
+    const updatedCollection = moveRequestToFolder(collection, itemId, targetFolderId, targetIndex);
+    setCollection(updatedCollection);
+    await window.electronAPI.saveCollection(updatedCollection);
+    setSelectedFolderId(targetFolderId);
   }
 }
 
