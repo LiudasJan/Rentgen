@@ -27,16 +27,18 @@ export function substituteRequestVariables(
   url: string,
   headers: string,
   body: string,
+  messageType: string,
   environment: Environment | null,
-): { url: string; headers: string; body: string } {
+): { url: string; headers: string; body: string; messageType: string } {
   if (!environment || environment.variables.length === 0) {
-    return { url, headers, body };
+    return { url, headers, body, messageType };
   }
 
   return {
     url: substituteVariables(url, environment.variables),
     headers: substituteVariables(headers, environment.variables),
     body: substituteVariables(body, environment.variables),
+    messageType: substituteVariables(messageType, environment.variables),
   };
 }
 

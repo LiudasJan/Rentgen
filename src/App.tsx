@@ -380,7 +380,7 @@ export default function App() {
               <Button
                 className="absolute top-3 right-4"
                 buttonType={ButtonType.SECONDARY}
-            buttonSize={ButtonSize.SMALL}
+                buttonSize={ButtonSize.SMALL}
                 onClick={() => setBody((prevBody) => formatBody(prevBody, parseHeaders(headers)))}
               >
                 Beautify
@@ -553,14 +553,11 @@ export default function App() {
                   disabled={disabledRunTests}
                   onClick={() => {
                     setTestOptions({
-                      body,
+                      ...substituteRequestVariables(url, headers, body, messageType, selectedEnvironment),
                       bodyParameters,
-                      headers,
                       method,
-                      messageType,
                       protoFile,
                       queryParameters,
-                      url,
                     });
                   }}
                 >
@@ -599,31 +596,31 @@ export default function App() {
                         name: 'Result',
                         selector: (row) => row.status,
                         width: securityTests.find((test) =>
-                      [TestStatus.Bug, TestStatus.Fail, TestStatus.Warning].includes(test.status),
-                    )
-                      ? '190px'
-                      :'150px',
+                          [TestStatus.Bug, TestStatus.Fail, TestStatus.Warning].includes(test.status),
+                        )
+                          ? '190px'
+                          : '150px',
                         cell: (row, id) => (
-                      <TestResultControls
-                          className={cn('py-1', { 'items-end': row.name === LARGE_PAYLOAD_TEST_NAME })}
+                          <TestResultControls
+                            className={cn('py-1', { 'items-end': row.name === LARGE_PAYLOAD_TEST_NAME })}
                             data-column-id={id}
-                        data-tag="allowRowEvents"
-                        testResult={row}
-                        testType="security"
-                      >
-                        {row.name === LARGE_PAYLOAD_TEST_NAME ? (
+                            data-tag="allowRowEvents"
+                            testResult={row}
+                            testType="security"
+                          >
+                            {row.name === LARGE_PAYLOAD_TEST_NAME ? (
                               <LargePayloadTestControls
                                 isRunning={isLargePayloadTestRunning}
                                 executeTest={(size: number) =>
                                   executeLargePayloadTest({ ...testOptions, bodyParameters, queryParameters }, size)
                                 }
                               />
-                            ): (
-                          <p className="m-0 mr-2 whitespace-nowrap" data-column-id={id} data-tag="allowRowEvents">
-                            {row.status}
-                          </p>
-                        )}
-                      </TestResultControls>
+                            ) : (
+                              <p className="m-0 mr-2 whitespace-nowrap" data-column-id={id} data-tag="allowRowEvents">
+                                {row.status}
+                              </p>
+                            )}
+                          </TestResultControls>
                         ),
                       },
                     ]}
@@ -650,17 +647,17 @@ export default function App() {
                         name: 'Result',
                         selector: (row) => row.status,
                         width: performanceTests.find((test) =>
-                      [TestStatus.Bug, TestStatus.Fail, TestStatus.Warning].includes(test.status),
-                    )
-                      ? '240px'
-                      :'220px',
+                          [TestStatus.Bug, TestStatus.Fail, TestStatus.Warning].includes(test.status),
+                        )
+                          ? '240px'
+                          : '220px',
                         cell: (row) => (
                           <TestResultControls
-                        className={cn('py-1', { 'items-end': row.name === LOAD_TEST_NAME })}
+                            className={cn('py-1', { 'items-end': row.name === LOAD_TEST_NAME })}
                             testResult={row}
-                        testType="performance"
-                      >
-                        {row.name === LOAD_TEST_NAME ? (
+                            testType="performance"
+                          >
+                            {row.name === LOAD_TEST_NAME ? (
                               <LoadTestControls
                                 isRunning={isLoadTestRunning}
                                 executeTest={(threadCount: number, requestCount: number) =>
@@ -671,11 +668,10 @@ export default function App() {
                                   )
                                 }
                               />
-                            ): (
-
-                          <p className="m-0 mr-2 whitespace-nowrap">{row.status}</p>
-                        )}
-                      </TestResultControls>
+                            ) : (
+                              <p className="m-0 mr-2 whitespace-nowrap">{row.status}</p>
+                            )}
+                          </TestResultControls>
                         ),
                       },
                     ]}
@@ -920,10 +916,11 @@ export default function App() {
         url: substitutedUrl,
         headers: substitutedHeaders,
         body: substitutedBody,
-      } = substituteRequestVariables(url, headers, body, selectedEnvironment);
+        messageType: substitutedMessageType,
+      } = substituteRequestVariables(url, headers, body, messageType, selectedEnvironment);
 
       const parsedHeaders = parseHeaders(substitutedHeaders);
-      const parsedBody = parseBody(substitutedBody, parsedHeaders, messageType, protoFile);
+      const parsedBody = parseBody(substitutedBody, parsedHeaders, substitutedMessageType, protoFile);
       const request = createHttpRequest(parsedBody, parsedHeaders, method, substitutedUrl);
       const response: HttpResponse = await window.electronAPI.sendHttp(request);
 
