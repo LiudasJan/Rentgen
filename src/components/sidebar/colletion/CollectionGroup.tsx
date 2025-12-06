@@ -115,7 +115,7 @@ export default function CollectionGroup({
               onKeyDown={handleKeyDown}
               onBlur={() => onSaveEdit(folder.id, editingName)}
               onClick={(e) => e.stopPropagation()}
-              className="flex-1 text-xs bg-transparent border border-border dark:border-dark-input rounded px-1 py-0.5 outline-none focus:border-button-primary"
+              className="flex-1 text-xs bg-transparent border border-border dark:border-dark-input dark:text-dark-text rounded px-1 py-0.5 outline-none focus:border-button-primary"
               autoFocus
             />
           ) : (

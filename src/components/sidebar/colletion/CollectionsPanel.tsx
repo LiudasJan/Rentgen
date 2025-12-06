@@ -114,8 +114,6 @@ export default function CollectionsPanel({
     setEditingName('');
   };
 
-  const totalItems = folders.reduce((sum, folder) => sum + folder.items.length, 0);
-
   // Create flat list of all sortable IDs (folders + all items from all folders)
   const allSortableIds = useMemo(() => {
     const ids: string[] = [];
@@ -136,7 +134,7 @@ export default function CollectionsPanel({
             <span className="text-xs text-text-secondary dark:text-dark-text-secondary">New Folder</span>
         </div>
 
-      {totalItems > 0 || folders.length > 1 ? (
+      {folders.length > 0 ? (
         <div className="h-full overflow-x-hidden overflow-y-auto">
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={allSortableIds} strategy={verticalListSortingStrategy}>
