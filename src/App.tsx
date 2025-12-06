@@ -7,9 +7,12 @@ import { CopyButton } from './components/buttons/CopyButton';
 import { IconButton } from './components/buttons/IconButton';
 import { LargePayloadTestControls } from './components/controls/LargePayloadTestControls';
 import { LoadTestControls } from './components/controls/LoadTestControls';
+import { TestResultControls } from './components/controls/TestResultControls';
+import EnvironmentEditor from './components/environment/EnvironmentEditor';
+import EnvironmentSelector from './components/environment/EnvironmentSelector';
+import FileInput from './components/inputs/FileInput';
 import HighlightedInput from './components/inputs/HighlightedInput';
 import HighlightedTextarea from './components/inputs/HighlightedTextarea';
-import FileInput from './components/inputs/FileInput';
 import Select, { SelectOption } from './components/inputs/Select';
 import Textarea from './components/inputs/Textarea';
 import { JsonViewer } from './components/JsonViewer';
@@ -25,8 +28,6 @@ import useTests from './hooks/useTests';
 import { LARGE_PAYLOAD_TEST_NAME, LOAD_TEST_NAME } from './tests';
 import { Environment, HttpResponse, RequestParameters, TestOptions, TestResult, TestStatus } from './types';
 import { PostmanCollection } from './types/postman';
-import EnvironmentEditor from './components/environment/EnvironmentEditor';
-import EnvironmentSelector from './components/environment/EnvironmentSelector';
 import {
   createHttpRequest,
   detectDataType,
@@ -57,7 +58,6 @@ import {
 import DarkModeIcon from './assets/icons/dark-mode-icon.svg';
 import LightModeIcon from './assets/icons/light-mode-icon.svg';
 import ReloadIcon from './assets/icons/reload-icon.svg';
-import { TestResultControls } from './components/controls/TestResultControls';
 
 type Mode = 'HTTP' | 'WSS';
 type ReportFormat = 'json' | 'md' | 'csv';
