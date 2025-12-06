@@ -1,4 +1,5 @@
 import {
+  LOAD_TEST_NAME,
   MEDIAN_RESPONSE_TIME_TEST_NAME,
   NETWORK_LATENCY_DOMINATES_RESPONSE_TIME_TEST_NAME,
   PING_LATENCY_TEST_NAME,
@@ -148,4 +149,50 @@ Suggested next steps:
 - Run ping / traceroute from the same environment where Rentgen is running
 - Check if the API can be moved closer to the client or test infra
 - Review network path (VPN, proxies, WAF, CDN) to reduce latency`,
+  [LOAD_TEST_NAME]: `BUG REPORT – Load Test Performance Degradation
+
+The API shows degraded performance under minimal concurrent load.
+During a lightweight load test ({{threads}} threads, {{requests}} requests), the median and high-percentile latencies exceeded acceptable performance thresholds.
+
+Why it’s a bug:
+Even small amounts of parallel traffic should not push API latency into the 500–1000 ms range. This indicates potential issues such as:
+
+- Inefficient middleware or routing
+- Slow database queries
+- Insufficient caching
+- N+1 patterns or unoptimized business logic
+- Thread/connection pool saturation
+
+RENTGEN’s performance thresholds:
+- Median <500 ms → Pass
+- Median <1000 ms → Warning
+- Median ≥1000 ms → Fail
+
+Crossing into Warning/Fail territory even with low load suggests the system may not scale reliably when real traffic increases.
+
+Request:
+{{CURL}}
+
+Response Time Metrics:
+{{RESPONSE_PERF_BLOCK}}
+
+Expected:
+Median latency <500 ms under minimal concurrency ({{threads}} threads, {{requests}} requests).
+p50 percentile value should remain well below 500 ms.
+
+Requirements:
+- Median, p50 should not degrade under low load
+- No 5xx or connection drops
+- Latency stability across repeated runs
+
+Severity:
+Medium (Scalability & Performance Reliability)
+
+Fix:
+Review performance bottlenecks by:
+- Profiling slow endpoints
+- Checking DB query execution plans
+- Implementing caching where possible
+- Ensuring proper connection/thread pool sizing
+- Reviewing middleware for synchronous blocking operations`,
 };
