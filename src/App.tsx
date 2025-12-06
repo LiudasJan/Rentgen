@@ -846,7 +846,7 @@ export default function App() {
 
       // Set the newly created request as selected
       const defaultFolder = updatedCollection.item.find((f) => f.id === 'default');
-      const newItem = defaultFolder?.item[defaultFolder.item.length - 1];
+      const newItem = defaultFolder?.item[0];
       if (newItem) setSelectedRequestId(newItem.id);
     }
 
