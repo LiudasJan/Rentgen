@@ -1,12 +1,13 @@
 import { getResponseStatusTitle, RESPONSE_STATUS } from '../constants/responseStatus';
 import { Test } from '../decorators';
-import { TestOptions, TestResult, TestStatus } from '../types';
+import { HttpRequest, HttpResponse, TestOptions, TestResult, TestStatus } from '../types';
 import { calculateMedian, calculatePercentile, createTestHttpRequest, extractStatusCode } from '../utils';
 import { createErrorTestResult, createTestResult, NOT_AVAILABLE_TEST } from './BaseTests';
 
 export const LOAD_TEST_NAME = 'Load Test';
-
-const PING_LATENCY_TEST_NAME = 'Ping Latency';
+export const MEDIAN_RESPONSE_TIME_TEST_NAME = 'Median Response Time';
+export const NETWORK_LATENCY_DOMINATES_RESPONSE_TIME_TEST_NAME = 'Network Latency Dominates Response Time';
+export const PING_LATENCY_TEST_NAME = 'Ping Latency';
 
 const EXCELLENT_RESPONSE_TIME_MS = 500;
 const ACCEPTABLE_RESPONSE_TIME_MS = 1000;
@@ -51,7 +52,7 @@ export class PerformanceInsights {
     else if (medianResponseTime <= ACCEPTABLE_RESPONSE_TIME_MS) responseTimeStatus = TestStatus.Warning;
 
     return createTestResult(
-      'Median Response Time',
+      MEDIAN_RESPONSE_TIME_TEST_NAME,
       `<= ${EXCELLENT_RESPONSE_TIME_MS} ms`,
       `${medianResponseTime.toFixed(0)} ms`,
       responseTimeStatus,
@@ -80,6 +81,10 @@ export class PerformanceInsights {
         `<= ${MAX_PING_LATENCY_MS} ms (${MAX_ACCEPTABLE_BAD_PINGS}/${PING_TEST_COUNT} rule)`,
         `${averagePingTime.toFixed(0)} ms (high latency ${highLatencyCount}/${PING_TEST_COUNT})`,
         pingLatencyStatus,
+        null,
+        null,
+        0,
+        pingResults,
       );
     } catch (error) {
       return createErrorTestResult(PING_LATENCY_TEST_NAME, 'Ping Succeeds', String(error));
@@ -105,21 +110,23 @@ export async function runLoadTest(
   requestCount: number,
   updateProgress?: (sentRequestCount: number, requestCount: number) => void,
 ): Promise<TestResult> {
-  const concurrency = Math.max(1, Math.min(MAX_CONCURRENCY, Math.floor(threadCount)));
-  const totalRequests = Math.max(1, Math.min(MAX_TOTAL_REQUESTS, Math.floor(requestCount)));
+  const threads = Math.max(1, Math.min(MAX_CONCURRENCY, Math.floor(threadCount)));
+  const requests = Math.max(1, Math.min(MAX_TOTAL_REQUESTS, Math.floor(requestCount)));
   const responseTimes: number[] = [];
 
   let requestsSent = 0,
     server5xxFailures = 0,
     client4xxFailures = 0,
-    isAborted = false;
+    isAborted = false,
+    request: HttpRequest = null,
+    response: HttpResponse = null;
 
   async function executeSingleRequest(): Promise<void> {
     if (isAborted) return;
 
-    const request = createTestHttpRequest(options);
+    request = createTestHttpRequest(options);
     const requestStartTime = performance.now();
-    const response = await window.electronAPI.sendHttp(request);
+    response = await window.electronAPI.sendHttp(request);
     const responseTime = performance.now() - requestStartTime;
     responseTimes.push(responseTime);
 
@@ -129,7 +136,7 @@ export async function runLoadTest(
 
     // Check early abort conditions
     if (server5xxFailures >= MAX_EARLY_ABORT_FAILURES) isAborted = true;
-    if (responseTimes.length >= Math.min(MIN_REQUESTS_FOR_ABORT_CHECK, totalRequests)) {
+    if (responseTimes.length >= Math.min(MIN_REQUESTS_FOR_ABORT_CHECK, requests)) {
       const medianResponseTime = calculatePercentile(responseTimes, 50);
       if (medianResponseTime > EARLY_ABORT_RESPONSE_TIME_MS) isAborted = true;
     }
@@ -138,7 +145,7 @@ export async function runLoadTest(
   async function workerThread(): Promise<void> {
     while (!isAborted) {
       const currentRequestIndex = requestsSent++;
-      if (currentRequestIndex >= totalRequests) break;
+      if (currentRequestIndex >= requests) break;
 
       await executeSingleRequest();
 
@@ -148,7 +155,7 @@ export async function runLoadTest(
   }
 
   // Execute concurrent worker threads
-  const workers = Array.from({ length: Math.min(concurrency, totalRequests) }, workerThread);
+  const workers = Array.from({ length: Math.min(threads, requests) }, workerThread);
   await Promise.all(workers);
 
   // Calculate performance percentiles
@@ -169,7 +176,11 @@ export async function runLoadTest(
   return createTestResult(
     LOAD_TEST_NAME,
     `Median <${EXCELLENT_RESPONSE_TIME_MS} ms (Pass), <${ACCEPTABLE_RESPONSE_TIME_MS} ms (Warning), ≥${ACCEPTABLE_RESPONSE_TIME_MS} ms (Fail)`,
-    `${concurrency} threads, ${totalRequests} total req. Executed: ${responseTimes.length} req → p50=${p50.toFixed(0)}ms p90=${p90.toFixed(0)}ms p95=${p95.toFixed(0)}ms avg=${averageResponseTime.toFixed(0)}ms, 4xx=${client4xxFailures}, 5xx=${server5xxFailures}`,
+    `${threads} threads, ${requests} total req. Executed: ${responseTimes.length} req → p50=${p50.toFixed(0)}ms p90=${p90.toFixed(0)}ms p95=${p95.toFixed(0)}ms avg=${averageResponseTime.toFixed(0)}ms, 4xx=${client4xxFailures}, 5xx=${server5xxFailures}`,
     testStatus,
+    request,
+    response,
+    averageResponseTime,
+    { threads, requests },
   );
 }

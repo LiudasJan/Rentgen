@@ -5,7 +5,7 @@ export function IconButton({ buttonType = ButtonType.SECONDARY, className, child
   return (
     <Button
       buttonType={buttonType}
-      className={cn('flex items-center justify-center h-[34px] w-[34px] min-w-auto! p-0! rounded-full!', className)}
+      className={cn('flex items-center justify-center h-[34px] w-[34px] min-w-auto p-0 rounded-full', className)}
       {...otherProps}
     >
       {children}

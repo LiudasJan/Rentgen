@@ -17,7 +17,7 @@ export function LoadTestControls({ isRunning, executeTest }: Props) {
       <div>
         <label className="block mb-0.5 font-bold text-[10px]">Threads</label>
         <Input
-          className="w-12! p-0.5! text-center!"
+          className="w-12 p-0.5 text-center"
           title="Threads (max 100)"
           type="number"
           value={threadCount}
@@ -28,7 +28,7 @@ export function LoadTestControls({ isRunning, executeTest }: Props) {
       <div>
         <label className="block mb-0.5 font-bold text-[10px]">Requests</label>
         <Input
-          className="w-16! p-0.5! text-center!"
+          className="w-16 p-0.5 text-center"
           type="number"
           title="Total requests (max 10 000)"
           value={requestCount}

@@ -18,7 +18,7 @@ export function LargePayloadTestControls({ isRunning, executeTest }: Props) {
       <div>
         <label className="block mb-0.5 font-bold text-[10px]">Size (MB)</label>
         <Input
-          className="w-16! p-0.5! text-center!"
+          className="w-16 p-0.5 text-center"
           type="number"
           title={`Size (max ${MAX_PAYLOAD_SIZE_MB} MB)`}
           value={size}

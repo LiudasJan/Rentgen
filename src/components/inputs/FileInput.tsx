@@ -31,7 +31,10 @@ export default function FileInput({
       <input ref={inputRef} accept={accept} className="sr-only" type="file" onChange={handleChange} {...otherProps} />
       <Button
         buttonType={ButtonType.SECONDARY}
-        className={cn('border-border! dark:border-dark-input! rounded-r-none whitespace-nowrap', buttonClassName)}
+        className={cn(
+          'border-border dark:border-dark-button-secondary dark:hover:border-dark-button-secondary-hover rounded-r-none whitespace-nowrap',
+          buttonClassName,
+        )}
         onClick={handleClick}
       >
         Choose file
