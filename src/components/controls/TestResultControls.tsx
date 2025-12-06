@@ -35,15 +35,15 @@ function renderControl({ actual, name, request, response, status, value }: TestR
   let filledTemplate = '';
   if (testType === 'security')
     filledTemplate = fillTemplate(template, {
-      CURL: request ? generateCurl(request) : '',
-      RESPONSE_HEADERS_BLOCK: response?.headers ? JSON.stringify(response.headers, null, 2) : '',
+      CURL: request ? generateCurl(request) : '-',
+      RESPONSE_HEADERS_BLOCK: response?.headers ? JSON.stringify(response.headers, null, 2) : '-',
     });
 
   if (testType === 'performance')
     filledTemplate = fillTemplate(template, {
-      MEDIAN_MS: actual || '',
+      MEDIAN_MS: actual || '-',
       YELLOW_OR_RED: status === TestStatus.Warning ? 'YELLOW' : 'RED',
-      PING: value && Array.isArray(value) ? (value as number[]).join(', ') : '',
+      PING: value && Array.isArray(value) ? (value as number[]).join(', ') : '-',
     });
 
   if (!filledTemplate) return null;
