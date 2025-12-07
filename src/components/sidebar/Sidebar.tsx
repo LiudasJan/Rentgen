@@ -17,9 +17,9 @@ interface Props {
   selectedId: string | null;
   environments: Environment[];
   selectedEnvironmentId: string | null;
-  onRemove: (id: string) => void;
-  onSelect: (id: string) => void;
-  onReorder: (activeId: string, overId: string) => void;
+  onRemoveCollection: (id: string) => void;
+  onSelectCollection: (id: string) => void;
+  onReorderCollection: (activeId: string, overId: string) => void;
   onSelectEnvironment: (id: string | null) => void;
   onEditEnvironment: (id: string | null) => void;
   onAddEnvironment: () => void;
@@ -32,9 +32,9 @@ export default function Sidebar({
   selectedId,
   environments,
   selectedEnvironmentId,
-  onRemove,
-  onSelect,
-  onReorder,
+  onRemoveCollection,
+  onSelectCollection,
+  onReorderCollection,
   onSelectEnvironment,
   onEditEnvironment,
   onAddEnvironment,
@@ -53,6 +53,7 @@ export default function Sidebar({
 
   const handleCollectionClick = () => {
     setActiveTab((prev) => (prev === 'collections' ? null : 'collections'));
+    onEditEnvironment(null);
   };
 
   const handleEnvironmentClick = () => {
@@ -60,7 +61,7 @@ export default function Sidebar({
   };
 
   const handleSelectCollection = (id: string) => {
-    onSelect(id);
+    onSelectCollection(id);
     onEditEnvironment(null);
   };
 
@@ -103,9 +104,9 @@ export default function Sidebar({
             <SidebarPanel
               items={items}
               selectedId={selectedId}
-              onRemove={onRemove}
+              onRemove={onRemoveCollection}
               onSelect={handleSelectCollection}
-              onReorder={onReorder}
+              onReorder={onReorderCollection}
             />
           )}
           {activeTab === 'environments' && (

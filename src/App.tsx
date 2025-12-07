@@ -211,9 +211,9 @@ export default function App() {
         selectedId={selectedRequestId}
         environments={environments}
         selectedEnvironmentId={selectedEnvironmentId}
-        onRemove={onRemoveSidebarItem}
-        onReorder={onReorderSidebarItem}
-        onSelect={onSelectSidebarItem}
+        onRemoveCollection={onRemoveSidebarItem}
+        onReorderCollection={onReorderSidebarItem}
+        onSelectCollection={onSelectSidebarItem}
         onSelectEnvironment={setSelectedEnvironmentId}
         onEditEnvironment={handleEditEnvironment}
         onAddEnvironment={handleAddEnvironment}
