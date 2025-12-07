@@ -98,7 +98,7 @@ export default function Sidebar({
         </SidebarButton>
       </div>
       <div className="border-l border-border dark:border-dark-border overflow-hidden">
-        <div className="max-h-screen h-full w-[calc(25rem-5.5rem)] flex flex-col overflow-hidden">
+        <div className="max-h-screen h-full w-78 flex flex-col overflow-hidden">
           {activeTab === 'collections' && (
             <SidebarPanel
               items={items}
