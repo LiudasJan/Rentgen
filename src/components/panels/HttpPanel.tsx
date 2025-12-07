@@ -20,7 +20,7 @@ export function HttpPanel({ className, children, source, title, ...otherProps }:
       <div
         className={cn('max-h-80 flex-auto m-0 p-2.5', {
           'bg-white border border-border rounded overflow-y-auto': source,
-          'dark:bg-dark-input dark:border-dark-input': source,
+          'dark:bg-dark-input dark:border-dark-border': source,
           'pl-0': !source,
         })}
       >
