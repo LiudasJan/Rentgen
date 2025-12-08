@@ -140,7 +140,7 @@ export function extractBodyParameters(body: unknown, headers: Record<string, str
   } else if (isObject(body)) {
     const extractedProperties = extractPropertiesFromJson(body);
     for (const [key, value] of Object.entries(extractedProperties)) {
-      if (value === 'DO_NOT_TEST') parameters[key] = { type: 'do-not-test' };
+      if (value === 'DO_NOT_TEST') parameters[key] = getInitialParameterValue('do-not-test', '', false);
       else {
         // Navigate to the actual value in the parsed body
         const paths = key.replace(/\[(\d+)\]/g, '.$1').split('.');
@@ -216,8 +216,8 @@ export function getBodyParameterValue(body: unknown, parameterName: string, head
   return value;
 }
 
-export function getInitialParameterValue(type: DataType, value: string): DynamicValue {
-  const dynamicValue: DynamicValue = { type, mandatory: true };
+export function getInitialParameterValue(type: DataType, value = '', mandatory = true): DynamicValue {
+  const dynamicValue: DynamicValue = { mandatory, type, value };
 
   switch (type) {
     case 'enum':

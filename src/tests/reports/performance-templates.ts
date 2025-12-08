@@ -1,7 +1,7 @@
 import {
   LOAD_TEST_NAME,
   MEDIAN_RESPONSE_TIME_TEST_NAME,
-  NETWORK_LATENCY_DOMINATES_RESPONSE_TIME_TEST_NAME,
+  NETWORK_SHARE_TEST_NAME,
   PING_LATENCY_TEST_NAME,
 } from '../PerformanceInsights';
 
@@ -117,7 +117,7 @@ Fix:
 - Investigate packet loss or throttling on internal networking equipment
 
 Stable low latency (< 100 ms) is foundational for a responsive API — failures here affect everything built on top of it.`,
-  [NETWORK_LATENCY_DOMINATES_RESPONSE_TIME_TEST_NAME]: `PERFORMANCE INSIGHT – Network Latency Dominates Response Time
+  [NETWORK_SHARE_TEST_NAME]: `PERFORMANCE INSIGHT – Network Latency Dominates Response Time
 
 Rentgen compared the API response time with raw network latency (ping).
 A large portion of the total response time is spent just traveling over the network, not in the backend.
