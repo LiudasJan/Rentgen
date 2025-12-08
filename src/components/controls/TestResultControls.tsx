@@ -1,7 +1,12 @@
 import cn from 'classnames';
 import { HTMLAttributes } from 'react';
 import { twMerge } from 'tailwind-merge';
-import { LOAD_TEST_NAME, MEDIAN_RESPONSE_TIME_TEST_NAME, PING_LATENCY_TEST_NAME } from '../../tests';
+import {
+  LOAD_TEST_NAME,
+  MEDIAN_RESPONSE_TIME_TEST_NAME,
+  NETWORK_SHARE_TEST_NAME,
+  PING_LATENCY_TEST_NAME,
+} from '../../tests';
 import { performanceTemplates, securityTemplates } from '../../tests/reports';
 import { TestResult, TestStatus } from '../../types';
 import { generateCurl } from '../../utils';
@@ -45,23 +50,36 @@ function renderControl({ actual, name, request, response, status, value }: TestR
         });
 
       if (testType === 'performance') {
+        if (name === LOAD_TEST_NAME)
+          filledTemplate = fillTemplate(template, {
+            threads: value && typeof value === 'object' && 'threads' in value ? value.threads : '-',
+            requests: value && typeof value === 'object' && 'requests' in value ? value.requests : '-',
+            CURL: request ? generateCurl(request) : '-',
+            RESPONSE_PERF_BLOCK: actual || '-',
+          });
+
         if (name === MEDIAN_RESPONSE_TIME_TEST_NAME)
           filledTemplate = fillTemplate(template, {
             MEDIAN_MS: actual || '-',
             YELLOW_OR_RED: status === TestStatus.Warning ? 'YELLOW' : 'RED',
           });
 
+        if (name === NETWORK_SHARE_TEST_NAME)
+          filledTemplate = fillTemplate(template, {
+            BEST_PING_MS: value && typeof value === 'object' && 'pingTime' in value ? value.pingTime : '-',
+            CURL: value && typeof value === 'object' && 'hostname' in value ? `ping ${value.hostname}` : '-',
+            MEDIAN_RESPONSE_MS:
+              value && typeof value === 'object' && 'medianResponseTime' in value
+                ? value.medianResponseTime.toFixed(0)
+                : '-',
+            RATIO_PERCENT:
+              value && typeof value === 'object' && 'ratioPercent' in value ? value.ratioPercent.toFixed(2) : '-',
+            PING_RESULTS_BLOCK: actual || '-',
+          });
+
         if (name === PING_LATENCY_TEST_NAME)
           filledTemplate = fillTemplate(template, {
             PING: value && Array.isArray(value) ? (value as number[]).join(', ') : '-',
-          });
-
-        if (name === LOAD_TEST_NAME)
-          filledTemplate = fillTemplate(template, {
-            threads: value && typeof value === 'object' && 'threads' in value ? String(value.threads) : '-',
-            requests: value && typeof value === 'object' && 'requests' in value ? String(value.requests) : '-',
-            CURL: request ? generateCurl(request) : '-',
-            RESPONSE_PERF_BLOCK: actual || '-',
           });
       }
 
