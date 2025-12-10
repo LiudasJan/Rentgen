@@ -1,9 +1,9 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import cn from 'classnames';
-import { Environment } from '../../types';
+import { Environment } from '../../../types';
 
-import ClearCrossIcon from '../../assets/icons/clear-cross-icon.svg';
+import ClearCrossIcon from '../../../assets/icons/clear-cross-icon.svg';
 
 interface Props {
   environment: Environment;

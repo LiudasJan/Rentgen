@@ -17,8 +17,8 @@ interface Props {
   selectedFolderId: string | null;
   isEditing: boolean;
   editingName: string;
-  onRemoveItem: (id: string) => void;
-  onSelectItem: (id: string) => void;
+  onRemoveCollection: (id: string) => void;
+  onSelectCollection: (id: string) => void;
   onSelectFolder: (folderId: string) => void;
   onStartEdit: (folderId: string) => void;
   onSaveEdit: (folderId: string, newName: string) => void;
@@ -34,8 +34,8 @@ export default function CollectionGroup({
   selectedFolderId,
   isEditing,
   editingName,
-  onRemoveItem,
-  onSelectItem,
+  onRemoveCollection,
+  onSelectCollection,
   onSelectFolder,
   onStartEdit,
   onSaveEdit,
@@ -141,14 +141,14 @@ export default function CollectionGroup({
       </div>
 
       {isExpanded && folder.items.length > 0 && (
-        <div className="pl-4">
+        <div>
           {folder.items.map((item) => (
             <SidebarItem
               key={item.id}
               item={item}
               isSelected={item.id === selectedId}
-              onRemove={onRemoveItem}
-              onSelect={onSelectItem}
+              onRemoveCollection={onRemoveCollection}
+              onSelectCollection={onSelectCollection}
             />
           ))}
         </div>

@@ -2,9 +2,9 @@ import cn from 'classnames';
 import { useEffect, useState } from 'react';
 import { Environment } from '../../types';
 import { SidebarFolderData } from '../../utils/collection';
-import EnvironmentSidebarPanel from './EnvironmentSidebarPanel';
+import EnvironmentSidebarPanel from './environment/EnvironmentSidebarPanel';
 import SidebarButton from './SidebarButton';
-import SidebarPanel from './SidebarPanel';
+import CollectionsPanel from './colletion/CollectionsPanel';
 
 import CollectionIcon from '../../assets/icons/collection-icon.svg';
 import EnvironmentIcon from '../../assets/icons/environment-icon.svg';
@@ -16,9 +16,9 @@ interface Props {
   folders: SidebarFolderData[];
   selectedId: string | null;
   selectedFolderId: string | null;
-  onRemoveItem: (id: string) => void;
-  onSelectItem: (id: string) => void;
-  onReorderItem: (activeId: string, overId: string) => void;
+  onRemoveCollection: (id: string) => void;
+  onSelectCollection: (id: string) => void;
+  onReorderCollection: (activeId: string, overId: string) => void;
   onMoveItem: (itemId: string, targetFolderId: string, targetIndex?: number) => void;
   onSelectFolder: (folderId: string) => void;
   onAddFolder: () => void;
@@ -38,9 +38,9 @@ export default function Sidebar({
   folders,
   selectedId,
   selectedFolderId,
-  onRemoveItem,
-  onSelectItem,
-  onReorderItem,
+  onRemoveCollection,
+  onSelectCollection,
+  onReorderCollection,
   onMoveItem,
   onSelectFolder,
   onAddFolder,
@@ -74,8 +74,8 @@ export default function Sidebar({
     setActiveTab((prev) => (prev === 'environments' ? null : 'environments'));
   };
 
-  const handleSelectItem = (id: string) => {
-    onSelectItem(id);
+  const handleSelectCollection = (id: string) => {
+    onSelectCollection(id);
     onEditEnvironment(null);
   };
 
@@ -115,13 +115,13 @@ export default function Sidebar({
       <div className="border-l border-border dark:border-dark-border overflow-hidden bg-body dark:bg-dark-body">
         <div className="max-h-screen h-full w-78 flex flex-col overflow-hidden">
           {activeTab === 'collections' && (
-            <SidebarPanel
+            <CollectionsPanel
               folders={folders}
               selectedId={selectedId}
               selectedFolderId={selectedFolderId}
-              onRemoveItem={onRemoveItem}
-              onSelectItem={handleSelectItem}
-              onReorderItem={onReorderItem}
+              onRemoveCollection={onRemoveCollection}
+              onSelectCollection={handleSelectCollection}
+              onReorderCollection={onReorderCollection}
               onMoveItem={onMoveItem}
               onSelectFolder={onSelectFolder}
               onAddFolder={onAddFolder}

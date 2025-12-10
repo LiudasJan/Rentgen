@@ -8,8 +8,8 @@ import {
   useSensors,
 } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { Environment } from '../../types';
-import AddIcon from '../../assets/icons/add-icon.svg';
+import { Environment } from '../../../types';
+import AddIcon from '../../../assets/icons/add-icon.svg';
 
 import EnvironmentSidebarItem from './EnvironmentSidebarItem';
 

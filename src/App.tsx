@@ -221,10 +221,10 @@ export default function App() {
         folders={sidebarFolders}
         selectedId={selectedRequestId}
         selectedFolderId={selectedFolderId}
-        onRemoveItem={onRemoveSidebarItem}
-        onReorderItem={onReorderSidebarItem}
+        onRemoveCollection={onRemoveCollection}
+        onReorderCollection={onReorderCollection}
         onMoveItem={handleMoveItem}
-        onSelectItem={onSelectSidebarItem}
+        onSelectCollection={onSelectCollection}
         onSelectFolder={handleSelectFolder}
         onAddFolder={handleAddFolder}
         onRenameFolder={handleRenameFolder}
@@ -1031,19 +1031,19 @@ export default function App() {
     window.electronAPI.sendWss(body);
   }
 
-  async function onRemoveSidebarItem(id: string) {
+  async function onRemoveCollection(id: string) {
     const updatedCollection = removeRequestFromCollection(collection, id);
     setCollection(updatedCollection);
     await window.electronAPI.saveCollection(updatedCollection);
   }
 
-  async function onReorderSidebarItem(activeId: string, overId: string) {
+  async function onReorderCollection(activeId: string, overId: string) {
     const updatedCollection = reorderRequestInCollection(collection, activeId, overId);
     setCollection(updatedCollection);
     await window.electronAPI.saveCollection(updatedCollection);
   }
 
-  function onSelectSidebarItem(id: string) {
+  function onSelectCollection(id: string) {
     const item = findRequestById(collection, id);
     if (!item) {
       return;

@@ -1,7 +1,7 @@
 import { PostmanCollection, PostmanHeader, PostmanItem, PostmanRequest } from '../types/postman';
 
 const DEFAULT_FOLDER_ID = 'default';
-const DEFAULT_FOLDER_NAME = 'Requests';
+const DEFAULT_FOLDER_NAME = 'All Requests';
 const COLLECTION_SCHEMA = 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json';
 
 export interface SidebarItemData {
@@ -232,7 +232,7 @@ export function reorderRequestInCollection(
 export function collectionToGroupedSidebarData(collection: PostmanCollection): SidebarFolderData[] {
   return collection.item.map((folder) => ({
     id: folder.id,
-    name: folder.name,
+    name: folder.id === DEFAULT_FOLDER_ID ? DEFAULT_FOLDER_NAME : folder.name,
     items: folder.item.map((item) => ({
       id: item.id,
       method: item.request.method,
@@ -255,7 +255,7 @@ export function addFolderToCollection(collection: PostmanCollection, name: strin
   };
   return {
     ...collection,
-    item: [...collection.item, newFolder],
+    item: [newFolder, ...collection.item],
   };
 }
 

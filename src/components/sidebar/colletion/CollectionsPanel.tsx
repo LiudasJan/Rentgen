@@ -18,10 +18,10 @@ interface Props {
   folders: SidebarFolderData[];
   selectedId: string | null;
   selectedFolderId: string | null;
-  onRemoveItem: (id: string) => void;
-  onReorderItem: (activeId: string, overId: string) => void;
+  onRemoveCollection: (id: string) => void;
+  onReorderCollection: (activeId: string, overId: string) => void;
   onMoveItem: (itemId: string, targetFolderId: string, targetIndex?: number) => void;
-  onSelectItem: (id: string) => void;
+  onSelectCollection: (id: string) => void;
   onSelectFolder: (folderId: string) => void;
   onAddFolder: () => void;
   onRenameFolder: (folderId: string, newName: string) => void;
@@ -33,10 +33,10 @@ export default function CollectionsPanel({
   folders,
   selectedId,
   selectedFolderId,
-  onRemoveItem,
-  onReorderItem,
+  onRemoveCollection,
+  onReorderCollection,
   onMoveItem,
-  onSelectItem,
+  onSelectCollection,
   onSelectFolder,
   onAddFolder,
   onRenameFolder,
@@ -83,7 +83,7 @@ export default function CollectionsPanel({
         const overFolderId = over.data.current?.folderId;
 
         if (activeFolderId === overFolderId) {
-          onReorderItem(active.id as string, over.id as string);
+          onReorderCollection(active.id as string, over.id as string);
         } else {
           const targetFolder = folders.find((f) => f.id === overFolderId);
           const targetIndex = targetFolder?.items.findIndex((i) => i.id === over.id) ?? -1;
@@ -125,14 +125,14 @@ export default function CollectionsPanel({
   }, [folders]);
 
   return (
-    <>
-        <div
-            className="flex items-center gap-2 px-3 py-2 border-b border-border dark:border-dark-border cursor-pointer hover:bg-button-secondary dark:hover:bg-dark-input"
-            onClick={onAddFolder}
-        >
-            <AddIcon className="w-4 h-4 text-text-secondary dark:text-dark-text-secondary" />
-            <span className="text-xs text-text-secondary dark:text-dark-text-secondary">New Folder</span>
-        </div>
+    <div className="max-h-screen h-full w-80 flex flex-col overflow-hidden bg-body dark:bg-dark-body">
+      <div
+        className="flex items-center gap-2 px-3 py-2 border-b border-border dark:border-dark-border cursor-pointer hover:bg-button-secondary dark:hover:bg-dark-input"
+        onClick={onAddFolder}
+      >
+        <AddIcon className="w-4 h-4 text-text-secondary dark:text-dark-text-secondary" />
+        <span className="text-xs text-text-secondary dark:text-dark-text-secondary">New Folder</span>
+      </div>
 
       {folders.length > 0 ? (
         <div className="h-full overflow-x-hidden overflow-y-auto">
@@ -147,8 +147,8 @@ export default function CollectionsPanel({
                   selectedFolderId={selectedFolderId}
                   isEditing={editingFolderId === folder.id}
                   editingName={editingName}
-                  onRemoveItem={onRemoveItem}
-                  onSelectItem={onSelectItem}
+                  onRemoveCollection={onRemoveCollection}
+                  onSelectCollection={onSelectCollection}
                   onSelectFolder={onSelectFolder}
                   onStartEdit={handleStartEdit}
                   onSaveEdit={handleSaveEdit}
@@ -165,6 +165,6 @@ export default function CollectionsPanel({
           No saved requests
         </div>
       )}
-    </>
+    </div>
   );
 }
