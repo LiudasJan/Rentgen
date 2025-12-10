@@ -9,40 +9,16 @@ import {
 } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useMemo, useState } from 'react';
-import { SidebarFolderData } from '../../../utils/collection';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import { collectionActions } from '../../../store/slices/collectionSlice';
+import { selectSidebarFolders } from '../../../store/selectors';
 import CollectionGroup from './CollectionGroup';
 
 import AddIcon from '../../../assets/icons/add-icon.svg';
 
-interface Props {
-  folders: SidebarFolderData[];
-  selectedId: string | null;
-  selectedFolderId: string | null;
-  onRemoveCollection: (id: string) => void;
-  onReorderCollection: (activeId: string, overId: string) => void;
-  onMoveItem: (itemId: string, targetFolderId: string, targetIndex?: number) => void;
-  onSelectCollection: (id: string) => void;
-  onSelectFolder: (folderId: string) => void;
-  onAddFolder: () => void;
-  onRenameFolder: (folderId: string, newName: string) => void;
-  onRemoveFolder: (folderId: string, itemCount: number) => void;
-  onReorderFolder: (activeId: string, overId: string) => void;
-}
-
-export default function CollectionsPanel({
-  folders,
-  selectedId,
-  selectedFolderId,
-  onRemoveCollection,
-  onReorderCollection,
-  onMoveItem,
-  onSelectCollection,
-  onSelectFolder,
-  onAddFolder,
-  onRenameFolder,
-  onRemoveFolder,
-  onReorderFolder,
-}: Props) {
+export default function CollectionsPanel() {
+  const dispatch = useAppDispatch();
+  const folders = useAppSelector(selectSidebarFolders);
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
 
@@ -65,7 +41,7 @@ export default function CollectionsPanel({
     const overType = over.data.current?.type;
 
     if (activeType === 'folder') {
-      onReorderFolder(active.id as string, over.id as string);
+      dispatch(collectionActions.reorderFolder({ activeId: active.id as string, overId: over.id as string }));
       return;
     }
 
@@ -74,7 +50,7 @@ export default function CollectionsPanel({
 
       if (overType === 'folder') {
         if (activeFolderId !== over.id) {
-          onMoveItem(active.id as string, over.id as string);
+          dispatch(collectionActions.moveRequest({ itemId: active.id as string, targetFolderId: over.id as string }));
         }
         return;
       }
@@ -83,11 +59,17 @@ export default function CollectionsPanel({
         const overFolderId = over.data.current?.folderId;
 
         if (activeFolderId === overFolderId) {
-          onReorderCollection(active.id as string, over.id as string);
+          dispatch(collectionActions.reorderRequest({ activeId: active.id as string, overId: over.id as string }));
         } else {
           const targetFolder = folders.find((f) => f.id === overFolderId);
           const targetIndex = targetFolder?.items.findIndex((i) => i.id === over.id) ?? -1;
-          onMoveItem(active.id as string, overFolderId as string, targetIndex >= 0 ? targetIndex : undefined);
+          dispatch(
+            collectionActions.moveRequest({
+              itemId: active.id as string,
+              targetFolderId: overFolderId as string,
+              targetIndex: targetIndex >= 0 ? targetIndex : undefined,
+            }),
+          );
         }
       }
     }
@@ -103,7 +85,7 @@ export default function CollectionsPanel({
 
   const handleSaveEdit = (folderId: string, newName: string) => {
     if (newName.trim()) {
-      onRenameFolder(folderId, newName.trim());
+      dispatch(collectionActions.renameFolder({ folderId, newName: newName.trim() }));
     }
     setEditingFolderId(null);
     setEditingName('');
@@ -128,7 +110,7 @@ export default function CollectionsPanel({
     <div className="max-h-screen h-full w-80 flex flex-col overflow-hidden bg-body dark:bg-dark-body">
       <div
         className="flex items-center gap-2 px-3 py-2 border-b border-border dark:border-dark-border cursor-pointer hover:bg-button-secondary dark:hover:bg-dark-input"
-        onClick={onAddFolder}
+        onClick={() => dispatch(collectionActions.addFolder('New Folder'))}
       >
         <AddIcon className="w-4 h-4 text-text-secondary dark:text-dark-text-secondary" />
         <span className="text-xs text-text-secondary dark:text-dark-text-secondary">New Folder</span>
@@ -143,18 +125,12 @@ export default function CollectionsPanel({
                   key={folder.id}
                   folder={folder}
                   folderCount={folders.length}
-                  selectedId={selectedId}
-                  selectedFolderId={selectedFolderId}
                   isEditing={editingFolderId === folder.id}
                   editingName={editingName}
-                  onRemoveCollection={onRemoveCollection}
-                  onSelectCollection={onSelectCollection}
-                  onSelectFolder={onSelectFolder}
                   onStartEdit={handleStartEdit}
                   onSaveEdit={handleSaveEdit}
                   onCancelEdit={handleCancelEdit}
                   onEditingNameChange={setEditingName}
-                  onRemoveFolder={onRemoveFolder}
                 />
               ))}
             </SortableContext>

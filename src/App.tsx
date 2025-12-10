@@ -1,7 +1,6 @@
-import { arrayMove } from '@dnd-kit/sortable';
 import { Method } from 'axios';
 import cn from 'classnames';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useCallback } from 'react';
 import Button, { ButtonSize, ButtonType } from './components/buttons/Button';
 import { CopyButton } from './components/buttons/CopyButton';
 import { IconButton } from './components/buttons/IconButton';
@@ -23,11 +22,9 @@ import ParametersPanel from './components/panels/ParametersPanel';
 import ResponsePanel from './components/panels/ResponsePanel';
 import Sidebar from './components/sidebar/Sidebar';
 import TestsTable, { ExpandedTestComponent, getTestsTableColumns } from './components/tables/TestsTable';
-import { RESPONSE_STATUS } from './constants/responseStatus';
-import useTests from './hooks/useTests';
+import useReduxTests from './hooks/useReduxTests';
 import { LARGE_PAYLOAD_TEST_NAME, LOAD_TEST_NAME } from './tests';
-import { Environment, HttpResponse, RequestParameters, TestOptions, TestResult, TestStatus } from './types';
-import { PostmanCollection } from './types/postman';
+import { Environment, HttpResponse, TestResult, TestStatus } from './types';
 import {
   createHttpRequest,
   detectDataType,
@@ -35,7 +32,6 @@ import {
   extractBodyParameters,
   extractCurl,
   extractQueryParameters,
-  extractStatusCode,
   formatBody,
   getInitialParameterValue,
   loadProtoSchema,
@@ -43,23 +39,51 @@ import {
   parseHeaders,
   substituteRequestVariables,
 } from './utils';
+import { findFolderIdByRequestId, findRequestById, headersRecordToString, postmanHeadersToRecord } from './utils/collection';
+
+// Redux
+import { useAppDispatch, useAppSelector } from './store/hooks';
+import { loadCollection, collectionActions } from './store/slices/collectionSlice';
+import { requestActions } from './store/slices/requestSlice';
+import { responseActions } from './store/slices/responseSlice';
+import { loadEnvironments, environmentActions } from './store/slices/environmentSlice';
+import { websocketActions } from './store/slices/websocketSlice';
+import { testActions } from './store/slices/testSlice';
+import { uiActions } from './store/slices/uiSlice';
 import {
-  addFolderToCollection,
-  addRequestToCollection,
-  collectionToGroupedSidebarData,
-  createEmptyCollection,
-  findFolderIdByRequestId,
-  findRequestById,
-  headersRecordToString,
-  moveRequestToFolder,
-  postmanHeadersToRecord,
-  removeRequestFromCollection,
-  removeFolderFromCollection,
-  renameFolderInCollection,
-  reorderFolderInCollection,
-  reorderRequestInCollection,
-  updateRequestInCollection,
-} from './utils/collection';
+  selectCollectionData,
+  selectSelectedRequestId,
+  selectSelectedFolderId,
+  selectEnvironments,
+  selectSelectedEnvironmentId,
+  selectSelectedEnvironment,
+  selectIsEditingEnvironment,
+  selectEditingEnvironmentId,
+  selectEnvironmentToDelete,
+  selectMode,
+  selectMethod,
+  selectUrl,
+  selectHeaders,
+  selectBody,
+  selectBodyParameters,
+  selectQueryParameters,
+  selectProtoFile,
+  selectMessageType,
+  selectHttpResponse,
+  selectWssConnected,
+  selectWssMessages,
+  selectTestOptions,
+  selectIsRunningTests,
+  selectDisabledRunTests,
+  selectOpenCurlModal,
+  selectOpenReloadModal,
+  selectDeleteFolderModal,
+  selectSaved,
+  selectExported,
+  selectCurl,
+  selectCurlError,
+  selectExportFormat,
+} from './store/selectors';
 
 import DarkModeIcon from './assets/icons/dark-mode-icon.svg';
 import LightModeIcon from './assets/icons/light-mode-icon.svg';
@@ -96,44 +120,54 @@ const methodOptions: SelectOption<Method>[] = [
 ];
 
 export default function App() {
-  const [collection, setCollection] = useState<PostmanCollection>(createEmptyCollection());
-  const [mode, setMode] = useState<Mode>('HTTP');
-  const [method, setMethod] = useState<Method>('GET');
-  const [openCurlModal, setOpenCurlModal] = useState<boolean>(false);
-  const [openReloadModal, setOpenReloadModal] = useState<boolean>(false);
-  const [deleteFolderModal, setDeleteFolderModal] = useState<{ isOpen: boolean; folderId: string | null }>({
-    isOpen: false,
-    folderId: null,
-  });
-  const [environmentToDelete, setEnvironmentToDelete] = useState<string | null>(null);
-  const [curl, setCurl] = useState<string>('');
-  const [curlError, setCurlError] = useState<string>('');
-  const [url, setUrl] = useState<string>('');
-  const [body, setBody] = useState<string>('{}');
-  const [headers, setHeaders] = useState<string>('');
-  const [wssConnected, setWssConnected] = useState<boolean>(false);
-  const [protoFile, setProtoFile] = useState<File | null>(null);
-  const [messageType, setMessageType] = useState<string>('');
-  const [httpResponse, setHttpResponse] = useState<HttpResponse | null>(null);
-  const [messages, setMessages] = useState<
-    {
-      direction: 'sent' | 'received' | 'system';
-      data: string;
-      decoded?: string | null;
-    }[]
-  >([]);
-  const [bodyParameters, setBodyParameters] = useState<RequestParameters>({});
-  const [queryParameters, setQueryParameters] = useState<RequestParameters>({});
-  const [testOptions, setTestOptions] = useState<TestOptions | null>(null);
-  const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
-  const [selectedFolderId, setSelectedFolderId] = useState<string>('default');
-  const [environments, setEnvironments] = useState<Environment[]>([]);
-  const [selectedEnvironmentId, setSelectedEnvironmentId] = useState<string | null>(null);
-  const [isEditingEnvironment, setIsEditingEnvironment] = useState(false);
-  const [editingEnvironmentId, setEditingEnvironmentId] = useState<string | null>(null);
-  const [saved, setSaved] = useState<boolean>(false);
-  const [exported, setExported] = useState<boolean>(false);
-  const [exportFormat, setExportFormat] = useState<ReportFormat>('json');
+  const dispatch = useAppDispatch();
+
+  // Collection state
+  const collection = useAppSelector(selectCollectionData);
+  const selectedRequestId = useAppSelector(selectSelectedRequestId);
+  const selectedFolderId = useAppSelector(selectSelectedFolderId);
+  // Environment state
+  const environments = useAppSelector(selectEnvironments);
+  const selectedEnvironmentId = useAppSelector(selectSelectedEnvironmentId);
+  const selectedEnvironment = useAppSelector(selectSelectedEnvironment);
+  const isEditingEnvironment = useAppSelector(selectIsEditingEnvironment);
+  const editingEnvironmentId = useAppSelector(selectEditingEnvironmentId);
+  const environmentToDelete = useAppSelector(selectEnvironmentToDelete);
+
+  // Request state
+  const mode = useAppSelector(selectMode);
+  const method = useAppSelector(selectMethod);
+  const url = useAppSelector(selectUrl);
+  const headers = useAppSelector(selectHeaders);
+  const body = useAppSelector(selectBody);
+  const bodyParameters = useAppSelector(selectBodyParameters);
+  const queryParameters = useAppSelector(selectQueryParameters);
+  const protoFile = useAppSelector(selectProtoFile);
+  const messageType = useAppSelector(selectMessageType);
+
+  // Response state
+  const httpResponse = useAppSelector(selectHttpResponse);
+
+  // WebSocket state
+  const wssConnected = useAppSelector(selectWssConnected);
+  const messages = useAppSelector(selectWssMessages);
+
+  // Test state
+  const testOptions = useAppSelector(selectTestOptions);
+  const isRunningTests = useAppSelector(selectIsRunningTests);
+  const disabledRunTests = useAppSelector(selectDisabledRunTests);
+
+  // UI state
+  const openCurlModal = useAppSelector(selectOpenCurlModal);
+  const openReloadModal = useAppSelector(selectOpenReloadModal);
+  const deleteFolderModal = useAppSelector(selectDeleteFolderModal);
+  const saved = useAppSelector(selectSaved);
+  const exported = useAppSelector(selectExported);
+  const curl = useAppSelector(selectCurl);
+  const curlError = useAppSelector(selectCurlError);
+  const exportFormat = useAppSelector(selectExportFormat);
+
+  // Tests hook
   const {
     crudTests,
     currentTest,
@@ -149,59 +183,39 @@ export default function App() {
     executeAllTests,
     executeLoadTest,
     executeLargePayloadTest,
-  } = useTests(testOptions);
-  const statusCode = useMemo(() => extractStatusCode(httpResponse), [httpResponse]);
-  const sidebarFolders = useMemo(() => collectionToGroupedSidebarData(collection), [collection]);
-  const selectedEnvironment = useMemo(
-    () => environments.find((env) => env.id === selectedEnvironmentId) || null,
-    [environments, selectedEnvironmentId],
-  );
+  } = useReduxTests();
 
-  const isRunningTests = isSecurityRunning || isPerformanceRunning || isDataDrivenRunning;
-  const disabledRunTests =
-    isRunningTests || !httpResponse || statusCode < RESPONSE_STATUS.OK || statusCode >= RESPONSE_STATUS.BAD_REQUEST;
+  // Load initial data
+  useEffect(() => {
+    dispatch(loadCollection());
+  }, [dispatch]);
 
   useEffect(() => {
-    const loadCollection = async () => setCollection(await window.electronAPI.loadCollection());
-
-    loadCollection();
-  }, []);
-
-  useEffect(() => {
-    const loadEnvironments = async () => setEnvironments(await window.electronAPI.loadEnvironments());
-
-    loadEnvironments();
-  }, []);
+    dispatch(loadEnvironments());
+  }, [dispatch]);
 
   useEffect(() => {
     const setTheme = async () => {
       const theme = await window.themeAPI.getTheme();
       if (theme === 'dark') document.documentElement.classList.add('dark');
     };
-
     setTheme();
   }, []);
 
+  // WebSocket event listener
   useEffect(() => {
     if (!window.electronAPI.onWssEvent) return;
 
     const messagesListener = (event: any) => {
       if (event.type === 'open') {
-        setMessages([{ direction: 'system', data: `🟢 Connected to ${event.data}` }]);
-        setWssConnected(true);
+        dispatch(websocketActions.handleWssOpen(event.data));
       } else if (event.type === 'close') {
-        setMessages((prevMessages) => [
-          { direction: 'system', data: `🔵 Disconnected from ${event.data}` },
-          ...prevMessages,
-        ]);
-        setWssConnected(false);
+        dispatch(websocketActions.handleWssClose(event.data));
       } else if (event.type === 'message') {
-        setMessages((prevMessages) => [
-          { direction: 'received', data: String(event.data), decoded: event.decoded ?? null },
-          ...prevMessages,
-        ]);
-      } else if (event.type === 'error')
-        setMessages((prevMessages) => [{ direction: 'system', data: `🔴 ${event.error}` }, ...prevMessages]);
+        dispatch(websocketActions.handleWssMessage({ data: String(event.data), decoded: event.decoded }));
+      } else if (event.type === 'error') {
+        dispatch(websocketActions.handleWssError(event.error));
+      }
     };
 
     const ipcRenderer = window.electronAPI.onWssEvent(messagesListener);
@@ -209,35 +223,257 @@ export default function App() {
     return () => {
       ipcRenderer?.off('wss-event', messagesListener);
     };
-  }, []);
+  }, [dispatch]);
 
+  // Execute tests when testOptions changes
   useEffect(() => {
     if (testOptions) executeAllTests();
   }, [testOptions]);
 
+  // Reset function
+  const reset = useCallback(
+    (resetTestOptions = true) => {
+      dispatch(requestActions.resetRequest());
+      dispatch(responseActions.clearResponse());
+      dispatch(websocketActions.clearMessages());
+      dispatch(websocketActions.setConnected(false));
+      dispatch(collectionActions.selectRequest(null));
+      if (resetTestOptions) dispatch(testActions.setTestOptions(null));
+    },
+    [dispatch],
+  );
+
+  // Load request data when selectedRequestId changes
+  useEffect(() => {
+    if (!selectedRequestId) return;
+
+    const item = findRequestById(collection, selectedRequestId);
+    if (!item) return;
+
+    reset(false);
+
+    const folderId = findFolderIdByRequestId(collection, selectedRequestId);
+    if (folderId) dispatch(collectionActions.selectFolder(folderId));
+
+    const { request } = item;
+    const isWssUrl = request.url.startsWith('ws://') || request.url.startsWith('wss://');
+    dispatch(requestActions.setMode(isWssUrl ? 'WSS' : 'HTTP'));
+    dispatch(requestActions.setMethod(request.method as Method));
+    dispatch(requestActions.setUrl(request.url));
+    dispatch(requestActions.setHeaders(headersRecordToString(postmanHeadersToRecord(request.header))));
+    dispatch(requestActions.setBody(request.body?.raw || '{}'));
+  }, [selectedRequestId, collection, reset, dispatch]);
+
+  // cURL import
+  const importCurl = useCallback(() => {
+    try {
+      if (curl.length > 200_000) throw new Error('cURL too large');
+
+      const { body: curlBody, decodedLines, headers: curlHeaders, method: curlMethod, url: curlUrl } = extractCurl(curl);
+
+      dispatch(requestActions.setUrl(curlUrl));
+      dispatch(requestActions.setMethod(curlMethod as Method));
+      dispatch(
+        requestActions.setHeaders(
+          Object.entries(curlHeaders)
+            .map(([k, v]) => `${k}: ${v}`)
+            .join('\n'),
+        ),
+      );
+
+      if (decodedLines.length > 0) {
+        dispatch(requestActions.setBody(decodedLines.join('\n')));
+      } else {
+        const trimmedBody = curlBody ? String(curlBody).trim() : '';
+        dispatch(requestActions.setBody(trimmedBody !== '' ? trimmedBody : '{}'));
+      }
+
+      dispatch(collectionActions.selectRequest(null));
+      dispatch(uiActions.closeCurlModal());
+    } catch (error) {
+      console.error('cURL import failed', error);
+      dispatch(uiActions.setCurlError('The cURL command you provided appears to be invalid. Please check it and try again'));
+    }
+  }, [curl, dispatch]);
+
+  // Send HTTP request
+  const sendHttp = useCallback(async () => {
+    dispatch(responseActions.setSendingState());
+    dispatch(requestActions.setBodyParameters({}));
+    dispatch(requestActions.setQueryParameters({}));
+
+    try {
+      const {
+        url: substitutedUrl,
+        headers: substitutedHeaders,
+        body: substitutedBody,
+        messageType: substitutedMessageType,
+      } = substituteRequestVariables(url, headers, body, messageType, selectedEnvironment);
+
+      const parsedHeaders = parseHeaders(substitutedHeaders);
+      const parsedBody = parseBody(substitutedBody, parsedHeaders, substitutedMessageType, protoFile);
+      const request = createHttpRequest(parsedBody, parsedHeaders, method, substitutedUrl);
+      const response: HttpResponse = await window.electronAPI.sendHttp(request);
+
+      dispatch(responseActions.setResponse(response));
+
+      if (!response.status.startsWith('2')) return;
+
+      const extractedBodyParams = extractBodyParameters(parsedBody, parsedHeaders);
+      const extractedQueryParams = Object.fromEntries(
+        Object.entries(extractQueryParameters(url)).map(([key, value]) => [
+          key,
+          getInitialParameterValue(detectDataType(value), value),
+        ]),
+      );
+
+      dispatch(requestActions.setBodyParameters(extractedBodyParams));
+      dispatch(requestActions.setQueryParameters(extractedQueryParams));
+    } catch (error) {
+      dispatch(
+        responseActions.setResponse({
+          status: NETWORK_ERROR,
+          body: String(error),
+          headers: {},
+        }),
+      );
+    }
+  }, [url, headers, body, messageType, selectedEnvironment, protoFile, method, dispatch]);
+
+  // Save request
+  const saveRequest = useCallback(async () => {
+    const parsedHeaders = parseHeaders(headers);
+    const parsedBody = parseBody(body, parsedHeaders, messageType, protoFile);
+    const bodyString = typeof parsedBody === 'string' ? parsedBody : JSON.stringify(parsedBody);
+
+    if (selectedRequestId && findRequestById(collection, selectedRequestId)) {
+      dispatch(
+        collectionActions.updateRequest({
+          requestId: selectedRequestId,
+          method,
+          url,
+          headers: parsedHeaders,
+          body: bodyString,
+        }),
+      );
+    } else {
+      dispatch(
+        collectionActions.addRequest({
+          method,
+          url,
+          headers: parsedHeaders,
+          body: bodyString,
+          folderId: selectedFolderId,
+        }),
+      );
+
+      // Set newly created request as selected
+      setTimeout(() => {
+        const targetFolder = collection.item.find((f) => f.id === selectedFolderId);
+        const newItem = targetFolder?.item[0];
+        if (newItem) dispatch(collectionActions.selectRequest(newItem.id));
+      }, 0);
+    }
+
+    dispatch(uiActions.setSaved(true));
+    clearTimeout(savedTimeout);
+    savedTimeout = setTimeout(() => dispatch(uiActions.setSaved(false)), 2000);
+  }, [headers, body, messageType, protoFile, selectedRequestId, collection, method, url, selectedFolderId, dispatch]);
+
+  // WebSocket functions
+  const connectWss = useCallback(() => {
+    if (!url.startsWith('ws')) {
+      dispatch(websocketActions.addMessage({ direction: 'system', data: '🔴 Please use ws:// or wss:// URL' }));
+      return;
+    }
+    window.electronAPI.connectWss({ url, headers: parseHeaders(headers) });
+  }, [url, headers, dispatch]);
+
+  const sendWss = useCallback(() => {
+    dispatch(websocketActions.handleWssSent({ data: body }));
+    window.electronAPI.sendWss(body);
+  }, [body, dispatch]);
+
+  const confirmDeleteFolder = useCallback(() => {
+    if (deleteFolderModal.folderId) {
+      dispatch(collectionActions.removeFolder(deleteFolderModal.folderId));
+    }
+    dispatch(uiActions.closeDeleteFolderModal());
+  }, [deleteFolderModal.folderId, dispatch]);
+
+  // Environment handlers
+  const handleSaveEnvironment = useCallback(
+    (environment: Environment) => {
+      dispatch(environmentActions.updateEnvironment(environment));
+    },
+    [dispatch],
+  );
+
+  const handleDeleteEnvironment = useCallback(
+    (id: string) => {
+      dispatch(environmentActions.deleteEnvironment(id));
+    },
+    [dispatch],
+  );
+
+  // Export report
+  const exportReport = useCallback(async () => {
+    if (!testOptions) return;
+
+    try {
+      const report = formatReport(buildReport(), exportFormat);
+      const result = await window.electronAPI.saveReport(report);
+
+      if (result?.error) throw new Error(result.error);
+      if (result?.canceled) return;
+
+      dispatch(uiActions.setExported(true));
+      clearTimeout(exportedTimeout);
+      exportedTimeout = setTimeout(() => dispatch(uiActions.setExported(false)), 2000);
+    } catch (error) {
+      console.error('Failed to export report', error);
+    }
+
+    function buildReport(): ExportReport {
+      if (!testOptions) throw new Error('No test results to export');
+
+      const suites = [
+        buildSuite('Security Tests', securityTests),
+        buildSuite('Performance Insights', performanceTests),
+        buildSuite('Data-Driven Tests', dataDrivenTests),
+        buildSuite('CRUD', crudTests),
+      ];
+
+      return {
+        generatedAt: new Date().toISOString(),
+        target: {
+          url: testOptions.url,
+          method: testOptions.method,
+          headers: parseHeaders(testOptions.headers),
+          body: safeParseBody(testOptions.body),
+          messageType: testOptions.messageType,
+          protoFileName: testOptions.protoFile?.name ?? null,
+        },
+        lastHttpResponse: httpResponse,
+        suites,
+      };
+    }
+
+    function safeParseBody(rawBody: string | null) {
+      if (rawBody === null) return null;
+      const trimmed = rawBody.trim();
+      if (!trimmed) return '';
+      try {
+        return JSON.parse(trimmed);
+      } catch {
+        return rawBody;
+      }
+    }
+  }, [testOptions, exportFormat, securityTests, performanceTests, dataDrivenTests, crudTests, httpResponse, dispatch]);
+
   return (
     <div className="flex">
-      <Sidebar
-        folders={sidebarFolders}
-        selectedId={selectedRequestId}
-        selectedFolderId={selectedFolderId}
-        onRemoveCollection={onRemoveCollection}
-        onReorderCollection={onReorderCollection}
-        onMoveItem={handleMoveItem}
-        onSelectCollection={onSelectCollection}
-        onSelectFolder={handleSelectFolder}
-        onAddFolder={handleAddFolder}
-        onRenameFolder={handleRenameFolder}
-        onRemoveFolder={handleRemoveFolder}
-        onReorderFolder={handleReorderFolder}
-        environments={environments}
-        selectedEnvironmentId={selectedEnvironmentId}
-        onSelectEnvironment={setSelectedEnvironmentId}
-        onEditEnvironment={handleEditEnvironment}
-        onAddEnvironment={handleAddEnvironment}
-        onReorderEnvironment={handleReorderEnvironment}
-        onRemoveEnvironment={setEnvironmentToDelete}
-      />
+      <Sidebar />
       <div className="flex-1 min-w-0 flex flex-col gap-4 py-5 px-7 overflow-y-auto">
         {isEditingEnvironment ? (
           <EnvironmentEditor
@@ -256,14 +492,14 @@ export default function App() {
                 placeholder="MODE"
                 value={modeOptions.find((option) => option.value == mode)}
                 onChange={(option: SelectOption<Mode>) => {
-                  setMode(option.value);
+                  dispatch(requestActions.setMode(option.value));
                   reset();
                 }}
               />
               {mode === 'HTTP' && (
                 <>
-                  <Button onClick={() => setOpenCurlModal(true)}>Import cURL</Button>
-                  <Modal isOpen={openCurlModal} onClose={closeCurlModal}>
+                  <Button onClick={() => dispatch(uiActions.openCurlModal())}>Import cURL</Button>
+                  <Modal isOpen={openCurlModal} onClose={() => dispatch(uiActions.closeCurlModal())}>
                     <div className="flex flex-col gap-4">
                       <h4 className="m-0">Import cURL</h4>
                       <Textarea
@@ -271,12 +507,12 @@ export default function App() {
                         className="min-h-40"
                         placeholder="Enter cURL or paste text"
                         value={curl}
-                        onChange={(event) => setCurl(event.target.value)}
+                        onChange={(event) => dispatch(uiActions.setCurl(event.target.value))}
                       />
                       {curlError && <p className="m-0 text-xs text-red-600">{curlError}</p>}
                       <div className="flex items-center justify-end gap-4">
                         <Button onClick={importCurl}>Import</Button>
-                        <Button buttonType={ButtonType.SECONDARY} onClick={closeCurlModal}>
+                        <Button buttonType={ButtonType.SECONDARY} onClick={() => dispatch(uiActions.closeCurlModal())}>
                           Cancel
                         </Button>
                       </div>
@@ -288,7 +524,7 @@ export default function App() {
                 <EnvironmentSelector
                   environments={environments}
                   selectedEnvironmentId={selectedEnvironmentId}
-                  onSelect={setSelectedEnvironmentId}
+                  onSelect={(id) => dispatch(environmentActions.selectEnvironment(id))}
                 />
                 <IconButton
                   onClick={async () => {
@@ -305,10 +541,14 @@ export default function App() {
                   <DarkModeIcon className="h-5 w-5 dark:hidden" />
                   <LightModeIcon className="hidden dark:block h-6 w-6" />
                 </IconButton>
-                <IconButton onClick={() => setOpenReloadModal(true)}>
+                <IconButton onClick={() => dispatch(uiActions.openReloadModal())}>
                   <ReloadIcon className="h-5 w-5" />
                 </IconButton>
-                <Modal className="[&>div]:w-[400px]!" isOpen={openReloadModal} onClose={closeReloadModal}>
+                <Modal
+                  className="[&>div]:w-[400px]!"
+                  isOpen={openReloadModal}
+                  onClose={() => dispatch(uiActions.closeReloadModal())}
+                >
                   <div className="flex flex-col gap-4">
                     <h4 className="m-0">Reload</h4>
                     <p className="m-0 text-sm dark:text-text-secondary">Only current tests results will be lost</p>
@@ -316,7 +556,7 @@ export default function App() {
                       <Button buttonType={ButtonType.DANGER} onClick={() => window.location.reload()}>
                         Reload
                       </Button>
-                      <Button buttonType={ButtonType.SECONDARY} onClick={closeReloadModal}>
+                      <Button buttonType={ButtonType.SECONDARY} onClick={() => dispatch(uiActions.closeReloadModal())}>
                         Cancel
                       </Button>
                     </div>
@@ -342,7 +582,7 @@ export default function App() {
                     options={methodOptions}
                     placeholder="METHOD"
                     value={methodOptions.find((option) => option.value == method) || { value: method, label: method }}
-                    onChange={(option: SelectOption<Method>) => setMethod(option.value)}
+                    onChange={(option: SelectOption<Method>) => dispatch(requestActions.setMethod(option.value))}
                   />
                 )}
                 <HighlightedInput
@@ -350,7 +590,7 @@ export default function App() {
                   placeholder="Enter URL or paste text"
                   value={url}
                   environment={selectedEnvironment}
-                  onChange={(event) => setUrl(event.target.value)}
+                  onChange={(event) => dispatch(requestActions.setUrl(event.target.value))}
                 />
               </div>
               {mode === 'HTTP' && (
@@ -384,7 +624,7 @@ export default function App() {
               placeholder="Header-Key: value"
               value={headers}
               environment={selectedEnvironment}
-              onChange={(event) => setHeaders(event.target.value)}
+              onChange={(event) => dispatch(requestActions.setHeaders(event.target.value))}
             />
 
             <div className="relative">
@@ -393,13 +633,13 @@ export default function App() {
                 placeholder={mode === 'HTTP' ? 'Enter request body (JSON or Form Data)' : 'Message body'}
                 value={body}
                 environment={selectedEnvironment}
-                onChange={(event) => setBody(event.target.value)}
+                onChange={(event) => dispatch(requestActions.setBody(event.target.value))}
               />
               <Button
                 className="absolute top-3 right-4"
                 buttonType={ButtonType.SECONDARY}
                 buttonSize={ButtonSize.SMALL}
-                onClick={() => setBody((prevBody) => formatBody(prevBody, parseHeaders(headers)))}
+                onClick={() => dispatch(requestActions.setBody(formatBody(body, parseHeaders(headers))))}
               >
                 Beautify
               </Button>
@@ -423,17 +663,15 @@ export default function App() {
 
                       try {
                         await loadProtoSchema(file);
-
-                        setProtoFile(file);
-                        setMessages((prevMessages) => [
-                          { direction: 'system', data: '🟢 Proto schema loaded' },
-                          ...prevMessages,
-                        ]);
+                        dispatch(requestActions.setProtoFile(file));
+                        dispatch(websocketActions.addMessage({ direction: 'system', data: '🟢 Proto schema loaded' }));
                       } catch (error) {
-                        setMessages((prevMessages) => [
-                          { direction: 'system', data: '🔴 Failed to parse proto: ' + error },
-                          ...prevMessages,
-                        ]);
+                        dispatch(
+                          websocketActions.addMessage({
+                            direction: 'system',
+                            data: '🔴 Failed to parse proto: ' + error,
+                          }),
+                        );
                       }
                     }}
                   />
@@ -443,7 +681,7 @@ export default function App() {
                     placeholder="Message type (e.g. mypackage.MyMessage)"
                     value={messageType}
                     environment={selectedEnvironment}
-                    onChange={(event) => setMessageType(event.target.value)}
+                    onChange={(event) => dispatch(requestActions.setMessageType(event.target.value))}
                   />
                 </div>
               </div>
@@ -541,12 +779,7 @@ export default function App() {
                   <ParametersPanel
                     title="Body Parameters"
                     parameters={bodyParameters}
-                    onChange={(parameters) =>
-                      setBodyParameters((prevBodyParameters) => ({
-                        ...prevBodyParameters,
-                        ...parameters,
-                      }))
-                    }
+                    onChange={(parameters) => dispatch(requestActions.mergeBodyParameters(parameters))}
                   />
                 )}
 
@@ -554,12 +787,7 @@ export default function App() {
                   <ParametersPanel
                     title="Query Parameters"
                     parameters={queryParameters}
-                    onChange={(parameters) =>
-                      setQueryParameters((prevQueryParameters) => ({
-                        ...prevQueryParameters,
-                        ...parameters,
-                      }))
-                    }
+                    onChange={(parameters) => dispatch(requestActions.mergeQueryParameters(parameters))}
                   />
                 )}
               </div>
@@ -570,13 +798,15 @@ export default function App() {
                 <Button
                   disabled={disabledRunTests}
                   onClick={() => {
-                    setTestOptions({
-                      ...substituteRequestVariables(url, headers, body, messageType, selectedEnvironment),
-                      bodyParameters,
-                      method,
-                      protoFile,
-                      queryParameters,
-                    });
+                    dispatch(
+                      testActions.setTestOptions({
+                        ...substituteRequestVariables(url, headers, body, messageType, selectedEnvironment),
+                        bodyParameters,
+                        method,
+                        protoFile,
+                        queryParameters,
+                      }),
+                    );
                   }}
                 >
                   {isRunningTests ? `Running tests... (${currentTest}/${testsCount})` : 'Generate & Run Tests'}
@@ -589,7 +819,7 @@ export default function App() {
                       options={exportFormatOptions}
                       placeholder="Format"
                       value={exportFormatOptions.find((option) => option.value === exportFormat)}
-                      onChange={(option: SelectOption<ReportFormat>) => setExportFormat(option.value)}
+                      onChange={(option: SelectOption<ReportFormat>) => dispatch(uiActions.setExportFormat(option.value))}
                     />
                     <Button
                       buttonType={ButtonType.SECONDARY}
@@ -731,7 +961,11 @@ export default function App() {
           </>
         )}
       </div>
-      <Modal className="[&>div]:w-[400px]!" isOpen={!!environmentToDelete} onClose={() => setEnvironmentToDelete(null)}>
+      <Modal
+        className="[&>div]:w-[400px]!"
+        isOpen={!!environmentToDelete}
+        onClose={() => dispatch(environmentActions.setEnvironmentToDelete(null))}
+      >
         <div className="flex flex-col gap-4">
           <h4 className="m-0">Delete Environment</h4>
           <p className="m-0 text-sm dark:text-text-secondary">Are you sure you want to delete this environment?</p>
@@ -742,18 +976,21 @@ export default function App() {
                 if (environmentToDelete) {
                   handleDeleteEnvironment(environmentToDelete);
                 }
-                setEnvironmentToDelete(null);
+                dispatch(environmentActions.setEnvironmentToDelete(null));
               }}
             >
               Delete
             </Button>
-            <Button buttonType={ButtonType.SECONDARY} onClick={() => setEnvironmentToDelete(null)}>
+            <Button
+              buttonType={ButtonType.SECONDARY}
+              onClick={() => dispatch(environmentActions.setEnvironmentToDelete(null))}
+            >
               Cancel
             </Button>
           </div>
         </div>
       </Modal>
-      <Modal className="[&>div]:w-[400px]!" isOpen={deleteFolderModal.isOpen} onClose={closeDeleteFolderModal}>
+      <Modal className="[&>div]:w-[400px]!" isOpen={deleteFolderModal.isOpen} onClose={() => dispatch(uiActions.closeDeleteFolderModal())}>
         <div className="flex flex-col gap-4">
           <h4 className="m-0">Delete Folder</h4>
           <p className="m-0 text-sm dark:text-text-secondary">
@@ -763,7 +1000,7 @@ export default function App() {
             <Button buttonType={ButtonType.DANGER} onClick={confirmDeleteFolder}>
               Delete
             </Button>
-            <Button buttonType={ButtonType.SECONDARY} onClick={closeDeleteFolderModal}>
+            <Button buttonType={ButtonType.SECONDARY} onClick={() => dispatch(uiActions.closeDeleteFolderModal())}>
               Cancel
             </Button>
           </div>
@@ -771,355 +1008,9 @@ export default function App() {
       </Modal>
     </div>
   );
-
-  function handleEditEnvironment(id: string | null) {
-    setEditingEnvironmentId(id);
-    setIsEditingEnvironment(id !== null);
-  }
-
-  function handleAddEnvironment() {
-    setSelectedEnvironmentId(null);
-    setEditingEnvironmentId(null);
-    setIsEditingEnvironment(true);
-  }
-
-  async function handleReorderEnvironment(activeId: string, overId: string) {
-    const oldIndex = environments.findIndex((e) => e.id === activeId);
-    const newIndex = environments.findIndex((e) => e.id === overId);
-
-    const reordered = arrayMove(environments, oldIndex, newIndex);
-    setEnvironments(reordered);
-    await window.electronAPI.saveEnvironments(reordered);
-  }
-
-  async function handleSaveEnvironment(environment: Environment) {
-    const existingIndex = environments.findIndex((e) => e.id === environment.id);
-    let updatedEnvironments: Environment[];
-
-    if (existingIndex >= 0) {
-      // Update existing
-      updatedEnvironments = [...environments];
-      updatedEnvironments[existingIndex] = environment;
-    } else {
-      // Add new
-      updatedEnvironments = [...environments, environment];
-      setSelectedEnvironmentId(environment.id);
-      setEditingEnvironmentId(environment.id);
-    }
-
-    setEnvironments(updatedEnvironments);
-    await window.electronAPI.saveEnvironments(updatedEnvironments);
-  }
-
-  async function handleDeleteEnvironment(id: string) {
-    const updatedEnvironments = environments.filter((e) => e.id !== id);
-    setEnvironments(updatedEnvironments);
-    await window.electronAPI.saveEnvironments(updatedEnvironments);
-
-    // Clear selection if deleted environment was selected
-    if (selectedEnvironmentId === id) {
-      setSelectedEnvironmentId(null);
-    }
-
-    setIsEditingEnvironment(false);
-    setEditingEnvironmentId(null);
-  }
-
-  function reset(resetTestOptions = true) {
-    setMethod('GET');
-    setUrl('');
-    setWssConnected(false);
-    setHeaders('');
-    setBody('{}');
-    setProtoFile(null);
-    setMessageType('');
-    setHttpResponse(null);
-    setMessages([]);
-    setBodyParameters({});
-    setQueryParameters({});
-    setSelectedRequestId(null);
-
-    if (resetTestOptions) setTestOptions(null);
-  }
-
-  function importCurl() {
-    try {
-      if (curl.length > 200_000) throw new Error('cURL too large');
-
-      const { body, decodedLines, headers, method, url } = extractCurl(curl);
-
-      setUrl(url);
-      setMethod(method as Method);
-      setHeaders(
-        Object.entries(headers)
-          .map(([k, v]) => `${k}: ${v}`)
-          .join('\n'),
-      );
-
-      if (decodedLines.length > 0) setBody(decodedLines.join('\n'));
-      else {
-        const trimmedBody = body ? String(body).trim() : '';
-        setBody(trimmedBody !== '' ? trimmedBody : '{}');
-      }
-
-      setSelectedRequestId(null);
-      closeCurlModal();
-    } catch (error) {
-      console.error('cURL import failed', error);
-      setCurlError('The cURL command you provided appears to be invalid. Please check it and try again');
-    }
-  }
-
-  function closeCurlModal() {
-    setOpenCurlModal(false);
-    setCurl('');
-    setCurlError('');
-  }
-
-  function closeReloadModal() {
-    setOpenReloadModal(false);
-  }
-
-  async function exportReport() {
-    if (!testOptions) return;
-
-    try {
-      const report = formatReport(buildReport(), exportFormat);
-      const result = await window.electronAPI.saveReport(report);
-
-      if (result?.error) throw new Error(result.error);
-      if (result?.canceled) return;
-
-      setExported(true);
-      clearTimeout(exportedTimeout);
-      exportedTimeout = setTimeout(() => setExported(false), 2000);
-    } catch (error) {
-      console.error('Failed to export report', error);
-    }
-  }
-
-  function buildReport(): ExportReport {
-    if (!testOptions) throw new Error('No test results to export');
-
-    const suites = [
-      buildSuite('Security Tests', securityTests),
-      buildSuite('Performance Insights', performanceTests),
-      buildSuite('Data-Driven Tests', dataDrivenTests),
-      buildSuite('CRUD', crudTests),
-    ];
-
-    return {
-      generatedAt: new Date().toISOString(),
-      target: {
-        url: testOptions.url,
-        method: testOptions.method,
-        headers: parseHeaders(testOptions.headers),
-        body: safeParseBody(testOptions.body),
-        messageType: testOptions.messageType,
-        protoFileName: testOptions.protoFile?.name ?? null,
-      },
-      lastHttpResponse: httpResponse,
-      suites,
-    };
-  }
-
-  function safeParseBody(rawBody: string | null) {
-    if (rawBody === null) return null;
-    const trimmed = rawBody.trim();
-    if (!trimmed) return '';
-
-    try {
-      return JSON.parse(trimmed);
-    } catch {
-      return rawBody;
-    }
-  }
-
-  async function sendHttp() {
-    setHttpResponse({
-      status: SENDING,
-      body: '',
-      headers: {},
-    });
-    setBodyParameters({});
-    setQueryParameters({});
-
-    try {
-      // Apply environment variable substitution
-      const {
-        url: substitutedUrl,
-        headers: substitutedHeaders,
-        body: substitutedBody,
-        messageType: substitutedMessageType,
-      } = substituteRequestVariables(url, headers, body, messageType, selectedEnvironment);
-
-      const parsedHeaders = parseHeaders(substitutedHeaders);
-      const parsedBody = parseBody(substitutedBody, parsedHeaders, substitutedMessageType, protoFile);
-      const request = createHttpRequest(parsedBody, parsedHeaders, method, substitutedUrl);
-      const response: HttpResponse = await window.electronAPI.sendHttp(request);
-
-      setHttpResponse(response);
-
-      if (!response.status.startsWith('2')) return;
-
-      const bodyParameters = extractBodyParameters(parsedBody, parsedHeaders);
-      const queryParameters = Object.fromEntries(
-        Object.entries(extractQueryParameters(url)).map(([key, value]) => [
-          key,
-          getInitialParameterValue(detectDataType(value), value),
-        ]),
-      );
-
-      setBodyParameters(bodyParameters);
-      setQueryParameters(queryParameters);
-    } catch (error) {
-      setHttpResponse({
-        status: NETWORK_ERROR,
-        body: String(error),
-        headers: {},
-      });
-    }
-  }
-
-  async function saveRequest() {
-    const parsedHeaders = parseHeaders(headers);
-    const parsedBody = parseBody(body, parsedHeaders, messageType, protoFile);
-    const bodyString = typeof parsedBody === 'string' ? parsedBody : JSON.stringify(parsedBody);
-
-    if (selectedRequestId && findRequestById(collection, selectedRequestId)) {
-      // Update existing request
-      const updatedCollection = updateRequestInCollection(
-        collection,
-        selectedRequestId,
-        method,
-        url,
-        parsedHeaders,
-        bodyString,
-      );
-      setCollection(updatedCollection);
-      await window.electronAPI.saveCollection(updatedCollection);
-    } else {
-      const updatedCollection = addRequestToCollection(collection, method, url, parsedHeaders, bodyString, selectedFolderId);
-      setCollection(updatedCollection);
-      await window.electronAPI.saveCollection(updatedCollection);
-
-      // Set the newly created request as selected (new requests appear at top)
-      const targetFolder = updatedCollection.item.find((f) => f.id === selectedFolderId);
-      const newItem = targetFolder?.item[0];
-      if (newItem) setSelectedRequestId(newItem.id);
-    }
-
-    setSaved(true);
-    clearTimeout(savedTimeout);
-    savedTimeout = setTimeout(() => setSaved(false), 2000);
-  }
-
-  function connectWss() {
-    if (!url.startsWith('ws')) {
-      setMessages((prevMessages) => [
-        { direction: 'system', data: '🔴 Please use ws:// or wss:// URL' },
-        ...prevMessages,
-      ]);
-      return;
-    }
-
-    window.electronAPI.connectWss({ url, headers: parseHeaders(headers) });
-  }
-
-  function sendWss() {
-    setMessages((prevMessages) => [{ direction: 'sent', data: body }, ...prevMessages]);
-    window.electronAPI.sendWss(body);
-  }
-
-  async function onRemoveCollection(id: string) {
-    const updatedCollection = removeRequestFromCollection(collection, id);
-    setCollection(updatedCollection);
-    await window.electronAPI.saveCollection(updatedCollection);
-  }
-
-  async function onReorderCollection(activeId: string, overId: string) {
-    const updatedCollection = reorderRequestInCollection(collection, activeId, overId);
-    setCollection(updatedCollection);
-    await window.electronAPI.saveCollection(updatedCollection);
-  }
-
-  function onSelectCollection(id: string) {
-    const item = findRequestById(collection, id);
-    if (!item) {
-      return;
-    }
-
-    reset(false);
-    setSelectedRequestId(id);
-
-    // Also select the folder containing this item
-    const folderId = findFolderIdByRequestId(collection, id);
-    if (folderId) {
-      setSelectedFolderId(folderId);
-    }
-
-    const { request } = item;
-    const isWssUrl = request.url.startsWith('ws://') || request.url.startsWith('wss://');
-    setMode(isWssUrl ? 'WSS' : 'HTTP');
-    setMethod(request.method as Method);
-    setUrl(request.url);
-    setHeaders(headersRecordToString(postmanHeadersToRecord(request.header)));
-    setBody(request.body?.raw || '{}');
-  }
-
-  function handleSelectFolder(folderId: string) {
-    setSelectedFolderId(folderId);
-  }
-
-  async function handleAddFolder() {
-    const updatedCollection = addFolderToCollection(collection, 'New Folder');
-    setCollection(updatedCollection);
-    await window.electronAPI.saveCollection(updatedCollection);
-  }
-
-  async function handleRenameFolder(folderId: string, newName: string) {
-    const updatedCollection = renameFolderInCollection(collection, folderId, newName);
-    setCollection(updatedCollection);
-    await window.electronAPI.saveCollection(updatedCollection);
-  }
-
-  async function handleRemoveFolder(folderId: string, itemCount: number) {
-    if (itemCount > 0) {
-      setDeleteFolderModal({ isOpen: true, folderId });
-    } else {
-      const updatedCollection = removeFolderFromCollection(collection, folderId);
-      setCollection(updatedCollection);
-      await window.electronAPI.saveCollection(updatedCollection);
-    }
-  }
-
-  async function confirmDeleteFolder() {
-    if (deleteFolderModal.folderId) {
-      const updatedCollection = removeFolderFromCollection(collection, deleteFolderModal.folderId);
-      setCollection(updatedCollection);
-      await window.electronAPI.saveCollection(updatedCollection);
-    }
-    setDeleteFolderModal({ isOpen: false, folderId: null });
-  }
-
-  function closeDeleteFolderModal() {
-    setDeleteFolderModal({ isOpen: false, folderId: null });
-  }
-
-  async function handleReorderFolder(activeId: string, overId: string) {
-    const updatedCollection = reorderFolderInCollection(collection, activeId, overId);
-    setCollection(updatedCollection);
-    await window.electronAPI.saveCollection(updatedCollection);
-  }
-
-  async function handleMoveItem(itemId: string, targetFolderId: string, targetIndex?: number) {
-    const updatedCollection = moveRequestToFolder(collection, itemId, targetFolderId, targetIndex);
-    setCollection(updatedCollection);
-    await window.electronAPI.saveCollection(updatedCollection);
-    setSelectedFolderId(targetFolderId);
-  }
 }
 
+// Report types and helper functions
 type ReportSuiteTest = {
   name?: string;
   status: TestResult['status'];

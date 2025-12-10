@@ -1,19 +1,21 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import cn from 'classnames';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import { environmentActions } from '../../../store/slices/environmentSlice';
+import { selectSelectedEnvironmentId } from '../../../store/selectors';
 import { Environment } from '../../../types';
 
 import ClearCrossIcon from '../../../assets/icons/clear-cross-icon.svg';
 
 interface Props {
   environment: Environment;
-  isSelected?: boolean;
-  onSelect: (id: string) => void;
-  onEdit: (id: string) => void;
-  onRemove: (id: string) => void;
 }
 
-export default function EnvironmentSidebarItem({ environment, isSelected, onSelect, onEdit, onRemove }: Props) {
+export default function EnvironmentSidebarItem({ environment }: Props) {
+  const dispatch = useAppDispatch();
+  const selectedEnvironmentId = useAppSelector(selectSelectedEnvironmentId);
+  const isSelected = environment.id === selectedEnvironmentId;
   const { attributes, isDragging, listeners, transform, transition, setNodeRef } = useSortable({
     id: environment.id,
   });
@@ -35,8 +37,8 @@ export default function EnvironmentSidebarItem({ environment, isSelected, onSele
       )}
       onClick={() => {
         if (!isDragging) {
-          onSelect(environment.id);
-          onEdit(environment.id);
+          dispatch(environmentActions.selectEnvironment(environment.id));
+          dispatch(environmentActions.startEditing(environment.id));
         }
       }}
       {...attributes}
@@ -49,7 +51,7 @@ export default function EnvironmentSidebarItem({ environment, isSelected, onSele
         className="h-4.5 w-4.5 p-0.5 text-button-text-secondary dark:text-text-secondary hover:text-button-danger cursor-pointer"
         onClick={(e: React.MouseEvent) => {
           e.stopPropagation();
-          onRemove(environment.id);
+          dispatch(environmentActions.setEnvironmentToDelete(environment.id));
         }}
       />
     </div>

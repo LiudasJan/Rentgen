@@ -1,7 +1,9 @@
 import cn from 'classnames';
 import { useEffect, useState } from 'react';
-import { Environment } from '../../types';
-import { SidebarFolderData } from '../../utils/collection';
+import { useAppDispatch, useAppSelector } from '../../store/hooks';
+import { environmentActions } from '../../store/slices/environmentSlice';
+import { uiActions } from '../../store/slices/uiSlice';
+import { selectSidebarActiveTab } from '../../store/selectors';
 import EnvironmentSidebarPanel from './environment/EnvironmentSidebarPanel';
 import SidebarButton from './SidebarButton';
 import CollectionsPanel from './colletion/CollectionsPanel';
@@ -10,53 +12,10 @@ import CollectionIcon from '../../assets/icons/collection-icon.svg';
 import EnvironmentIcon from '../../assets/icons/environment-icon.svg';
 import UpgradeStarIcon from '../../assets/icons/upgrade-star-icon.svg';
 
-type SidebarTab = 'collections' | 'environments' | null;
-
-interface Props {
-  folders: SidebarFolderData[];
-  selectedId: string | null;
-  selectedFolderId: string | null;
-  onRemoveCollection: (id: string) => void;
-  onSelectCollection: (id: string) => void;
-  onReorderCollection: (activeId: string, overId: string) => void;
-  onMoveItem: (itemId: string, targetFolderId: string, targetIndex?: number) => void;
-  onSelectFolder: (folderId: string) => void;
-  onAddFolder: () => void;
-  onRenameFolder: (folderId: string, newName: string) => void;
-  onRemoveFolder: (folderId: string, itemCount: number) => void;
-  onReorderFolder: (activeId: string, overId: string) => void;
-  environments: Environment[];
-  selectedEnvironmentId: string | null;
-  onSelectEnvironment: (id: string | null) => void;
-  onEditEnvironment: (id: string | null) => void;
-  onAddEnvironment: () => void;
-  onReorderEnvironment: (activeId: string, overId: string) => void;
-  onRemoveEnvironment: (id: string) => void;
-}
-
-export default function Sidebar({
-  folders,
-  selectedId,
-  selectedFolderId,
-  onRemoveCollection,
-  onSelectCollection,
-  onReorderCollection,
-  onMoveItem,
-  onSelectFolder,
-  onAddFolder,
-  onRenameFolder,
-  onRemoveFolder,
-  onReorderFolder,
-  environments,
-  selectedEnvironmentId,
-  onSelectEnvironment,
-  onEditEnvironment,
-  onAddEnvironment,
-  onReorderEnvironment,
-  onRemoveEnvironment,
-}: Props) {
+export default function Sidebar() {
+  const dispatch = useAppDispatch();
+  const activeTab = useAppSelector(selectSidebarActiveTab);
   const [appVersion, setAppVersion] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<SidebarTab>(null);
 
   const isExpanded = activeTab !== null;
 
@@ -66,17 +25,12 @@ export default function Sidebar({
   }, []);
 
   const handleCollectionClick = () => {
-    setActiveTab((prev) => (prev === 'collections' ? null : 'collections'));
-    onEditEnvironment(null);
+    dispatch(uiActions.toggleSidebarTab('collections'));
+    dispatch(environmentActions.stopEditing());
   };
 
   const handleEnvironmentClick = () => {
-    setActiveTab((prev) => (prev === 'environments' ? null : 'environments'));
-  };
-
-  const handleSelectCollection = (id: string) => {
-    onSelectCollection(id);
-    onEditEnvironment(null);
+    dispatch(uiActions.toggleSidebarTab('environments'));
   };
 
   return (
@@ -114,33 +68,8 @@ export default function Sidebar({
       </div>
       <div className="border-l border-border dark:border-dark-border overflow-hidden bg-body dark:bg-dark-body">
         <div className="max-h-screen h-full w-78 flex flex-col overflow-hidden">
-          {activeTab === 'collections' && (
-            <CollectionsPanel
-              folders={folders}
-              selectedId={selectedId}
-              selectedFolderId={selectedFolderId}
-              onRemoveCollection={onRemoveCollection}
-              onSelectCollection={handleSelectCollection}
-              onReorderCollection={onReorderCollection}
-              onMoveItem={onMoveItem}
-              onSelectFolder={onSelectFolder}
-              onAddFolder={onAddFolder}
-              onRenameFolder={onRenameFolder}
-              onRemoveFolder={onRemoveFolder}
-              onReorderFolder={onReorderFolder}
-            />
-          )}
-          {activeTab === 'environments' && (
-            <EnvironmentSidebarPanel
-              environments={environments}
-              selectedEnvironmentId={selectedEnvironmentId}
-              onSelect={onSelectEnvironment}
-              onEdit={onEditEnvironment}
-              onAdd={onAddEnvironment}
-              onReorder={onReorderEnvironment}
-              onRemove={onRemoveEnvironment}
-            />
-          )}
+          {activeTab === 'collections' && <CollectionsPanel />}
+          {activeTab === 'environments' && <EnvironmentSidebarPanel />}
         </div>
       </div>
     </div>
