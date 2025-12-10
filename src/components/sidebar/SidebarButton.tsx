@@ -9,7 +9,7 @@ export default function SidebarButton({ children, className, label, onClick, ...
   return (
     <div
       className={cn(
-        'w-20 py-2.5 flex flex-col items-center gap-1 cursor-pointer text-center',
+        'py-2.5 flex flex-col items-center gap-1 cursor-pointer text-center',
         'text-button-text-secondary hover:bg-button-secondary hover:text-button-text-secondary-hover',
         'dark:text-dark-text dark:hover:bg-dark-input dark:hover:text-dark-text',
         className,

@@ -1,28 +1,54 @@
-## [v1.4.0]
+## [v1.5.0]
 
-### 🔍 New Test Cases:
+### 🔍 Smarter Test Generation
 
-- **TEST: Boundary value analysis out of the box**  
-  Automatically detects integer/float and generates valid range tests (min → max) and out-of-range tests.
+- **TEST: Required vs Optional fields**  
+  You can now mark any request field as **mandatory** or **optional**.  
+  Rentgen automatically generates:
+  - **missing-required-field tests** → expect **4xx**
+  - **optional-field-omitted tests** → expect **2xx**  
+    This gives you instant coverage for “what happens if this field is not sent?” without writing a single script.
 
-- **TEST: ENUM field type support**  
-  Detects enum-like values from the original cURL request.  
-  Allows entering all valid ENUM options.  
-  Valid ENUM → expect **2xx**, invalid ENUM → expect **4xx**.
+### 🐛 One-Click Bug Reports
 
-- **TEST: String Max Length Test**  
-  New `max length` control.  
-  Up to max → **2xx**.  
-  `max + 1` → **4xx**.
+- **Copy Bug Report**  
+  When a test fails, you shouldn’t waste time writing tickets by hand.  
+  Each failed test now has a **“Copy Bug Report”** button that:
+  - pre-fills the bug title with the test name,
+  - includes request, response, expectations and severity,
+  - is formatted as clean plaintext ready to paste into Jira, Trello, Linear, or GitHub Issues.
 
-### 🌙 Dark Mode Arrives
+  Fail → click → paste into your tracker → done.
 
-Rentgen now has **full Dark Mode** — clean, minimal and perfect for late-night API debugging.  
-Instant theme switching, no reloads, no tracking.
+### 📦 Test Export (kudos to Aivaras)
 
-### 🐞 Bug Fixes
+- **Test Export for all generated checks**  
+  Huge thanks to **Aivaras St.** – he implemented export of all generated tests and shared the code with us.  
+  Now Rentgen can export your tests so you can:
+  - review them outside the app,
+  - share them with the team,
+  - keep a versioned snapshot of your API hygiene checks.
 
-- Other minor parsing and UI fixes.
+### 🗂 Collections: your work is finally persistent
+
+- **Save all your work into Collections**  
+  No more “start from scratch every time.”  
+  You can now:
+  - add requests into **Collections**,
+  - group them by feature / service,
+  - reopen Rentgen and continue exactly where you left off.
+
+  Collections are the first building block for bigger test suites and regression packs.
+
+### 🌍 Environment Support (Test / Staging / Prod)
+
+- **Environment profiles** for dev, test, staging, prod (or anything you like).
+- Each environment can have its own:
+  - base URL,
+  - headers / tokens,
+  - and **color theme**, so you instantly see where you are running tests.
+
+This also means you can make staging bright and friendly, and keep prod visually “scary” enough to think twice before firing **200 heavy tests** against it.
 
 ### 💻 How to Run on macOS
 
