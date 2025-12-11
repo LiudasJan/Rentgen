@@ -2,47 +2,41 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import cn from 'classnames';
 import { useState } from 'react';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import { collectionActions } from '../../../store/slices/collectionSlice';
+import { selectSelectedFolderId } from '../../../store/selectors';
+import { uiActions } from '../../../store/slices/uiSlice';
 import { SidebarFolderData } from '../../../utils/collection';
-import CollectionItem from './CollectionItem';
 
 import ChevronIcon from '../../../assets/icons/chevron-icon.svg';
 import ClearCrossIcon from '../../../assets/icons/clear-cross-icon.svg';
 import EditIcon from '../../../assets/icons/edit-icon.svg';
 import FolderIcon from '../../../assets/icons/folder-icon.svg';
+import CollectionItem from "./CollectionItem";
 
 interface Props {
   folder: SidebarFolderData;
   folderCount: number;
-  selectedId: string | null;
-  selectedFolderId: string | null;
   isEditing: boolean;
   editingName: string;
-  onRemoveCollection: (id: string) => void;
-  onSelectCollection: (id: string) => void;
-  onSelectFolder: (folderId: string) => void;
   onStartEdit: (folderId: string) => void;
   onSaveEdit: (folderId: string, newName: string) => void;
   onCancelEdit: () => void;
   onEditingNameChange: (name: string) => void;
-  onRemoveFolder: (folderId: string, itemCount: number) => void;
 }
 
 export default function CollectionGroup({
   folder,
   folderCount,
-  selectedId,
-  selectedFolderId,
   isEditing,
   editingName,
-  onRemoveCollection,
-  onSelectCollection,
-  onSelectFolder,
   onStartEdit,
   onSaveEdit,
   onCancelEdit,
   onEditingNameChange,
-  onRemoveFolder,
 }: Props) {
+  const dispatch = useAppDispatch();
+  const selectedFolderId = useAppSelector(selectSelectedFolderId);
   const [isExpanded, setIsExpanded] = useState(folderCount === 1);
   const isSelected = folder.id === selectedFolderId;
   const canEdit = true;
@@ -55,7 +49,7 @@ export default function CollectionGroup({
   const handleHeaderClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsExpanded(!isExpanded);
-    onSelectFolder(folder.id);
+    dispatch(collectionActions.selectFolder(folder.id));
   };
 
   const handleEditClick = (e: React.MouseEvent) => {
@@ -65,7 +59,7 @@ export default function CollectionGroup({
 
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onRemoveFolder(folder.id, folder.items.length);
+    dispatch(uiActions.openDeleteFolderModal(folder.id));
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -143,13 +137,7 @@ export default function CollectionGroup({
       {isExpanded && folder.items.length > 0 && (
         <div>
           {folder.items.map((item) => (
-            <CollectionItem
-              key={item.id}
-              item={item}
-              isSelected={item.id === selectedId}
-              onRemoveCollection={onRemoveCollection}
-              onSelectCollection={onSelectCollection}
-            />
+            <CollectionItem key={item.id} item={item} />
           ))}
         </div>
       )}
