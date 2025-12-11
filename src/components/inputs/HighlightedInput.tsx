@@ -1,5 +1,6 @@
 import cn from 'classnames';
 import { InputHTMLAttributes } from 'react';
+import Input from './Input';
 import VariableHighlighter from './VariableHighlighter';
 import { Environment } from '../../types';
 
@@ -35,13 +36,8 @@ export default function HighlightedInput({
       </div>
 
       {/* Actual input */}
-      <input
-        className={cn(
-          'w-full m-0 py-2 px-3 text-xs font-monospace border border-border rounded-md box-border outline-none',
-          'dark:bg-dark-input dark:border-dark-border dark:placeholder:text-text-secondary',
-          'bg-transparent caret-text dark:caret-dark-text',
-          { 'p-1.5!': type === 'file' },
-        )}
+      <Input
+        className={cn('w-full bg-transparent caret-text dark:caret-dark-text', { 'p-1.5!': type === 'file' })}
         style={{ color: 'transparent' }}
         disabled={disabled}
         type={type}

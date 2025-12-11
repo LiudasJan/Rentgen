@@ -1,21 +1,22 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import cn from 'classnames';
-import { SidebarItemData } from '../../utils/collection';
-import MethodBadge from '../MethodBadge';
+import { SidebarItemData } from '../../../utils/collection';
+import MethodBadge from '../../MethodBadge';
 
-import ClearCrossIcon from '../../assets/icons/clear-cross-icon.svg';
+import ClearCrossIcon from '../../../assets/icons/clear-cross-icon.svg';
 
 interface Props {
   item: SidebarItemData;
   isSelected?: boolean;
-  onRemove(id: string): void;
-  onSelect(id: string): void;
+  onRemoveCollection(id: string): void;
+  onSelectCollection(id: string): void;
 }
 
-export default function SidebarItem({ item, isSelected, onRemove, onSelect }: Props) {
+export default function CollectionItem({ item, isSelected, onRemoveCollection, onSelectCollection }: Props) {
   const { attributes, isDragging, listeners, transform, transition, setNodeRef } = useSortable({
     id: item.id,
+    data: { type: 'item', folderId: item.folderId },
   });
 
   return (
@@ -33,7 +34,7 @@ export default function SidebarItem({ item, isSelected, onRemove, onSelect }: Pr
           'opacity-50 shadow-lg z-50': isDragging,
         },
       )}
-      onClick={() => !isDragging && onSelect(item.id)}
+      onClick={() => !isDragging && onSelectCollection(item.id)}
       {...attributes}
       {...listeners}
     >
@@ -43,7 +44,7 @@ export default function SidebarItem({ item, isSelected, onRemove, onSelect }: Pr
       </span>
       <ClearCrossIcon
         className="h-4.5 w-4.5 p-0.5 text-button-text-secondary dark:text-text-secondary hover:text-button-danger cursor-pointer"
-        onClick={() => onRemove(item.id)}
+        onClick={() => onRemoveCollection(item.id)}
       />
     </div>
   );

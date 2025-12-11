@@ -1,7 +1,7 @@
 import { PostmanCollection, PostmanHeader, PostmanItem, PostmanRequest } from '../types/postman';
 
 const DEFAULT_FOLDER_ID = 'default';
-const DEFAULT_FOLDER_NAME = 'default';
+const DEFAULT_FOLDER_NAME = 'All Requests';
 const COLLECTION_SCHEMA = 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json';
 
 export interface SidebarItemData {
@@ -10,6 +10,12 @@ export interface SidebarItemData {
   url: string;
   name: string;
   folderId: string;
+}
+
+export interface SidebarFolderData {
+  id: string;
+  name: string;
+  items: SidebarItemData[];
 }
 
 export function createEmptyCollection(): PostmanCollection {
@@ -221,4 +227,131 @@ export function reorderRequestInCollection(
   }
 
   return updatedCollection;
+}
+
+export function collectionToGroupedSidebarData(collection: PostmanCollection): SidebarFolderData[] {
+  return collection.item.map((folder) => ({
+    id: folder.id,
+    name: folder.id === DEFAULT_FOLDER_ID ? DEFAULT_FOLDER_NAME : folder.name,
+    items: folder.item.map((item) => ({
+      id: item.id,
+      method: item.request.method,
+      url: item.request.url,
+      name: item.name,
+      folderId: folder.id,
+    })),
+  }));
+}
+
+export function generateFolderId(): string {
+  return `folder_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+}
+
+export function addFolderToCollection(collection: PostmanCollection, name: string): PostmanCollection {
+  const newFolder = {
+    id: generateFolderId(),
+    name,
+    item: [] as PostmanItem[],
+  };
+  return {
+    ...collection,
+    item: [newFolder, ...collection.item],
+  };
+}
+
+export function renameFolderInCollection(
+  collection: PostmanCollection,
+  folderId: string,
+  newName: string,
+): PostmanCollection {
+  if (folderId === DEFAULT_FOLDER_ID) {
+    return collection;
+  }
+  return {
+    ...collection,
+    item: collection.item.map((folder) =>
+      folder.id === folderId ? { ...folder, name: newName } : folder,
+    ),
+  };
+}
+
+export function removeFolderFromCollection(collection: PostmanCollection, folderId: string): PostmanCollection {
+  return {
+    ...collection,
+    item: collection.item.filter((f) => f.id !== folderId),
+  };
+}
+
+export function reorderFolderInCollection(
+  collection: PostmanCollection,
+  activeId: string,
+  overId: string,
+): PostmanCollection {
+  const updatedFolders = [...collection.item];
+  const activeIndex = updatedFolders.findIndex((f) => f.id === activeId);
+  const overIndex = updatedFolders.findIndex((f) => f.id === overId);
+
+  if (activeIndex !== -1 && overIndex !== -1) {
+    const [movedFolder] = updatedFolders.splice(activeIndex, 1);
+    updatedFolders.splice(overIndex, 0, movedFolder);
+  }
+
+  return {
+    ...collection,
+    item: updatedFolders,
+  };
+}
+
+export function findFolderIdByRequestId(collection: PostmanCollection, requestId: string): string | null {
+  for (const folder of collection.item) {
+    const item = folder.item.find((i) => i.id === requestId);
+    if (item) {
+      return folder.id;
+    }
+  }
+  return null;
+}
+
+export function moveRequestToFolder(
+  collection: PostmanCollection,
+  requestId: string,
+  targetFolderId: string,
+  targetIndex?: number,
+): PostmanCollection {
+  let movedItem: PostmanItem | undefined;
+  let sourceFolderId: string | undefined;
+
+  for (const folder of collection.item) {
+    const item = folder.item.find((i) => i.id === requestId);
+    if (item) {
+      movedItem = item;
+      sourceFolderId = folder.id;
+      break;
+    }
+  }
+
+  if (!movedItem || !sourceFolderId || sourceFolderId === targetFolderId) {
+    return collection;
+  }
+
+  const itemToMove = movedItem;
+
+  return {
+    ...collection,
+    item: collection.item.map((folder) => {
+      if (folder.id === sourceFolderId) {
+        return {
+          ...folder,
+          item: folder.item.filter((item) => item.id !== requestId),
+        };
+      }
+      if (folder.id === targetFolderId) {
+        const newItems = [...folder.item];
+        const insertIndex = targetIndex !== undefined ? targetIndex : newItems.length;
+        newItems.splice(insertIndex, 0, itemToMove);
+        return { ...folder, item: newItems };
+      }
+      return folder;
+    }),
+  };
 }

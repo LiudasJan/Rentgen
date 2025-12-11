@@ -1,6 +1,7 @@
 import cn from 'classnames';
 import { useRef } from 'react';
-import AutosizeTextarea, { TextareaAutosizeProps } from 'react-textarea-autosize';
+import { TextareaAutosizeProps } from 'react-textarea-autosize';
+import TextareaAutosize from './TextareaAutosize';
 import VariableHighlighter from './VariableHighlighter';
 import { Environment } from '../../types';
 
@@ -45,12 +46,8 @@ export default function HighlightedTextarea({
       </div>
 
       {/* Actual textarea */}
-      <AutosizeTextarea
-        className={cn(
-          'w-full min-h-28 m-0 py-2 px-3 font-monospace text-xs border border-border rounded-md box-border resize-y outline-none',
-          'dark:bg-dark-input dark:border-dark-border dark:placeholder:text-text-secondary',
-          'bg-transparent caret-text dark:caret-dark-text',
-        )}
+      <TextareaAutosize
+        className="bg-transparent caret-text dark:caret-dark-text"
         style={{ color: 'transparent' }}
         value={value}
         onScroll={handleScroll}
