@@ -1,12 +1,12 @@
 import cn from 'classnames';
 import { useEffect, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
+import { selectSidebarActiveTab } from '../../store/selectors';
 import { environmentActions } from '../../store/slices/environmentSlice';
 import { uiActions } from '../../store/slices/uiSlice';
-import { selectSidebarActiveTab } from '../../store/selectors';
-import EnvironmentSidebarPanel from './environment/EnvironmentSidebarPanel';
-import SidebarButton from './SidebarButton';
 import CollectionsPanel from './colletion/CollectionsPanel';
+import EnvironmentPanel from './environment/EnvironmentPanel';
+import SidebarButton from './SidebarButton';
 
 import CollectionIcon from '../../assets/icons/collection-icon.svg';
 import EnvironmentIcon from '../../assets/icons/environment-icon.svg';
@@ -69,7 +69,7 @@ export default function Sidebar() {
       <div className="border-l border-border dark:border-dark-border overflow-hidden bg-body dark:bg-dark-body">
         <div className="max-h-screen h-full w-78 flex flex-col overflow-hidden">
           {activeTab === 'collections' && <CollectionsPanel />}
-          {activeTab === 'environments' && <EnvironmentSidebarPanel />}
+          {activeTab === 'environments' && <EnvironmentPanel />}
         </div>
       </div>
     </div>

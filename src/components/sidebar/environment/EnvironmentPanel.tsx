@@ -13,9 +13,9 @@ import { environmentActions } from '../../../store/slices/environmentSlice';
 import { selectEnvironments } from '../../../store/selectors';
 import AddIcon from '../../../assets/icons/add-icon.svg';
 
-import EnvironmentSidebarItem from './EnvironmentSidebarItem';
+import EnvironmentItem from './EnvironmentItem';
 
-export default function EnvironmentSidebarPanel() {
+export default function EnvironmentPanel() {
   const dispatch = useAppDispatch();
   const environments = useAppSelector(selectEnvironments);
   const sensors = useSensors(
@@ -54,7 +54,7 @@ export default function EnvironmentSidebarPanel() {
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={environments.map((env) => env.id)} strategy={verticalListSortingStrategy}>
               {environments.map((env) => (
-                <EnvironmentSidebarItem key={env.id} environment={env} />
+                <EnvironmentItem key={env.id} environment={env} />
               ))}
             </SortableContext>
           </DndContext>

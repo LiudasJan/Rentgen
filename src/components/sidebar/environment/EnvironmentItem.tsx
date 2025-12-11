@@ -12,7 +12,7 @@ interface Props {
   environment: Environment;
 }
 
-export default function EnvironmentSidebarItem({ environment }: Props) {
+export default function EnvironmentItem({ environment }: Props) {
   const dispatch = useAppDispatch();
   const selectedEnvironmentId = useAppSelector(selectSelectedEnvironmentId);
   const isSelected = environment.id === selectedEnvironmentId;

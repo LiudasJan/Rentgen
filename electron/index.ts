@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
+import { installExtension, REACT_DEVELOPER_TOOLS, REDUX_DEVTOOLS } from 'electron-devtools-installer';
 import Store from 'electron-store';
 import { writeFileSync } from 'fs';
 import {
@@ -27,7 +28,7 @@ const store = new Store<{ theme: 'light' | 'dark' }>({
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) app.quit();
 
-const createWindow = (): void => {
+const createWindow = async (): Promise<void> => {
   const icon =
     process.platform === 'win32'
       ? './assets/icons/rentgen.ico'
@@ -51,7 +52,15 @@ const createWindow = (): void => {
   mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
 
   // Open DevTools in dev mode
-  if (process.env.MODE === 'development') mainWindow.webContents.openDevTools();
+  if (process.env.MODE === 'development') {
+    try {
+      await installExtension([REDUX_DEVTOOLS, REACT_DEVELOPER_TOOLS]);
+    } catch (error) {
+      console.error('Failed to install DevTools:', error);
+    }
+
+    mainWindow.webContents.openDevTools();
+  }
 };
 
 // This method will be called when Electron has finished
