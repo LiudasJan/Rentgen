@@ -22,7 +22,7 @@ import ParametersPanel from './components/panels/ParametersPanel';
 import ResponsePanel from './components/panels/ResponsePanel';
 import Sidebar from './components/sidebar/Sidebar';
 import TestsTable, { ExpandedTestComponent, getTestsTableColumns } from './components/tables/TestsTable';
-import useReduxTests from './hooks/useReduxTests';
+import useTests from './hooks/useTests';
 import { LARGE_PAYLOAD_TEST_NAME, LOAD_TEST_NAME } from './tests';
 import { Environment, HttpResponse, TestResult, TestStatus } from './types';
 import {
@@ -183,7 +183,7 @@ export default function App() {
     executeAllTests,
     executeLoadTest,
     executeLargePayloadTest,
-  } = useReduxTests();
+  } = useTests();
 
   // Load initial data
   useEffect(() => {

@@ -30,7 +30,7 @@ import {
 } from '../tests';
 import { DynamicValue, TestOptions, TestResult } from '../types';
 
-const useReduxTests = () => {
+const useTests = () => {
   const dispatch = useAppDispatch();
 
   const testOptions = useAppSelector(selectTestOptions);
@@ -243,4 +243,4 @@ const useReduxTests = () => {
   };
 };
 
-export default useReduxTests;
+export default useTests;
