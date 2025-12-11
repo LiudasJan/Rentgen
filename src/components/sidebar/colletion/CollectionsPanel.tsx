@@ -125,7 +125,7 @@ export default function CollectionsPanel({
   }, [folders]);
 
   return (
-    <div className="max-h-screen h-full w-80 flex flex-col overflow-hidden bg-body dark:bg-dark-body">
+    <>
       <div
         className="flex items-center gap-2 px-3 py-2 border-b border-border dark:border-dark-border cursor-pointer hover:bg-button-secondary dark:hover:bg-dark-input"
         onClick={onAddFolder}
@@ -165,6 +165,6 @@ export default function CollectionsPanel({
           No saved requests
         </div>
       )}
-    </div>
+    </>
   );
 }

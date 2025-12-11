@@ -1,10 +1,10 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import cn from 'classnames';
-import { SidebarItemData } from '../../utils/collection';
-import MethodBadge from '../MethodBadge';
+import { SidebarItemData } from '../../../utils/collection';
+import MethodBadge from '../../MethodBadge';
 
-import ClearCrossIcon from '../../assets/icons/clear-cross-icon.svg';
+import ClearCrossIcon from '../../../assets/icons/clear-cross-icon.svg';
 
 interface Props {
   item: SidebarItemData;
@@ -13,7 +13,7 @@ interface Props {
   onSelectCollection(id: string): void;
 }
 
-export default function SidebarItem({ item, isSelected, onRemoveCollection, onSelectCollection }: Props) {
+export default function CollectionItem({ item, isSelected, onRemoveCollection, onSelectCollection }: Props) {
   const { attributes, isDragging, listeners, transform, transition, setNodeRef } = useSortable({
     id: item.id,
     data: { type: 'item', folderId: item.folderId },

@@ -13,7 +13,7 @@ interface Props {
   onRemove: (id: string) => void;
 }
 
-export default function EnvironmentSidebarItem({ environment, isSelected, onSelect, onEdit, onRemove }: Props) {
+export default function EnvironmentItem({ environment, isSelected, onSelect, onEdit, onRemove }: Props) {
   const { attributes, isDragging, listeners, transform, transition, setNodeRef } = useSortable({
     id: environment.id,
   });

@@ -3,7 +3,7 @@ import { CSS } from '@dnd-kit/utilities';
 import cn from 'classnames';
 import { useState } from 'react';
 import { SidebarFolderData } from '../../../utils/collection';
-import SidebarItem from '../SidebarItem';
+import CollectionItem from './CollectionItem';
 
 import ChevronIcon from '../../../assets/icons/chevron-icon.svg';
 import ClearCrossIcon from '../../../assets/icons/clear-cross-icon.svg';
@@ -143,7 +143,7 @@ export default function CollectionGroup({
       {isExpanded && folder.items.length > 0 && (
         <div>
           {folder.items.map((item) => (
-            <SidebarItem
+            <CollectionItem
               key={item.id}
               item={item}
               isSelected={item.id === selectedId}

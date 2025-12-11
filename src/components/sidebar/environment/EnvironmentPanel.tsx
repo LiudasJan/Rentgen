@@ -9,9 +9,9 @@ import {
 } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { Environment } from '../../../types';
-import AddIcon from '../../../assets/icons/add-icon.svg';
+import EnvironmentItem from './EnvironmentItem';
 
-import EnvironmentSidebarItem from './EnvironmentSidebarItem';
+import AddIcon from '../../../assets/icons/add-icon.svg';
 
 interface Props {
   environments: Environment[];
@@ -23,7 +23,7 @@ interface Props {
   onRemove: (id: string) => void;
 }
 
-export default function EnvironmentSidebarPanel({
+export default function EnvironmentPanel({
   environments,
   selectedEnvironmentId,
   onSelect,
@@ -68,7 +68,7 @@ export default function EnvironmentSidebarPanel({
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={environments.map((env) => env.id)} strategy={verticalListSortingStrategy}>
               {environments.map((env) => (
-                <EnvironmentSidebarItem
+                <EnvironmentItem
                   key={env.id}
                   environment={env}
                   isSelected={env.id === selectedEnvironmentId}

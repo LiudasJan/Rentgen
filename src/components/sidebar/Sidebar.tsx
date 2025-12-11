@@ -2,9 +2,9 @@ import cn from 'classnames';
 import { useEffect, useState } from 'react';
 import { Environment } from '../../types';
 import { SidebarFolderData } from '../../utils/collection';
-import EnvironmentSidebarPanel from './environment/EnvironmentSidebarPanel';
-import SidebarButton from './SidebarButton';
 import CollectionsPanel from './colletion/CollectionsPanel';
+import EnvironmentPanel from './environment/EnvironmentPanel';
+import SidebarButton from './SidebarButton';
 
 import CollectionIcon from '../../assets/icons/collection-icon.svg';
 import EnvironmentIcon from '../../assets/icons/environment-icon.svg';
@@ -131,7 +131,7 @@ export default function Sidebar({
             />
           )}
           {activeTab === 'environments' && (
-            <EnvironmentSidebarPanel
+            <EnvironmentPanel
               environments={environments}
               selectedEnvironmentId={selectedEnvironmentId}
               onSelect={onSelectEnvironment}
