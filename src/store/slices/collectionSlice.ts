@@ -57,7 +57,14 @@ export const collectionSlice = createSlice({
       }>,
     ) => {
       const { method, url, headers, body, folderId } = action.payload;
-      state.data = addRequestToCollection(state.data, method, url, headers, body, folderId || state.selectedFolderId);
+      const targetFolderId = folderId || state.selectedFolderId;
+      state.data = addRequestToCollection(state.data, method, url, headers, body, targetFolderId);
+
+      // Auto-select the newly added request (it's at index 0 due to unshift in addRequestToCollection)
+      const folder = state.data.item.find((f) => f.id === targetFolderId);
+      if (folder && folder.item.length > 0) {
+        state.selectedRequestId = folder.item[0].id;
+      }
     },
     updateRequest: (
       state,

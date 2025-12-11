@@ -232,12 +232,12 @@ export default function App() {
 
   // Reset function
   const reset = useCallback(
-    (resetTestOptions = true) => {
+    (resetTestOptions = true, clearSelection = true) => {
       dispatch(requestActions.resetRequest());
       dispatch(responseActions.clearResponse());
       dispatch(websocketActions.clearMessages());
       dispatch(websocketActions.setConnected(false));
-      dispatch(collectionActions.selectRequest(null));
+      if (clearSelection) dispatch(collectionActions.selectRequest(null));
       if (resetTestOptions) dispatch(testActions.setTestOptions(null));
     },
     [dispatch],
@@ -250,7 +250,7 @@ export default function App() {
     const item = findRequestById(collection, selectedRequestId);
     if (!item) return;
 
-    reset(false);
+    reset(false, false);
 
     const folderId = findFolderIdByRequestId(collection, selectedRequestId);
     if (folderId) dispatch(collectionActions.selectFolder(folderId));
@@ -366,13 +366,6 @@ export default function App() {
           folderId: selectedFolderId,
         }),
       );
-
-      // Set newly created request as selected
-      setTimeout(() => {
-        const targetFolder = collection.item.find((f) => f.id === selectedFolderId);
-        const newItem = targetFolder?.item[0];
-        if (newItem) dispatch(collectionActions.selectRequest(newItem.id));
-      }, 0);
     }
 
     dispatch(uiActions.setSaved(true));
