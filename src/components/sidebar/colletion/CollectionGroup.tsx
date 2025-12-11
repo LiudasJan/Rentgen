@@ -7,12 +7,12 @@ import { collectionActions } from '../../../store/slices/collectionSlice';
 import { selectSelectedFolderId } from '../../../store/selectors';
 import { uiActions } from '../../../store/slices/uiSlice';
 import { SidebarFolderData } from '../../../utils/collection';
-import SidebarItem from '../SidebarItem';
 
 import ChevronIcon from '../../../assets/icons/chevron-icon.svg';
 import ClearCrossIcon from '../../../assets/icons/clear-cross-icon.svg';
 import EditIcon from '../../../assets/icons/edit-icon.svg';
 import FolderIcon from '../../../assets/icons/folder-icon.svg';
+import CollectionItem from "./CollectionItem";
 
 interface Props {
   folder: SidebarFolderData;
@@ -137,7 +137,7 @@ export default function CollectionGroup({
       {isExpanded && folder.items.length > 0 && (
         <div>
           {folder.items.map((item) => (
-            <SidebarItem key={item.id} item={item} />
+            <CollectionItem key={item.id} item={item} />
           ))}
         </div>
       )}

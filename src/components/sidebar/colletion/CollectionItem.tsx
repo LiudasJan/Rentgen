@@ -1,19 +1,19 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import cn from 'classnames';
-import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import { collectionActions } from '../../store/slices/collectionSlice';
-import { selectSelectedRequestId } from '../../store/selectors';
-import { SidebarItemData } from '../../utils/collection';
-import MethodBadge from '../MethodBadge';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import { collectionActions } from '../../../store/slices/collectionSlice';
+import { selectSelectedRequestId } from '../../../store/selectors';
+import { SidebarItemData } from '../../../utils/collection';
+import MethodBadge from '../../MethodBadge';
 
-import ClearCrossIcon from '../../assets/icons/clear-cross-icon.svg';
+import ClearCrossIcon from '../../../assets/icons/clear-cross-icon.svg';
 
 interface Props {
   item: SidebarItemData;
 }
 
-export default function SidebarItem({ item }: Props) {
+export default function CollectionItem({ item }: Props) {
   const dispatch = useAppDispatch();
   const selectedId = useAppSelector(selectSelectedRequestId);
   const isSelected = item.id === selectedId;
