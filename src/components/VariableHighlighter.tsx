@@ -1,23 +1,15 @@
 import { useMemo } from 'react';
-import { parseVariables } from '../../utils/highlightVariables';
-import { EnvironmentVariable } from '../../types';
+import { parseVariables } from '../utils/highlightVariables';
 
-interface VariableHighlighterProps {
-  text: string;
+interface Props {
   highlightColor: string;
-  variables?: EnvironmentVariable[];
-  className?: string;
+  variables?: string[];
+  text: string;
 }
 
-export default function VariableHighlighter({
-  text,
-  highlightColor,
-  variables = [],
-  className,
-}: VariableHighlighterProps) {
+export default function VariableHighlighter({ highlightColor, variables = [], text }: Props) {
   const segments = useMemo(() => parseVariables(text), [text]);
-
-  const variableKeys = useMemo(() => new Set(variables.map((v) => v.key.trim())), [variables]);
+  const variableKeys = useMemo(() => new Set(variables.map((variable) => variable.trim())), [variables]);
 
   const variableExists = (segmentText: string): boolean => {
     const varName = segmentText.slice(2, -2).trim();
@@ -25,7 +17,7 @@ export default function VariableHighlighter({
   };
 
   return (
-    <span className={className}>
+    <span>
       {segments.map((segment, index) =>
         segment.isVariable && variableExists(segment.text) ? (
           <span
@@ -34,7 +26,6 @@ export default function VariableHighlighter({
               color: highlightColor,
               backgroundColor: `${highlightColor}20`,
               borderRadius: '2px',
-              padding: '0 1px',
             }}
           >
             {segment.text}

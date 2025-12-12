@@ -24,7 +24,7 @@ export default function Select({ classNames, styles, isCreatable, ...otherProps 
     dropdownIndicator: () => 'w-7! p-1.5! text-text/40! dark:text-dark-text/40!',
     indicatorSeparator: () => 'hidden',
     input: () => 'm-0! p-0! text-text! dark:text-dark-text!',
-    menu: () => 'm-0! rounded-md! dark:bg-dark-input! transition-none!',
+    menu: () => 'm-0! rounded-md! dark:bg-dark-input! transition-none! z-50!',
     menuList: () => 'p-0!',
     option: ({ data, isSelected }) =>
       cn(
