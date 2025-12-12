@@ -8,6 +8,7 @@ import CollectionsPanel from './colletion/CollectionsPanel';
 import EnvironmentPanel from './environment/EnvironmentPanel';
 import SidebarButton from './SidebarButton';
 
+import BugIcon from '../../assets/icons/bug-icon.svg';
 import CollectionIcon from '../../assets/icons/collection-icon.svg';
 import EnvironmentIcon from '../../assets/icons/environment-icon.svg';
 import UpgradeStarIcon from '../../assets/icons/upgrade-star-icon.svg';
@@ -57,6 +58,7 @@ export default function Sidebar() {
             <EnvironmentIcon className="w-5 h-5" />
           </SidebarButton>
         </div>
+        <div>
         <SidebarButton
           label="Check for updates"
           onClick={() =>
@@ -65,6 +67,13 @@ export default function Sidebar() {
         >
           <UpgradeStarIcon className="w-5 h-5" />
         </SidebarButton>
+        <SidebarButton
+          label="Report feedback"
+          onClick={() => window.electronAPI.openExternal('https://github.com/LiudasJan/Rentgen/issues/new')}
+        >
+          <BugIcon className="w-5 h-5" />
+        </SidebarButton>
+        </div>
       </div>
       <div className="border-l border-border dark:border-dark-border overflow-hidden bg-body dark:bg-dark-body">
         <div className="max-h-screen h-full w-78 flex flex-col overflow-hidden">
