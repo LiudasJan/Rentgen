@@ -6,7 +6,7 @@ import { createErrorTestResult, createTestResult, NOT_AVAILABLE_TEST } from './B
 
 export const LOAD_TEST_NAME = 'Load Test';
 export const MEDIAN_RESPONSE_TIME_TEST_NAME = 'Median Response Time';
-export const NETWORK_LATENCY_DOMINATES_RESPONSE_TIME_TEST_NAME = 'Network Latency Dominates Response Time';
+export const NETWORK_SHARE_TEST_NAME = 'Network Share Calculation';
 export const PING_LATENCY_TEST_NAME = 'Ping Latency';
 
 const EXCELLENT_RESPONSE_TIME_MS = 500;
@@ -22,6 +22,10 @@ const MAX_EARLY_ABORT_FAILURES = 5;
 const EARLY_ABORT_RESPONSE_TIME_MS = 5000;
 const MIN_REQUESTS_FOR_ABORT_CHECK = 10;
 
+const NETWORK_SHARE_RESPONSE_TIME_MS = 300;
+const NETWORK_SHARE_PASS_THRESHOLD = 30;
+const NETWORK_SHARE_WARNING_THRESHOLD = 50;
+
 export class PerformanceInsights {
   constructor(
     private url: string,
@@ -34,8 +38,17 @@ export class PerformanceInsights {
 
   public async run(): Promise<TestResult[]> {
     const results: TestResult[] = [];
+    const medianTestResult = this.testMedianResponseTime();
+    const pingTestResult = await this.testNetworkPingLatency();
+    const pingTimes = pingTestResult.value as number[];
+    const bestPingTime = pingTimes?.length > 0 ? Math.min(...pingTimes) : null;
 
-    results.push(this.testMedianResponseTime(), await this.testNetworkPingLatency(), ...getManualTests());
+    results.push(
+      medianTestResult,
+      pingTestResult,
+      this.networkShareTest(medianTestResult.responseTime, bestPingTime),
+      ...getManualTests(),
+    );
 
     return results;
   }
@@ -47,15 +60,18 @@ export class PerformanceInsights {
     const responseTimes = this.testResults.map((result: TestResult) => result.responseTime).filter(Boolean);
     const medianResponseTime = calculateMedian(responseTimes);
 
-    let responseTimeStatus = TestStatus.Fail;
-    if (medianResponseTime <= EXCELLENT_RESPONSE_TIME_MS) responseTimeStatus = TestStatus.Pass;
-    else if (medianResponseTime <= ACCEPTABLE_RESPONSE_TIME_MS) responseTimeStatus = TestStatus.Warning;
+    let status = TestStatus.Fail;
+    if (medianResponseTime <= EXCELLENT_RESPONSE_TIME_MS) status = TestStatus.Pass;
+    else if (medianResponseTime <= ACCEPTABLE_RESPONSE_TIME_MS) status = TestStatus.Warning;
 
     return createTestResult(
       MEDIAN_RESPONSE_TIME_TEST_NAME,
       `<= ${EXCELLENT_RESPONSE_TIME_MS} ms`,
       `${medianResponseTime.toFixed(0)} ms`,
-      responseTimeStatus,
+      status,
+      null,
+      null,
+      medianResponseTime,
     );
   }
 
@@ -74,13 +90,12 @@ export class PerformanceInsights {
 
       const highLatencyCount = pingResults.filter((pingTime) => pingTime > MAX_PING_LATENCY_MS).length;
       const averagePingTime = pingResults.reduce((sum, pingTime) => sum + pingTime, 0) / pingResults.length;
-      const pingLatencyStatus = highLatencyCount >= MAX_ACCEPTABLE_BAD_PINGS ? TestStatus.Fail : TestStatus.Pass;
 
       return createTestResult(
         PING_LATENCY_TEST_NAME,
         `<= ${MAX_PING_LATENCY_MS} ms (${MAX_ACCEPTABLE_BAD_PINGS}/${PING_TEST_COUNT} rule)`,
         `${averagePingTime.toFixed(0)} ms (high latency ${highLatencyCount}/${PING_TEST_COUNT})`,
-        pingLatencyStatus,
+        highLatencyCount >= MAX_ACCEPTABLE_BAD_PINGS ? TestStatus.Fail : TestStatus.Pass,
         null,
         null,
         0,
@@ -89,6 +104,35 @@ export class PerformanceInsights {
     } catch (error) {
       return createErrorTestResult(PING_LATENCY_TEST_NAME, 'Ping Succeeds', String(error));
     }
+  }
+
+  @Test('Detects when network latency (ping) consumes a significant portion of the total API response time')
+  private networkShareTest(medianResponseTime: number, pingTime: number | null): TestResult {
+    this.onTestStart?.();
+
+    if (pingTime === null)
+      return createTestResult(NETWORK_SHARE_TEST_NAME, `< ${NETWORK_SHARE_PASS_THRESHOLD}%`, '', TestStatus.Manual);
+
+    const hostname = new URL(this.url).hostname;
+    const ratioPercent = (pingTime / medianResponseTime) * 100;
+
+    let status = TestStatus.Fail;
+    if (ratioPercent < NETWORK_SHARE_PASS_THRESHOLD || medianResponseTime < NETWORK_SHARE_RESPONSE_TIME_MS)
+      status = TestStatus.Pass;
+    else if (ratioPercent < NETWORK_SHARE_WARNING_THRESHOLD) status = TestStatus.Warning;
+
+    return createTestResult(
+      NETWORK_SHARE_TEST_NAME,
+      `< ${NETWORK_SHARE_PASS_THRESHOLD}% or total response time < ${NETWORK_SHARE_RESPONSE_TIME_MS} ms`,
+      medianResponseTime < NETWORK_SHARE_RESPONSE_TIME_MS
+        ? `${pingTime} ms (best ping time)`
+        : `${ratioPercent.toFixed(2)}% (best ping time: ${pingTime} ms)`,
+      status,
+      null,
+      null,
+      0,
+      { hostname, medianResponseTime, pingTime, ratioPercent },
+    );
   }
 }
 

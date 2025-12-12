@@ -165,7 +165,7 @@ export function ParameterControls({ dynamicValue, onChange }: Props) {
 
   function onSelectTypeChange(event: ChangeEvent<HTMLSelectElement>) {
     const type = event.target.value as DataType;
-    if (isParameterTestSkipped(type)) onChange({ type, value: '', mandatory: false });
-    else onChange(getInitialParameterValue(type, ''));
+    if (isParameterTestSkipped(type)) onChange(getInitialParameterValue(type, '', false));
+    else onChange(getInitialParameterValue(type));
   }
 }
