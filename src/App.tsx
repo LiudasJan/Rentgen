@@ -1,6 +1,6 @@
 import { Method } from 'axios';
 import cn from 'classnames';
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useMemo } from 'react';
 import Button, { ButtonSize, ButtonType } from './components/buttons/Button';
 import { CopyButton } from './components/buttons/CopyButton';
 import { IconButton } from './components/buttons/IconButton';
@@ -39,7 +39,12 @@ import {
   parseHeaders,
   substituteRequestVariables,
 } from './utils';
-import { findFolderIdByRequestId, findRequestById, headersRecordToString, postmanHeadersToRecord } from './utils/collection';
+import {
+  findFolderIdByRequestId,
+  findRequestById,
+  headersRecordToString,
+  postmanHeadersToRecord,
+} from './utils/collection';
 
 // Redux
 import { useAppDispatch, useAppSelector } from './store/hooks';
@@ -133,6 +138,11 @@ export default function App() {
   const isEditingEnvironment = useAppSelector(selectIsEditingEnvironment);
   const editingEnvironmentId = useAppSelector(selectEditingEnvironmentId);
   const environmentToDelete = useAppSelector(selectEnvironmentToDelete);
+
+  const variables = useMemo(
+    () => selectedEnvironment?.variables?.map((variable) => variable.key) || [],
+    [selectedEnvironment],
+  );
 
   // Request state
   const mode = useAppSelector(selectMode);
@@ -269,7 +279,13 @@ export default function App() {
     try {
       if (curl.length > 200_000) throw new Error('cURL too large');
 
-      const { body: curlBody, decodedLines, headers: curlHeaders, method: curlMethod, url: curlUrl } = extractCurl(curl);
+      const {
+        body: curlBody,
+        decodedLines,
+        headers: curlHeaders,
+        method: curlMethod,
+        url: curlUrl,
+      } = extractCurl(curl);
 
       dispatch(requestActions.setUrl(curlUrl));
       dispatch(requestActions.setMethod(curlMethod as Method));
@@ -292,7 +308,9 @@ export default function App() {
       dispatch(uiActions.closeCurlModal());
     } catch (error) {
       console.error('cURL import failed', error);
-      dispatch(uiActions.setCurlError('The cURL command you provided appears to be invalid. Please check it and try again'));
+      dispatch(
+        uiActions.setCurlError('The cURL command you provided appears to be invalid. Please check it and try again'),
+      );
     }
   }, [curl, dispatch]);
 
@@ -580,9 +598,10 @@ export default function App() {
                 )}
                 <HighlightedInput
                   className={cn('flex-auto', { 'border-l-0 rounded-l-none': mode === 'HTTP' })}
+                  highlightColor={selectedEnvironment?.color}
                   placeholder="Enter URL or paste text"
                   value={url}
-                  environment={selectedEnvironment}
+                  variables={variables}
                   onChange={(event) => dispatch(requestActions.setUrl(event.target.value))}
                 />
               </div>
@@ -613,23 +632,25 @@ export default function App() {
             </div>
 
             <HighlightedTextarea
+              highlightColor={selectedEnvironment?.color}
               maxRows={10}
               placeholder="Header-Key: value"
               value={headers}
-              environment={selectedEnvironment}
+              variables={variables}
               onChange={(event) => dispatch(requestActions.setHeaders(event.target.value))}
             />
 
             <div className="relative">
               <HighlightedTextarea
+                highlightColor={selectedEnvironment?.color}
                 maxRows={15}
                 placeholder={mode === 'HTTP' ? 'Enter request body (JSON or Form Data)' : 'Message body'}
                 value={body}
-                environment={selectedEnvironment}
+                variables={variables}
                 onChange={(event) => dispatch(requestActions.setBody(event.target.value))}
               />
               <Button
-                className="absolute top-3 right-4"
+                className="absolute top-3 right-4 z-10"
                 buttonType={ButtonType.SECONDARY}
                 buttonSize={ButtonSize.SMALL}
                 onClick={() => dispatch(requestActions.setBody(formatBody(body, parseHeaders(headers))))}
@@ -671,9 +692,10 @@ export default function App() {
 
                   <HighlightedInput
                     className="flex-auto"
+                    highlightColor={selectedEnvironment?.color}
                     placeholder="Message type (e.g. mypackage.MyMessage)"
                     value={messageType}
-                    environment={selectedEnvironment}
+                    variables={variables}
                     onChange={(event) => dispatch(requestActions.setMessageType(event.target.value))}
                   />
                 </div>
@@ -812,7 +834,9 @@ export default function App() {
                       options={exportFormatOptions}
                       placeholder="Format"
                       value={exportFormatOptions.find((option) => option.value === exportFormat)}
-                      onChange={(option: SelectOption<ReportFormat>) => dispatch(uiActions.setExportFormat(option.value))}
+                      onChange={(option: SelectOption<ReportFormat>) =>
+                        dispatch(uiActions.setExportFormat(option.value))
+                      }
                     />
                     <Button
                       buttonType={ButtonType.SECONDARY}
@@ -983,7 +1007,11 @@ export default function App() {
           </div>
         </div>
       </Modal>
-      <Modal className="[&>div]:w-[400px]!" isOpen={deleteFolderModal.isOpen} onClose={() => dispatch(uiActions.closeDeleteFolderModal())}>
+      <Modal
+        className="[&>div]:w-[400px]!"
+        isOpen={deleteFolderModal.isOpen}
+        onClose={() => dispatch(uiActions.closeDeleteFolderModal())}
+      >
         <div className="flex flex-col gap-4">
           <h4 className="m-0">Delete Folder</h4>
           <p className="m-0 text-sm dark:text-text-secondary">

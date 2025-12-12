@@ -1,58 +1,68 @@
 import cn from 'classnames';
-import { useRef } from 'react';
-import { TextareaAutosizeProps } from 'react-textarea-autosize';
-import TextareaAutosize from './TextareaAutosize';
-import VariableHighlighter from './VariableHighlighter';
-import { Environment } from '../../types';
+import { useEffect, useRef, useState } from 'react';
+import AutosizeTextarea, { TextareaAutosizeProps } from 'react-textarea-autosize';
+import VariableHighlighter from '../VariableHighlighter';
 
 const DEFAULT_HIGHLIGHT_COLOR = '#6B7280';
 
-interface HighlightedTextareaProps extends TextareaAutosizeProps {
-  environment?: Environment | null;
+interface Props extends TextareaAutosizeProps {
+  highlightColor: string;
+  variables?: string[];
 }
 
 export default function HighlightedTextarea({
   className,
+  highlightColor,
+  variables,
   value,
-  environment,
   onScroll,
   ...otherProps
-}: HighlightedTextareaProps) {
-  const overlayRef = useRef<HTMLDivElement>(null);
-  const highlightColor = environment?.color || DEFAULT_HIGHLIGHT_COLOR;
+}: Props) {
+  const highlighterRef = useRef<HTMLDivElement>(null);
+  const [scrollValue, setScrollValue] = useState<{ scrollTop: number; scrollLeft: number }>({
+    scrollTop: 0,
+    scrollLeft: 0,
+  });
+
   const textValue = typeof value === 'string' ? value : '';
 
-  const handleScroll = (e: React.UIEvent<HTMLTextAreaElement>) => {
-    if (overlayRef.current) {
-      overlayRef.current.scrollTop = e.currentTarget.scrollTop;
-      overlayRef.current.scrollLeft = e.currentTarget.scrollLeft;
+  useEffect(() => {
+    if (highlighterRef.current) {
+      highlighterRef.current.scrollTop = scrollValue.scrollTop;
+      highlighterRef.current.scrollLeft = scrollValue.scrollLeft;
     }
-    onScroll?.(e);
-  };
+  }, [scrollValue]);
 
   return (
-    <div className={cn('relative', className)}>
-      {/* Highlight overlay */}
-      <div
-        ref={overlayRef}
+    <div
+      className={cn(
+        'relative leading-0 text-text bg-white border border-border rounded-md',
+        'dark:text-dark-text dark:bg-dark-input dark:border-dark-border',
+        className,
+      )}
+    >
+      <AutosizeTextarea
         className={cn(
-          'absolute inset-0 pointer-events-none overflow-hidden whitespace-pre-wrap break-words',
-          'w-full m-0 py-2 px-3 font-monospace text-xs text-text',
-          'dark:text-dark-text',
+          'relative w-full min-h-28 m-0 py-2 px-3 font-monospace text-xs text-transparent bg-transparent border-none caret-text box-border outline-none z-1',
+          'dark:placeholder:text-text-secondary dark:caret-dark-text',
         )}
-        aria-hidden="true"
-      >
-        <VariableHighlighter text={textValue} highlightColor={highlightColor} variables={environment?.variables} />
-      </div>
-
-      {/* Actual textarea */}
-      <TextareaAutosize
-        className="bg-transparent caret-text dark:caret-dark-text"
-        style={{ color: 'transparent' }}
         value={value}
-        onScroll={handleScroll}
+        onScroll={(event) => {
+          setScrollValue({ scrollLeft: event.currentTarget.scrollLeft, scrollTop: event.currentTarget.scrollTop });
+          onScroll?.(event);
+        }}
         {...otherProps}
       />
+      <div
+        className="absolute inset-0 mx-3 py-2 font-monospace text-xs whitespace-pre overflow-x-auto [scrollbar-width:none]"
+        ref={highlighterRef}
+      >
+        <VariableHighlighter
+          text={textValue}
+          highlightColor={highlightColor || DEFAULT_HIGHLIGHT_COLOR}
+          variables={variables}
+        />
+      </div>
     </div>
   );
 }

@@ -128,7 +128,7 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
           <div className="mb-4">
             <label className="block mb-1 font-bold text-sm">Environment Name</label>
             <Input
-              className="w-full"
+              className="w-full dark:bg-dark-body"
               placeholder="e.g., Production, Staging, Local"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -164,7 +164,7 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
           {/* Variables Table */}
           <div className="mb-4">
             <label className="block mb-1 font-bold text-sm">Variables</label>
-            <div className="border border-border dark:border-dark-border rounded-md overflow-hidden">
+            <div className="border border-border dark:border-dark-body rounded-md overflow-hidden">
               {/* Table Header */}
               <div className="flex bg-body dark:bg-dark-body border-b border-border dark:border-dark-border">
                 <div className="flex-1 px-3 py-2 font-bold text-xs">Variable Name</div>
@@ -173,7 +173,7 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
               {/* Table Body - scrollable */}
               <div className="max-h-[400px] overflow-y-auto">
                 {variables.map((variable, index) => (
-                  <div key={index} className="flex border-b border-border dark:border-dark-border last:border-b-0">
+                  <div key={index} className="flex border-b border-border dark:border-dark-body last:border-b-0">
                     <div className="flex-1 p-1">
                       <Input
                         className="w-full border-0 bg-transparent"
@@ -182,7 +182,7 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
                         onChange={(e) => handleVariableChange(index, 'key', e.target.value)}
                       />
                     </div>
-                    <div className="flex-1 p-1 border-l border-border dark:border-dark-border">
+                    <div className="flex-1 p-1 border-l border-border dark:border-dark-body">
                       <Input
                         className="w-full border-0 bg-transparent"
                         placeholder="value"
