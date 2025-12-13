@@ -3,16 +3,16 @@ import { CSS } from '@dnd-kit/utilities';
 import cn from 'classnames';
 import { useState } from 'react';
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
-import { collectionActions } from '../../../store/slices/collectionSlice';
 import { selectSelectedFolderId } from '../../../store/selectors';
+import { collectionActions } from '../../../store/slices/collectionSlice';
 import { uiActions } from '../../../store/slices/uiSlice';
 import { SidebarFolderData } from '../../../utils/collection';
+import CollectionItem from './CollectionItem';
 
 import ChevronIcon from '../../../assets/icons/chevron-icon.svg';
 import ClearCrossIcon from '../../../assets/icons/clear-cross-icon.svg';
 import EditIcon from '../../../assets/icons/edit-icon.svg';
 import FolderIcon from '../../../assets/icons/folder-icon.svg';
-import CollectionItem from "./CollectionItem";
 
 interface Props {
   folder: SidebarFolderData;
@@ -85,7 +85,7 @@ export default function CollectionGroup({
         <div
           className={cn(
             'flex items-center gap-2 px-3 py-2 border-b border-border dark:border-dark-input',
-            'cursor-pointer hover:bg-button-secondary dark:hover:bg-dark-input group',
+            'hover:bg-button-secondary dark:hover:bg-dark-input group cursor-pointer outline-none',
             {
               'bg-button-secondary dark:bg-dark-input': isSelected,
             },

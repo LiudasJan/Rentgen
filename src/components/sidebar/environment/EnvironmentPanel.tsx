@@ -9,11 +9,11 @@ import {
 } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
-import { environmentActions } from '../../../store/slices/environmentSlice';
 import { selectEnvironments } from '../../../store/selectors';
-import AddIcon from '../../../assets/icons/add-icon.svg';
-
+import { environmentActions } from '../../../store/slices/environmentSlice';
 import EnvironmentItem from './EnvironmentItem';
+
+import AddIcon from '../../../assets/icons/add-icon.svg';
 
 export default function EnvironmentPanel() {
   const dispatch = useAppDispatch();
@@ -41,7 +41,7 @@ export default function EnvironmentPanel() {
     <>
       {/* Add New Env Button - Always visible at top */}
       <div
-        className="flex items-center gap-2 px-3 py-2 border-b border-border dark:border-dark-border cursor-pointer hover:bg-button-secondary dark:hover:bg-dark-input"
+        className="flex items-center gap-2 px-3 py-2 border-b border-border dark:border-dark-border hover:bg-button-secondary dark:hover:bg-dark-input cursor-pointer outline-none"
         onClick={() => dispatch(environmentActions.startAddEnvironment())}
       >
         <AddIcon className="w-4 h-4 text-text-secondary dark:text-dark-text-secondary" />

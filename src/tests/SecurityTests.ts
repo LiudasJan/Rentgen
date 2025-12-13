@@ -550,7 +550,10 @@ export async function runLargePayloadTest(options: TestOptions, size: number): P
       LARGE_PAYLOAD_TEST_EXPECTED,
       actual,
       status,
-      modifiedRequest,
+      {
+        ...modifiedRequest,
+        body: `[${size} MB string]`,
+      },
       response,
     );
   } catch (error) {
