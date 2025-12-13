@@ -43,14 +43,15 @@ export default function EnvironmentSelector({ environments, selectedEnvironmentI
               control: (base) => ({
                 ...base,
                 backgroundColor: selectedEnvironment.color,
+                borderColor: `${selectedEnvironment.color} !important`,
               }),
               singleValue: (base) => ({
                 ...base,
-                color: needsLightText ? '#ffffff' : '#000000',
+                color: needsLightText ? '#ffffff !important' : '#000000 !important',
               }),
               dropdownIndicator: (base) => ({
                 ...base,
-                color: needsLightText ? '#ffffff' : undefined,
+                color: needsLightText ? '#ffffff !important' : '#000000 !important',
               }),
             }
           : undefined

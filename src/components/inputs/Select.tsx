@@ -13,25 +13,24 @@ interface Props extends SelectProps {
 }
 
 export default function Select({ classNames, styles, isCreatable, ...otherProps }: Props) {
-  const hasCustomControlStyle = !!styles?.control;
-
   const selectClassNames: ClassNamesConfig<unknown, boolean, GroupBase<unknown>> = {
     container: () => 'min-w-[110px] text-xs',
     control: () =>
-      cn('min-h-auto! border! border-border! rounded-md! shadow-none!', 'dark:border-dark-border! transition-none!', {
-        'bg-white! dark:bg-dark-input!': !hasCustomControlStyle,
+      cn('min-h-auto! rounded-md! border! shadow-none! transition-none!', {
+        'bg-white! dark:bg-dark-input! border-border! dark:border-dark-border!': !styles?.control,
       }),
-    dropdownIndicator: () => 'w-7! p-1.5! text-text/40! dark:text-dark-text/40!',
+    dropdownIndicator: () =>
+      cn('w-7! p-1.5! transition-none!', !styles?.dropdownIndicator && 'text-text/40! dark:text-dark-text/40!'),
     indicatorSeparator: () => 'hidden',
     input: () => 'm-0! p-0! text-text! dark:text-dark-text!',
-    menu: () => 'm-0! rounded-md! dark:bg-dark-input! transition-none! z-50!',
+    menu: () => 'm-0! rounded-md! dark:bg-dark-input! transition-none! shadow-md! z-50!',
     menuList: () => 'p-0!',
     option: ({ data, isSelected }) =>
       cn(
-        'first:rounded-t-md! last:rounded-b-md! transition-none!',
+        'first:rounded-t-md! last:rounded-b-md! transition-none! cursor-pointer!',
         {
           'text-white!': isSelected,
-          'dark:bg-dark-input! dark:hover:bg-dark-button-secondary!': !isSelected,
+          'hover:bg-select-hover dark:bg-dark-input! dark:hover:bg-dark-button-secondary!': !isSelected,
           'text-text! dark:text-dark-text!': !(data as SelectOption<unknown>).className,
         },
         !isSelected ? (data as SelectOption<unknown>).className : undefined,
@@ -40,7 +39,7 @@ export default function Select({ classNames, styles, isCreatable, ...otherProps 
     singleValue: ({ data, isDisabled }) =>
       cn(
         'm-0!',
-        {
+        !styles?.singleValue && {
           'text-text/50! dark:text-dark-text/50!': isDisabled,
           'text-text! dark:text-dark-text!': !(data as SelectOption<unknown>).className,
         },
