@@ -1,6 +1,7 @@
 import { Method } from 'axios';
 import cn from 'classnames';
-import { useEffect, useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
+import ActionsButton from './components/buttons/ActionsButton';
 import Button, { ButtonSize, ButtonType } from './components/buttons/Button';
 import { CopyButton } from './components/buttons/CopyButton';
 import { IconButton } from './components/buttons/IconButton';
@@ -46,49 +47,48 @@ import {
   postmanHeadersToRecord,
 } from './utils/collection';
 
-// Redux
 import { useAppDispatch, useAppSelector } from './store/hooks';
-import { loadCollection, collectionActions } from './store/slices/collectionSlice';
-import { requestActions } from './store/slices/requestSlice';
-import { responseActions } from './store/slices/responseSlice';
-import { loadEnvironments, environmentActions } from './store/slices/environmentSlice';
-import { websocketActions } from './store/slices/websocketSlice';
-import { testActions } from './store/slices/testSlice';
-import { uiActions } from './store/slices/uiSlice';
 import {
-  selectCollectionData,
-  selectSelectedRequestId,
-  selectSelectedFolderId,
-  selectEnvironments,
-  selectSelectedEnvironmentId,
-  selectSelectedEnvironment,
-  selectIsEditingEnvironment,
-  selectEditingEnvironmentId,
-  selectEnvironmentToDelete,
-  selectMode,
-  selectMethod,
-  selectUrl,
-  selectHeaders,
   selectBody,
   selectBodyParameters,
-  selectQueryParameters,
-  selectProtoFile,
-  selectMessageType,
-  selectHttpResponse,
-  selectWssConnected,
-  selectWssMessages,
-  selectTestOptions,
-  selectIsRunningTests,
-  selectDisabledRunTests,
-  selectOpenCurlModal,
-  selectOpenReloadModal,
-  selectDeleteFolderModal,
-  selectSaved,
-  selectExported,
+  selectCollectionData,
   selectCurl,
   selectCurlError,
+  selectDeleteFolderModal,
+  selectDisabledRunTests,
+  selectEditingEnvironmentId,
+  selectEnvironments,
+  selectEnvironmentToDelete,
+  selectExported,
   selectExportFormat,
+  selectHeaders,
+  selectHttpResponse,
+  selectIsEditingEnvironment,
+  selectIsRunningTests,
+  selectMessageType,
+  selectMethod,
+  selectMode,
+  selectOpenCurlModal,
+  selectOpenReloadModal,
+  selectProtoFile,
+  selectQueryParameters,
+  selectSaved,
+  selectSelectedEnvironment,
+  selectSelectedEnvironmentId,
+  selectSelectedFolderId,
+  selectSelectedRequestId,
+  selectTestOptions,
+  selectUrl,
+  selectWssConnected,
+  selectWssMessages,
 } from './store/selectors';
+import { collectionActions, loadCollection } from './store/slices/collectionSlice';
+import { environmentActions, loadEnvironments } from './store/slices/environmentSlice';
+import { requestActions } from './store/slices/requestSlice';
+import { responseActions } from './store/slices/responseSlice';
+import { testActions } from './store/slices/testSlice';
+import { uiActions } from './store/slices/uiSlice';
+import { websocketActions } from './store/slices/websocketSlice';
 
 import DarkModeIcon from './assets/icons/dark-mode-icon.svg';
 import LightModeIcon from './assets/icons/light-mode-icon.svg';
@@ -509,7 +509,12 @@ export default function App() {
               />
               {mode === 'HTTP' && (
                 <>
-                  <Button onClick={() => dispatch(uiActions.openCurlModal())}>Import cURL</Button>
+                  <ActionsButton
+                    actions={[{ label: 'New Request', onClick: () => reset(false) }]}
+                    onClick={() => dispatch(uiActions.openCurlModal())}
+                  >
+                    Import cURL
+                  </ActionsButton>
                   <Modal isOpen={openCurlModal} onClose={() => dispatch(uiActions.closeCurlModal())}>
                     <div className="flex flex-col gap-4">
                       <h4 className="m-0">Import cURL</h4>
@@ -651,8 +656,8 @@ export default function App() {
               />
               <Button
                 className="absolute top-3 right-4 z-10"
-                buttonType={ButtonType.SECONDARY}
                 buttonSize={ButtonSize.SMALL}
+                buttonType={ButtonType.SECONDARY}
                 onClick={() => dispatch(requestActions.setBody(formatBody(body, parseHeaders(headers))))}
               >
                 Beautify

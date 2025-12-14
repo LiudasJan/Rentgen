@@ -2,26 +2,26 @@ import cn from 'classnames';
 import { ButtonHTMLAttributes } from 'react';
 import { twMerge } from 'tailwind-merge';
 
-export enum ButtonType {
-  PRIMARY = 'primary',
-  SECONDARY = 'secondary',
-  DANGER = 'danger',
-}
-
 export enum ButtonSize {
   SMALL = 'small',
   MEDIUM = 'medium',
   LARGE = 'large',
 }
 
+export enum ButtonType {
+  PRIMARY = 'primary',
+  SECONDARY = 'secondary',
+  DANGER = 'danger',
+}
+
 export interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
-  buttonType?: ButtonType;
   buttonSize?: ButtonSize;
+  buttonType?: ButtonType;
 }
 
 export default function Button({
-  buttonType = ButtonType.PRIMARY,
   buttonSize = ButtonSize.MEDIUM,
+  buttonType = ButtonType.PRIMARY,
   children,
   className,
   disabled,
