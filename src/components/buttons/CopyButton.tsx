@@ -23,8 +23,8 @@ export function CopyButton({
   return (
     <Button
       className={twMerge(cn('min-w-auto whitespace-nowrap', className))}
-      buttonType={buttonType}
       buttonSize={buttonSize}
+      buttonType={buttonType}
       {...otherProps}
       onClick={copyToClipboard}
     >

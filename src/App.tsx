@@ -656,8 +656,8 @@ export default function App() {
               />
               <Button
                 className="absolute top-3 right-4 z-10"
-                buttonType={ButtonType.SECONDARY}
                 buttonSize={ButtonSize.SMALL}
+                buttonType={ButtonType.SECONDARY}
                 onClick={() => dispatch(requestActions.setBody(formatBody(body, parseHeaders(headers))))}
               >
                 Beautify
