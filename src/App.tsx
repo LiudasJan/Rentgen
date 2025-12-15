@@ -1,6 +1,6 @@
 import { Method } from 'axios';
 import cn from 'classnames';
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import ActionsButton from './components/buttons/ActionsButton';
 import Button, { ButtonSize, ButtonType } from './components/buttons/Button';
 import { CopyButton } from './components/buttons/CopyButton';
@@ -23,6 +23,7 @@ import ParametersPanel from './components/panels/ParametersPanel';
 import ResponsePanel from './components/panels/ResponsePanel';
 import Sidebar from './components/sidebar/Sidebar';
 import TestsTable, { ExpandedTestComponent, getTestsTableColumns } from './components/tables/TestsTable';
+import { useCtrlS } from './hooks/useCtrlS';
 import useTests from './hooks/useTests';
 import { LARGE_PAYLOAD_TEST_NAME, LOAD_TEST_NAME } from './tests';
 import { Environment, HttpResponse, TestResult, TestStatus } from './types';
@@ -177,9 +178,6 @@ export default function App() {
   const curlError = useAppSelector(selectCurlError);
   const exportFormat = useAppSelector(selectExportFormat);
 
-  // Ref to skip reset when saving (prevents response from being hidden)
-  const skipNextResetRef = useRef(false);
-
   // Tests hook
   const {
     crudTests,
@@ -197,6 +195,8 @@ export default function App() {
     executeLoadTest,
     executeLargePayloadTest,
   } = useTests();
+
+  const disabled = useMemo(() => !url || isRunningTests, [url, isRunningTests]);
 
   // Load initial data
   useEffect(() => {
@@ -262,14 +262,6 @@ export default function App() {
 
     const item = findRequestById(collection, selectedRequestId);
     if (!item) return;
-
-    // Skip reset if we just saved (response should stay visible)
-    if (skipNextResetRef.current) {
-      skipNextResetRef.current = false;
-      const folderId = findFolderIdByRequestId(collection, selectedRequestId);
-      if (folderId) dispatch(collectionActions.selectFolder(folderId));
-      return;
-    }
 
     reset(false, false);
 
@@ -371,7 +363,6 @@ export default function App() {
 
   // Save request
   const saveRequest = useCallback(async () => {
-    skipNextResetRef.current = true;
     const parsedHeaders = parseHeaders(headers);
     const parsedBody = parseBody(body, parsedHeaders, messageType, protoFile);
     const bodyString = typeof parsedBody === 'string' ? parsedBody : JSON.stringify(parsedBody);
@@ -402,6 +393,12 @@ export default function App() {
     clearTimeout(savedTimeout);
     savedTimeout = setTimeout(() => dispatch(uiActions.setSaved(false)), 2000);
   }, [headers, body, messageType, protoFile, selectedRequestId, collection, method, url, selectedFolderId, dispatch]);
+
+  const autoSaveRequest = useCallback(() => {
+    if (disabled || !selectedRequestId) return;
+
+    saveRequest();
+  }, [disabled, selectedRequestId, saveRequest]);
 
   // WebSocket functions
   const connectWss = useCallback(() => {
@@ -493,6 +490,8 @@ export default function App() {
       }
     }
   }, [testOptions, exportFormat, securityTests, performanceTests, dataDrivenTests, crudTests, httpResponse, dispatch]);
+
+  useCtrlS(!disabled && saveRequest);
 
   return (
     <div className="flex">
@@ -619,15 +618,16 @@ export default function App() {
                   placeholder="Enter URL or paste text"
                   value={url}
                   variables={variables}
+                  onBlur={autoSaveRequest}
                   onChange={(event) => dispatch(requestActions.setUrl(event.target.value))}
                 />
               </div>
               {mode === 'HTTP' && (
                 <>
-                  <Button disabled={!url || isRunningTests} onClick={sendHttp}>
+                  <Button disabled={disabled} onClick={sendHttp}>
                     Send
                   </Button>
-                  <Button buttonType={ButtonType.SECONDARY} disabled={!url || isRunningTests} onClick={saveRequest}>
+                  <Button buttonType={ButtonType.SECONDARY} disabled={disabled} onClick={saveRequest}>
                     {saved ? 'Saved ✅' : 'Save'}
                   </Button>
                 </>
@@ -654,6 +654,7 @@ export default function App() {
               placeholder="Header-Key: value"
               value={headers}
               variables={variables}
+              onBlur={autoSaveRequest}
               onChange={(event) => dispatch(requestActions.setHeaders(event.target.value))}
             />
 
@@ -664,6 +665,7 @@ export default function App() {
                 placeholder={mode === 'HTTP' ? 'Enter request body (JSON or Form Data)' : 'Message body'}
                 value={body}
                 variables={variables}
+                onBlur={autoSaveRequest}
                 onChange={(event) => dispatch(requestActions.setBody(event.target.value))}
               />
               <Button
