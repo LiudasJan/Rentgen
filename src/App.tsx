@@ -178,6 +178,9 @@ export default function App() {
   const curlError = useAppSelector(selectCurlError);
   const exportFormat = useAppSelector(selectExportFormat);
 
+  // Ref to skip reset when saving (prevents response from being hidden)
+  const skipNextResetRef = useRef(false);
+
   // Tests hook
   const {
     crudTests,
@@ -444,9 +447,6 @@ export default function App() {
     },
     [dispatch],
   );
-
-  // Ref to skip reset when saving (prevents response from being hidden)
-  const skipNextResetRef = useRef(false);
 
   // Export report
   const exportReport = useCallback(async () => {
