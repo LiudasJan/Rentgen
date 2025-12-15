@@ -3,6 +3,11 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 type ReportFormat = 'json' | 'md' | 'csv';
 type SidebarTab = 'collections' | 'environments' | null;
 
+interface SetAsVariableModalState {
+  isOpen: boolean;
+  initialValue: string;
+}
+
 interface UIState {
   // Modal states
   openCurlModal: boolean;
@@ -11,6 +16,7 @@ interface UIState {
     isOpen: boolean;
     folderId: string | null;
   };
+  setAsVariableModal: SetAsVariableModalState;
 
   // Feedback states
   saved: boolean;
@@ -34,6 +40,7 @@ const initialState: UIState = {
   openCurlModal: false,
   openReloadModal: false,
   deleteFolderModal: { isOpen: false, folderId: null },
+  setAsVariableModal: { isOpen: false, initialValue: '' },
   saved: false,
   exported: false,
   curl: '',
@@ -67,6 +74,12 @@ export const uiSlice = createSlice({
     },
     closeDeleteFolderModal: (state) => {
       state.deleteFolderModal = { isOpen: false, folderId: null };
+    },
+    openSetAsVariableModal: (state, action: PayloadAction<string>) => {
+      state.setAsVariableModal = { isOpen: true, initialValue: action.payload };
+    },
+    closeSetAsVariableModal: (state) => {
+      state.setAsVariableModal = { isOpen: false, initialValue: '' };
     },
 
     // cURL

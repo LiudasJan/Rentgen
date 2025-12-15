@@ -19,6 +19,7 @@ import { JsonViewer } from './components/JsonViewer';
 import Loader from './components/loaders/Loader';
 import TestRunningLoader from './components/loaders/TestRunningLoader';
 import Modal from './components/modals/Modal';
+import SetAsVariableModal from './components/modals/SetAsVariableModal';
 import ParametersPanel from './components/panels/ParametersPanel';
 import ResponsePanel from './components/panels/ResponsePanel';
 import Sidebar from './components/sidebar/Sidebar';
@@ -1088,6 +1089,7 @@ export default function App() {
           </div>
         </div>
       </Modal>
+      <SetAsVariableModal />
     </div>
   );
 }

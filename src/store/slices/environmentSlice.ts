@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { Environment } from '../../types';
+import { Environment, EnvironmentVariable } from '../../types';
 
 interface EnvironmentState {
   environments: Environment[];
@@ -85,6 +85,30 @@ export const environmentSlice = createSlice({
       if (oldIndex !== -1 && newIndex !== -1) {
         const [moved] = state.environments.splice(oldIndex, 1);
         state.environments.splice(newIndex, 0, moved);
+      }
+    },
+    addVariableToEnvironment: (
+      state,
+      action: PayloadAction<{ variable: EnvironmentVariable; environmentId: string | 'all' }>,
+    ) => {
+      const { variable, environmentId } = action.payload;
+
+      const addOrUpdateVariable = (env: Environment) => {
+        const existingIndex = env.variables.findIndex((v) => v.key === variable.key);
+        if (existingIndex >= 0) {
+          env.variables[existingIndex] = variable;
+        } else {
+          env.variables.push(variable);
+        }
+      };
+
+      if (environmentId === 'all') {
+        state.environments.forEach(addOrUpdateVariable);
+      } else {
+        const env = state.environments.find((e) => e.id === environmentId);
+        if (env) {
+          addOrUpdateVariable(env);
+        }
       }
     },
   },
