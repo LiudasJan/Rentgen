@@ -266,18 +266,16 @@ export default function App() {
     const item = findRequestById(collection, selectedRequestId);
     if (!item) return;
 
+    const folderId = findFolderIdByRequestId(collection, selectedRequestId);
+    if (folderId) dispatch(collectionActions.selectFolder(folderId));
+
     // Skip reset if we just saved (response should stay visible)
     if (skipNextResetRef.current) {
       skipNextResetRef.current = false;
-      const folderId = findFolderIdByRequestId(collection, selectedRequestId);
-      if (folderId) dispatch(collectionActions.selectFolder(folderId));
       return;
     }
 
     reset(false, false);
-
-    const folderId = findFolderIdByRequestId(collection, selectedRequestId);
-    if (folderId) dispatch(collectionActions.selectFolder(folderId));
 
     const { request } = item;
     const isWssUrl = request.url.startsWith('ws://') || request.url.startsWith('wss://');
