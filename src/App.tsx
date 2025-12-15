@@ -52,6 +52,7 @@ import {
   selectBody,
   selectBodyParameters,
   selectCollectionData,
+  selectCollectionRunResults,
   selectCurl,
   selectCurlError,
   selectDeleteFolderModal,
@@ -131,6 +132,7 @@ export default function App() {
   const collection = useAppSelector(selectCollectionData);
   const selectedRequestId = useAppSelector(selectSelectedRequestId);
   const selectedFolderId = useAppSelector(selectSelectedFolderId);
+  const collectionRunResults = useAppSelector(selectCollectionRunResults);
   // Environment state
   const environments = useAppSelector(selectEnvironments);
   const selectedEnvironmentId = useAppSelector(selectSelectedEnvironmentId);
@@ -273,6 +275,12 @@ export default function App() {
 
     reset(false, false);
 
+    // If there's a stored run result for this request, show its response
+    const runResult = collectionRunResults[selectedRequestId];
+    if (runResult?.response) {
+      dispatch(responseActions.setResponse(runResult.response));
+    }
+
     const folderId = findFolderIdByRequestId(collection, selectedRequestId);
     if (folderId) dispatch(collectionActions.selectFolder(folderId));
 
@@ -283,7 +291,7 @@ export default function App() {
     dispatch(requestActions.setUrl(request.url));
     dispatch(requestActions.setHeaders(headersRecordToString(postmanHeadersToRecord(request.header))));
     dispatch(requestActions.setBody(request.body?.raw || '{}'));
-  }, [selectedRequestId, reset, dispatch]);
+  }, [selectedRequestId, collectionRunResults, collection, reset, dispatch]);
 
   // cURL import
   const importCurl = useCallback(() => {

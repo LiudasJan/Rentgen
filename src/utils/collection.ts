@@ -269,9 +269,7 @@ export function renameFolderInCollection(
   }
   return {
     ...collection,
-    item: collection.item.map((folder) =>
-      folder.id === folderId ? { ...folder, name: newName } : folder,
-    ),
+    item: collection.item.map((folder) => (folder.id === folderId ? { ...folder, name: newName } : folder)),
   };
 }
 

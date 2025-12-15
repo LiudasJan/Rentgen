@@ -3,7 +3,8 @@ import { CSS } from '@dnd-kit/utilities';
 import cn from 'classnames';
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
 import { collectionActions } from '../../../store/slices/collectionSlice';
-import { selectSelectedRequestId } from '../../../store/selectors';
+import { responseActions } from '../../../store/slices/responseSlice';
+import { selectSelectedRequestId, selectCollectionRunResults } from '../../../store/selectors';
 import { SidebarItemData } from '../../../utils/collection';
 import MethodBadge from '../../MethodBadge';
 
@@ -16,11 +17,22 @@ interface Props {
 export default function CollectionItem({ item }: Props) {
   const dispatch = useAppDispatch();
   const selectedId = useAppSelector(selectSelectedRequestId);
+  const runResults = useAppSelector(selectCollectionRunResults);
+  const runResult = runResults[item.id] || null;
   const isSelected = item.id === selectedId;
   const { attributes, isDragging, listeners, transform, transition, setNodeRef } = useSortable({
     id: item.id,
     data: { type: 'item', folderId: item.folderId },
   });
+
+  const handleClick = () => {
+    if (isDragging) return;
+    dispatch(collectionActions.selectRequest(item.id));
+    // If we have a stored run result, show that response
+    if (runResult?.response) {
+      dispatch(responseActions.setResponse(runResult.response));
+    }
+  };
 
   return (
     <div
@@ -37,10 +49,18 @@ export default function CollectionItem({ item }: Props) {
           'opacity-50 shadow-lg z-50': isDragging,
         },
       )}
-      onClick={() => !isDragging && dispatch(collectionActions.selectRequest(item.id))}
+      onClick={handleClick}
       {...attributes}
       {...listeners}
     >
+      {runResult && (
+        <span
+          className={cn('w-2 h-2 rounded-full flex-shrink-0', {
+            'bg-green-500': runResult.success,
+            'bg-red-500': !runResult.success,
+          })}
+        />
+      )}
       <MethodBadge method={item.method} />
       <span className="flex-1 text-xs truncate" title={item.url}>
         {item.url}

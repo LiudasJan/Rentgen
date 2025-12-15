@@ -26,21 +26,13 @@ export const electronMiddleware: Middleware = (store) => (next) => (action: AnyA
   const actionType = action.type as string;
 
   // Auto-save collection after mutation actions
-  if (
-    actionType &&
-    actionType.startsWith('collection/') &&
-    !collectionReadOnlyActions.includes(actionType)
-  ) {
+  if (actionType && actionType.startsWith('collection/') && !collectionReadOnlyActions.includes(actionType)) {
     const state = store.getState();
     window.electronAPI.saveCollection(state.collection.data);
   }
 
   // Auto-save environments after mutation actions
-  if (
-    actionType &&
-    actionType.startsWith('environment/') &&
-    !environmentReadOnlyActions.includes(actionType)
-  ) {
+  if (actionType && actionType.startsWith('environment/') && !environmentReadOnlyActions.includes(actionType)) {
     const state = store.getState();
     window.electronAPI.saveEnvironments(state.environment.environments);
   }
