@@ -1,6 +1,6 @@
 import { Method } from 'axios';
 import cn from 'classnames';
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import ActionsButton from './components/buttons/ActionsButton';
 import Button, { ButtonSize, ButtonType } from './components/buttons/Button';
 import { CopyButton } from './components/buttons/CopyButton';
@@ -263,6 +263,14 @@ export default function App() {
     const item = findRequestById(collection, selectedRequestId);
     if (!item) return;
 
+    // Skip reset if we just saved (response should stay visible)
+    if (skipNextResetRef.current) {
+      skipNextResetRef.current = false;
+      const folderId = findFolderIdByRequestId(collection, selectedRequestId);
+      if (folderId) dispatch(collectionActions.selectFolder(folderId));
+      return;
+    }
+
     reset(false, false);
 
     const folderId = findFolderIdByRequestId(collection, selectedRequestId);
@@ -275,7 +283,7 @@ export default function App() {
     dispatch(requestActions.setUrl(request.url));
     dispatch(requestActions.setHeaders(headersRecordToString(postmanHeadersToRecord(request.header))));
     dispatch(requestActions.setBody(request.body?.raw || '{}'));
-  }, [selectedRequestId, reset, dispatch]);
+  }, [selectedRequestId, collection, reset, dispatch]);
 
   // cURL import
   const importCurl = useCallback(() => {
@@ -363,6 +371,7 @@ export default function App() {
 
   // Save request
   const saveRequest = useCallback(async () => {
+    skipNextResetRef.current = true;
     const parsedHeaders = parseHeaders(headers);
     const parsedBody = parseBody(body, parsedHeaders, messageType, protoFile);
     const bodyString = typeof parsedBody === 'string' ? parsedBody : JSON.stringify(parsedBody);
@@ -435,6 +444,9 @@ export default function App() {
     },
     [dispatch],
   );
+
+  // Ref to skip reset when saving (prevents response from being hidden)
+  const skipNextResetRef = useRef(false);
 
   // Export report
   const exportReport = useCallback(async () => {
