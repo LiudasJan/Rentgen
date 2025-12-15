@@ -510,7 +510,7 @@ export default function App() {
               {mode === 'HTTP' && (
                 <>
                   <ActionsButton
-                    actions={[{ label: 'New Request', onClick: () => reset(false) }]}
+                    actions={[{ label: 'Create', onClick: () => reset(false) }]}
                     onClick={() => dispatch(uiActions.openCurlModal())}
                   >
                     Import cURL

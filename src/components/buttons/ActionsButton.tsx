@@ -22,7 +22,7 @@ export default function ActionsButton({
   const refButton = useClickOutside<HTMLDivElement>(() => setOpenActions(false));
 
   return (
-    <div className={twMerge(cn('relative flex items-center', className))} ref={refButton}>
+    <div className={twMerge(cn('relative flex', className))} ref={refButton}>
       <Button buttonSize={buttonSize} buttonType={buttonType} className="rounded-r-none" {...otherProps}>
         {children}
       </Button>
