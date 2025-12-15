@@ -1,5 +1,6 @@
 import { configureStore } from '@reduxjs/toolkit';
 import collectionReducer from './slices/collectionSlice';
+import collectionRunReducer from './slices/collectionRunSlice';
 import requestReducer from './slices/requestSlice';
 import responseReducer from './slices/responseSlice';
 import environmentReducer from './slices/environmentSlice';
@@ -11,6 +12,7 @@ import { electronMiddleware } from './middleware/electronMiddleware';
 export const store = configureStore({
   reducer: {
     collection: collectionReducer,
+    collectionRun: collectionRunReducer,
     request: requestReducer,
     response: responseReducer,
     environment: environmentReducer,

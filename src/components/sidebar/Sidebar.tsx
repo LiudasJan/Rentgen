@@ -59,20 +59,20 @@ export default function Sidebar() {
           </SidebarButton>
         </div>
         <div>
-        <SidebarButton
-          label="Check for updates"
-          onClick={() =>
-            window.electronAPI.openExternal(`https://rentgen.io/check-for-update.html?current_version=${appVersion}`)
-          }
-        >
-          <UpgradeStarIcon className="w-5 h-5" />
-        </SidebarButton>
-        <SidebarButton
-          label="Report feedback"
-          onClick={() => window.electronAPI.openExternal('https://github.com/LiudasJan/Rentgen/issues/new')}
-        >
-          <BugIcon className="w-5 h-5" />
-        </SidebarButton>
+          <SidebarButton
+            label="Check for updates"
+            onClick={() =>
+              window.electronAPI.openExternal(`https://rentgen.io/check-for-update.html?current_version=${appVersion}`)
+            }
+          >
+            <UpgradeStarIcon className="w-5 h-5" />
+          </SidebarButton>
+          <SidebarButton
+            label="Report feedback"
+            onClick={() => window.electronAPI.openExternal('https://github.com/LiudasJan/Rentgen/issues/new')}
+          >
+            <BugIcon className="w-5 h-5" />
+          </SidebarButton>
         </div>
       </div>
       <div className="border-l border-border dark:border-dark-border overflow-hidden bg-body dark:bg-dark-body">

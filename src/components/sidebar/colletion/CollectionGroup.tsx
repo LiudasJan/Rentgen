@@ -3,9 +3,10 @@ import { CSS } from '@dnd-kit/utilities';
 import cn from 'classnames';
 import { useState } from 'react';
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
-import { selectSelectedFolderId } from '../../../store/selectors';
+import { selectSelectedFolderId, selectRunningFolderId } from '../../../store/selectors';
 import { collectionActions } from '../../../store/slices/collectionSlice';
 import { uiActions } from '../../../store/slices/uiSlice';
+import { useCollectionRunner } from '../../../hooks/useCollectionRunner';
 import { SidebarFolderData } from '../../../utils/collection';
 import CollectionItem from './CollectionItem';
 
@@ -13,6 +14,8 @@ import ChevronIcon from '../../../assets/icons/chevron-icon.svg';
 import ClearCrossIcon from '../../../assets/icons/clear-cross-icon.svg';
 import EditIcon from '../../../assets/icons/edit-icon.svg';
 import FolderIcon from '../../../assets/icons/folder-icon.svg';
+import PlayIcon from '../../../assets/icons/play-icon.svg';
+import StopIcon from '../../../assets/icons/stop-icon.svg';
 
 interface Props {
   folder: SidebarFolderData;
@@ -37,9 +40,13 @@ export default function CollectionGroup({
 }: Props) {
   const dispatch = useAppDispatch();
   const selectedFolderId = useAppSelector(selectSelectedFolderId);
+  const runningFolderId = useAppSelector(selectRunningFolderId);
+  const { runFolder, cancelRun } = useCollectionRunner();
   const [isExpanded, setIsExpanded] = useState(folderCount === 1);
   const isSelected = folder.id === selectedFolderId;
   const canEdit = true;
+  const isThisFolderRunning = runningFolderId === folder.id;
+  const isOtherFolderRunning = runningFolderId !== null && runningFolderId !== folder.id;
 
   const { attributes, isDragging, listeners, transform, transition, setNodeRef } = useSortable({
     id: folder.id,
@@ -60,6 +67,15 @@ export default function CollectionGroup({
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     dispatch(uiActions.openDeleteFolderModal(folder.id));
+  };
+
+  const handlePlayClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isThisFolderRunning) {
+      cancelRun();
+    } else {
+      runFolder(folder.id);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -117,6 +133,21 @@ export default function CollectionGroup({
           )}
 
           <span className="text-xs text-text-secondary">{folder.items.length}</span>
+
+          {folder.items.length > 0 &&
+            !isEditing &&
+            !isOtherFolderRunning &&
+            (isThisFolderRunning ? (
+              <StopIcon
+                className="h-4 w-4 text-red-500 hover:text-red-600 cursor-pointer transition-opacity"
+                onClick={handlePlayClick}
+              />
+            ) : (
+              <PlayIcon
+                className="h-4 w-4 text-green-500 hover:text-green-600 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={handlePlayClick}
+              />
+            ))}
 
           {canEdit && !isEditing && (
             <EditIcon
