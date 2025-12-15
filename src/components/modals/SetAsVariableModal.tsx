@@ -10,6 +10,15 @@ import Button, { ButtonType } from '../buttons/Button';
 
 const ALL_ENVIRONMENTS_VALUE = 'all';
 
+const sanitizeToVariableName = (val: string): string => {
+  return val
+    .toLowerCase()
+    .replace(/\s+/g, '_')
+    .replace(/[^a-z0-9_]/g, '')
+    .replace(/^_+|_+$/g, '')
+    .replace(/_+/g, '_');
+};
+
 interface EnvironmentOption {
   value: string;
   label: string;
@@ -29,9 +38,9 @@ export default function SetAsVariableModal() {
   // Reset form when modal opens
   useEffect(() => {
     if (isOpen) {
-      setName('');
+      setName(sanitizeToVariableName(initialValue));
       setValue(initialValue);
-      setSelectedEnvironment(null);
+      setSelectedEnvironment({ value: ALL_ENVIRONMENTS_VALUE, label: 'All Environments' });
       setShowDuplicateWarning(false);
       setError('');
     }
