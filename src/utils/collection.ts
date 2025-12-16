@@ -1,4 +1,4 @@
-import { PostmanCollection, PostmanHeader, PostmanItem, PostmanRequest } from '../types/postman';
+import { PostmanCollection, PostmanHeader, PostmanItem, PostmanRequest } from '../types';
 
 const DEFAULT_FOLDER_ID = 'default';
 const DEFAULT_FOLDER_NAME = 'All Requests';

@@ -1,16 +1,16 @@
-import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { PostmanCollection } from '../../types/postman';
+import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { PostmanCollection } from '../../types';
 import {
-  createEmptyCollection,
-  addRequestToCollection,
-  updateRequestInCollection,
-  removeRequestFromCollection,
-  reorderRequestInCollection,
   addFolderToCollection,
-  renameFolderInCollection,
-  removeFolderFromCollection,
-  reorderFolderInCollection,
+  addRequestToCollection,
+  createEmptyCollection,
   moveRequestToFolder,
+  removeFolderFromCollection,
+  removeRequestFromCollection,
+  renameFolderInCollection,
+  reorderFolderInCollection,
+  reorderRequestInCollection,
+  updateRequestInCollection,
 } from '../../utils/collection';
 
 interface CollectionState {

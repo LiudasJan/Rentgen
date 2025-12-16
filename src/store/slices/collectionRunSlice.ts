@@ -3,22 +3,20 @@ import { HttpResponse } from '../../types';
 
 export interface CollectionRunResult {
   requestId: string;
-  success: boolean;
+  status: number;
   response: HttpResponse | null;
   error: string | null;
 }
 
 interface CollectionRunState {
   runningFolderId: string | null;
-  currentRequestIndex: number;
-  totalRequests: number;
+  runningRequestId: string;
   results: Record<string, CollectionRunResult>;
 }
 
 const initialState: CollectionRunState = {
   runningFolderId: null,
-  currentRequestIndex: 0,
-  totalRequests: 0,
+  runningRequestId: null,
   results: {},
 };
 
@@ -28,24 +26,23 @@ export const collectionRunSlice = createSlice({
   reducers: {
     startRun: (state, action: PayloadAction<{ folderId: string; totalRequests: number }>) => {
       state.runningFolderId = action.payload.folderId;
-      state.totalRequests = action.payload.totalRequests;
-      state.currentRequestIndex = 0;
     },
-    setProgress: (state, action: PayloadAction<number>) => {
-      state.currentRequestIndex = action.payload;
+    startRequestRun: (state, action: PayloadAction<string>) => {
+      state.runningRequestId = action.payload;
     },
     addResult: (state, action: PayloadAction<CollectionRunResult>) => {
       state.results[action.payload.requestId] = action.payload;
     },
     finishRun: (state) => {
       state.runningFolderId = null;
-      state.currentRequestIndex = 0;
-      state.totalRequests = 0;
+      state.runningRequestId = null;
+    },
+    finishRequestRun: (state) => {
+      state.runningRequestId = null;
     },
     cancelRun: (state) => {
       state.runningFolderId = null;
-      state.currentRequestIndex = 0;
-      state.totalRequests = 0;
+      state.runningRequestId = null;
     },
     clearFolderResults: (state, action: PayloadAction<string[]>) => {
       // action.payload is array of requestIds to clear

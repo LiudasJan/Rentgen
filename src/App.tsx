@@ -265,11 +265,12 @@ export default function App() {
     const item = findRequestById(collection, selectedRequestId);
     if (!item) return;
 
+    const folderId = findFolderIdByRequestId(collection, selectedRequestId);
+    if (folderId) dispatch(collectionActions.selectFolder(folderId));
+
     // Skip reset if we just saved (response should stay visible)
     if (skipNextResetRef.current) {
       skipNextResetRef.current = false;
-      const folderId = findFolderIdByRequestId(collection, selectedRequestId);
-      if (folderId) dispatch(collectionActions.selectFolder(folderId));
       return;
     }
 
@@ -277,12 +278,7 @@ export default function App() {
 
     // If there's a stored run result for this request, show its response
     const runResult = collectionRunResults[selectedRequestId];
-    if (runResult?.response) {
-      dispatch(responseActions.setResponse(runResult.response));
-    }
-
-    const folderId = findFolderIdByRequestId(collection, selectedRequestId);
-    if (folderId) dispatch(collectionActions.selectFolder(folderId));
+    if (runResult?.response) dispatch(responseActions.setResponse(runResult.response));
 
     const { request } = item;
     const isWssUrl = request.url.startsWith('ws://') || request.url.startsWith('wss://');
@@ -291,7 +287,7 @@ export default function App() {
     dispatch(requestActions.setUrl(request.url));
     dispatch(requestActions.setHeaders(headersRecordToString(postmanHeadersToRecord(request.header))));
     dispatch(requestActions.setBody(request.body?.raw || '{}'));
-  }, [selectedRequestId, collectionRunResults, collection, reset, dispatch]);
+  }, [selectedRequestId, collection, collectionRunResults, reset, dispatch]);
 
   // cURL import
   const importCurl = useCallback(() => {
