@@ -108,7 +108,7 @@ export function addRequestToCollection(
   if (!folder) {
     folder = {
       id: folderId,
-      name: folderId,
+      name: folderId === DEFAULT_FOLDER_ID ? DEFAULT_FOLDER_NAME : folderId,
       item: [],
     };
     collection.item.push(folder);
