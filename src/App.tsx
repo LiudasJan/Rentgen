@@ -23,6 +23,7 @@ import ParametersPanel from './components/panels/ParametersPanel';
 import ResponsePanel from './components/panels/ResponsePanel';
 import Sidebar from './components/sidebar/Sidebar';
 import TestsTable, { ExpandedTestComponent, getTestsTableColumns } from './components/tables/TestsTable';
+import { useCtrlS } from './hooks/useCtrlS';
 import useTests from './hooks/useTests';
 import { LARGE_PAYLOAD_TEST_NAME, LOAD_TEST_NAME } from './tests';
 import { Environment, HttpResponse, TestResult, TestStatus } from './types';
@@ -198,6 +199,8 @@ export default function App() {
     executeLargePayloadTest,
   } = useTests();
 
+  const disabled = useMemo(() => !url || isRunningTests, [url, isRunningTests]);
+
   // Load initial data
   useEffect(() => {
     dispatch(loadCollection());
@@ -263,18 +266,16 @@ export default function App() {
     const item = findRequestById(collection, selectedRequestId);
     if (!item) return;
 
+    const folderId = findFolderIdByRequestId(collection, selectedRequestId);
+    if (folderId) dispatch(collectionActions.selectFolder(folderId));
+
     // Skip reset if we just saved (response should stay visible)
     if (skipNextResetRef.current) {
       skipNextResetRef.current = false;
-      const folderId = findFolderIdByRequestId(collection, selectedRequestId);
-      if (folderId) dispatch(collectionActions.selectFolder(folderId));
       return;
     }
 
     reset(false, false);
-
-    const folderId = findFolderIdByRequestId(collection, selectedRequestId);
-    if (folderId) dispatch(collectionActions.selectFolder(folderId));
 
     const { request } = item;
     const isWssUrl = request.url.startsWith('ws://') || request.url.startsWith('wss://');
@@ -283,7 +284,7 @@ export default function App() {
     dispatch(requestActions.setUrl(request.url));
     dispatch(requestActions.setHeaders(headersRecordToString(postmanHeadersToRecord(request.header))));
     dispatch(requestActions.setBody(request.body?.raw || '{}'));
-  }, [selectedRequestId, reset, dispatch]);
+  }, [selectedRequestId, collection, reset, dispatch]);
 
   // cURL import
   const importCurl = useCallback(() => {
@@ -403,6 +404,12 @@ export default function App() {
     savedTimeout = setTimeout(() => dispatch(uiActions.setSaved(false)), 2000);
   }, [headers, body, messageType, protoFile, selectedRequestId, collection, method, url, selectedFolderId, dispatch]);
 
+  const autoSaveRequest = useCallback(() => {
+    if (disabled || !selectedRequestId) return;
+
+    saveRequest();
+  }, [disabled, selectedRequestId, saveRequest]);
+
   // WebSocket functions
   const connectWss = useCallback(() => {
     if (!url.startsWith('ws')) {
@@ -493,6 +500,8 @@ export default function App() {
       }
     }
   }, [testOptions, exportFormat, securityTests, performanceTests, dataDrivenTests, crudTests, httpResponse, dispatch]);
+
+  useCtrlS(!disabled && saveRequest);
 
   return (
     <div className="flex">
@@ -619,15 +628,16 @@ export default function App() {
                   placeholder="Enter URL or paste text"
                   value={url}
                   variables={variables}
+                  onBlur={autoSaveRequest}
                   onChange={(event) => dispatch(requestActions.setUrl(event.target.value))}
                 />
               </div>
               {mode === 'HTTP' && (
                 <>
-                  <Button disabled={!url || isRunningTests} onClick={sendHttp}>
+                  <Button disabled={disabled} onClick={sendHttp}>
                     Send
                   </Button>
-                  <Button buttonType={ButtonType.SECONDARY} disabled={!url || isRunningTests} onClick={saveRequest}>
+                  <Button buttonType={ButtonType.SECONDARY} disabled={disabled} onClick={saveRequest}>
                     {saved ? 'Saved ✅' : 'Save'}
                   </Button>
                 </>
@@ -654,6 +664,7 @@ export default function App() {
               placeholder="Header-Key: value"
               value={headers}
               variables={variables}
+              onBlur={autoSaveRequest}
               onChange={(event) => dispatch(requestActions.setHeaders(event.target.value))}
             />
 
@@ -664,6 +675,7 @@ export default function App() {
                 placeholder={mode === 'HTTP' ? 'Enter request body (JSON or Form Data)' : 'Message body'}
                 value={body}
                 variables={variables}
+                onBlur={autoSaveRequest}
                 onChange={(event) => dispatch(requestActions.setBody(event.target.value))}
               />
               <Button
