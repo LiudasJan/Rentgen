@@ -35,6 +35,10 @@ export function JsonViewer({ source, ...otherProps }: Props) {
         enableClipboard={false}
         name={false}
         src={source as object}
+        shouldCollapse={(field) => {
+          if (Array.isArray(field.src) && field.src.length > 20) return true;
+          return field.namespace.length > 4;
+        }}
         {...otherProps}
       />
     </div>
