@@ -277,7 +277,7 @@ export default function App() {
       return;
     }
 
-    reset(false, false);
+    reset(true, false);
 
     // If there's a stored run result for this request, show its response
     const runResult = collectionRunResults[selectedRequestId];
