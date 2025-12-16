@@ -1,9 +1,9 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import cn from 'classnames';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
-import { selectSelectedFolderId, selectRunningFolderId } from '../../../store/selectors';
+import { selectSelectedFolderId, selectRunningFolderId, selectCollectionRunResults } from '../../../store/selectors';
 import { collectionActions } from '../../../store/slices/collectionSlice';
 import { uiActions } from '../../../store/slices/uiSlice';
 import { useCollectionRunner } from '../../../hooks/useCollectionRunner';
@@ -47,6 +47,20 @@ export default function CollectionGroup({
   const canEdit = true;
   const isThisFolderRunning = runningFolderId === folder.id;
   const isOtherFolderRunning = runningFolderId !== null && runningFolderId !== folder.id;
+  const runResults = useAppSelector(selectCollectionRunResults);
+
+  const folderStatus = useMemo(() => {
+    const itemResults = folder.items.map((item) => runResults[item.id]).filter(Boolean);
+
+    if (itemResults.length === 0) return null;
+
+    const hasRed = itemResults.some((r) => !r.status || r.status < 200 || r.status >= 500);
+    const hasOrange = itemResults.some((r) => r.status >= 400 && r.status < 500);
+
+    if (hasRed) return 'red';
+    if (hasOrange) return 'orange';
+    return 'green';
+  }, [folder.items, runResults]);
 
   const { attributes, isDragging, listeners, transform, transition, setNodeRef } = useSortable({
     id: folder.id,
@@ -135,6 +149,16 @@ export default function CollectionGroup({
           )}
 
           <span className="text-xs text-text-secondary">{folder.items.length}</span>
+
+          {folderStatus && (
+            <span
+              className={cn('w-2 h-2 rounded-full shrink-0', {
+                'bg-green-500': folderStatus === 'green',
+                'bg-orange-500': folderStatus === 'orange',
+                'bg-red-500': folderStatus === 'red',
+              })}
+            />
+          )}
 
           {folder.items.length > 0 &&
             !isEditing &&
