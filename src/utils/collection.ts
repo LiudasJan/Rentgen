@@ -232,7 +232,7 @@ export function reorderRequestInCollection(
 export function collectionToGroupedSidebarData(collection: PostmanCollection): SidebarFolderData[] {
   return collection.item.map((folder) => ({
     id: folder.id,
-    name: folder.id === DEFAULT_FOLDER_ID ? DEFAULT_FOLDER_NAME : folder.name,
+    name: folder.id === DEFAULT_FOLDER_ID ? (folder.name ?? DEFAULT_FOLDER_NAME) : folder.name,
     items: folder.item.map((item) => ({
       id: item.id,
       method: item.request.method,
@@ -264,9 +264,6 @@ export function renameFolderInCollection(
   folderId: string,
   newName: string,
 ): PostmanCollection {
-  if (folderId === DEFAULT_FOLDER_ID) {
-    return collection;
-  }
   return {
     ...collection,
     item: collection.item.map((folder) => (folder.id === folderId ? { ...folder, name: newName } : folder)),
