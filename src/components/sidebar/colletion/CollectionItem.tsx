@@ -56,10 +56,9 @@ export default function CollectionItem({ item }: Props) {
       {runResult && (
         <span
           className={cn('w-2 h-2 rounded-full shrink-0', {
-            'bg-green-500': runResult.status >= 200 && runResult.status < 300,
-            'bg-blue-500': runResult.status >= 300 && runResult.status < 400,
+            'bg-green-500': runResult.status >= 200 && runResult.status < 400,
             'bg-orange-500': runResult.status >= 400 && runResult.status < 500,
-            'bg-red-500': runResult.status >= 500 || !runResult.status,
+            'bg-red-500': !runResult.status || runResult.status < 200 || runResult.status >= 500,
           })}
         />
       )}
