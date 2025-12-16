@@ -85,4 +85,5 @@ export const selectSidebarActiveTab = (state: RootState) => state.ui.sidebarActi
 
 // Collection Run selectors
 export const selectRunningFolderId = (state: RootState) => state.collectionRun.runningFolderId;
+export const selectRunningRequestId = (state: RootState) => state.collectionRun.runningRequestId;
 export const selectCollectionRunResults = (state: RootState) => state.collectionRun.results;

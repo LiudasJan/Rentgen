@@ -26,6 +26,8 @@ export function JsonViewer({ source, ...otherProps }: Props) {
         '[&_.icon-container_svg]:text-black/40!',
         'dark:[&_.icon-container_svg]:text-white! dark:[&_.icon-container+span+span]:text-white!',
         'dark:[&_.brace-row>span]:text-white! dark:[&_.brace-row+span]:text-white! dark:[&_.variable-value+span]:text-white!',
+        'dark:[&_.array-group_.object-key-val>span>span]:text-white!',
+        'dark:[&_.array-group-brace]:text-white/80! dark:[&_.object-size]:text-white/50!',
       )}
     >
       <ReactJson
