@@ -3,7 +3,17 @@ import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { selectCollectionData, selectSelectedEnvironment } from '../store/selectors';
 import { collectionRunActions } from '../store/slices/collectionRunSlice';
 import { HttpResponse, PostmanItem } from '../types';
-import { createHttpRequest, extractStatusCode, parseBody, parseHeaders, substituteRequestVariables } from '../utils';
+import {
+  createHttpRequest,
+  detectDataType,
+  extractBodyParameters,
+  extractQueryParameters,
+  extractStatusCode,
+  getInitialParameterValue,
+  parseBody,
+  parseHeaders,
+  substituteRequestVariables,
+} from '../utils';
 import { findRequestById, headersRecordToString, postmanHeadersToRecord } from '../utils/collection';
 
 export function useCollectionRunner() {
@@ -78,12 +88,28 @@ export function useCollectionRunner() {
         const parsedBody = parseBody(substituted.body, parsedHeaders, '', null);
         const httpRequest = createHttpRequest(parsedBody, parsedHeaders, request.method, substituted.url);
         const response: HttpResponse = await window.electronAPI.sendHttp(httpRequest);
+        const status = extractStatusCode(response);
+
+        let bodyParameters = {};
+        let queryParameters = {};
+
+        if (status >= 200 && status < 300) {
+          bodyParameters = extractBodyParameters(parsedBody, parsedHeaders);
+          queryParameters = Object.fromEntries(
+            Object.entries(extractQueryParameters(request.url)).map(([key, value]) => [
+              key,
+              getInitialParameterValue(detectDataType(value), value),
+            ]),
+          );
+        }
 
         dispatch(
           collectionRunActions.addResult({
             requestId: item.id,
-            status: extractStatusCode(response),
+            status,
             response,
+            bodyParameters,
+            queryParameters,
             error: null,
           }),
         );
@@ -93,6 +119,8 @@ export function useCollectionRunner() {
             requestId: item.id,
             status: null,
             response: null,
+            bodyParameters: {},
+            queryParameters: {},
             error: String(error),
           }),
         );

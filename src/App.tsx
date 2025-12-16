@@ -281,7 +281,11 @@ export default function App() {
 
     // If there's a stored run result for this request, show its response
     const runResult = collectionRunResults[selectedRequestId];
-    if (runResult?.response) dispatch(responseActions.setResponse(runResult.response));
+    if (runResult?.response) {
+      dispatch(responseActions.setResponse(runResult.response));
+      dispatch(requestActions.setBodyParameters(runResult.bodyParameters || {}));
+      dispatch(requestActions.setQueryParameters(runResult.queryParameters || {}));
+    }
 
     const { request } = item;
     const isWssUrl = request.url.startsWith('ws://') || request.url.startsWith('wss://');

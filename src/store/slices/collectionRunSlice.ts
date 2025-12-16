@@ -1,10 +1,12 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { HttpResponse } from '../../types';
+import { HttpResponse, RequestParameters } from '../../types';
 
 export interface CollectionRunResult {
   requestId: string;
   status: number;
   response: HttpResponse | null;
+  bodyParameters: RequestParameters | null;
+  queryParameters: RequestParameters | null;
   error: string | null;
 }
 
