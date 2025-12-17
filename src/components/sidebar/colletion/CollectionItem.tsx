@@ -1,11 +1,27 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { Method } from 'axios';
 import cn from 'classnames';
+import { useCallback } from 'react';
 import { useCollectionRunner } from '../../../hooks/useCollectionRunner';
+import { useReset } from '../../../hooks/useReset';
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
-import { selectCollectionRunResults, selectRunningRequestId, selectSelectedRequestId } from '../../../store/selectors';
+import {
+  selectCollectionData,
+  selectCollectionRunResults,
+  selectRunningRequestId,
+  selectSelectedRequestId,
+} from '../../../store/selectors';
 import { collectionActions } from '../../../store/slices/collectionSlice';
-import { SidebarItemData } from '../../../utils/collection';
+import { requestActions } from '../../../store/slices/requestSlice';
+import { responseActions } from '../../../store/slices/responseSlice';
+import {
+  findFolderIdByRequestId,
+  findRequestById,
+  headersRecordToString,
+  postmanHeadersToRecord,
+  SidebarItemData,
+} from '../../../utils/collection';
 import MethodBadge from '../../MethodBadge';
 
 import ClearCrossIcon from '../../../assets/icons/clear-cross-icon.svg';
@@ -18,9 +34,13 @@ interface Props {
 export default function CollectionItem({ item }: Props) {
   const dispatch = useAppDispatch();
   const { runRequest } = useCollectionRunner();
+  const reset = useReset();
+
+  const collection = useAppSelector(selectCollectionData);
   const runningRequestId = useAppSelector(selectRunningRequestId);
-  const selectedId = useAppSelector(selectSelectedRequestId);
   const runResults = useAppSelector(selectCollectionRunResults);
+  const selectedId = useAppSelector(selectSelectedRequestId);
+
   const runResult = runResults[item.id] || null;
   const isSelected = item.id === selectedId;
   const { attributes, isDragging, listeners, transform, transition, setNodeRef } = useSortable({
@@ -28,11 +48,35 @@ export default function CollectionItem({ item }: Props) {
     data: { type: 'item', folderId: item.folderId },
   });
 
-  const handleClick = () => {
-    if (isDragging) return;
+  const handleClick = useCallback(
+    (id: string) => {
+      if (isDragging) return;
 
-    dispatch(collectionActions.selectRequest(item.id));
-  };
+      const item = findRequestById(collection, id);
+      if (!item) return;
+
+      reset(false);
+      dispatch(collectionActions.selectRequest(id));
+
+      const folderId = findFolderIdByRequestId(collection, id);
+      if (folderId) dispatch(collectionActions.selectFolder(folderId));
+
+      if (runResult?.response) {
+        dispatch(responseActions.setResponse(runResult.response));
+        dispatch(requestActions.setBodyParameters(runResult.bodyParameters || {}));
+        dispatch(requestActions.setQueryParameters(runResult.queryParameters || {}));
+      }
+
+      const { request } = item;
+      const isWssUrl = request.url.startsWith('ws://') || request.url.startsWith('wss://');
+      dispatch(requestActions.setMode(isWssUrl ? 'WSS' : 'HTTP'));
+      dispatch(requestActions.setMethod(request.method as Method));
+      dispatch(requestActions.setUrl(request.url));
+      dispatch(requestActions.setHeaders(headersRecordToString(postmanHeadersToRecord(request.header))));
+      dispatch(requestActions.setBody(request.body?.raw || '{}'));
+    },
+    [collection, isDragging, runResult, dispatch, reset],
+  );
 
   return (
     <div
@@ -49,7 +93,7 @@ export default function CollectionItem({ item }: Props) {
           'opacity-50 shadow-lg z-50': isDragging,
         },
       )}
-      onClick={handleClick}
+      onClick={() => handleClick(item.id)}
       {...attributes}
       {...listeners}
     >

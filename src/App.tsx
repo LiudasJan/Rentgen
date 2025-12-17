@@ -1,6 +1,6 @@
 import { Method } from 'axios';
 import cn from 'classnames';
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import ActionsButton from './components/buttons/ActionsButton';
 import Button, { ButtonSize, ButtonType } from './components/buttons/Button';
 import { CopyButton } from './components/buttons/CopyButton';
@@ -24,6 +24,7 @@ import ResponsePanel from './components/panels/ResponsePanel';
 import Sidebar from './components/sidebar/Sidebar';
 import TestsTable, { ExpandedTestComponent, getTestsTableColumns } from './components/tables/TestsTable';
 import { useCtrlS } from './hooks/useCtrlS';
+import { useReset } from './hooks/useReset';
 import useTests from './hooks/useTests';
 import { LARGE_PAYLOAD_TEST_NAME, LOAD_TEST_NAME } from './tests';
 import { Environment, HttpResponse, TestResult, TestStatus } from './types';
@@ -41,12 +42,7 @@ import {
   parseHeaders,
   substituteRequestVariables,
 } from './utils';
-import {
-  findFolderIdByRequestId,
-  findRequestById,
-  headersRecordToString,
-  postmanHeadersToRecord,
-} from './utils/collection';
+import { findRequestById } from './utils/collection';
 
 import { useAppDispatch, useAppSelector } from './store/hooks';
 import {
@@ -131,9 +127,15 @@ export default function App() {
 
   // Collection state
   const collection = useAppSelector(selectCollectionData);
-  const selectedRequestId = useAppSelector(selectSelectedRequestId);
-  const selectedFolderId = useAppSelector(selectSelectedFolderId);
   const collectionRunResults = useAppSelector(selectCollectionRunResults);
+  const selectedFolderId = useAppSelector(selectSelectedFolderId);
+  const selectedRequestId = useAppSelector(selectSelectedRequestId);
+
+  const runResult = useMemo(
+    () => collectionRunResults[selectedRequestId] || null,
+    [collectionRunResults, selectedRequestId],
+  );
+
   // Environment state
   const environments = useAppSelector(selectEnvironments);
   const selectedEnvironmentId = useAppSelector(selectSelectedEnvironmentId);
@@ -180,9 +182,6 @@ export default function App() {
   const curlError = useAppSelector(selectCurlError);
   const exportFormat = useAppSelector(selectExportFormat);
 
-  // Ref to skip reset when saving (prevents response from being hidden)
-  const skipNextResetRef = useRef(false);
-
   // Tests hook
   const {
     crudTests,
@@ -200,6 +199,9 @@ export default function App() {
     executeLoadTest,
     executeLargePayloadTest,
   } = useTests();
+
+  // Reset hook
+  const reset = useReset();
 
   const disabled = useMemo(() => !url || isRunningTests, [url, isRunningTests]);
 
@@ -248,53 +250,14 @@ export default function App() {
     if (testOptions) executeAllTests();
   }, [testOptions]);
 
-  // Reset function
-  const reset = useCallback(
-    (resetTestOptions = true, clearSelection = true) => {
-      dispatch(requestActions.resetRequest());
-      dispatch(responseActions.clearResponse());
-      dispatch(websocketActions.clearMessages());
-      dispatch(websocketActions.setConnected(false));
-      if (clearSelection) dispatch(collectionActions.selectRequest(null));
-      if (resetTestOptions) dispatch(testActions.setTestOptions(null));
-    },
-    [dispatch],
-  );
-
-  // Load request data when selectedRequestId changes
+  // Populate request/response state when runResult changes
   useEffect(() => {
-    if (!selectedRequestId) return;
-
-    const item = findRequestById(collection, selectedRequestId);
-    if (!item) return;
-
-    const folderId = findFolderIdByRequestId(collection, selectedRequestId);
-    if (folderId) dispatch(collectionActions.selectFolder(folderId));
-
-    // Skip reset if we just saved (response should stay visible)
-    if (skipNextResetRef.current) {
-      skipNextResetRef.current = false;
-      return;
-    }
-
-    reset(true, false);
-
-    // If there's a stored run result for this request, show its response
-    const runResult = collectionRunResults[selectedRequestId];
     if (runResult?.response) {
       dispatch(responseActions.setResponse(runResult.response));
       dispatch(requestActions.setBodyParameters(runResult.bodyParameters || {}));
       dispatch(requestActions.setQueryParameters(runResult.queryParameters || {}));
     }
-
-    const { request } = item;
-    const isWssUrl = request.url.startsWith('ws://') || request.url.startsWith('wss://');
-    dispatch(requestActions.setMode(isWssUrl ? 'WSS' : 'HTTP'));
-    dispatch(requestActions.setMethod(request.method as Method));
-    dispatch(requestActions.setUrl(request.url));
-    dispatch(requestActions.setHeaders(headersRecordToString(postmanHeadersToRecord(request.header))));
-    dispatch(requestActions.setBody(request.body?.raw || '{}'));
-  }, [selectedRequestId, collection, collectionRunResults, reset, dispatch]);
+  }, [runResult, dispatch]);
 
   // cURL import
   const importCurl = useCallback(() => {
@@ -382,7 +345,6 @@ export default function App() {
 
   // Save request
   const saveRequest = useCallback(async () => {
-    skipNextResetRef.current = true;
     const parsedHeaders = parseHeaders(headers);
     const parsedBody = parseBody(body, parsedHeaders, messageType, protoFile);
     const bodyString = typeof parsedBody === 'string' ? parsedBody : JSON.stringify(parsedBody);
@@ -541,7 +503,7 @@ export default function App() {
               {mode === 'HTTP' && (
                 <>
                   <ActionsButton
-                    actions={[{ label: 'Create', onClick: () => reset(false) }]}
+                    actions={[{ label: 'Create', onClick: reset }]}
                     onClick={() => dispatch(uiActions.openCurlModal())}
                   >
                     Import cURL
