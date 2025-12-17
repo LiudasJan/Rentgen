@@ -367,8 +367,6 @@ export default function App() {
   // Save request
   const saveRequest = useCallback(async () => {
     const parsedHeaders = parseHeaders(headers);
-    const parsedBody = parseBody(body, parsedHeaders, messageType, protoFile);
-    const bodyString = typeof parsedBody === 'string' ? parsedBody : JSON.stringify(parsedBody);
 
     if (selectedRequestId && findRequestById(collection, selectedRequestId)) {
       dispatch(
@@ -377,7 +375,7 @@ export default function App() {
           method,
           url,
           headers: parsedHeaders,
-          body: bodyString,
+          body,
         }),
       );
     } else {
@@ -386,7 +384,7 @@ export default function App() {
           method,
           url,
           headers: parsedHeaders,
-          body: bodyString,
+          body,
           folderId: selectedFolderId,
         }),
       );
@@ -429,10 +427,8 @@ export default function App() {
     dataDrivenTests,
     headers,
     httpResponse,
-    messageType,
     method,
     performanceTests,
-    protoFile,
     queryParameters,
     securityTests,
     selectedFolderId,
