@@ -50,7 +50,7 @@ export default function CollectionItem({ item }: Props) {
 
   const handleClick = useCallback(
     (id: string) => {
-      if (isDragging) return;
+      if (isSelected || isDragging) return;
 
       const item = findRequestById(collection, id);
       if (!item) return;
@@ -75,7 +75,7 @@ export default function CollectionItem({ item }: Props) {
       dispatch(requestActions.setHeaders(headersRecordToString(postmanHeadersToRecord(request.header))));
       dispatch(requestActions.setBody(request.body?.raw || '{}'));
     },
-    [collection, isDragging, runResult, dispatch, reset],
+    [collection, isDragging, isSelected, runResult, dispatch, reset],
   );
 
   return (
@@ -93,7 +93,7 @@ export default function CollectionItem({ item }: Props) {
           'opacity-50 shadow-lg z-50': isDragging,
         },
       )}
-      onClick={() => !isSelected && handleClick(item.id)}
+      onClick={() => handleClick(item.id)}
       {...attributes}
       {...listeners}
     >

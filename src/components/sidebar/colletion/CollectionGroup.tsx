@@ -2,11 +2,11 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import cn from 'classnames';
 import { useMemo, useState } from 'react';
+import { useCollectionRunner } from '../../../hooks/useCollectionRunner';
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
-import { selectSelectedFolderId, selectRunningFolderId, selectCollectionRunResults } from '../../../store/selectors';
+import { selectCollectionRunResults, selectRunningFolderId, selectSelectedFolderId } from '../../../store/selectors';
 import { collectionActions } from '../../../store/slices/collectionSlice';
 import { uiActions } from '../../../store/slices/uiSlice';
-import { useCollectionRunner } from '../../../hooks/useCollectionRunner';
 import { SidebarFolderData } from '../../../utils/collection';
 import CollectionItem from './CollectionItem';
 
@@ -141,6 +141,7 @@ export default function CollectionGroup({
               onKeyDown={handleKeyDown}
               onBlur={() => onSaveEdit(folder.id, editingName)}
               onClick={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
               className="flex-1 text-xs bg-transparent border border-border dark:border-dark-input dark:text-dark-text rounded px-1 py-0.5 outline-none focus:border-button-primary"
               autoFocus
             />
