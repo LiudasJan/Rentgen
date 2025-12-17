@@ -155,36 +155,36 @@ export default function CollectionGroup({
               autoFocus
             />
           ) : (
-            <span className="flex-1 text-xs truncate">{folder.name}</span>
+            <span className="text-xs truncate">{folder.name}</span>
           )}
 
-          <span className="text-xs text-text-secondary">{folder.items.length}</span>
+          <span className={cn('text-xs text-text-secondary', { 'flex-auto': !isEditing })}>{folder.items.length}</span>
 
           {folder.items.length > 0 &&
             !isEditing &&
             !isOtherFolderRunning &&
             (isThisFolderRunning ? (
               <StopIcon
-                className="h-4 w-4 text-red-500 hover:text-red-600 cursor-pointer transition-opacity"
+                className="h-4 w-4 shrink-0 text-red-500 hover:text-red-600 cursor-pointer transition-opacity"
                 onClick={handlePlayClick}
               />
             ) : (
               <PlayIcon
-                className="h-4 w-4 text-green-500 hover:text-green-600 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
+                className="h-4 w-4 shrink-0 text-green-500 hover:text-green-600 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
                 onClick={handlePlayClick}
               />
             ))}
 
           {canEdit && !isEditing && (
             <EditIcon
-              className="h-4 w-4 text-button-text-secondary dark:text-text-secondary hover:text-button-primary cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
+              className="h-4 w-4 shrink-0 text-button-text-secondary dark:text-text-secondary hover:text-button-primary cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
               onClick={handleEditClick}
             />
           )}
 
           {!isEditing && (
             <ClearCrossIcon
-              className="h-4.5 w-4.5 text-button-text-secondary dark:text-text-secondary hover:text-button-danger cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
+              className="h-4.5 w-4.5 shrink-0 text-button-text-secondary dark:text-text-secondary hover:text-button-danger cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
               onClick={handleDeleteClick}
             />
           )}
