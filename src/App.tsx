@@ -277,6 +277,7 @@ export default function App() {
         url: curlUrl,
       } = extractCurl(curl);
 
+      reset();
       dispatch(requestActions.setUrl(curlUrl));
       dispatch(requestActions.setMethod(curlMethod as Method));
       dispatch(
@@ -294,7 +295,6 @@ export default function App() {
         dispatch(requestActions.setBody(trimmedBody !== '' ? trimmedBody : '{}'));
       }
 
-      dispatch(collectionActions.selectRequest(null));
       dispatch(uiActions.closeCurlModal());
     } catch (error) {
       console.error('cURL import failed', error);
