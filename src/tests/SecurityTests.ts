@@ -1,6 +1,6 @@
 import { Method } from 'axios';
 import { getResponseStatusTitle, RESPONSE_STATUS } from '../constants/responseStatus';
-import { Test } from '../decorators';
+import { Abortable, Test } from '../decorators';
 import { HttpRequest, HttpResponse, TestOptions, TestResult, TestStatus } from '../types';
 import {
   createHttpRequest,
@@ -47,12 +47,9 @@ const UPPERCASE_PATH_TEST_EXPECTED = `${RESPONSE_STATUS.NOT_FOUND} ${getResponse
 const UNSUPPORTED_METHOD_TEST_EXPECTED = `${RESPONSE_STATUS.METHOD_NOT_ALLOWED} ${getResponseStatusTitle(RESPONSE_STATUS.METHOD_NOT_ALLOWED)} or ${RESPONSE_STATUS.NOT_IMPLEMENTED} ${getResponseStatusTitle(RESPONSE_STATUS.NOT_IMPLEMENTED)}`;
 
 export class SecurityTests extends BaseTests {
-  public async run(): Promise<{
-    securityTestResults: TestResult[];
-    crudTestResults: TestResult[];
-  }> {
-    const securityTestResults: TestResult[] = [];
-    const crudTestResults: TestResult[] = [];
+  public async run(): Promise<{ crudTests: TestResult[]; securityTests: TestResult[] }> {
+    const securityTests: TestResult[] = [];
+    const crudTests: TestResult[] = [];
     const request = createTestHttpRequest(this.options);
     const { headers, url } = request;
 
@@ -60,7 +57,7 @@ export class SecurityTests extends BaseTests {
       const response = await window.electronAPI.sendHttp(request);
 
       // Run all header-based security tests
-      securityTestResults.push(
+      securityTests.push(
         this.testServerHeaderSecurity(request, response),
         this.testClickjackingProtection(request, response),
         this.testHSTS(request, response),
@@ -70,13 +67,13 @@ export class SecurityTests extends BaseTests {
 
       // Test OPTIONS method and get CRUD results
       const { testResult, allowHeader } = await this.testOptionsMethod();
-      securityTestResults.push(testResult);
+      securityTests.push(testResult);
 
       this.onTestStart?.();
       if (testResult.status === TestStatus.Pass)
-        crudTestResults.push(...this.getCrudTestResults(allowHeader, headers, url, response));
+        crudTests.push(...this.getCrudTestResults(allowHeader, headers, url, response));
       else
-        crudTestResults.push(
+        crudTests.push(
           createTestResult(
             CRUD_TEST_NAME,
             CRUD_TEST_EXPECTED,
@@ -85,11 +82,11 @@ export class SecurityTests extends BaseTests {
           ),
         );
     } catch (error) {
-      securityTestResults.push(createErrorTestResult('Security Test Error', 'Responds', String(error), request));
+      securityTests.push(createErrorTestResult('Security Test Error', 'Responds', String(error), request));
     }
 
     // Run tests that don't depend on initial response
-    securityTestResults.push(
+    securityTests.push(
       await this.testUnsupportedMethod(),
       await this.testMissingAuthorization(),
       await this.testCors(),
@@ -100,9 +97,10 @@ export class SecurityTests extends BaseTests {
       ...getManualTests(),
     );
 
-    return { securityTestResults, crudTestResults };
+    return { securityTests, crudTests };
   }
 
+  @Abortable
   @Test('Validates that server header does not expose sensitive version information')
   private testServerHeaderSecurity(request: HttpRequest, response: HttpResponse): TestResult {
     this.onTestStart?.();
@@ -119,6 +117,7 @@ export class SecurityTests extends BaseTests {
     );
   }
 
+  @Abortable
   @Test('Checks for clickjacking protection via X-Frame-Options or CSP frame-ancestors')
   private testClickjackingProtection(request: HttpRequest, response: HttpResponse): TestResult {
     this.onTestStart?.();
@@ -137,6 +136,7 @@ export class SecurityTests extends BaseTests {
     );
   }
 
+  @Abortable
   @Test('Verifies Strict-Transport-Security header is present on HTTPS endpoints')
   private testHSTS(request: HttpRequest, response: HttpResponse): TestResult {
     this.onTestStart?.();
@@ -153,6 +153,7 @@ export class SecurityTests extends BaseTests {
     );
   }
 
+  @Abortable
   @Test('Checks for X-Content-Type-Options: nosniff to prevent MIME sniffing')
   private testMimeSniffing(request: HttpRequest, response: HttpResponse): TestResult {
     this.onTestStart?.();
@@ -170,6 +171,7 @@ export class SecurityTests extends BaseTests {
     );
   }
 
+  @Abortable
   @Test('Validates Cache-Control header for private API endpoints')
   private testCacheControl(request: HttpRequest, response: HttpResponse): TestResult {
     this.onTestStart?.();
@@ -187,6 +189,7 @@ export class SecurityTests extends BaseTests {
     );
   }
 
+  @Abortable
   @Test('Tests OPTIONS method handling and retrieves allowed HTTP methods')
   private async testOptionsMethod(): Promise<{ testResult: TestResult; allowHeader: string }> {
     this.onTestStart?.();
@@ -230,6 +233,7 @@ export class SecurityTests extends BaseTests {
     }
   }
 
+  @Abortable
   @Test('Verifies server properly rejects unsupported HTTP methods with 405 or 501')
   private async testUnsupportedMethod(): Promise<TestResult> {
     this.onTestStart?.();
@@ -264,6 +268,7 @@ export class SecurityTests extends BaseTests {
     }
   }
 
+  @Abortable
   @Test('Checks if API requires authorization by removing auth headers')
   private async testMissingAuthorization(): Promise<TestResult> {
     this.onTestStart?.();
@@ -303,6 +308,7 @@ export class SecurityTests extends BaseTests {
     }
   }
 
+  @Abortable
   @Test('Determines if API is public or private by testing CORS policy')
   private async testCors(): Promise<TestResult> {
     this.onTestStart?.();
@@ -340,6 +346,7 @@ export class SecurityTests extends BaseTests {
     }
   }
 
+  @Abortable
   @Test('Validates proper 404 Not Found response for non-existent endpoints')
   private async testNotFound(): Promise<TestResult> {
     this.onTestStart?.();
@@ -363,6 +370,7 @@ export class SecurityTests extends BaseTests {
     }
   }
 
+  @Abortable
   @Test('Tests reflected payload safety by sending a payload that should be rejected if reflected')
   private async testReflectedPayloadSafety(): Promise<TestResult> {
     this.onTestStart?.();
@@ -415,6 +423,7 @@ export class SecurityTests extends BaseTests {
     }
   }
 
+  @Abortable
   @Test(
     'Tests if the server behaves according to RFC 3986 — specifically, that the domain part is treated as case-insensitive',
   )
@@ -452,6 +461,7 @@ export class SecurityTests extends BaseTests {
     }
   }
 
+  @Abortable
   @Test(
     'Tests if the server behaves according to RFC 3986 — specifically, that the path part is treated as case-sensitive',
   )
@@ -488,6 +498,7 @@ export class SecurityTests extends BaseTests {
     }
   }
 
+  @Abortable
   @Test('Generates CRUD test results based on Allow header from OPTIONS response')
   private getCrudTestResults(
     allowHeader: string,

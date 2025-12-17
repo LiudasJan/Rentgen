@@ -1,16 +1,12 @@
-import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { HttpRequest, HttpResponse } from '../../types';
 
 interface ResponseState {
   httpResponse: HttpResponse | null;
-  loading: boolean;
-  error: string | null;
 }
 
 const initialState: ResponseState = {
   httpResponse: null,
-  loading: false,
-  error: null,
 };
 
 export const sendHttpRequest = createAsyncThunk(
@@ -31,17 +27,11 @@ export const responseSlice = createSlice({
   reducers: {
     clearResponse: (state) => {
       state.httpResponse = null;
-      state.error = null;
     },
     setResponse: (state, action: PayloadAction<HttpResponse>) => {
       state.httpResponse = action.payload;
-      state.loading = false;
-    },
-    setLoading: (state, action: PayloadAction<boolean>) => {
-      state.loading = action.payload;
     },
     setSendingState: (state) => {
-      state.loading = true;
       state.httpResponse = {
         status: 'Sending...',
         body: '',
@@ -52,8 +42,6 @@ export const responseSlice = createSlice({
   extraReducers: (builder) => {
     builder
       .addCase(sendHttpRequest.pending, (state) => {
-        state.loading = true;
-        state.error = null;
         state.httpResponse = {
           status: 'Sending...',
           body: '',
@@ -62,7 +50,6 @@ export const responseSlice = createSlice({
       })
       .addCase(sendHttpRequest.fulfilled, (state, action) => {
         state.httpResponse = action.payload;
-        state.loading = false;
       })
       .addCase(sendHttpRequest.rejected, (state, action) => {
         state.httpResponse = {
@@ -70,8 +57,6 @@ export const responseSlice = createSlice({
           body: String(action.payload || action.error.message),
           headers: {},
         };
-        state.loading = false;
-        state.error = String(action.payload || action.error.message);
       });
   },
 });

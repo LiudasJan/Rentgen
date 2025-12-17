@@ -1,6 +1,6 @@
 import { createSelector } from '@reduxjs/toolkit';
 import { RootState } from '../index';
-import { collectionToGroupedSidebarData, findRequestById } from '../../utils/collection';
+import { collectionToGroupedSidebarData } from '../../utils/collection';
 import { extractStatusCode } from '../../utils';
 import { RESPONSE_STATUS } from '../../constants/responseStatus';
 
@@ -8,18 +8,9 @@ import { RESPONSE_STATUS } from '../../constants/responseStatus';
 export const selectCollectionData = (state: RootState) => state.collection.data;
 export const selectSelectedRequestId = (state: RootState) => state.collection.selectedRequestId;
 export const selectSelectedFolderId = (state: RootState) => state.collection.selectedFolderId;
-export const selectCollectionLoading = (state: RootState) => state.collection.loading;
 
 export const selectSidebarFolders = createSelector([selectCollectionData], (collection) =>
   collectionToGroupedSidebarData(collection),
-);
-
-export const selectSelectedRequest = createSelector(
-  [selectCollectionData, selectSelectedRequestId],
-  (collection, requestId) => {
-    if (!requestId) return null;
-    return findRequestById(collection, requestId);
-  },
 );
 
 // Environment selectors
@@ -35,7 +26,6 @@ export const selectSelectedEnvironment = createSelector(
 );
 
 // Request selectors
-export const selectRequestState = (state: RootState) => state.request;
 export const selectMode = (state: RootState) => state.request.mode;
 export const selectMethod = (state: RootState) => state.request.method;
 export const selectUrl = (state: RootState) => state.request.url;
@@ -48,8 +38,6 @@ export const selectMessageType = (state: RootState) => state.request.messageType
 
 // Response selectors
 export const selectHttpResponse = (state: RootState) => state.response.httpResponse;
-export const selectResponseLoading = (state: RootState) => state.response.loading;
-export const selectResponseError = (state: RootState) => state.response.error;
 
 export const selectStatusCode = createSelector([selectHttpResponse], (response) => extractStatusCode(response));
 
@@ -58,7 +46,6 @@ export const selectWssConnected = (state: RootState) => state.websocket.connecte
 export const selectWssMessages = (state: RootState) => state.websocket.messages;
 
 // Test selectors
-export const selectTestState = (state: RootState) => state.tests;
 export const selectTestOptions = (state: RootState) => state.tests.testOptions;
 export const selectCrudTests = (state: RootState) => state.tests.crudTests;
 export const selectDataDrivenTests = (state: RootState) => state.tests.dataDrivenTests;
@@ -66,7 +53,6 @@ export const selectPerformanceTests = (state: RootState) => state.tests.performa
 export const selectSecurityTests = (state: RootState) => state.tests.securityTests;
 export const selectCurrentTest = (state: RootState) => state.tests.currentTest;
 export const selectTestsCount = (state: RootState) => state.tests.testsCount;
-export const selectLoadProgress = (state: RootState) => state.tests.loadProgress;
 
 export const selectIsSecurityRunning = (state: RootState) => state.tests.isSecurityRunning;
 export const selectIsPerformanceRunning = (state: RootState) => state.tests.isPerformanceRunning;
@@ -86,10 +72,9 @@ export const selectDisabledRunTests = createSelector(
     isRunning || !response || statusCode < RESPONSE_STATUS.OK || statusCode >= RESPONSE_STATUS.BAD_REQUEST,
 );
 
-export const selectTestProgress = createSelector([selectCurrentTest, selectTestsCount], (current, total) => ({
-  current,
-  total,
-}));
+export const selectAllTestResults = (state: RootState) => state.tests.results;
+export const selectRequestTestResults = (requestId: string) =>
+  createSelector([selectAllTestResults], (results) => results[requestId] || null);
 
 // UI selectors
 export const selectOpenCurlModal = (state: RootState) => state.ui.openCurlModal;
@@ -101,4 +86,8 @@ export const selectCurl = (state: RootState) => state.ui.curl;
 export const selectCurlError = (state: RootState) => state.ui.curlError;
 export const selectExportFormat = (state: RootState) => state.ui.exportFormat;
 export const selectSidebarActiveTab = (state: RootState) => state.ui.sidebarActiveTab;
-export const selectTheme = (state: RootState) => state.ui.theme;
+
+// Collection Run selectors
+export const selectRunningFolderId = (state: RootState) => state.collectionRun.runningFolderId;
+export const selectRunningRequestId = (state: RootState) => state.collectionRun.runningRequestId;
+export const selectCollectionRunResults = (state: RootState) => state.collectionRun.results;

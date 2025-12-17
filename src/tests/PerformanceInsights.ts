@@ -1,5 +1,5 @@
 import { getResponseStatusTitle, RESPONSE_STATUS } from '../constants/responseStatus';
-import { Test } from '../decorators';
+import { Abortable, Test } from '../decorators';
 import { HttpRequest, HttpResponse, TestOptions, TestResult, TestStatus } from '../types';
 import { calculateMedian, calculatePercentile, createTestHttpRequest, extractStatusCode } from '../utils';
 import { createErrorTestResult, createTestResult, NOT_AVAILABLE_TEST } from './BaseTests';
@@ -27,6 +27,12 @@ const NETWORK_SHARE_PASS_THRESHOLD = 30;
 const NETWORK_SHARE_WARNING_THRESHOLD = 50;
 
 export class PerformanceInsights {
+  private _aborted = false;
+
+  public get aborted() {
+    return this._aborted;
+  }
+
   constructor(
     private url: string,
     private testResults: TestResult[],
@@ -34,6 +40,11 @@ export class PerformanceInsights {
   ) {
     this.url = url;
     this.testResults = testResults;
+    this.onTestStart = onTestStart;
+  }
+
+  public abort() {
+    this._aborted = true;
   }
 
   public async run(): Promise<TestResult[]> {
@@ -53,6 +64,7 @@ export class PerformanceInsights {
     return results;
   }
 
+  @Abortable
   @Test('Calculates the median response time from load test results')
   private testMedianResponseTime(): TestResult {
     this.onTestStart?.();
@@ -75,6 +87,7 @@ export class PerformanceInsights {
     );
   }
 
+  @Abortable
   @Test('Tests network ping latency')
   private async testNetworkPingLatency(): Promise<TestResult> {
     this.onTestStart?.();
@@ -106,6 +119,7 @@ export class PerformanceInsights {
     }
   }
 
+  @Abortable
   @Test('Detects when network latency (ping) consumes a significant portion of the total API response time')
   private networkShareTest(medianResponseTime: number, pingTime: number | null): TestResult {
     this.onTestStart?.();

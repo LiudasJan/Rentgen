@@ -1,6 +1,6 @@
 import { Method } from 'axios';
 import cn from 'classnames';
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import ActionsButton from './components/buttons/ActionsButton';
 import Button, { ButtonSize, ButtonType } from './components/buttons/Button';
 import { CopyButton } from './components/buttons/CopyButton';
@@ -24,6 +24,7 @@ import ResponsePanel from './components/panels/ResponsePanel';
 import Sidebar from './components/sidebar/Sidebar';
 import TestsTable, { ExpandedTestComponent, getTestsTableColumns } from './components/tables/TestsTable';
 import { useCtrlS } from './hooks/useCtrlS';
+import { useReset } from './hooks/useReset';
 import useTests from './hooks/useTests';
 import { LARGE_PAYLOAD_TEST_NAME, LOAD_TEST_NAME } from './tests';
 import { Environment, HttpResponse, TestResult, TestStatus } from './types';
@@ -34,6 +35,7 @@ import {
   extractBodyParameters,
   extractCurl,
   extractQueryParameters,
+  extractStatusCode,
   formatBody,
   getInitialParameterValue,
   loadProtoSchema,
@@ -41,18 +43,15 @@ import {
   parseHeaders,
   substituteRequestVariables,
 } from './utils';
-import {
-  findFolderIdByRequestId,
-  findRequestById,
-  headersRecordToString,
-  postmanHeadersToRecord,
-} from './utils/collection';
+import { findRequestById } from './utils/collection';
 
+import { store } from './store';
 import { useAppDispatch, useAppSelector } from './store/hooks';
 import {
   selectBody,
   selectBodyParameters,
   selectCollectionData,
+  selectCollectionRunResults,
   selectCurl,
   selectCurlError,
   selectDeleteFolderModal,
@@ -73,6 +72,7 @@ import {
   selectOpenReloadModal,
   selectProtoFile,
   selectQueryParameters,
+  selectRequestTestResults,
   selectSaved,
   selectSelectedEnvironment,
   selectSelectedEnvironmentId,
@@ -83,6 +83,7 @@ import {
   selectWssConnected,
   selectWssMessages,
 } from './store/selectors';
+import { collectionRunActions } from './store/slices/collectionRunSlice';
 import { collectionActions, loadCollection } from './store/slices/collectionSlice';
 import { environmentActions, loadEnvironments } from './store/slices/environmentSlice';
 import { requestActions } from './store/slices/requestSlice';
@@ -130,8 +131,15 @@ export default function App() {
 
   // Collection state
   const collection = useAppSelector(selectCollectionData);
-  const selectedRequestId = useAppSelector(selectSelectedRequestId);
+  const collectionRunResults = useAppSelector(selectCollectionRunResults);
   const selectedFolderId = useAppSelector(selectSelectedFolderId);
+  const selectedRequestId = useAppSelector(selectSelectedRequestId);
+
+  const runResult = useMemo(
+    () => collectionRunResults[selectedRequestId] || null,
+    [collectionRunResults, selectedRequestId],
+  );
+
   // Environment state
   const environments = useAppSelector(selectEnvironments);
   const selectedEnvironmentId = useAppSelector(selectSelectedEnvironmentId);
@@ -167,6 +175,7 @@ export default function App() {
   const testOptions = useAppSelector(selectTestOptions);
   const isRunningTests = useAppSelector(selectIsRunningTests);
   const disabledRunTests = useAppSelector(selectDisabledRunTests);
+  const requestTestResults = useAppSelector(selectRequestTestResults(selectedRequestId));
 
   // UI state
   const openCurlModal = useAppSelector(selectOpenCurlModal);
@@ -177,9 +186,6 @@ export default function App() {
   const curl = useAppSelector(selectCurl);
   const curlError = useAppSelector(selectCurlError);
   const exportFormat = useAppSelector(selectExportFormat);
-
-  // Ref to skip reset when saving (prevents response from being hidden)
-  const skipNextResetRef = useRef(false);
 
   // Tests hook
   const {
@@ -198,6 +204,9 @@ export default function App() {
     executeLoadTest,
     executeLargePayloadTest,
   } = useTests();
+
+  // Reset hook
+  const reset = useReset();
 
   const disabled = useMemo(() => !url || isRunningTests, [url, isRunningTests]);
 
@@ -246,45 +255,14 @@ export default function App() {
     if (testOptions) executeAllTests();
   }, [testOptions]);
 
-  // Reset function
-  const reset = useCallback(
-    (resetTestOptions = true, clearSelection = true) => {
-      dispatch(requestActions.resetRequest());
-      dispatch(responseActions.clearResponse());
-      dispatch(websocketActions.clearMessages());
-      dispatch(websocketActions.setConnected(false));
-      if (clearSelection) dispatch(collectionActions.selectRequest(null));
-      if (resetTestOptions) dispatch(testActions.setTestOptions(null));
-    },
-    [dispatch],
-  );
-
-  // Load request data when selectedRequestId changes
+  // Populate request/response state when runResult changes
   useEffect(() => {
-    if (!selectedRequestId) return;
-
-    const item = findRequestById(collection, selectedRequestId);
-    if (!item) return;
-
-    const folderId = findFolderIdByRequestId(collection, selectedRequestId);
-    if (folderId) dispatch(collectionActions.selectFolder(folderId));
-
-    // Skip reset if we just saved (response should stay visible)
-    if (skipNextResetRef.current) {
-      skipNextResetRef.current = false;
-      return;
+    if (runResult?.response) {
+      dispatch(responseActions.setResponse(runResult.response));
+      dispatch(requestActions.setBodyParameters(runResult.bodyParameters || {}));
+      dispatch(requestActions.setQueryParameters(runResult.queryParameters || {}));
     }
-
-    reset(false, false);
-
-    const { request } = item;
-    const isWssUrl = request.url.startsWith('ws://') || request.url.startsWith('wss://');
-    dispatch(requestActions.setMode(isWssUrl ? 'WSS' : 'HTTP'));
-    dispatch(requestActions.setMethod(request.method as Method));
-    dispatch(requestActions.setUrl(request.url));
-    dispatch(requestActions.setHeaders(headersRecordToString(postmanHeadersToRecord(request.header))));
-    dispatch(requestActions.setBody(request.body?.raw || '{}'));
-  }, [selectedRequestId, collection, reset, dispatch]);
+  }, [runResult, dispatch]);
 
   // cURL import
   const importCurl = useCallback(() => {
@@ -299,6 +277,7 @@ export default function App() {
         url: curlUrl,
       } = extractCurl(curl);
 
+      reset();
       dispatch(requestActions.setUrl(curlUrl));
       dispatch(requestActions.setMethod(curlMethod as Method));
       dispatch(
@@ -316,7 +295,6 @@ export default function App() {
         dispatch(requestActions.setBody(trimmedBody !== '' ? trimmedBody : '{}'));
       }
 
-      dispatch(collectionActions.selectRequest(null));
       dispatch(uiActions.closeCurlModal());
     } catch (error) {
       console.error('cURL import failed', error);
@@ -344,21 +322,37 @@ export default function App() {
       const parsedBody = parseBody(substitutedBody, parsedHeaders, substitutedMessageType, protoFile);
       const request = createHttpRequest(parsedBody, parsedHeaders, method, substitutedUrl);
       const response: HttpResponse = await window.electronAPI.sendHttp(request);
+      const status = extractStatusCode(response);
 
       dispatch(responseActions.setResponse(response));
 
-      if (!response.status.startsWith('2')) return;
+      let bodyParameters = {};
+      let queryParameters = {};
 
-      const extractedBodyParams = extractBodyParameters(parsedBody, parsedHeaders);
-      const extractedQueryParams = Object.fromEntries(
-        Object.entries(extractQueryParameters(url)).map(([key, value]) => [
-          key,
-          getInitialParameterValue(detectDataType(value), value),
-        ]),
-      );
+      if (status >= 200 && status < 300) {
+        bodyParameters = extractBodyParameters(parsedBody, parsedHeaders);
+        queryParameters = Object.fromEntries(
+          Object.entries(extractQueryParameters(url)).map(([key, value]) => [
+            key,
+            getInitialParameterValue(detectDataType(value), value),
+          ]),
+        );
 
-      dispatch(requestActions.setBodyParameters(extractedBodyParams));
-      dispatch(requestActions.setQueryParameters(extractedQueryParams));
+        dispatch(requestActions.setBodyParameters(bodyParameters));
+        dispatch(requestActions.setQueryParameters(queryParameters));
+      }
+
+      if (selectedRequestId)
+        dispatch(
+          collectionRunActions.addResult({
+            requestId: selectedRequestId,
+            status,
+            response,
+            bodyParameters,
+            queryParameters,
+            error: null,
+          }),
+        );
     } catch (error) {
       dispatch(
         responseActions.setResponse({
@@ -368,14 +362,11 @@ export default function App() {
         }),
       );
     }
-  }, [url, headers, body, messageType, selectedEnvironment, protoFile, method, dispatch]);
+  }, [url, headers, body, messageType, selectedEnvironment, selectedRequestId, protoFile, method, dispatch]);
 
   // Save request
   const saveRequest = useCallback(async () => {
-    skipNextResetRef.current = true;
     const parsedHeaders = parseHeaders(headers);
-    const parsedBody = parseBody(body, parsedHeaders, messageType, protoFile);
-    const bodyString = typeof parsedBody === 'string' ? parsedBody : JSON.stringify(parsedBody);
 
     if (selectedRequestId && findRequestById(collection, selectedRequestId)) {
       dispatch(
@@ -384,7 +375,7 @@ export default function App() {
           method,
           url,
           headers: parsedHeaders,
-          body: bodyString,
+          body,
         }),
       );
     } else {
@@ -393,16 +384,58 @@ export default function App() {
           method,
           url,
           headers: parsedHeaders,
-          body: bodyString,
+          body,
           folderId: selectedFolderId,
         }),
       );
+
+      const requestId = store.getState().collection.selectedRequestId;
+      if (httpResponse)
+        dispatch(
+          collectionRunActions.addResult({
+            requestId,
+            status: extractStatusCode(httpResponse),
+            response: httpResponse,
+            bodyParameters,
+            queryParameters,
+            error: null,
+          }),
+        );
+
+      if (crudTests.length > 0 && dataDrivenTests.length > 0 && performanceTests.length > 0 && securityTests.length > 0)
+        dispatch(
+          testActions.addResults({
+            requestId,
+            results: {
+              crudTests,
+              dataDrivenTests,
+              performanceTests,
+              securityTests,
+            },
+          }),
+        );
     }
 
     dispatch(uiActions.setSaved(true));
     clearTimeout(savedTimeout);
     savedTimeout = setTimeout(() => dispatch(uiActions.setSaved(false)), 2000);
-  }, [headers, body, messageType, protoFile, selectedRequestId, collection, method, url, selectedFolderId, dispatch]);
+  }, [
+    body,
+    bodyParameters,
+    collection,
+    crudTests,
+    dataDrivenTests,
+    headers,
+    httpResponse,
+    method,
+    performanceTests,
+    queryParameters,
+    securityTests,
+    selectedFolderId,
+    selectedRequestId,
+    url,
+    dispatch,
+  ]);
 
   const autoSaveRequest = useCallback(() => {
     if (disabled || !selectedRequestId) return;
@@ -518,7 +551,6 @@ export default function App() {
             <div className="flex items-center gap-2">
               <Select
                 className="font-bold"
-                isDisabled={isRunningTests}
                 isSearchable={false}
                 options={modeOptions}
                 placeholder="MODE"
@@ -531,7 +563,7 @@ export default function App() {
               {mode === 'HTTP' && (
                 <>
                   <ActionsButton
-                    actions={[{ label: 'Create', onClick: () => reset(false) }]}
+                    actions={[{ label: 'Create', onClick: reset }]}
                     onClick={() => dispatch(uiActions.openCurlModal())}
                   >
                     Import cURL
@@ -880,7 +912,7 @@ export default function App() {
               </div>
             )}
 
-            {testOptions && (
+            {(testOptions || requestTestResults) && (
               <>
                 <ResponsePanel title="Security Tests">
                   <TestsTable

@@ -1,4 +1,4 @@
-import { PostmanCollection, PostmanHeader, PostmanItem, PostmanRequest } from '../types/postman';
+import { PostmanCollection, PostmanHeader, PostmanItem, PostmanRequest } from '../types';
 
 const DEFAULT_FOLDER_ID = 'default';
 const DEFAULT_FOLDER_NAME = 'All Requests';
@@ -108,7 +108,7 @@ export function addRequestToCollection(
   if (!folder) {
     folder = {
       id: folderId,
-      name: folderId,
+      name: folderId === DEFAULT_FOLDER_ID ? DEFAULT_FOLDER_NAME : folderId,
       item: [],
     };
     collection.item.push(folder);
@@ -232,7 +232,7 @@ export function reorderRequestInCollection(
 export function collectionToGroupedSidebarData(collection: PostmanCollection): SidebarFolderData[] {
   return collection.item.map((folder) => ({
     id: folder.id,
-    name: folder.id === DEFAULT_FOLDER_ID ? DEFAULT_FOLDER_NAME : folder.name,
+    name: folder.id === DEFAULT_FOLDER_ID ? (folder.name ?? DEFAULT_FOLDER_NAME) : folder.name,
     items: folder.item.map((item) => ({
       id: item.id,
       method: item.request.method,
@@ -264,14 +264,9 @@ export function renameFolderInCollection(
   folderId: string,
   newName: string,
 ): PostmanCollection {
-  if (folderId === DEFAULT_FOLDER_ID) {
-    return collection;
-  }
   return {
     ...collection,
-    item: collection.item.map((folder) =>
-      folder.id === folderId ? { ...folder, name: newName } : folder,
-    ),
+    item: collection.item.map((folder) => (folder.id === folderId ? { ...folder, name: newName } : folder)),
   };
 }
 

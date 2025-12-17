@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
+import { datasets } from '../constants/datasets';
+import { getTestCount } from '../decorators';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { testActions } from '../store/slices/testSlice';
 import {
   selectCrudTests,
   selectCurrentTest,
@@ -12,11 +13,11 @@ import {
   selectIsSecurityRunning,
   selectPerformanceTests,
   selectSecurityTests,
+  selectSelectedRequestId,
   selectTestOptions,
   selectTestsCount,
 } from '../store/selectors';
-import { datasets } from '../constants/datasets';
-import { getTestCount } from '../decorators';
+import { testActions } from '../store/slices/testSlice';
 import {
   DataDrivenTests,
   generateDynamicTestData,
@@ -30,8 +31,15 @@ import {
 } from '../tests';
 import { DynamicValue, TestOptions, TestResult } from '../types';
 
+let abortAllTests = false;
+let dataDrivenTestsInstance: DataDrivenTests | null = null;
+let performanceInsightsInstance: PerformanceInsights | null = null;
+let securityTestsInstance: SecurityTests | null = null;
+
 const useTests = () => {
   const dispatch = useAppDispatch();
+
+  const selectedRequestId = useAppSelector(selectSelectedRequestId);
 
   const testOptions = useAppSelector(selectTestOptions);
   const currentTest = useAppSelector(selectCurrentTest);
@@ -72,28 +80,34 @@ const useTests = () => {
   }, []);
 
   const executeSecurityTests = useCallback(
-    async (options: TestOptions) => {
+    async (options: TestOptions, execute = true): Promise<{ crudTests: TestResult[]; securityTests: TestResult[] }> => {
+      if (!execute) return;
+
       dispatch(testActions.setSecurityRunning(true));
       dispatch(testActions.setSecurityTests([]));
       dispatch(testActions.setCrudTests([]));
 
-      const securityTests = new SecurityTests(options, incrementCurrentTest);
-      const { securityTestResults, crudTestResults } = await securityTests.run();
+      securityTestsInstance = new SecurityTests(options, incrementCurrentTest);
+      const { crudTests, securityTests } = await securityTestsInstance.run();
 
-      dispatch(testActions.setSecurityTests(securityTestResults));
-      dispatch(testActions.setCrudTests(crudTestResults));
+      dispatch(testActions.setCrudTests(crudTests));
+      dispatch(testActions.setSecurityTests(securityTests));
       dispatch(testActions.setSecurityRunning(false));
+
+      return { crudTests, securityTests };
     },
     [dispatch, incrementCurrentTest],
   );
 
   const executeDataDrivenTests = useCallback(
-    async (options: TestOptions): Promise<TestResult[]> => {
+    async (options: TestOptions, execute = true): Promise<TestResult[]> => {
+      if (!execute) return;
+
       dispatch(testActions.setDataDrivenRunning(true));
       dispatch(testActions.setDataDrivenTests([]));
 
-      const dataDrivenTests = new DataDrivenTests(options, incrementCurrentTest);
-      const dataDrivenTestResults = await dataDrivenTests.run();
+      dataDrivenTestsInstance = new DataDrivenTests(options, incrementCurrentTest);
+      const dataDrivenTestResults = await dataDrivenTestsInstance.run();
 
       dispatch(testActions.setDataDrivenTests(dataDrivenTestResults));
       dispatch(testActions.setDataDrivenRunning(false));
@@ -104,17 +118,21 @@ const useTests = () => {
   );
 
   const executePerformanceTests = useCallback(
-    async (options: TestOptions, testResults: TestResult[] = []) => {
+    async (options: TestOptions, testResults: TestResult[] = [], execute = true): Promise<TestResult[]> => {
+      if (!execute) return;
+
       const { url } = options;
 
       dispatch(testActions.setPerformanceRunning(true));
       dispatch(testActions.setPerformanceTests([]));
 
-      const performanceInsights = new PerformanceInsights(url, testResults, incrementCurrentTest);
-      const performanceTestResults = await performanceInsights.run();
+      performanceInsightsInstance = new PerformanceInsights(url, testResults, incrementCurrentTest);
+      const performanceTestResults = await performanceInsightsInstance.run();
 
       dispatch(testActions.setPerformanceTests(performanceTestResults));
       dispatch(testActions.setPerformanceRunning(false));
+
+      return performanceTestResults;
     },
     [dispatch, incrementCurrentTest],
   );
@@ -122,6 +140,7 @@ const useTests = () => {
   const executeAllTests = useCallback(async () => {
     if (!testOptions) return;
 
+    abortAllTests = false;
     dispatch(testActions.startAllTests());
 
     const totalTests =
@@ -132,10 +151,24 @@ const useTests = () => {
 
     dispatch(testActions.setTestsCount(totalTests));
 
-    await executeSecurityTests(testOptions);
-    const dataDrivenTestResults = await executeDataDrivenTests(testOptions);
-    await executePerformanceTests(testOptions, dataDrivenTestResults);
+    const { crudTests, securityTests } = await executeSecurityTests(testOptions, !abortAllTests);
+    const dataDrivenTests = await executeDataDrivenTests(testOptions, !abortAllTests);
+    const performanceTests = await executePerformanceTests(testOptions, dataDrivenTests, !abortAllTests);
+
+    if (!abortAllTests && selectedRequestId)
+      dispatch(
+        testActions.addResults({
+          requestId: selectedRequestId,
+          results: {
+            crudTests,
+            dataDrivenTests,
+            performanceTests,
+            securityTests,
+          },
+        }),
+      );
   }, [
+    selectedRequestId,
     testOptions,
     dispatch,
     calculateDataDrivenTestsCount,
@@ -160,6 +193,16 @@ const useTests = () => {
     },
     [dispatch],
   );
+
+  const cancelAllTests = useCallback(() => {
+    abortAllTests = true;
+
+    securityTestsInstance?.abort();
+    dataDrivenTestsInstance?.abort();
+    performanceInsightsInstance?.abort();
+
+    dispatch(testActions.resetTests());
+  }, [dispatch]);
 
   const generateLoadBarProgress = (percent: number) => {
     const width = 20;
@@ -234,6 +277,7 @@ const useTests = () => {
     performanceTests,
     securityTests,
     testsCount,
+    cancelAllTests,
     executeAllTests,
     executeDataDrivenTests,
     executeLargePayloadTest,
