@@ -112,14 +112,6 @@ export const testSlice = createSlice({
     },
 
     // Reset
-    resetTests: (state) => {
-      state.crudTests = [];
-      state.dataDrivenTests = [];
-      state.performanceTests = [];
-      state.securityTests = [];
-      state.currentTest = 0;
-      state.testsCount = 0;
-    },
     resetAllTestState: () => initialState,
 
     // Start all tests

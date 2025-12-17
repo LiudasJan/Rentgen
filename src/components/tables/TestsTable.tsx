@@ -1,4 +1,5 @@
 import cn from 'classnames';
+import { useMemo } from 'react';
 import DataTable, { ExpanderComponentProps, TableColumn, TableProps } from 'react-data-table-component';
 import { TestResult, TestStatus } from '../../types';
 import {
@@ -12,6 +13,8 @@ import { CopyButton } from '../buttons/CopyButton';
 import { HttpPanel } from '../panels/HttpPanel';
 
 export default function TestsTable({ columns, data, className, ...otherProps }: TableProps<TestResult>) {
+  const definedData = useMemo(() => data?.filter(Boolean) ?? [], [data]);
+
   return (
     <DataTable
       className={cn('border-t border-border dark:border-t-0 rounded-t-none!', className)}
@@ -53,7 +56,7 @@ export default function TestsTable({ columns, data, className, ...otherProps }: 
           },
         },
       }}
-      data={data}
+      data={definedData}
       {...otherProps}
     />
   );

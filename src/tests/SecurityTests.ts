@@ -1,6 +1,6 @@
 import { Method } from 'axios';
 import { getResponseStatusTitle, RESPONSE_STATUS } from '../constants/responseStatus';
-import { Test } from '../decorators';
+import { Abortable, Test } from '../decorators';
 import { HttpRequest, HttpResponse, TestOptions, TestResult, TestStatus } from '../types';
 import {
   createHttpRequest,
@@ -103,6 +103,7 @@ export class SecurityTests extends BaseTests {
     return { securityTestResults, crudTestResults };
   }
 
+  @Abortable
   @Test('Validates that server header does not expose sensitive version information')
   private testServerHeaderSecurity(request: HttpRequest, response: HttpResponse): TestResult {
     this.onTestStart?.();
@@ -119,6 +120,7 @@ export class SecurityTests extends BaseTests {
     );
   }
 
+  @Abortable
   @Test('Checks for clickjacking protection via X-Frame-Options or CSP frame-ancestors')
   private testClickjackingProtection(request: HttpRequest, response: HttpResponse): TestResult {
     this.onTestStart?.();
@@ -137,6 +139,7 @@ export class SecurityTests extends BaseTests {
     );
   }
 
+  @Abortable
   @Test('Verifies Strict-Transport-Security header is present on HTTPS endpoints')
   private testHSTS(request: HttpRequest, response: HttpResponse): TestResult {
     this.onTestStart?.();
@@ -153,6 +156,7 @@ export class SecurityTests extends BaseTests {
     );
   }
 
+  @Abortable
   @Test('Checks for X-Content-Type-Options: nosniff to prevent MIME sniffing')
   private testMimeSniffing(request: HttpRequest, response: HttpResponse): TestResult {
     this.onTestStart?.();
@@ -170,6 +174,7 @@ export class SecurityTests extends BaseTests {
     );
   }
 
+  @Abortable
   @Test('Validates Cache-Control header for private API endpoints')
   private testCacheControl(request: HttpRequest, response: HttpResponse): TestResult {
     this.onTestStart?.();
@@ -187,6 +192,7 @@ export class SecurityTests extends BaseTests {
     );
   }
 
+  @Abortable
   @Test('Tests OPTIONS method handling and retrieves allowed HTTP methods')
   private async testOptionsMethod(): Promise<{ testResult: TestResult; allowHeader: string }> {
     this.onTestStart?.();
@@ -230,6 +236,7 @@ export class SecurityTests extends BaseTests {
     }
   }
 
+  @Abortable
   @Test('Verifies server properly rejects unsupported HTTP methods with 405 or 501')
   private async testUnsupportedMethod(): Promise<TestResult> {
     this.onTestStart?.();
@@ -264,6 +271,7 @@ export class SecurityTests extends BaseTests {
     }
   }
 
+  @Abortable
   @Test('Checks if API requires authorization by removing auth headers')
   private async testMissingAuthorization(): Promise<TestResult> {
     this.onTestStart?.();
@@ -303,6 +311,7 @@ export class SecurityTests extends BaseTests {
     }
   }
 
+  @Abortable
   @Test('Determines if API is public or private by testing CORS policy')
   private async testCors(): Promise<TestResult> {
     this.onTestStart?.();
@@ -340,6 +349,7 @@ export class SecurityTests extends BaseTests {
     }
   }
 
+  @Abortable
   @Test('Validates proper 404 Not Found response for non-existent endpoints')
   private async testNotFound(): Promise<TestResult> {
     this.onTestStart?.();
@@ -363,6 +373,7 @@ export class SecurityTests extends BaseTests {
     }
   }
 
+  @Abortable
   @Test('Tests reflected payload safety by sending a payload that should be rejected if reflected')
   private async testReflectedPayloadSafety(): Promise<TestResult> {
     this.onTestStart?.();
@@ -415,6 +426,7 @@ export class SecurityTests extends BaseTests {
     }
   }
 
+  @Abortable
   @Test(
     'Tests if the server behaves according to RFC 3986 — specifically, that the domain part is treated as case-insensitive',
   )
@@ -452,6 +464,7 @@ export class SecurityTests extends BaseTests {
     }
   }
 
+  @Abortable
   @Test(
     'Tests if the server behaves according to RFC 3986 — specifically, that the path part is treated as case-sensitive',
   )
@@ -488,6 +501,7 @@ export class SecurityTests extends BaseTests {
     }
   }
 
+  @Abortable
   @Test('Generates CRUD test results based on Allow header from OPTIONS response')
   private getCrudTestResults(
     allowHeader: string,

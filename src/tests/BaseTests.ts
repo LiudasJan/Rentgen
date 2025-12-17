@@ -7,12 +7,22 @@ export const NOT_AVAILABLE_TEST = 'Not Available';
 export const SUCCESS_RESPONSE_EXPECTED = '2xx';
 
 export abstract class BaseTests {
+  private _aborted = false;
+
+  public get aborted() {
+    return this._aborted;
+  }
+
   constructor(
     protected options: TestOptions,
     protected onTestStart?: () => void,
   ) {
     this.options = options;
     this.onTestStart = onTestStart;
+  }
+
+  public abort() {
+    this._aborted = true;
   }
 
   public abstract run(): any;

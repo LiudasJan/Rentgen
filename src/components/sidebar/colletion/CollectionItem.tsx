@@ -93,7 +93,7 @@ export default function CollectionItem({ item }: Props) {
           'opacity-50 shadow-lg z-50': isDragging,
         },
       )}
-      onClick={() => handleClick(item.id)}
+      onClick={() => !isSelected && handleClick(item.id)}
       {...attributes}
       {...listeners}
     >

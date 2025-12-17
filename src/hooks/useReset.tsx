@@ -5,12 +5,15 @@ import { requestActions } from '../store/slices/requestSlice';
 import { responseActions } from '../store/slices/responseSlice';
 import { testActions } from '../store/slices/testSlice';
 import { websocketActions } from '../store/slices/websocketSlice';
+import useTests from './useTests';
 
 export function useReset() {
   const dispatch = useAppDispatch();
+  const { cancelAllTests } = useTests();
 
   const reset = useCallback(
     (clearSelection = true) => {
+      cancelAllTests();
       dispatch(requestActions.resetRequest());
       dispatch(responseActions.clearResponse());
       dispatch(websocketActions.clearMessages());

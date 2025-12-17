@@ -1,5 +1,14 @@
 import 'reflect-metadata';
 
+export function Abortable(_target: any, _propertyKey: string, descriptor: PropertyDescriptor) {
+  const original = descriptor.value;
+
+  descriptor.value = function (...args: any[]) {
+    if (this.aborted) return;
+    return original.apply(this, args);
+  };
+}
+
 export function Test(description?: string) {
   return function (target: any, propertyKey: string) {
     Reflect.defineMetadata('test:description', description, target, propertyKey);

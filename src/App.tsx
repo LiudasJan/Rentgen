@@ -490,7 +490,6 @@ export default function App() {
             <div className="flex items-center gap-2">
               <Select
                 className="font-bold"
-                isDisabled={isRunningTests}
                 isSearchable={false}
                 options={modeOptions}
                 placeholder="MODE"

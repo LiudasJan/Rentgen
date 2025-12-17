@@ -1,6 +1,6 @@
 import { datasets } from '../constants/datasets';
 import { getResponseStatusTitle, RESPONSE_STATUS } from '../constants/responseStatus';
-import { Test } from '../decorators';
+import { Abortable, Test } from '../decorators';
 import {
   DataType,
   DynamicValue,
@@ -65,20 +65,18 @@ export class DataDrivenTests extends BaseTests {
       },
       async (parameterName: string, parameterValue: DynamicValue) => {
         results.push(
-          ...(await testRequestParameterWithDataset(
+          ...((await this.testRequestParameterWithDataset(
             { ...this.options, parameterName, parameterType: 'body' },
             parameterValue,
-            this.onTestStart,
-          )),
+          )) ?? []),
         );
       },
       async (parameterName: string, parameterValue: DynamicValue) => {
         results.push(
-          ...(await testRequestParameterWithDataset(
+          ...((await this.testRequestParameterWithDataset(
             { ...this.options, parameterName, parameterType: 'query' },
             parameterValue,
-            this.onTestStart,
-          )),
+          )) ?? []),
         );
       },
     );
@@ -86,6 +84,7 @@ export class DataDrivenTests extends BaseTests {
     return results;
   }
 
+  @Abortable
   @Test('Validates the original request succeeds as a baseline')
   private async testOriginalRequest(request: HttpRequest): Promise<TestResult> {
     this.onTestStart?.();
@@ -122,6 +121,38 @@ export class DataDrivenTests extends BaseTests {
         ),
     );
   }
+
+  @Abortable
+  private async testRequestParameterWithDataset(
+    options: TestOptions,
+    parameterValue: DynamicValue,
+  ): Promise<TestResult[]> {
+    const { type, value } = parameterValue;
+    const results: TestResult[] = [];
+    const dataset = [
+      ...generateDynamicTestData(parameterValue),
+      ...(datasets[type] || []).map((dataset) => {
+        if (type !== 'string' || !dataset.valid) return dataset;
+
+        return {
+          ...dataset,
+          value: (dataset.value as string).substring(0, value as number),
+        };
+      }),
+    ];
+
+    for (const data of dataset)
+      results.push(
+        await testRequestParameter(
+          { ...options, testData: data },
+          data.valid ? SUCCESS_RESPONSE_EXPECTED : CLIENT_ERROR_RESPONSE_EXPECTED,
+          determineRequestParameterTestStatus,
+          this.onTestStart,
+        ),
+      );
+
+    return results;
+  }
 }
 
 export async function runDataDrivenTests(
@@ -153,38 +184,6 @@ export async function runDataDrivenTests(
     if (isParameterTestSkipped(value.type)) continue;
     await onQueryParameterTest(key, value);
   }
-}
-
-async function testRequestParameterWithDataset(
-  options: TestOptions,
-  parameterValue: DynamicValue,
-  onTestStart?: () => void,
-): Promise<TestResult[]> {
-  const { type, value } = parameterValue;
-  const results: TestResult[] = [];
-  const dataset = [
-    ...generateDynamicTestData(parameterValue),
-    ...(datasets[type] || []).map((dataset) => {
-      if (type !== 'string' || !dataset.valid) return dataset;
-
-      return {
-        ...dataset,
-        value: (dataset.value as string).substring(0, value as number),
-      };
-    }),
-  ];
-
-  for (const data of dataset)
-    results.push(
-      await testRequestParameter(
-        { ...options, testData: data },
-        data.valid ? SUCCESS_RESPONSE_EXPECTED : CLIENT_ERROR_RESPONSE_EXPECTED,
-        determineRequestParameterTestStatus,
-        onTestStart,
-      ),
-    );
-
-  return results;
 }
 
 async function testRequestParameter(
