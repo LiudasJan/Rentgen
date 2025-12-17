@@ -86,7 +86,7 @@ export default function CollectionItem({ item }: Props) {
         transition,
       }}
       className={cn(
-        'flex items-center gap-2 px-3 py-2 border-b border-border dark:border-dark-border hover:bg-button-secondary dark:hover:bg-dark-input',
+        'relative flex items-center gap-2 px-3 py-2 border-b border-border dark:border-dark-border hover:bg-button-secondary dark:hover:bg-dark-input',
         'group cursor-pointer outline-none',
         {
           'bg-button-secondary dark:bg-dark-input': isSelected,
@@ -110,25 +110,27 @@ export default function CollectionItem({ item }: Props) {
       <span className="flex-1 text-xs truncate" title={item.url}>
         {item.url}
       </span>
-      <PlayIcon
-        className={cn('h-4 w-4 text-green-500 hover:text-green-600 opacity-0 transition-opacity', {
-          'cursor-pointer opacity-0 group-hover:opacity-100': runningRequestId !== item.id,
-          'group-hover:opacity-50 cursor-not-allowed': runningRequestId === item.id,
-        })}
-        onClick={(event: MouseEvent) => {
-          event.stopPropagation();
+      <div className="absolute top-0 bottom-0 right-0 pl-2 pr-3 flex items-center gap-2 bg-button-secondary dark:bg-dark-input opacity-0 group-hover:opacity-100">
+        <PlayIcon
+          className={cn('h-4 w-4 text-green-500 hover:text-green-600 transition-opacity', {
+            'cursor-pointer': runningRequestId !== item.id,
+            'opacity-50 cursor-not-allowed': runningRequestId === item.id,
+          })}
+          onClick={(event: MouseEvent) => {
+            event.stopPropagation();
 
-          if (runningRequestId === item.id) return;
-          runRequest(item.id);
-        }}
-      />
-      <ClearCrossIcon
-        className="h-4.5 w-4.5 p-0.5 text-button-text-secondary dark:text-text-secondary hover:text-button-danger cursor-pointer"
-        onClick={(event: MouseEvent) => {
-          event.stopPropagation();
-          dispatch(collectionActions.removeRequest(item.id));
-        }}
-      />
+            if (runningRequestId === item.id) return;
+            runRequest(item.id);
+          }}
+        />
+        <ClearCrossIcon
+          className="h-4.5 w-4.5 text-button-text-secondary dark:text-text-secondary hover:text-button-danger cursor-pointer"
+          onClick={(event: MouseEvent) => {
+            event.stopPropagation();
+            dispatch(collectionActions.removeRequest(item.id));
+          }}
+        />
+      </div>
     </div>
   );
 }
