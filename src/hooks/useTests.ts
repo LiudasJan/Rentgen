@@ -155,7 +155,7 @@ const useTests = () => {
     const dataDrivenTests = await executeDataDrivenTests(testOptions, !abortAllTests);
     const performanceTests = await executePerformanceTests(testOptions, dataDrivenTests, !abortAllTests);
 
-    if (!abortAllTests && selectedRequestId) {
+    if (!abortAllTests && selectedRequestId)
       dispatch(
         testActions.addResults({
           requestId: selectedRequestId,
@@ -167,7 +167,6 @@ const useTests = () => {
           },
         }),
       );
-    }
   }, [
     selectedRequestId,
     testOptions,
