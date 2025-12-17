@@ -47,12 +47,9 @@ const UPPERCASE_PATH_TEST_EXPECTED = `${RESPONSE_STATUS.NOT_FOUND} ${getResponse
 const UNSUPPORTED_METHOD_TEST_EXPECTED = `${RESPONSE_STATUS.METHOD_NOT_ALLOWED} ${getResponseStatusTitle(RESPONSE_STATUS.METHOD_NOT_ALLOWED)} or ${RESPONSE_STATUS.NOT_IMPLEMENTED} ${getResponseStatusTitle(RESPONSE_STATUS.NOT_IMPLEMENTED)}`;
 
 export class SecurityTests extends BaseTests {
-  public async run(): Promise<{
-    securityTestResults: TestResult[];
-    crudTestResults: TestResult[];
-  }> {
-    const securityTestResults: TestResult[] = [];
-    const crudTestResults: TestResult[] = [];
+  public async run(): Promise<{ crudTests: TestResult[]; securityTests: TestResult[] }> {
+    const securityTests: TestResult[] = [];
+    const crudTests: TestResult[] = [];
     const request = createTestHttpRequest(this.options);
     const { headers, url } = request;
 
@@ -60,7 +57,7 @@ export class SecurityTests extends BaseTests {
       const response = await window.electronAPI.sendHttp(request);
 
       // Run all header-based security tests
-      securityTestResults.push(
+      securityTests.push(
         this.testServerHeaderSecurity(request, response),
         this.testClickjackingProtection(request, response),
         this.testHSTS(request, response),
@@ -70,13 +67,13 @@ export class SecurityTests extends BaseTests {
 
       // Test OPTIONS method and get CRUD results
       const { testResult, allowHeader } = await this.testOptionsMethod();
-      securityTestResults.push(testResult);
+      securityTests.push(testResult);
 
       this.onTestStart?.();
       if (testResult.status === TestStatus.Pass)
-        crudTestResults.push(...this.getCrudTestResults(allowHeader, headers, url, response));
+        crudTests.push(...this.getCrudTestResults(allowHeader, headers, url, response));
       else
-        crudTestResults.push(
+        crudTests.push(
           createTestResult(
             CRUD_TEST_NAME,
             CRUD_TEST_EXPECTED,
@@ -85,11 +82,11 @@ export class SecurityTests extends BaseTests {
           ),
         );
     } catch (error) {
-      securityTestResults.push(createErrorTestResult('Security Test Error', 'Responds', String(error), request));
+      securityTests.push(createErrorTestResult('Security Test Error', 'Responds', String(error), request));
     }
 
     // Run tests that don't depend on initial response
-    securityTestResults.push(
+    securityTests.push(
       await this.testUnsupportedMethod(),
       await this.testMissingAuthorization(),
       await this.testCors(),
@@ -100,7 +97,7 @@ export class SecurityTests extends BaseTests {
       ...getManualTests(),
     );
 
-    return { securityTestResults, crudTestResults };
+    return { securityTests, crudTests };
   }
 
   @Abortable

@@ -13,6 +13,7 @@ import {
   selectIsSecurityRunning,
   selectPerformanceTests,
   selectSecurityTests,
+  selectSelectedRequestId,
   selectTestOptions,
   selectTestsCount,
 } from '../store/selectors';
@@ -37,6 +38,8 @@ let securityTestsInstance: SecurityTests | null = null;
 
 const useTests = () => {
   const dispatch = useAppDispatch();
+
+  const selectedRequestId = useAppSelector(selectSelectedRequestId);
 
   const testOptions = useAppSelector(selectTestOptions);
   const currentTest = useAppSelector(selectCurrentTest);
@@ -77,7 +80,7 @@ const useTests = () => {
   }, []);
 
   const executeSecurityTests = useCallback(
-    async (options: TestOptions, execute = true) => {
+    async (options: TestOptions, execute = true): Promise<{ crudTests: TestResult[]; securityTests: TestResult[] }> => {
       if (!execute) return;
 
       dispatch(testActions.setSecurityRunning(true));
@@ -85,11 +88,13 @@ const useTests = () => {
       dispatch(testActions.setCrudTests([]));
 
       securityTestsInstance = new SecurityTests(options, incrementCurrentTest);
-      const { securityTestResults, crudTestResults } = await securityTestsInstance.run();
+      const { crudTests, securityTests } = await securityTestsInstance.run();
 
-      dispatch(testActions.setSecurityTests(securityTestResults));
-      dispatch(testActions.setCrudTests(crudTestResults));
+      dispatch(testActions.setCrudTests(crudTests));
+      dispatch(testActions.setSecurityTests(securityTests));
       dispatch(testActions.setSecurityRunning(false));
+
+      return { crudTests, securityTests };
     },
     [dispatch, incrementCurrentTest],
   );
@@ -113,7 +118,7 @@ const useTests = () => {
   );
 
   const executePerformanceTests = useCallback(
-    async (options: TestOptions, testResults: TestResult[] = [], execute = true) => {
+    async (options: TestOptions, testResults: TestResult[] = [], execute = true): Promise<TestResult[]> => {
       if (!execute) return;
 
       const { url } = options;
@@ -126,6 +131,8 @@ const useTests = () => {
 
       dispatch(testActions.setPerformanceTests(performanceTestResults));
       dispatch(testActions.setPerformanceRunning(false));
+
+      return performanceTestResults;
     },
     [dispatch, incrementCurrentTest],
   );
@@ -144,10 +151,25 @@ const useTests = () => {
 
     dispatch(testActions.setTestsCount(totalTests));
 
-    await executeSecurityTests(testOptions, !abortAllTests);
-    const dataDrivenTestResults = await executeDataDrivenTests(testOptions, !abortAllTests);
-    await executePerformanceTests(testOptions, dataDrivenTestResults, !abortAllTests);
+    const { crudTests, securityTests } = await executeSecurityTests(testOptions, !abortAllTests);
+    const dataDrivenTests = await executeDataDrivenTests(testOptions, !abortAllTests);
+    const performanceTests = await executePerformanceTests(testOptions, dataDrivenTests, !abortAllTests);
+
+    if (!abortAllTests && selectedRequestId) {
+      dispatch(
+        testActions.addResults({
+          requestId: selectedRequestId,
+          results: {
+            crudTests,
+            dataDrivenTests,
+            performanceTests,
+            securityTests,
+          },
+        }),
+      );
+    }
   }, [
+    selectedRequestId,
     testOptions,
     dispatch,
     calculateDataDrivenTestsCount,
@@ -180,7 +202,7 @@ const useTests = () => {
     dataDrivenTestsInstance?.abort();
     performanceInsightsInstance?.abort();
 
-    dispatch(testActions.resetAllTestState());
+    dispatch(testActions.resetTests());
   }, [dispatch]);
 
   const generateLoadBarProgress = (percent: number) => {

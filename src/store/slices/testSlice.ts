@@ -1,13 +1,14 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { TestOptions, TestResult } from '../../types';
 
-interface TestState {
-  // Test results
+export interface TestResults {
   crudTests: TestResult[];
   dataDrivenTests: TestResult[];
   performanceTests: TestResult[];
   securityTests: TestResult[];
+}
 
+interface TestState extends TestResults {
   // Running states
   isDataDrivenRunning: boolean;
   isLargePayloadTestRunning: boolean;
@@ -22,6 +23,9 @@ interface TestState {
 
   // Test configuration
   testOptions: TestOptions | null;
+
+  // All results by collection/request id
+  results: Record<string, TestResults>;
 }
 
 const initialState: TestState = {
@@ -38,6 +42,7 @@ const initialState: TestState = {
   testsCount: 0,
   loadProgress: 0,
   testOptions: null,
+  results: {},
 };
 
 export const testSlice = createSlice({
@@ -112,7 +117,7 @@ export const testSlice = createSlice({
     },
 
     // Reset
-    resetAllTestState: () => initialState,
+    resetTests: (state) => ({ ...initialState, results: state.results }),
 
     // Start all tests
     startAllTests: (state) => {
@@ -125,6 +130,10 @@ export const testSlice = createSlice({
       state.securityTests = [];
       state.currentTest = 0;
       state.testsCount = 0;
+    },
+
+    addResults: (state, action: PayloadAction<{ requestId: string; results: TestResults }>) => {
+      state.results[action.payload.requestId] = action.payload.results;
     },
   },
 });

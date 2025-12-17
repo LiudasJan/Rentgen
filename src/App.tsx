@@ -35,6 +35,7 @@ import {
   extractBodyParameters,
   extractCurl,
   extractQueryParameters,
+  extractStatusCode,
   formatBody,
   getInitialParameterValue,
   loadProtoSchema,
@@ -44,6 +45,7 @@ import {
 } from './utils';
 import { findRequestById } from './utils/collection';
 
+import { store } from './store';
 import { useAppDispatch, useAppSelector } from './store/hooks';
 import {
   selectBody,
@@ -70,6 +72,7 @@ import {
   selectOpenReloadModal,
   selectProtoFile,
   selectQueryParameters,
+  selectRequestTestResults,
   selectSaved,
   selectSelectedEnvironment,
   selectSelectedEnvironmentId,
@@ -80,6 +83,7 @@ import {
   selectWssConnected,
   selectWssMessages,
 } from './store/selectors';
+import { collectionRunActions } from './store/slices/collectionRunSlice';
 import { collectionActions, loadCollection } from './store/slices/collectionSlice';
 import { environmentActions, loadEnvironments } from './store/slices/environmentSlice';
 import { requestActions } from './store/slices/requestSlice';
@@ -171,6 +175,7 @@ export default function App() {
   const testOptions = useAppSelector(selectTestOptions);
   const isRunningTests = useAppSelector(selectIsRunningTests);
   const disabledRunTests = useAppSelector(selectDisabledRunTests);
+  const requestTestResults = useAppSelector(selectRequestTestResults(selectedRequestId));
 
   // UI state
   const openCurlModal = useAppSelector(selectOpenCurlModal);
@@ -317,21 +322,37 @@ export default function App() {
       const parsedBody = parseBody(substitutedBody, parsedHeaders, substitutedMessageType, protoFile);
       const request = createHttpRequest(parsedBody, parsedHeaders, method, substitutedUrl);
       const response: HttpResponse = await window.electronAPI.sendHttp(request);
+      const status = extractStatusCode(response);
 
       dispatch(responseActions.setResponse(response));
 
-      if (!response.status.startsWith('2')) return;
+      let bodyParameters = {};
+      let queryParameters = {};
 
-      const extractedBodyParams = extractBodyParameters(parsedBody, parsedHeaders);
-      const extractedQueryParams = Object.fromEntries(
-        Object.entries(extractQueryParameters(url)).map(([key, value]) => [
-          key,
-          getInitialParameterValue(detectDataType(value), value),
-        ]),
-      );
+      if (status >= 200 && status < 300) {
+        bodyParameters = extractBodyParameters(parsedBody, parsedHeaders);
+        queryParameters = Object.fromEntries(
+          Object.entries(extractQueryParameters(url)).map(([key, value]) => [
+            key,
+            getInitialParameterValue(detectDataType(value), value),
+          ]),
+        );
 
-      dispatch(requestActions.setBodyParameters(extractedBodyParams));
-      dispatch(requestActions.setQueryParameters(extractedQueryParams));
+        dispatch(requestActions.setBodyParameters(bodyParameters));
+        dispatch(requestActions.setQueryParameters(queryParameters));
+      }
+
+      if (selectedRequestId)
+        dispatch(
+          collectionRunActions.addResult({
+            requestId: selectedRequestId,
+            status,
+            response,
+            bodyParameters,
+            queryParameters,
+            error: null,
+          }),
+        );
     } catch (error) {
       dispatch(
         responseActions.setResponse({
@@ -341,7 +362,7 @@ export default function App() {
         }),
       );
     }
-  }, [url, headers, body, messageType, selectedEnvironment, protoFile, method, dispatch]);
+  }, [url, headers, body, messageType, selectedEnvironment, selectedRequestId, protoFile, method, dispatch]);
 
   // Save request
   const saveRequest = useCallback(async () => {
@@ -369,12 +390,56 @@ export default function App() {
           folderId: selectedFolderId,
         }),
       );
+
+      const requestId = store.getState().collection.selectedRequestId;
+      if (httpResponse)
+        dispatch(
+          collectionRunActions.addResult({
+            requestId,
+            status: extractStatusCode(httpResponse),
+            response: httpResponse,
+            bodyParameters,
+            queryParameters,
+            error: null,
+          }),
+        );
+
+      if (crudTests.length > 0 && dataDrivenTests.length > 0 && performanceTests.length > 0 && securityTests.length > 0)
+        dispatch(
+          testActions.addResults({
+            requestId,
+            results: {
+              crudTests,
+              dataDrivenTests,
+              performanceTests,
+              securityTests,
+            },
+          }),
+        );
     }
 
     dispatch(uiActions.setSaved(true));
     clearTimeout(savedTimeout);
     savedTimeout = setTimeout(() => dispatch(uiActions.setSaved(false)), 2000);
-  }, [headers, body, messageType, protoFile, selectedRequestId, collection, method, url, selectedFolderId, dispatch]);
+  }, [
+    body,
+    bodyParameters,
+    collection,
+    crudTests,
+    dataDrivenTests,
+    headers,
+    httpResponse,
+    messageType,
+    method,
+    performanceTests,
+    protoFile,
+    queryParameters,
+    securityTests,
+    selectedFolderId,
+    selectedRequestId,
+    url,
+    dispatch,
+  ]);
 
   const autoSaveRequest = useCallback(() => {
     if (disabled || !selectedRequestId) return;
@@ -851,7 +916,7 @@ export default function App() {
               </div>
             )}
 
-            {testOptions && (
+            {(testOptions || requestTestResults) && (
               <>
                 <ResponsePanel title="Security Tests">
                   <TestsTable

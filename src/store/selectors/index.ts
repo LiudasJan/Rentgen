@@ -72,6 +72,10 @@ export const selectDisabledRunTests = createSelector(
     isRunning || !response || statusCode < RESPONSE_STATUS.OK || statusCode >= RESPONSE_STATUS.BAD_REQUEST,
 );
 
+export const selectAllTestResults = (state: RootState) => state.tests.results;
+export const selectRequestTestResults = (requestId: string) =>
+  createSelector([selectAllTestResults], (results) => results[requestId] || null);
+
 // UI selectors
 export const selectOpenCurlModal = (state: RootState) => state.ui.openCurlModal;
 export const selectOpenReloadModal = (state: RootState) => state.ui.openReloadModal;

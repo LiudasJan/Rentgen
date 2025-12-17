@@ -1,4 +1,4 @@
-import { Middleware, AnyAction } from '@reduxjs/toolkit';
+import { Middleware, Action } from '@reduxjs/toolkit';
 
 // Actions that should NOT trigger auto-save (read-only or loading actions)
 const collectionReadOnlyActions = [
@@ -20,7 +20,7 @@ const environmentReadOnlyActions = [
   'environment/setEnvironmentToDelete',
 ];
 
-export const electronMiddleware: Middleware = (store) => (next) => (action: AnyAction) => {
+export const electronMiddleware: Middleware = (store) => (next) => (action: Action) => {
   const result = next(action);
 
   const actionType = action.type as string;

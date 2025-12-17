@@ -9,12 +9,14 @@ import { useAppDispatch, useAppSelector } from '../../../store/hooks';
 import {
   selectCollectionData,
   selectCollectionRunResults,
+  selectRequestTestResults,
   selectRunningRequestId,
   selectSelectedRequestId,
 } from '../../../store/selectors';
 import { collectionActions } from '../../../store/slices/collectionSlice';
 import { requestActions } from '../../../store/slices/requestSlice';
 import { responseActions } from '../../../store/slices/responseSlice';
+import { testActions } from '../../../store/slices/testSlice';
 import {
   findFolderIdByRequestId,
   findRequestById,
@@ -39,10 +41,11 @@ export default function CollectionItem({ item }: Props) {
   const collection = useAppSelector(selectCollectionData);
   const runningRequestId = useAppSelector(selectRunningRequestId);
   const runResults = useAppSelector(selectCollectionRunResults);
-  const selectedId = useAppSelector(selectSelectedRequestId);
+  const requestTestResults = useAppSelector(selectRequestTestResults(item.id));
+  const selectedRequestId = useAppSelector(selectSelectedRequestId);
 
   const runResult = runResults[item.id] || null;
-  const isSelected = item.id === selectedId;
+  const isSelected = item.id === selectedRequestId;
   const { attributes, isDragging, listeners, transform, transition, setNodeRef } = useSortable({
     id: item.id,
     data: { type: 'item', folderId: item.folderId },
@@ -67,6 +70,13 @@ export default function CollectionItem({ item }: Props) {
         dispatch(requestActions.setQueryParameters(runResult.queryParameters || {}));
       }
 
+      if (requestTestResults) {
+        dispatch(testActions.setCrudTests(requestTestResults.crudTests));
+        dispatch(testActions.setDataDrivenTests(requestTestResults.dataDrivenTests));
+        dispatch(testActions.setPerformanceTests(requestTestResults.performanceTests));
+        dispatch(testActions.setSecurityTests(requestTestResults.securityTests));
+      }
+
       const { request } = item;
       const isWssUrl = request.url.startsWith('ws://') || request.url.startsWith('wss://');
       dispatch(requestActions.setMode(isWssUrl ? 'WSS' : 'HTTP'));
@@ -75,7 +85,7 @@ export default function CollectionItem({ item }: Props) {
       dispatch(requestActions.setHeaders(headersRecordToString(postmanHeadersToRecord(request.header))));
       dispatch(requestActions.setBody(request.body?.raw || '{}'));
     },
-    [collection, isDragging, isSelected, runResult, dispatch, reset],
+    [collection, isDragging, isSelected, runResult, requestTestResults, dispatch, reset],
   );
 
   return (
