@@ -229,7 +229,7 @@ function determineValueNormalizationTestStatus(
     return { actual: response.status, status: TestStatus.Pass };
 
   const responseBody = typeof response.body === 'string' ? response.body : JSON.stringify(response.body);
-  if (!responseBody)
+  if (!responseBody || !responseBody.includes(String(testData.value).trim()))
     return {
       actual: `${response.status} → Check Manually via GET Method or Database`,
       status: TestStatus.Info,
