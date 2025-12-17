@@ -131,6 +131,15 @@ export default function CollectionGroup({
               'rotate-90': isExpanded,
             })}
           />
+          {folderStatus && (
+            <span
+              className={cn('w-2 h-2 rounded-full shrink-0', {
+                'bg-green-500': folderStatus === 'green',
+                'bg-orange-500': folderStatus === 'orange',
+                'bg-red-500': folderStatus === 'red',
+              })}
+            />
+          )}
           <FolderIcon className="h-4 w-4 text-text-secondary" />
 
           {isEditing ? (
@@ -150,16 +159,6 @@ export default function CollectionGroup({
           )}
 
           <span className="text-xs text-text-secondary">{folder.items.length}</span>
-
-          {folderStatus && (
-            <span
-              className={cn('w-2 h-2 rounded-full shrink-0', {
-                'bg-green-500': folderStatus === 'green',
-                'bg-orange-500': folderStatus === 'orange',
-                'bg-red-500': folderStatus === 'red',
-              })}
-            />
-          )}
 
           {folder.items.length > 0 &&
             !isEditing &&
