@@ -1,22 +1,22 @@
-import { Method } from 'axios';
+import {Method} from 'axios';
 import cn from 'classnames';
-import { useCallback, useEffect, useMemo } from 'react';
+import {useCallback, useEffect, useMemo} from 'react';
 import ActionsButton from './components/buttons/ActionsButton';
-import Button, { ButtonSize, ButtonType } from './components/buttons/Button';
-import { CopyButton } from './components/buttons/CopyButton';
-import { IconButton } from './components/buttons/IconButton';
-import { LargePayloadTestControls } from './components/controls/LargePayloadTestControls';
-import { LoadTestControls } from './components/controls/LoadTestControls';
-import { TestResultControls } from './components/controls/TestResultControls';
+import Button, {ButtonSize, ButtonType} from './components/buttons/Button';
+import {CopyButton} from './components/buttons/CopyButton';
+import {IconButton} from './components/buttons/IconButton';
+import {LargePayloadTestControls} from './components/controls/LargePayloadTestControls';
+import {LoadTestControls} from './components/controls/LoadTestControls';
+import {TestResultControls} from './components/controls/TestResultControls';
 import EnvironmentEditor from './components/environment/EnvironmentEditor';
 import EnvironmentSelector from './components/environment/EnvironmentSelector';
 import FileInput from './components/inputs/FileInput';
 import HighlightedInput from './components/inputs/HighlightedInput';
 import HighlightedTextarea from './components/inputs/HighlightedTextarea';
-import Select, { SelectOption } from './components/inputs/Select';
+import Select, {SelectOption} from './components/inputs/Select';
 import Textarea from './components/inputs/Textarea';
-import { GlobalContextMenuProvider } from './components/context-menu';
-import { JsonViewer } from './components/JsonViewer';
+import {GlobalContextMenuProvider} from './components/context-menu';
+import {JsonViewer} from './components/JsonViewer';
 import Loader from './components/loaders/Loader';
 import TestRunningLoader from './components/loaders/TestRunningLoader';
 import Modal from './components/modals/Modal';
@@ -24,9 +24,9 @@ import SetAsVariableModal from './components/modals/SetAsVariableModal';
 import ParametersPanel from './components/panels/ParametersPanel';
 import ResponsePanel from './components/panels/ResponsePanel';
 import Sidebar from './components/sidebar/Sidebar';
-import TestsTable, { ExpandedTestComponent, getTestsTableColumns } from './components/tables/TestsTable';
-import { useCtrlS } from './hooks/useCtrlS';
-import { useReset } from './hooks/useReset';
+import TestsTable, {ExpandedTestComponent, getTestsTableColumns} from './components/tables/TestsTable';
+import {useCtrlS} from './hooks/useCtrlS';
+import {useReset} from './hooks/useReset';
 import useTests from './hooks/useTests';
 import {
   ARRAY_LIST_WITHOUT_PAGINATION_TEST_NAME,
@@ -34,7 +34,7 @@ import {
   LOAD_TEST_NAME,
   RESPONSE_SIZE_CHECK_TEST_NAME,
 } from './tests';
-import { Environment, HttpResponse, TestResult, TestStatus } from './types';
+import {Environment, HttpResponse, TestResult, TestStatus} from './types';
 import {
   createHttpRequest,
   detectDataType,
@@ -50,10 +50,10 @@ import {
   parseHeaders,
   substituteRequestVariables,
 } from './utils';
-import { findRequestById } from './utils/collection';
+import {findRequestById} from './utils/collection';
 
-import { store } from './store';
-import { useAppDispatch, useAppSelector } from './store/hooks';
+import {store} from './store';
+import {useAppDispatch, useAppSelector} from './store/hooks';
 import {
   selectBody,
   selectBodyParameters,
@@ -90,14 +90,14 @@ import {
   selectWssConnected,
   selectWssMessages,
 } from './store/selectors';
-import { collectionRunActions } from './store/slices/collectionRunSlice';
-import { collectionActions, loadCollection } from './store/slices/collectionSlice';
-import { environmentActions, loadEnvironments } from './store/slices/environmentSlice';
-import { requestActions } from './store/slices/requestSlice';
-import { responseActions } from './store/slices/responseSlice';
-import { testActions } from './store/slices/testSlice';
-import { uiActions } from './store/slices/uiSlice';
-import { websocketActions } from './store/slices/websocketSlice';
+import {collectionRunActions} from './store/slices/collectionRunSlice';
+import {collectionActions, loadCollection} from './store/slices/collectionSlice';
+import {environmentActions, loadEnvironments} from './store/slices/environmentSlice';
+import {requestActions} from './store/slices/requestSlice';
+import {responseActions} from './store/slices/responseSlice';
+import {testActions} from './store/slices/testSlice';
+import {uiActions} from './store/slices/uiSlice';
+import {websocketActions} from './store/slices/websocketSlice';
 
 import DarkModeIcon from './assets/icons/dark-mode-icon.svg';
 import LightModeIcon from './assets/icons/light-mode-icon.svg';
@@ -250,11 +250,7 @@ export default function App() {
       }
     };
 
-    const ipcRenderer = window.electronAPI.onWssEvent(messagesListener);
-
-    return () => {
-      ipcRenderer?.off('wss-event', messagesListener);
-    };
+    return window.electronAPI.onWssEvent(messagesListener);
   }, [dispatch]);
 
   // Execute tests when testOptions changes

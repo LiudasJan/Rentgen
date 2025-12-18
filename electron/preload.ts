@@ -6,7 +6,7 @@ interface ElectronApi {
   loadCollection: () => Promise<any>;
   loadEnvironments: () => Promise<any>;
   getAppVersion: () => Promise<string>;
-  onWssEvent: (callback: (data: any) => void) => Electron.IpcRenderer;
+  onWssEvent: (callback: (data: any) => void) => () => void;
   openExternal: (url: string) => void;
   pingHost: (host: string) => Promise<any>;
   saveCollection: (collection: any) => Promise<{ success: boolean; error?: string }>;
@@ -31,7 +31,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   loadCollection: (): Promise<any> => ipcRenderer.invoke('load-collection'),
   loadEnvironments: (): Promise<any> => ipcRenderer.invoke('load-environments'),
   getAppVersion: (): Promise<string> => ipcRenderer.invoke('get-app-version'),
-  onWssEvent: (callback): Electron.IpcRenderer => ipcRenderer.on('wss-event', (_, data) => callback(data)),
+  onWssEvent: (callback): (() => void) => {
+    const handler = (_: Electron.IpcRendererEvent, data: any) => callback(data);
+    ipcRenderer.on('wss-event', handler);
+    return () => {
+      ipcRenderer.off('wss-event', handler);
+    };
+  },
   openExternal: (url: string) => ipcRenderer.send('open-external', url),
   pingHost: (host: string): Promise<any> => ipcRenderer.invoke('ping-host', host),
   saveCollection: (collection: any): Promise<{ success: boolean; error?: string }> =>
