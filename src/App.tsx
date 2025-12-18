@@ -2,6 +2,7 @@ import { Method } from 'axios';
 import cn from 'classnames';
 import { useCallback, useEffect, useMemo } from 'react';
 import ActionsButton from './components/buttons/ActionsButton';
+import { GlobalContextMenuProvider } from './components/context-menu';
 import Button, { ButtonSize, ButtonType } from './components/buttons/Button';
 import { CopyButton } from './components/buttons/CopyButton';
 import { IconButton } from './components/buttons/IconButton';
@@ -19,6 +20,7 @@ import { JsonViewer } from './components/JsonViewer';
 import Loader from './components/loaders/Loader';
 import TestRunningLoader from './components/loaders/TestRunningLoader';
 import Modal from './components/modals/Modal';
+import SetAsVariableModal from './components/modals/SetAsVariableModal';
 import ParametersPanel from './components/panels/ParametersPanel';
 import ResponsePanel from './components/panels/ResponsePanel';
 import Sidebar from './components/sidebar/Sidebar';
@@ -542,7 +544,8 @@ export default function App() {
   useCtrlS(!disabled && saveRequest);
 
   return (
-    <div className="flex">
+    <GlobalContextMenuProvider>
+      <div className="flex">
       <Sidebar />
       <div className="flex-1 min-w-0 flex flex-col gap-4 py-5 px-7 overflow-y-auto">
         {isEditingEnvironment ? (
@@ -1102,7 +1105,9 @@ export default function App() {
           </div>
         </div>
       </Modal>
-    </div>
+      <SetAsVariableModal />
+      </div>
+    </GlobalContextMenuProvider>
   );
 }
 
