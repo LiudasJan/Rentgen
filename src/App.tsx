@@ -26,7 +26,12 @@ import TestsTable, { ExpandedTestComponent, getTestsTableColumns } from './compo
 import { useCtrlS } from './hooks/useCtrlS';
 import { useReset } from './hooks/useReset';
 import useTests from './hooks/useTests';
-import { LARGE_PAYLOAD_TEST_NAME, LOAD_TEST_NAME, RESPONSE_SIZE_CHECK_TEST_NAME } from './tests';
+import {
+  ARRAY_LIST_WITHOUT_PAGINATION_TEST_NAME,
+  LARGE_PAYLOAD_TEST_NAME,
+  LOAD_TEST_NAME,
+  RESPONSE_SIZE_CHECK_TEST_NAME,
+} from './tests';
 import { Environment, HttpResponse, TestResult, TestStatus } from './types';
 import {
   createHttpRequest,
@@ -1004,7 +1009,11 @@ export default function App() {
                     expandableRows
                     expandableRowsComponent={ExpandedTestComponent}
                     expandableRowsComponentProps={{ headers: parseHeaders(headers), protoFile, messageType }}
-                    expandableRowDisabled={(row) => row.name !== RESPONSE_SIZE_CHECK_TEST_NAME || !row.response}
+                    expandableRowDisabled={(row) =>
+                      (row.name !== RESPONSE_SIZE_CHECK_TEST_NAME &&
+                        row.name !== ARRAY_LIST_WITHOUT_PAGINATION_TEST_NAME) ||
+                      !row.response
+                    }
                     expandOnRowClicked
                     data={performanceTests}
                     progressComponent={<TestRunningLoader text="Running Performance Insights..." />}

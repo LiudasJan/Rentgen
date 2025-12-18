@@ -2,6 +2,7 @@ import cn from 'classnames';
 import { HTMLAttributes } from 'react';
 import { twMerge } from 'tailwind-merge';
 import {
+  ARRAY_LIST_WITHOUT_PAGINATION_TEST_NAME,
   LOAD_TEST_NAME,
   MEDIAN_RESPONSE_TIME_TEST_NAME,
   NETWORK_SHARE_TEST_NAME,
@@ -51,6 +52,11 @@ function renderControl({ actual, name, request, response, status, value }: TestR
         });
 
       if (testType === 'performance') {
+        if (name === ARRAY_LIST_WITHOUT_PAGINATION_TEST_NAME)
+          filledTemplate = fillTemplate(template, {
+            CURL: request ? generateCurl(request) : '-',
+          });
+
         if (name === LOAD_TEST_NAME)
           filledTemplate = fillTemplate(template, {
             threads: value && typeof value === 'object' && 'threads' in value ? value.threads : '-',

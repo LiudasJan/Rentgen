@@ -1,5 +1,24 @@
 import { isPhoneNumber } from './validation';
 
+export function containsArray(value: string): boolean {
+  let parsed;
+
+  try {
+    parsed = JSON.parse(value);
+  } catch {
+    return false;
+  }
+
+  function check(value: any): boolean {
+    if (Array.isArray(value)) return true;
+    if (value !== null && typeof value === 'object') return Object.values(value).some(check);
+
+    return false;
+  }
+
+  return check(parsed);
+}
+
 export function isObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }

@@ -4,17 +4,28 @@ import { HttpRequest, HttpResponse, TestOptions, TestResult, TestStatus } from '
 import {
   calculateMedian,
   calculatePercentile,
+  containsArray,
   createTestHttpRequest,
   extractStatusCode,
   getHeaderValue,
+  hasQueryParameters,
 } from '../utils';
-import { BaseTests, createErrorTestResult, createTestResult, NOT_AVAILABLE_TEST } from './BaseTests';
+import {
+  BaseTests,
+  createErrorTestResult,
+  createTestResult,
+  NOT_AVAILABLE_TEST,
+  ORIGINAL_REQUEST_TEST_PARAMETER_NAME,
+} from './BaseTests';
 
+export const ARRAY_LIST_WITHOUT_PAGINATION_TEST_NAME = 'Array List Without Pagination';
 export const LOAD_TEST_NAME = 'Load Test';
 export const MEDIAN_RESPONSE_TIME_TEST_NAME = 'Median Response Time';
 export const NETWORK_SHARE_TEST_NAME = 'Network Share Calculation';
 export const PING_LATENCY_TEST_NAME = 'Ping Latency';
 export const RESPONSE_SIZE_CHECK_TEST_NAME = 'Response Size Check';
+
+const ARRAY_LIST_WITHOUT_PAGINATION_TEST_EXPECTED = 'Supports Pagination / Limit (Query Parameters Present)';
 
 const EXCELLENT_RESPONSE_TIME_MS = 500;
 const ACCEPTABLE_RESPONSE_TIME_MS = 1000;
@@ -36,8 +47,6 @@ const NETWORK_SHARE_WARNING_THRESHOLD = 50;
 const RESPONSE_SIZE_KB = 100;
 
 export class PerformanceInsights extends BaseTests {
-  private url: string;
-
   constructor(
     private testResults: TestResult[],
     protected options: TestOptions,
@@ -45,9 +54,7 @@ export class PerformanceInsights extends BaseTests {
   ) {
     super(options, onTestStart);
 
-    this.url = options.url;
     this.testResults = testResults;
-    this.onTestStart = onTestStart;
   }
 
   public async run(): Promise<TestResult[]> {
@@ -62,10 +69,11 @@ export class PerformanceInsights extends BaseTests {
       pingTestResult,
       this.testNetworkSharing(medianTestResult.responseTime, bestPingTime),
       this.testResponseSize(),
+      this.testArrayListWithoutPagination(),
       ...getManualTests(),
     );
 
-    return results;
+    return results.filter(Boolean);
   }
 
   @Abortable
@@ -97,7 +105,7 @@ export class PerformanceInsights extends BaseTests {
     this.onTestStart?.();
 
     try {
-      const targetDomain = new URL(this.url).hostname;
+      const targetDomain = new URL(this.options.url).hostname;
       const pingResults: number[] = [];
 
       for (let i = 0; i < PING_TEST_COUNT; i++) {
@@ -131,7 +139,7 @@ export class PerformanceInsights extends BaseTests {
     if (pingTime === null)
       return createTestResult(NETWORK_SHARE_TEST_NAME, `< ${NETWORK_SHARE_PASS_THRESHOLD}%`, '', TestStatus.Manual);
 
-    const hostname = new URL(this.url).hostname;
+    const hostname = new URL(this.options.url).hostname;
     const ratioPercent = (pingTime / medianResponseTime) * 100;
 
     let status = TestStatus.Fail;
@@ -177,6 +185,35 @@ export class PerformanceInsights extends BaseTests {
       result?.response,
       result?.responseTime ?? 0,
       size,
+    );
+  }
+
+  @Abortable
+  @Test('Detects GET endpoints that return a JSON array or collection without accepting any query parameters')
+  private testArrayListWithoutPagination(): TestResult | null {
+    this.onTestStart?.();
+
+    if (this.options.method.toUpperCase() !== 'GET') return null;
+
+    const originalRequestTest = this.testResults.find(({ name }) => name === ORIGINAL_REQUEST_TEST_PARAMETER_NAME);
+    if (!originalRequestTest || !originalRequestTest.response || !originalRequestTest.response.body) return null;
+
+    const contentType = getHeaderValue(originalRequestTest.response.headers, 'content-type');
+    if (!contentType || !contentType.toLowerCase().includes('application/json')) return null;
+    if (!containsArray(originalRequestTest.response.body)) return null;
+
+    const containsQueryParameters = hasQueryParameters(this.options.url);
+
+    return createTestResult(
+      ARRAY_LIST_WITHOUT_PAGINATION_TEST_NAME,
+      ARRAY_LIST_WITHOUT_PAGINATION_TEST_EXPECTED,
+      containsQueryParameters
+        ? ARRAY_LIST_WITHOUT_PAGINATION_TEST_EXPECTED
+        : 'Missing Pagination / Limit (No Query Parameters)',
+      containsQueryParameters ? TestStatus.Pass : TestStatus.Warning,
+      originalRequestTest.request,
+      originalRequestTest.response,
+      originalRequestTest.responseTime,
     );
   }
 }

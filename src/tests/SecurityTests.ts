@@ -68,19 +68,7 @@ export class SecurityTests extends BaseTests {
       // Test OPTIONS method and get CRUD results
       const { testResult, allowHeader } = await this.testOptionsMethod();
       securityTests.push(testResult);
-
-      this.onTestStart?.();
-      if (testResult.status === TestStatus.Pass)
-        crudTests.push(...this.getCrudTestResults(allowHeader, headers, url, response));
-      else
-        crudTests.push(
-          createTestResult(
-            CRUD_TEST_NAME,
-            CRUD_TEST_EXPECTED,
-            'OPTIONS Method Handling Failed → CRUD Not Available',
-            TestStatus.Fail,
-          ),
-        );
+      crudTests.push(...this.getCrudTestResults(allowHeader, testResult.status, headers, url, response));
     } catch (error) {
       securityTests.push(createErrorTestResult('Security Test Error', 'Responds', String(error), request));
     }
@@ -502,10 +490,23 @@ export class SecurityTests extends BaseTests {
   @Test('Generates CRUD test results based on Allow header from OPTIONS response')
   private getCrudTestResults(
     allowHeader: string,
+    status: TestStatus,
     headers: Record<string, string>,
     url: string,
     response: HttpResponse,
   ): TestResult[] {
+    this.onTestStart?.();
+
+    if (status !== TestStatus.Pass)
+      return [
+        createTestResult(
+          CRUD_TEST_NAME,
+          CRUD_TEST_EXPECTED,
+          'OPTIONS Method Handling Failed → CRUD Not Available',
+          TestStatus.Fail,
+        ),
+      ];
+
     try {
       const allowedMethods = String(allowHeader || '')
         .split(',')

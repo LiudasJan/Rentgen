@@ -4,6 +4,7 @@ import { extractStatusCode } from '../utils';
 
 export const CLIENT_ERROR_RESPONSE_EXPECTED = '4xx';
 export const NOT_AVAILABLE_TEST = 'Not Available';
+export const ORIGINAL_REQUEST_TEST_PARAMETER_NAME = '[original request]';
 export const SUCCESS_RESPONSE_EXPECTED = '2xx';
 
 export abstract class BaseTests {
