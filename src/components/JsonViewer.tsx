@@ -1,43 +1,103 @@
-import ReactJson, { ReactJsonViewProps } from '@microlink/react-json-view';
-import cn from 'classnames';
+import { useEffect, useRef, useState } from 'react';
+import MonacoEditor, { Monaco, OnMount, loader } from '@monaco-editor/react';
+import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
+import { rentgenLightTheme, rentgenDarkTheme } from './monaco/themes';
 
-interface Props extends Omit<ReactJsonViewProps, 'src'> {
+// Configure Monaco to use local ESM bundle instead of CDN (required for Electron)
+loader.config({ monaco });
+
+interface Props {
   source: string | object;
+  className?: string;
 }
 
-export function JsonViewer({ source, ...otherProps }: Props) {
-  if (!source || typeof source === 'string')
+const getInitialTheme = () => document.documentElement.classList.contains('dark');
+
+export function JsonViewer({ source, className }: Props) {
+  const [isDark, setIsDark] = useState(getInitialTheme);
+  const monacoRef = useRef<Monaco | null>(null);
+
+  useEffect(() => {
+    const checkTheme = () => {
+      const dark = document.documentElement.classList.contains('dark');
+      setIsDark(dark);
+    };
+
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.attributeName === 'class') {
+          checkTheme();
+        }
+      });
+    });
+
+    observer.observe(document.documentElement, { attributes: true });
+    return () => observer.disconnect();
+  }, []);
+
+  if (!source || typeof source === 'string') {
     return (
       <pre className="m-0! text-[#0451a5] dark:text-[#c3612f] whitespace-pre-wrap break-all">{String(source)}</pre>
     );
+  }
+
+  const jsonString = JSON.stringify(source, null, 2);
+  const lineCount = jsonString.split('\n').length;
+  const height = Math.min(Math.max(lineCount * 19 + 16, 100), 600);
+
+  const handleEditorDidMount: OnMount = (editor, monaco) => {
+    monacoRef.current = monaco;
+
+    monaco.editor.defineTheme('rentgen-light', rentgenLightTheme);
+    monaco.editor.defineTheme('rentgen-dark', rentgenDarkTheme);
+
+    monaco.editor.setTheme(isDark ? 'rentgen-dark' : 'rentgen-light');
+  };
+
+  useEffect(() => {
+    if (monacoRef.current) {
+      monacoRef.current.editor.setTheme(isDark ? 'rentgen-dark' : 'rentgen-light');
+    }
+  }, [isDark]);
 
   return (
-    <div
-      className={cn(
-        '[&_.node-ellipsis]:text-xs! [&_.node-ellipsis]:text-black! [&_.node-ellipsis]:-translate-y-0.5! [&_.node-ellipsis+.brace-row]:block!',
-        'dark:[&_.node-ellipsis]:text-white!',
-        '[&_.object-key]:text-[#a31515]! [&_.object-key+span]:ml-0! [&_.object-key+span]:text-black!',
-        'dark:[&_.object-key]:text-[#9cdcfe]! dark:[&_.object-key+span]:text-white!',
-        '[&_.string-value]:text-[#0451a5]!',
-        'dark:[&_.string-value]:text-[#c3612f]!',
-        '[&_.variable-row]:pr-0! [&_.variable-row]:border-l-border/20! [&_.object-key-val]:pr-0! [&_.object-key-val]:border-l-border/20! [&_.variable-value]:pr-0! [&_.variable-value]:border-l-border/20!',
-        '[&_.variable-value>:first-child]:text-[#098658]! [&_.variable-value>:first-child]:bg-transparent! [&_.variable-value>:first-child]:text-[13px]! [&_.variable-value>:first-child]:font-normal!',
-        'dark:[&_.variable-value>:first-child]:text-[#81c09b]!',
-        '[&_.icon-container_svg]:text-black/40!',
-        'dark:[&_.icon-container_svg]:text-white! dark:[&_.icon-container+span+span]:text-white!',
-        'dark:[&_.brace-row>span]:text-white! dark:[&_.brace-row+span]:text-white! dark:[&_.variable-value+span]:text-white!',
-        'dark:[&_.array-group_.object-key-val>span>span]:text-white!',
-        'dark:[&_.array-group-brace]:text-white/80! dark:[&_.object-size]:text-white/50!',
-      )}
-    >
-      <ReactJson
-        displayArrayKey={false}
-        displayDataTypes={false}
-        displayObjectSize={false}
-        enableClipboard={false}
-        name={false}
-        src={source as object}
-        {...otherProps}
+    <div className={className} style={{ height }}>
+      <MonacoEditor
+        height="100%"
+        language="json"
+        value={jsonString}
+        theme={isDark ? 'rentgen-dark' : 'rentgen-light'}
+        onMount={handleEditorDidMount}
+        options={{
+          readOnly: true,
+          minimap: { enabled: false },
+          scrollBeyondLastLine: false,
+          lineNumbers: 'on',
+          folding: true,
+          foldingHighlight: false,
+          stickyScroll: { enabled: false },
+          renderLineHighlight: 'none',
+          overviewRulerLanes: 0,
+          hideCursorInOverviewRuler: true,
+          overviewRulerBorder: false,
+          scrollbar: {
+            vertical: 'auto',
+            horizontal: 'auto',
+            verticalScrollbarSize: 8,
+            horizontalScrollbarSize: 8,
+          },
+          fontSize: 13,
+          fontFamily: 'monospace',
+          wordWrap: 'on',
+          automaticLayout: true,
+          contextmenu: false,
+          selectionHighlight: false,
+          occurrencesHighlight: 'off',
+          renderWhitespace: 'none',
+          guides: {
+            indentation: false,
+          },
+        }}
       />
     </div>
   );

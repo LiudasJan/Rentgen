@@ -132,11 +132,7 @@ export default function SetAsVariableModal() {
 
             <div className="flex flex-col gap-1">
               <label className="text-xs text-text dark:text-dark-text">Value</label>
-              <Input
-                placeholder="Value"
-                value={value}
-                onChange={(e) => setValue(e.target.value)}
-              />
+              <Input placeholder="Value" value={value} onChange={(e) => setValue(e.target.value)} />
             </div>
 
             <div className="flex flex-col gap-1">
@@ -167,9 +163,7 @@ export default function SetAsVariableModal() {
           <Button buttonType={ButtonType.SECONDARY} onClick={handleClose}>
             Cancel
           </Button>
-          {!hasNoEnvironments && (
-            <Button onClick={handleSave}>{showDuplicateWarning ? 'Overwrite' : 'Save'}</Button>
-          )}
+          {!hasNoEnvironments && <Button onClick={handleSave}>{showDuplicateWarning ? 'Overwrite' : 'Save'}</Button>}
         </div>
       </div>
     </Modal>

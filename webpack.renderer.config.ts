@@ -8,6 +8,12 @@ rules.push({
   use: [{ loader: 'style-loader' }, { loader: 'css-loader' }, { loader: 'postcss-loader' }],
 });
 
+// Monaco editor requires TTF fonts
+rules.push({
+  test: /\.ttf$/,
+  type: 'asset/resource',
+});
+
 export const rendererConfig: Configuration = {
   module: {
     rules,
