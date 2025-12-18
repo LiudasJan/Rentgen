@@ -3,6 +3,7 @@ import {
   MEDIAN_RESPONSE_TIME_TEST_NAME,
   NETWORK_SHARE_TEST_NAME,
   PING_LATENCY_TEST_NAME,
+  RESPONSE_SIZE_CHECK_TEST_NAME,
 } from '../PerformanceInsights';
 
 export const performanceTemplates: Record<string, string> = {
@@ -195,4 +196,84 @@ Review performance bottlenecks by:
 - Implementing caching where possible
 - Ensuring proper connection/thread pool sizing
 - Reviewing middleware for synchronous blocking operations`,
+  [RESPONSE_SIZE_CHECK_TEST_NAME]: `BUG REPORT – Excessive JSON Response Size
+
+Summary
+One or more API endpoints return an excessively large JSON response.
+At least one response body exceeds 100 KB, which negatively impacts performance,scalability, and client usability.
+
+This issue was detected during normal API requests (no additional test requests were made).
+
+Why it's a bug:
+Large JSON responses are almost never accidental and usually indicate poor API design.
+
+Excessive response sizes cause multiple real-world problems:
+- Increased latency (especially on mobile or slow networks)
+- Higher memory usage on clients
+- Slower parsing and rendering
+- Unnecessary bandwidth costs
+- Harder caching and pagination strategies
+- Tightly coupled clients that depend on oversized payloads
+
+In most cases, large responses mean:
+- Overfetching (too many fields returned by default)
+- Missing pagination
+- Missing filtering (e.g., fields, includes, excludes)
+- Debug or internal fields leaking into public responses
+- Endpoints doing “data dumps” instead of serving a clear contract
+
+APIs should return only what the client actually needs.
+Anything else is technical debt disguised as convenience.
+
+Reproduction Steps:
+1) Execute the API request normally.
+2) Inspect the response body size.
+3) Observe that the JSON response exceeds the recommended size limit.
+
+No special setup or repeated requests are required.
+
+Request:
+{{CURL}}
+
+Observed:
+- Response Content-Type: application/json
+- Response Body Size: {{RESPONSE_SIZE}} KB
+- Limit: 100 KB
+
+Expected:
+The API should return a JSON response that is:
+- Smaller than 100 KB
+- Focused on the specific use case
+- Optimized for client consumption
+
+If large datasets are required, the API should provide:
+- Pagination
+- Field filtering
+- Explicit expansion parameters
+
+Requirements:
+- JSON responses should not exceed 100 KB by default
+- Large collections must be paginated
+- Clients must be able to request only required fields
+- Internal or debug fields must not be exposed
+- API contracts should favor small, predictable payloads
+
+Severity:
+Medium (Performance, Scalability & API Design)
+
+Fix:
+Consider one or more of the following:
+- Add pagination (limit / offset, cursor-based pagination, etc.)
+- Introduce field filtering (e.g., ?fields=id,name,status)
+- Split large endpoints into smaller, purpose-driven endpoints
+- Remove unused, redundant, or internal fields from responses
+- Avoid returning nested objects by default unless explicitly requested
+
+As a rule of thumb:
+If a response “looks big”, it probably is.
+APIs should be designed to return minimal, intentional data — not everything.
+
+Notes:
+This is a design and quality issue, not a functional failure.
+The endpoint may work correctly, but its current response size creates long-term performance and maintenance risks.`,
 };

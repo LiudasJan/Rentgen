@@ -26,7 +26,7 @@ import TestsTable, { ExpandedTestComponent, getTestsTableColumns } from './compo
 import { useCtrlS } from './hooks/useCtrlS';
 import { useReset } from './hooks/useReset';
 import useTests from './hooks/useTests';
-import { LARGE_PAYLOAD_TEST_NAME, LOAD_TEST_NAME } from './tests';
+import { LARGE_PAYLOAD_TEST_NAME, LOAD_TEST_NAME, RESPONSE_SIZE_CHECK_TEST_NAME } from './tests';
 import { Environment, HttpResponse, TestResult, TestStatus } from './types';
 import {
   createHttpRequest,
@@ -780,7 +780,7 @@ export default function App() {
                   {httpResponse.status}
                 </div>
                 {httpResponse.status !== SENDING && (
-                  <div className="grid grid-cols-2 items-stretch max-h-[450px] py-4 border-t border-border dark:border-dark-body overflow-y-auto">
+                  <div className="grid grid-cols-2 items-stretch max-h-100 py-4 border-t border-border dark:border-dark-body overflow-y-auto">
                     <div className="relative flex-1 px-4">
                       <h4 className="m-0 mb-4">Headers</h4>
                       {httpResponse.headers && (
@@ -1001,6 +1001,11 @@ export default function App() {
                         ),
                       },
                     ]}
+                    expandableRows
+                    expandableRowsComponent={ExpandedTestComponent}
+                    expandableRowsComponentProps={{ headers: parseHeaders(headers), protoFile, messageType }}
+                    expandableRowDisabled={(row) => row.name !== RESPONSE_SIZE_CHECK_TEST_NAME || !row.response}
+                    expandOnRowClicked
                     data={performanceTests}
                     progressComponent={<TestRunningLoader text="Running Performance Insights..." />}
                     progressPending={isPerformanceRunning}

@@ -1,13 +1,20 @@
 import { getResponseStatusTitle, RESPONSE_STATUS } from '../constants/responseStatus';
 import { Abortable, Test } from '../decorators';
 import { HttpRequest, HttpResponse, TestOptions, TestResult, TestStatus } from '../types';
-import { calculateMedian, calculatePercentile, createTestHttpRequest, extractStatusCode } from '../utils';
-import { createErrorTestResult, createTestResult, NOT_AVAILABLE_TEST } from './BaseTests';
+import {
+  calculateMedian,
+  calculatePercentile,
+  createTestHttpRequest,
+  extractStatusCode,
+  getHeaderValue,
+} from '../utils';
+import { BaseTests, createErrorTestResult, createTestResult, NOT_AVAILABLE_TEST } from './BaseTests';
 
 export const LOAD_TEST_NAME = 'Load Test';
 export const MEDIAN_RESPONSE_TIME_TEST_NAME = 'Median Response Time';
 export const NETWORK_SHARE_TEST_NAME = 'Network Share Calculation';
 export const PING_LATENCY_TEST_NAME = 'Ping Latency';
+export const RESPONSE_SIZE_CHECK_TEST_NAME = 'Response Size Check';
 
 const EXCELLENT_RESPONSE_TIME_MS = 500;
 const ACCEPTABLE_RESPONSE_TIME_MS = 1000;
@@ -26,25 +33,21 @@ const NETWORK_SHARE_RESPONSE_TIME_MS = 300;
 const NETWORK_SHARE_PASS_THRESHOLD = 30;
 const NETWORK_SHARE_WARNING_THRESHOLD = 50;
 
-export class PerformanceInsights {
-  private _aborted = false;
+const RESPONSE_SIZE_KB = 100;
 
-  public get aborted() {
-    return this._aborted;
-  }
+export class PerformanceInsights extends BaseTests {
+  private url: string;
 
   constructor(
-    private url: string,
     private testResults: TestResult[],
+    protected options: TestOptions,
     protected onTestStart?: () => void,
   ) {
-    this.url = url;
+    super(options, onTestStart);
+
+    this.url = options.url;
     this.testResults = testResults;
     this.onTestStart = onTestStart;
-  }
-
-  public abort() {
-    this._aborted = true;
   }
 
   public async run(): Promise<TestResult[]> {
@@ -57,7 +60,8 @@ export class PerformanceInsights {
     results.push(
       medianTestResult,
       pingTestResult,
-      this.networkShareTest(medianTestResult.responseTime, bestPingTime),
+      this.testNetworkSharing(medianTestResult.responseTime, bestPingTime),
+      this.testResponseSize(),
       ...getManualTests(),
     );
 
@@ -121,7 +125,7 @@ export class PerformanceInsights {
 
   @Abortable
   @Test('Detects when network latency (ping) consumes a significant portion of the total API response time')
-  private networkShareTest(medianResponseTime: number, pingTime: number | null): TestResult {
+  private testNetworkSharing(medianResponseTime: number, pingTime: number | null): TestResult {
     this.onTestStart?.();
 
     if (pingTime === null)
@@ -146,6 +150,33 @@ export class PerformanceInsights {
       null,
       0,
       { hostname, medianResponseTime, pingTime, ratioPercent },
+    );
+  }
+
+  @Abortable
+  @Test('Checks the size of the response payload from load test results')
+  private testResponseSize(): TestResult {
+    this.onTestStart?.();
+
+    const result = this.testResults.find(({ response }) => {
+      if (!response) return false;
+
+      const contentType = getHeaderValue(response.headers, 'content-type');
+      if (!contentType || !contentType.toLowerCase().includes('application/json')) return false;
+
+      return new TextEncoder().encode(response.body).length > 100 * 1024;
+    });
+    const size = result ? (new TextEncoder().encode(result.response.body).length / 1024).toFixed(2) : null;
+
+    return createTestResult(
+      RESPONSE_SIZE_CHECK_TEST_NAME,
+      `< ${RESPONSE_SIZE_KB} KB`,
+      result ? `${size} KB` : `< ${RESPONSE_SIZE_KB} KB`,
+      result ? TestStatus.Fail : TestStatus.Pass,
+      result?.request,
+      result?.response,
+      result?.responseTime ?? 0,
+      size,
     );
   }
 }
