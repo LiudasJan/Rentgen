@@ -121,12 +121,10 @@ const useTests = () => {
     async (options: TestOptions, testResults: TestResult[] = [], execute = true): Promise<TestResult[]> => {
       if (!execute) return;
 
-      const { url } = options;
-
       dispatch(testActions.setPerformanceRunning(true));
       dispatch(testActions.setPerformanceTests([]));
 
-      performanceInsightsInstance = new PerformanceInsights(url, testResults, incrementCurrentTest);
+      performanceInsightsInstance = new PerformanceInsights(testResults, options, incrementCurrentTest);
       const performanceTestResults = await performanceInsightsInstance.run();
 
       dispatch(testActions.setPerformanceTests(performanceTestResults));

@@ -13,6 +13,14 @@ export function extractQueryParameters(url: string): Record<string, string> {
   }
 }
 
+export function hasQueryParameters(url: string): boolean {
+  try {
+    return new URL(url).searchParams.toString().length > 0;
+  } catch {
+    return false;
+  }
+}
+
 export function uppercaseDomain(url: string): string {
   const parsedUrl = new URL(url);
   const uppercaseHostname = parsedUrl.hostname.toUpperCase();

@@ -1,8 +1,10 @@
 import {
+  ARRAY_LIST_WITHOUT_PAGINATION_TEST_NAME,
   LOAD_TEST_NAME,
   MEDIAN_RESPONSE_TIME_TEST_NAME,
   NETWORK_SHARE_TEST_NAME,
   PING_LATENCY_TEST_NAME,
+  RESPONSE_SIZE_CHECK_TEST_NAME,
 } from '../PerformanceInsights';
 
 export const performanceTemplates: Record<string, string> = {
@@ -195,4 +197,147 @@ Review performance bottlenecks by:
 - Implementing caching where possible
 - Ensuring proper connection/thread pool sizing
 - Reviewing middleware for synchronous blocking operations`,
+  [RESPONSE_SIZE_CHECK_TEST_NAME]: `BUG REPORT – Excessive JSON Response Size
+
+Summary:
+One or more API endpoints return an excessively large JSON response.
+At least one response body exceeds 100 KB, which negatively impacts performance,scalability, and client usability.
+
+This issue was detected during normal API requests (no additional test requests were made).
+
+Why it's a bug:
+Large JSON responses are almost never accidental and usually indicate poor API design.
+
+Excessive response sizes cause multiple real-world problems:
+- Increased latency (especially on mobile or slow networks)
+- Higher memory usage on clients
+- Slower parsing and rendering
+- Unnecessary bandwidth costs
+- Harder caching and pagination strategies
+- Tightly coupled clients that depend on oversized payloads
+
+In most cases, large responses mean:
+- Overfetching (too many fields returned by default)
+- Missing pagination
+- Missing filtering (e.g., fields, includes, excludes)
+- Debug or internal fields leaking into public responses
+- Endpoints doing “data dumps” instead of serving a clear contract
+
+APIs should return only what the client actually needs.
+Anything else is technical debt disguised as convenience.
+
+Reproduction Steps:
+1) Execute the API request normally.
+2) Inspect the response body size.
+3) Observe that the JSON response exceeds the recommended size limit.
+
+No special setup or repeated requests are required.
+
+Request:
+{{CURL}}
+
+Observed:
+- Response Content-Type: application/json
+- Response Body Size: {{RESPONSE_SIZE}} KB
+- Limit: 100 KB
+
+Expected:
+The API should return a JSON response that is:
+- Smaller than 100 KB
+- Focused on the specific use case
+- Optimized for client consumption
+
+If large datasets are required, the API should provide:
+- Pagination
+- Field filtering
+- Explicit expansion parameters
+
+Requirements:
+- JSON responses should not exceed 100 KB by default
+- Large collections must be paginated
+- Clients must be able to request only required fields
+- Internal or debug fields must not be exposed
+- API contracts should favor small, predictable payloads
+
+Severity:
+Medium (Performance, Scalability & API Design)
+
+Suggested Fix:
+Consider one or more of the following:
+- Add pagination (limit / offset, cursor-based pagination, etc.)
+- Introduce field filtering (e.g., ?fields=id,name,status)
+- Split large endpoints into smaller, purpose-driven endpoints
+- Remove unused, redundant, or internal fields from responses
+- Avoid returning nested objects by default unless explicitly requested
+
+As a rule of thumb:
+If a response “looks big”, it probably is.
+APIs should be designed to return minimal, intentional data — not everything.
+
+Notes:
+This is a design and quality issue, not a functional failure.
+The endpoint may work correctly, but its current response size creates long-term performance and maintenance risks.`,
+  [ARRAY_LIST_WITHOUT_PAGINATION_TEST_NAME]: `BUG REPORT – Array List Without Pagination
+
+Summary:
+The API returns a JSON array (list/collection) from a GET endpoint without any query parameters controlling pagination or limits.
+This indicates an unbounded response that will grow over time and eventually cause performance and scalability issues.
+
+Why it's a bug:
+GET endpoints that return collections must always be paginated or limited.
+Returning arrays without server-side limits is a well-known API design flaw.
+
+When pagination or limits are missing:
+- Response size grows linearly with data growth
+- Latency increases over time
+- Memory usage increases on both server and client
+- Mobile and low-bandwidth clients suffer first
+- Clients may unknowingly depend on unbounded behavior
+
+Even if the response is small today, this becomes a production incident as soon as real data accumulates.
+
+This breaks basic expectations:
+- APIs should be predictable in size and performance
+- Collection endpoints must protect themselves from unbounded growth
+- Clients should never receive "all data" by default
+
+Reproduction Steps:
+1) Call a GET endpoint that returns a JSON array.
+2) Ensure the request URL contains no query parameters.
+3) Observe that the response contains a list/collection without pagination.
+
+Request:
+{{CURL}}
+
+Observed:
+- HTTP Method: GET
+- Response Content-Type: application/json
+- Response Body: JSON array (list of objects)
+- Request URL: no query parameters (no limit, page, offset, cursor, etc.)
+
+Expected:
+Collection endpoints should require or support pagination and/or limits, such as:
+- ?limit=50
+- ?page=1
+- ?offset=0
+- ?cursor=abc123
+
+By default, responses should be bounded and predictable in size.
+
+Requirements:
+- GET endpoints returning collections must implement server-side pagination
+- A limit or pagination parameter must be supported
+- Unbounded "return all" behavior must be avoided
+- Default responses should be safe even as data grows
+
+Severity:
+Medium (API Design, Performance & Scalability)
+
+Suggested Fix:
+- Add pagination (limit/offset, page-based, or cursor-based)
+- Enforce a reasonable default limit if no parameters are provided
+- Require explicit query parameters for large result sets
+- Avoid returning full datasets by default
+
+Unpaginated array responses are technical debt that turns into outages later.`,
 };

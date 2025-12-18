@@ -30,11 +30,11 @@ import {
   createErrorTestResult,
   createTestResult,
   determineTestStatus,
+  ORIGINAL_REQUEST_TEST_PARAMETER_NAME,
   SUCCESS_RESPONSE_EXPECTED,
 } from './BaseTests';
 
 const VALUE_NORMALIZATION_TEST_EXPECTED = `${RESPONSE_STATUS.BAD_REQUEST} ${getResponseStatusTitle(RESPONSE_STATUS.BAD_REQUEST)}/${RESPONSE_STATUS.UNPROCESSABLE_ENTITY} ${getResponseStatusTitle(RESPONSE_STATUS.UNPROCESSABLE_ENTITY)} or Trimmed/Normalized Value`;
-const ORIGINAL_REQUEST_TEST_PARAMETER_NAME = '[original request]';
 
 export class DataDrivenTests extends BaseTests {
   public async run(): Promise<TestResult[]> {

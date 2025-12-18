@@ -1,13 +1,31 @@
 import { getResponseStatusTitle, RESPONSE_STATUS } from '../constants/responseStatus';
 import { Abortable, Test } from '../decorators';
 import { HttpRequest, HttpResponse, TestOptions, TestResult, TestStatus } from '../types';
-import { calculateMedian, calculatePercentile, createTestHttpRequest, extractStatusCode } from '../utils';
-import { createErrorTestResult, createTestResult, NOT_AVAILABLE_TEST } from './BaseTests';
+import {
+  calculateMedian,
+  calculatePercentile,
+  containsArray,
+  createTestHttpRequest,
+  extractStatusCode,
+  getHeaderValue,
+  hasQueryParameters,
+} from '../utils';
+import {
+  BaseTests,
+  createErrorTestResult,
+  createTestResult,
+  NOT_AVAILABLE_TEST,
+  ORIGINAL_REQUEST_TEST_PARAMETER_NAME,
+} from './BaseTests';
 
+export const ARRAY_LIST_WITHOUT_PAGINATION_TEST_NAME = 'Array List Without Pagination';
 export const LOAD_TEST_NAME = 'Load Test';
 export const MEDIAN_RESPONSE_TIME_TEST_NAME = 'Median Response Time';
 export const NETWORK_SHARE_TEST_NAME = 'Network Share Calculation';
 export const PING_LATENCY_TEST_NAME = 'Ping Latency';
+export const RESPONSE_SIZE_CHECK_TEST_NAME = 'Response Size Check';
+
+const ARRAY_LIST_WITHOUT_PAGINATION_TEST_EXPECTED = 'Supports Pagination / Limit (Query Parameters Present)';
 
 const EXCELLENT_RESPONSE_TIME_MS = 500;
 const ACCEPTABLE_RESPONSE_TIME_MS = 1000;
@@ -26,25 +44,17 @@ const NETWORK_SHARE_RESPONSE_TIME_MS = 300;
 const NETWORK_SHARE_PASS_THRESHOLD = 30;
 const NETWORK_SHARE_WARNING_THRESHOLD = 50;
 
-export class PerformanceInsights {
-  private _aborted = false;
+const RESPONSE_SIZE_KB = 100;
 
-  public get aborted() {
-    return this._aborted;
-  }
-
+export class PerformanceInsights extends BaseTests {
   constructor(
-    private url: string,
     private testResults: TestResult[],
+    protected options: TestOptions,
     protected onTestStart?: () => void,
   ) {
-    this.url = url;
-    this.testResults = testResults;
-    this.onTestStart = onTestStart;
-  }
+    super(options, onTestStart);
 
-  public abort() {
-    this._aborted = true;
+    this.testResults = testResults;
   }
 
   public async run(): Promise<TestResult[]> {
@@ -57,11 +67,13 @@ export class PerformanceInsights {
     results.push(
       medianTestResult,
       pingTestResult,
-      this.networkShareTest(medianTestResult.responseTime, bestPingTime),
+      this.testNetworkSharing(medianTestResult.responseTime, bestPingTime),
+      this.testResponseSize(),
+      this.testArrayListWithoutPagination(),
       ...getManualTests(),
     );
 
-    return results;
+    return results.filter(Boolean);
   }
 
   @Abortable
@@ -93,7 +105,7 @@ export class PerformanceInsights {
     this.onTestStart?.();
 
     try {
-      const targetDomain = new URL(this.url).hostname;
+      const targetDomain = new URL(this.options.url).hostname;
       const pingResults: number[] = [];
 
       for (let i = 0; i < PING_TEST_COUNT; i++) {
@@ -121,13 +133,13 @@ export class PerformanceInsights {
 
   @Abortable
   @Test('Detects when network latency (ping) consumes a significant portion of the total API response time')
-  private networkShareTest(medianResponseTime: number, pingTime: number | null): TestResult {
+  private testNetworkSharing(medianResponseTime: number, pingTime: number | null): TestResult {
     this.onTestStart?.();
 
     if (pingTime === null)
       return createTestResult(NETWORK_SHARE_TEST_NAME, `< ${NETWORK_SHARE_PASS_THRESHOLD}%`, '', TestStatus.Manual);
 
-    const hostname = new URL(this.url).hostname;
+    const hostname = new URL(this.options.url).hostname;
     const ratioPercent = (pingTime / medianResponseTime) * 100;
 
     let status = TestStatus.Fail;
@@ -146,6 +158,62 @@ export class PerformanceInsights {
       null,
       0,
       { hostname, medianResponseTime, pingTime, ratioPercent },
+    );
+  }
+
+  @Abortable
+  @Test('Checks the size of the response payload from load test results')
+  private testResponseSize(): TestResult {
+    this.onTestStart?.();
+
+    const result = this.testResults.find(({ response }) => {
+      if (!response) return false;
+
+      const contentType = getHeaderValue(response.headers, 'content-type');
+      if (!contentType || !contentType.toLowerCase().includes('application/json')) return false;
+
+      return new TextEncoder().encode(response.body).length > 100 * 1024;
+    });
+    const size = result ? (new TextEncoder().encode(result.response.body).length / 1024).toFixed(2) : null;
+
+    return createTestResult(
+      RESPONSE_SIZE_CHECK_TEST_NAME,
+      `< ${RESPONSE_SIZE_KB} KB`,
+      result ? `${size} KB` : `< ${RESPONSE_SIZE_KB} KB`,
+      result ? TestStatus.Fail : TestStatus.Pass,
+      result?.request,
+      result?.response,
+      result?.responseTime ?? 0,
+      size,
+    );
+  }
+
+  @Abortable
+  @Test('Detects GET endpoints that return a JSON array or collection without accepting any query parameters')
+  private testArrayListWithoutPagination(): TestResult | null {
+    this.onTestStart?.();
+
+    if (this.options.method.toUpperCase() !== 'GET') return null;
+
+    const originalRequestTest = this.testResults.find(({ name }) => name === ORIGINAL_REQUEST_TEST_PARAMETER_NAME);
+    if (!originalRequestTest || !originalRequestTest.response || !originalRequestTest.response.body) return null;
+
+    const contentType = getHeaderValue(originalRequestTest.response.headers, 'content-type');
+    if (!contentType || !contentType.toLowerCase().includes('application/json')) return null;
+    if (!containsArray(originalRequestTest.response.body)) return null;
+
+    const containsQueryParameters = hasQueryParameters(this.options.url);
+
+    return createTestResult(
+      ARRAY_LIST_WITHOUT_PAGINATION_TEST_NAME,
+      ARRAY_LIST_WITHOUT_PAGINATION_TEST_EXPECTED,
+      containsQueryParameters
+        ? ARRAY_LIST_WITHOUT_PAGINATION_TEST_EXPECTED
+        : 'Missing Pagination / Limit (No Query Parameters)',
+      containsQueryParameters ? TestStatus.Pass : TestStatus.Warning,
+      originalRequestTest.request,
+      originalRequestTest.response,
+      originalRequestTest.responseTime,
     );
   }
 }

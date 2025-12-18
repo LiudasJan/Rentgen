@@ -53,6 +53,7 @@ export default function TestsTable({ columns, data, className, ...otherProps }: 
           style: {
             '&:hover': { backgroundColor: 'transparent !important' },
             '&:focus': { backgroundColor: 'transparent !important' },
+            '&:disabled': { display: 'none' },
           },
         },
       }}
