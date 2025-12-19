@@ -1,4 +1,4 @@
-import { PropsWithChildren, useCallback, useEffect, useMemo, useState } from 'react';
+import { createContext, PropsWithChildren, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useAppDispatch } from '../../store/hooks';
 import { uiActions } from '../../store/slices/uiSlice';
 import ContextMenu from './ContextMenu';
@@ -9,6 +9,10 @@ interface MenuState {
   position: { x: number; y: number };
   selectedText: string;
 }
+
+const ContextMenuContext = createContext<MenuState | undefined>(undefined);
+
+export const useContextMenu = () => useContext(ContextMenuContext);
 
 export default function GlobalContextMenuProvider({ children }: PropsWithChildren) {
   const dispatch = useAppDispatch();
@@ -92,7 +96,7 @@ export default function GlobalContextMenuProvider({ children }: PropsWithChildre
   }, []);
 
   return (
-    <>
+    <ContextMenuContext.Provider value={{ ...menuState }}>
       {children}
       <ContextMenu isOpen={menuState.isOpen} position={menuState.position} onClose={closeMenu}>
         {htmlElement && isInputOrTextarea(htmlElement) && (
@@ -102,7 +106,7 @@ export default function GlobalContextMenuProvider({ children }: PropsWithChildre
         {htmlElement && isInputOrTextarea(htmlElement) && <ContextMenuItem label="Paste" onClick={handlePaste} />}
         <ContextMenuItem label="Set as Variable" onClick={handleSetAsVariable} divider />
       </ContextMenu>
-    </>
+    </ContextMenuContext.Provider>
   );
 }
 

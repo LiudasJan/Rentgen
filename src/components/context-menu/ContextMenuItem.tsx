@@ -8,7 +8,7 @@ interface Props {
   onClick: (event: MouseEvent) => void;
 }
 
-export default function ContextMenuItem({ label, onClick, disabled = false, divider = false }: Props) {
+export default function ContextMenuItem({ label, disabled = false, divider = false, onClick }: Props) {
   return (
     <>
       {divider && <div className="my-1 border-t border-border dark:border-dark-body" />}
