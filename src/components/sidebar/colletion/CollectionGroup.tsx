@@ -8,6 +8,7 @@ import { selectCollectionRunResults, selectRunningFolderId, selectSelectedFolder
 import { collectionActions } from '../../../store/slices/collectionSlice';
 import { uiActions } from '../../../store/slices/uiSlice';
 import { SidebarFolderData } from '../../../utils/collection';
+import { useContextMenu } from '../../context-menu/GlobalContextMenuProvider';
 import CollectionItem from './CollectionItem';
 
 import ChevronIcon from '../../../assets/icons/chevron-icon.svg';
@@ -39,6 +40,7 @@ export default function CollectionGroup({
   onEditingNameChange,
 }: Props) {
   const dispatch = useAppDispatch();
+  const { isOpen } = useContextMenu();
   const selectedFolderId = useAppSelector(selectSelectedFolderId);
   const runningFolderId = useAppSelector(selectRunningFolderId);
   const { runFolder, cancelRun } = useCollectionRunner();
@@ -148,7 +150,7 @@ export default function CollectionGroup({
               value={editingName}
               onChange={(e) => onEditingNameChange(e.target.value)}
               onKeyDown={handleKeyDown}
-              onBlur={() => onSaveEdit(folder.id, editingName)}
+              onBlur={() => !isOpen && onSaveEdit(folder.id, editingName)}
               onClick={(e) => e.stopPropagation()}
               onPointerDown={(e) => e.stopPropagation()}
               className="flex-1 text-xs bg-transparent border border-border dark:border-dark-input dark:text-dark-text rounded px-1 py-0.5 outline-none focus:border-button-primary"

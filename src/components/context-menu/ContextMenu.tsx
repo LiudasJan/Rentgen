@@ -1,18 +1,24 @@
 import cn from 'classnames';
-import { ReactNode, useEffect, useState } from 'react';
+import { PropsWithChildren, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import useClickOutside from '../../hooks/useClickOutside';
 
-interface Props {
+interface Props extends PropsWithChildren {
   isOpen: boolean;
   position: { x: number; y: number };
   onClose: () => void;
-  children: ReactNode;
 }
 
-export default function ContextMenu({ isOpen, position, onClose, children }: Props) {
-  const menuRef = useClickOutside<HTMLDivElement>(onClose);
+export default function ContextMenu({ children, isOpen, position, onClose }: Props) {
+  const menuRef = useClickOutside<HTMLDivElement>(onClose, true);
   const [adjustedPosition, setAdjustedPosition] = useState(position);
+  const [isVisible, setIsVisible] = useState(false);
+
+  // Delay to allow DOM mount before triggering CSS transition
+  useEffect(() => {
+    const visibilityTimeout = setTimeout(() => setIsVisible(isOpen));
+    return () => clearTimeout(visibilityTimeout);
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -58,8 +64,12 @@ export default function ContextMenu({ isOpen, position, onClose, children }: Pro
     <div
       ref={menuRef}
       className={cn(
-        'fixed py-1 min-w-40 bg-white rounded-md shadow-lg border border-border z-100',
-        'dark:bg-dark-input dark:border-dark-border',
+        'fixed py-1 min-w-40 bg-white rounded-md shadow-lg border border-border',
+        'dark:bg-dark-input dark:border-dark-border transition-opacity',
+        {
+          'invisible opacity-0 -z-100': !isVisible,
+          'visible opacity-100 z-100': isVisible,
+        },
       )}
       style={{ left: adjustedPosition.x, top: adjustedPosition.y }}
     >

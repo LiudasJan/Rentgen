@@ -1,16 +1,17 @@
 import cn from 'classnames';
+import { MouseEvent } from 'react';
 
 interface Props {
   label: string;
-  onClick: () => void;
   disabled?: boolean;
   divider?: boolean;
+  onClick: (event: MouseEvent) => void;
 }
 
-export default function ContextMenuItem({ label, onClick, disabled = false, divider = false }: Props) {
+export default function ContextMenuItem({ label, disabled = false, divider = false, onClick }: Props) {
   return (
     <>
-      {divider && <div className="my-1 border-t border-border dark:border-dark-border" />}
+      {divider && <div className="my-1 border-t border-border dark:border-dark-body" />}
       <button
         type="button"
         className={cn(
@@ -21,9 +22,7 @@ export default function ContextMenuItem({ label, onClick, disabled = false, divi
             'opacity-50 cursor-not-allowed hover:bg-transparent dark:hover:bg-transparent': disabled,
           },
         )}
-        onClick={() => {
-          if (!disabled) onClick();
-        }}
+        onClick={(event: MouseEvent) => !disabled && onClick(event)}
         disabled={disabled}
       >
         {label}

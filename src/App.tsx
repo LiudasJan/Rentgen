@@ -2,7 +2,6 @@ import { Method } from 'axios';
 import cn from 'classnames';
 import { useCallback, useEffect, useMemo } from 'react';
 import ActionsButton from './components/buttons/ActionsButton';
-import { GlobalContextMenuProvider } from './components/context-menu';
 import Button, { ButtonSize, ButtonType } from './components/buttons/Button';
 import { CopyButton } from './components/buttons/CopyButton';
 import { IconButton } from './components/buttons/IconButton';
@@ -544,8 +543,7 @@ export default function App() {
   useCtrlS(!disabled && saveRequest);
 
   return (
-    <GlobalContextMenuProvider>
-      <div className="flex">
+    <div className="flex">
       <Sidebar />
       <div className="flex-1 min-w-0 flex flex-col gap-4 py-5 px-7 overflow-y-auto">
         {isEditingEnvironment ? (
@@ -1106,8 +1104,7 @@ export default function App() {
         </div>
       </Modal>
       <SetAsVariableModal />
-      </div>
-    </GlobalContextMenuProvider>
+    </div>
   );
 }
 
