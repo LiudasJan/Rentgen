@@ -37,8 +37,60 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Import Apple Developer ID cert (macOS)
+        if: startsWith(matrix.os, 'macos')
+        env:
+          MAC_CERT_P12_BASE64: ${{ secrets.MAC_CERT_P12_BASE64 }}
+          MAC_CERT_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
+        run: |
+          echo "$MAC_CERT_P12_BASE64" | base64 --decode > certificate.p12
+
+          security create-keychain -p "temp_pass" build.keychain
+          security set-keychain-settings -lut 21600 build.keychain
+          security unlock-keychain -p "temp_pass" build.keychain
+
+          security import certificate.p12 -k build.keychain -P "$MAC_CERT_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+          security list-keychains -d user -s build.keychain
+          security default-keychain -s build.keychain
+
+          security set-key-partition-list -S apple-tool:,apple: -s -k "temp_pass" build.keychain
+
       - name: Build installers
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: npm run make -- --arch=${{ matrix.arch }}
+
+      - name: Notarize + staple DMG (macOS)
+        if: startsWith(matrix.os, 'macos')
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -e
+
+          echo "Looking for DMG..."
+          DMG_PATH=$(find out/make -name "*.dmg" -print -quit)
+          if [ -z "$DMG_PATH" ]; then
+            echo "No DMG found under out/make"
+            find out/make -maxdepth 4 -type f | head -50
+            exit 1
+          fi
+
+          echo "Submitting for notarization: $DMG_PATH"
+          xcrun notarytool submit "$DMG_PATH" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" \
+            --wait
+
+          echo "Stapling notarization ticket..."
+          xcrun stapler staple "$DMG_PATH"
+
+          echo "Done. Verifying..."
+          spctl -a -vv "$DMG_PATH" || true
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
