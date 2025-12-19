@@ -56,10 +56,6 @@ jobs:
           security default-keychain -s build.keychain
 
       - name: Build installers
-        env:
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: npm run make -- --arch=${{ matrix.arch }}
 
       - name: Notarize + staple DMG (macOS)
@@ -79,18 +75,32 @@ jobs:
             exit 1
           fi
 
-          echo "Submitting for notarization: $DMG_PATH"
-          xcrun notarytool submit "$DMG_PATH" \
+          echo "Found DMG: $DMG_PATH"
+          ls -lh "$DMG_PATH"
+
+          echo "Submitting for notarization..."
+          SUBMISSION_ID=$(xcrun notarytool submit "$DMG_PATH" \
             --apple-id "$APPLE_ID" \
             --password "$APPLE_APP_SPECIFIC_PASSWORD" \
             --team-id "$APPLE_TEAM_ID" \
-            --wait
+            --output-format json \
+            --wait | jq -r '.id')
+
+          echo "Submission ID: $SUBMISSION_ID"
+
+          # Get detailed logs if notarization failed
+          echo "Getting notarization log..."
+          xcrun notarytool log "$SUBMISSION_ID" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" || true
 
           echo "Stapling notarization ticket..."
           xcrun stapler staple "$DMG_PATH"
 
-          echo "Done. Verifying..."
-          spctl -a -vv "$DMG_PATH" || true
+          echo "Verifying notarization..."
+          xcrun stapler validate "$DMG_PATH"
+          spctl -a -vv "$DMG_PATH"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
