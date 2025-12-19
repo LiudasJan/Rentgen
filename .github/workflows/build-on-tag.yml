@@ -368,7 +368,7 @@ jobs:
             artifacts/**/*.deb
             artifacts/**/*.rpm
           fail_on_unmatched_files: false
-          draft: false
+          draft: true
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
