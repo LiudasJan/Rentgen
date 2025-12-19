@@ -1,13 +1,18 @@
 import { useEffect, useRef } from 'react';
 import { useContextMenu } from '../components/context-menu/GlobalContextMenuProvider';
 
-const useClickOutside = <T extends HTMLElement>(onClickOutside?: () => void) => {
+const useClickOutside = <T extends HTMLElement>(onClickOutside?: () => void, ignoreContextMenu = false) => {
   const { isOpen } = useContextMenu();
   const element = useRef<T>(null);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (!isOpen && onClickOutside && element.current && !element.current.contains(event.target as T))
+      if (
+        (ignoreContextMenu || !isOpen) &&
+        onClickOutside &&
+        element.current &&
+        !element.current.contains(event.target as T)
+      )
         onClickOutside();
     }
 
@@ -16,7 +21,7 @@ const useClickOutside = <T extends HTMLElement>(onClickOutside?: () => void) => 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isOpen, onClickOutside]);
+  }, [isOpen, ignoreContextMenu, onClickOutside]);
 
   return element;
 };

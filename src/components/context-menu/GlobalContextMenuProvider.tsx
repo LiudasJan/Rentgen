@@ -38,6 +38,7 @@ export default function GlobalContextMenuProvider({ children }: PropsWithChildre
     const start = htmlElement.selectionStart ?? 0;
     const end = htmlElement.selectionEnd ?? 0;
 
+    htmlElement.focus();
     htmlElement.setRangeText('', start, end, 'start');
     htmlElement.dispatchEvent(new Event('input', { bubbles: true }));
 
@@ -59,6 +60,7 @@ export default function GlobalContextMenuProvider({ children }: PropsWithChildre
     const start = htmlElement.selectionStart ?? 0;
     const end = htmlElement.selectionEnd ?? 0;
 
+    htmlElement.focus();
     htmlElement.setRangeText(clipboardText, start, end, 'end');
     htmlElement.dispatchEvent(new Event('input', { bubbles: true }));
 

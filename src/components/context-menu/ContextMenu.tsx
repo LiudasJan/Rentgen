@@ -10,8 +10,15 @@ interface Props extends PropsWithChildren {
 }
 
 export default function ContextMenu({ children, isOpen, position, onClose }: Props) {
-  const menuRef = useClickOutside<HTMLDivElement>(onClose);
+  const menuRef = useClickOutside<HTMLDivElement>(onClose, true);
   const [adjustedPosition, setAdjustedPosition] = useState(position);
+  const [isVisible, setIsVisible] = useState(false);
+
+  // Delay to allow DOM mount before triggering CSS transition
+  useEffect(() => {
+    const visibilityTimeout = setTimeout(() => setIsVisible(isOpen));
+    return () => clearTimeout(visibilityTimeout);
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -51,6 +58,8 @@ export default function ContextMenu({ children, isOpen, position, onClose }: Pro
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
+  if (!isOpen) return null;
+
   return createPortal(
     <div
       ref={menuRef}
@@ -58,8 +67,8 @@ export default function ContextMenu({ children, isOpen, position, onClose }: Pro
         'fixed py-1 min-w-40 bg-white rounded-md shadow-lg border border-border',
         'dark:bg-dark-input dark:border-dark-border transition-opacity',
         {
-          'invisible opacity-0 -z-100': !isOpen,
-          'visible opacity-100 z-100': isOpen,
+          'invisible opacity-0 -z-100': !isVisible,
+          'visible opacity-100 z-100': isVisible,
         },
       )}
       style={{ left: adjustedPosition.x, top: adjustedPosition.y }}
