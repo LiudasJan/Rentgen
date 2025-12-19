@@ -47,7 +47,7 @@ export default function ActionsButton({
             />
           </Button>
           {openActions && (
-            <div className="absolute top-full right-0 w-full bg-white dark:bg-dark-input rounded-md shadow-md z-50">
+            <div className="absolute top-full right-0 w-full bg-white dark:bg-dark-input rounded-md shadow-lg z-50">
               {actions.map(({ label, onClick }, index) => (
                 <div
                   key={index}

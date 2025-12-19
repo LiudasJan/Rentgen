@@ -10,7 +10,7 @@ interface Props {
 export default function ContextMenuItem({ label, onClick, disabled = false, divider = false }: Props) {
   return (
     <>
-      {divider && <div className="my-1 border-t border-border dark:border-dark-border" />}
+      {divider && <div className="my-1 border-t border-border dark:border-dark-body" />}
       <button
         type="button"
         className={cn(
