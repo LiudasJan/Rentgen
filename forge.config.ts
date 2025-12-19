@@ -17,22 +17,21 @@ const config: ForgeConfig = {
     asar: true,
     executableName: 'Rentgen',
     icon: './assets/icons/rentgen',
-
-    // --- MACOS ---
     osxSign: {
-      'hardened-runtime': true,
-      'gatekeeper-assess': false,
-      entitlements: path.join(__dirname, 'entitlements.mac.plist'),
-      'entitlements-inherit': path.join(__dirname, 'entitlements.mac.plist'),
-    } as any,
-    // macOS notarization
+      optionsForFile: () => {
+        return {
+          hardenedRuntime: true,
+          gatekeeperAssess: false,
+          entitlements: path.join(__dirname, 'entitlements.mac.plist'),
+          entitlementsInherit: path.join(__dirname, 'entitlements.mac.plist'),
+        };
+      },
+    },
     osxNotarize: {
-      tool: 'notarytool',
-      appleId: process.env.APPLE_ID,
-      appleIdPassword: process.env.APPLE_APP_SPECIFIC_PASSWORD,
-      teamId: process.env.APPLE_TEAM_ID,
-    } as any,
-    // --- MACOS ---
+      appleId: process.env.APPLE_ID || '',
+      appleIdPassword: process.env.APPLE_APP_SPECIFIC_PASSWORD || '',
+      teamId: process.env.APPLE_TEAM_ID || '',
+    },
   },
   rebuildConfig: {},
   makers: [
@@ -42,7 +41,7 @@ const config: ForgeConfig = {
     }),
     new MakerDMG({
       icon: './assets/icons/rentgen.icns',
-      format: 'ULFO', // Geresnis suspaudimas
+      format: 'ULFO',
     }),
     new MakerRpm({
       options: {
