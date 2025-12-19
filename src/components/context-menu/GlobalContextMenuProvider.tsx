@@ -81,12 +81,12 @@ export default function GlobalContextMenuProvider({ children }: PropsWithChildre
   useEffect(() => {
     const handleContextMenu = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
-      setHtmlElement(target);
-
       const selectedText = getSelectedText();
+
       if (!selectedText && !isInputOrTextarea(target)) return;
 
       event.preventDefault();
+      setHtmlElement(target);
       setMenuState({
         isOpen: true,
         position: { x: event.clientX, y: event.clientY },
