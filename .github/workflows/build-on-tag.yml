@@ -40,16 +40,16 @@ jobs:
       - name: Import Apple Developer ID cert (macOS)
         if: startsWith(matrix.os, 'macos')
         env:
-          MAC_CERT_P12_BASE64: ${{ secrets.MAC_CERT_P12_BASE64 }}
-          MAC_CERT_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
+          MACOS_CERT_P12_B64: ${{ secrets.MACOS_CERT_P12_B64 }}
+          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
         run: |
-          echo "$MAC_CERT_P12_BASE64" | base64 --decode > certificate.p12
+          echo "$MACOS_CERT_P12_B64" | base64 --decode > certificate.p12
 
           security create-keychain -p "temp_pass" build.keychain
           security set-keychain-settings -lut 21600 build.keychain
           security unlock-keychain -p "temp_pass" build.keychain
 
-          security import certificate.p12 -k build.keychain -P "$MAC_CERT_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+          security import certificate.p12 -k build.keychain -P "$MACOS_CERT_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
           security list-keychains -d user -s build.keychain
           security default-keychain -s build.keychain
 
