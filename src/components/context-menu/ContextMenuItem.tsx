@@ -16,7 +16,7 @@ export default function ContextMenuItem({ label, disabled = false, divider = fal
         type="button"
         className={cn(
           'w-full px-3 py-1.5 text-left text-xs cursor-pointer border-none bg-transparent',
-          'hover:bg-gray-100 dark:hover:bg-dark-button-secondary',
+          'hover:bg-select-hover dark:hover:bg-dark-button-secondary',
           'text-text dark:text-dark-text',
           {
             'opacity-50 cursor-not-allowed hover:bg-transparent dark:hover:bg-transparent': disabled,
