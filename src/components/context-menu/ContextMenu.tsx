@@ -52,14 +52,16 @@ export default function ContextMenu({ isOpen, position, onClose, children }: Pro
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
-
   return createPortal(
     <div
       ref={menuRef}
       className={cn(
-        'fixed py-1 min-w-40 bg-white rounded-md shadow-lg border border-border z-100',
-        'dark:bg-dark-input dark:border-dark-border',
+        'fixed py-1 min-w-40 bg-white rounded-md shadow-lg border border-border',
+        'dark:bg-dark-input dark:border-dark-border transition-opacity',
+        {
+          'invisible opacity-0 -z-100': !isOpen,
+          'visible opacity-100 z-100': isOpen,
+        },
       )}
       style={{ left: adjustedPosition.x, top: adjustedPosition.y }}
     >
