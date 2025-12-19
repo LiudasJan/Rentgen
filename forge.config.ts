@@ -7,6 +7,7 @@ import { AutoUnpackNativesPlugin } from '@electron-forge/plugin-auto-unpack-nati
 import { WebpackPlugin } from '@electron-forge/plugin-webpack';
 import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
+import path from 'path';
 
 import { mainConfig } from './webpack.main.config';
 import { rendererConfig } from './webpack.renderer.config';
@@ -16,6 +17,22 @@ const config: ForgeConfig = {
     asar: true,
     executableName: 'Rentgen',
     icon: './assets/icons/rentgen',
+
+    // --- MACOS ---
+    osxSign: {
+      'hardened-runtime': true,
+      'gatekeeper-assess': false,
+      entitlements: path.join(__dirname, 'entitlements.mac.plist'),
+      'entitlements-inherit': path.join(__dirname, 'entitlements.mac.plist'),
+    } as any,
+    // macOS notarization
+    osxNotarize: {
+      tool: 'notarytool',
+      appleId: process.env.APPLE_ID,
+      appleIdPassword: process.env.APPLE_APP_SPECIFIC_PASSWORD,
+      teamId: process.env.APPLE_TEAM_ID,
+    } as any,
+    // --- MACOS ---
   },
   rebuildConfig: {},
   makers: [
@@ -23,7 +40,10 @@ const config: ForgeConfig = {
       setupIcon: './assets/icons/rentgen.ico',
       iconUrl: `file://${__dirname}/assets/icons/rentgen.ico`,
     }),
-    new MakerDMG({ icon: './assets/icons/rentgen.icns' }),
+    new MakerDMG({
+      icon: './assets/icons/rentgen.icns',
+      format: 'ULFO', // Geresnis suspaudimas
+    }),
     new MakerRpm({
       options: {
         bin: 'Rentgen',
