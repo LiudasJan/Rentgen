@@ -106,7 +106,7 @@ export default function GlobalContextMenuProvider({ children }: PropsWithChildre
         )}
         <ContextMenuItem label="Copy" onClick={handleCopy} disabled={!hasSelection} />
         {htmlElement && isInputOrTextarea(htmlElement) && <ContextMenuItem label="Paste" onClick={handlePaste} />}
-        <ContextMenuItem label="Set as Variable" onClick={handleSetAsVariable} divider />
+        <ContextMenuItem label="Set as Variable" onClick={handleSetAsVariable} disabled={!hasSelection} divider />
       </ContextMenu>
     </ContextMenuContext.Provider>
   );
