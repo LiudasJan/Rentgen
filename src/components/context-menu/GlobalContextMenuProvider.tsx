@@ -34,12 +34,10 @@ export default function GlobalContextMenuProvider({ children }: PropsWithChildre
     const start = htmlElement.selectionStart ?? 0;
     const end = htmlElement.selectionEnd ?? 0;
     const value = htmlElement.value.substring(0, start) + htmlElement.value.substring(end);
-    const nativeTextAreaValueSetter = Object.getOwnPropertyDescriptor(
-      window.HTMLTextAreaElement.prototype,
-      'value',
-    )?.set;
-    if (nativeTextAreaValueSetter) {
-      nativeTextAreaValueSetter.call(htmlElement, value);
+    const proto = htmlElement instanceof HTMLInputElement ? HTMLInputElement.prototype : HTMLTextAreaElement.prototype;
+    const valueSetter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+    if (valueSetter) {
+      valueSetter.call(htmlElement, value);
       htmlElement.dispatchEvent(new Event('input', { bubbles: true }));
     }
 
@@ -61,12 +59,10 @@ export default function GlobalContextMenuProvider({ children }: PropsWithChildre
     const start = htmlElement.selectionStart ?? 0;
     const end = htmlElement.selectionEnd ?? 0;
     const value = htmlElement.value.substring(0, start) + clipboardText + htmlElement.value.substring(end);
-    const nativeTextAreaValueSetter = Object.getOwnPropertyDescriptor(
-      window.HTMLTextAreaElement.prototype,
-      'value',
-    )?.set;
-    if (nativeTextAreaValueSetter) {
-      nativeTextAreaValueSetter.call(htmlElement, value);
+    const proto = htmlElement instanceof HTMLInputElement ? HTMLInputElement.prototype : HTMLTextAreaElement.prototype;
+    const valueSetter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+    if (valueSetter) {
+      valueSetter.call(htmlElement, value);
       htmlElement.dispatchEvent(new Event('input', { bubbles: true }));
     }
 
