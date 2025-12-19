@@ -1,16 +1,15 @@
 import cn from 'classnames';
-import { ReactNode, useEffect, useState } from 'react';
+import { PropsWithChildren, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import useClickOutside from '../../hooks/useClickOutside';
 
-interface Props {
+interface Props extends PropsWithChildren {
   isOpen: boolean;
   position: { x: number; y: number };
   onClose: () => void;
-  children: ReactNode;
 }
 
-export default function ContextMenu({ isOpen, position, onClose, children }: Props) {
+export default function ContextMenu({ children, isOpen, position, onClose }: Props) {
   const menuRef = useClickOutside<HTMLDivElement>(onClose);
   const [adjustedPosition, setAdjustedPosition] = useState(position);
 

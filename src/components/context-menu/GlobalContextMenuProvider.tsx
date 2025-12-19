@@ -33,13 +33,9 @@ export default function GlobalContextMenuProvider({ children }: PropsWithChildre
 
     const start = htmlElement.selectionStart ?? 0;
     const end = htmlElement.selectionEnd ?? 0;
-    const value = htmlElement.value.substring(0, start) + htmlElement.value.substring(end);
-    const proto = htmlElement instanceof HTMLInputElement ? HTMLInputElement.prototype : HTMLTextAreaElement.prototype;
-    const valueSetter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
-    if (valueSetter) {
-      valueSetter.call(htmlElement, value);
-      htmlElement.dispatchEvent(new Event('input', { bubbles: true }));
-    }
+
+    htmlElement.setRangeText('', start, end, 'start');
+    htmlElement.dispatchEvent(new Event('input', { bubbles: true }));
 
     closeMenu();
   }, [htmlElement, menuState.selectedText, closeMenu]);
@@ -58,13 +54,9 @@ export default function GlobalContextMenuProvider({ children }: PropsWithChildre
     const clipboardText = await navigator.clipboard.readText();
     const start = htmlElement.selectionStart ?? 0;
     const end = htmlElement.selectionEnd ?? 0;
-    const value = htmlElement.value.substring(0, start) + clipboardText + htmlElement.value.substring(end);
-    const proto = htmlElement instanceof HTMLInputElement ? HTMLInputElement.prototype : HTMLTextAreaElement.prototype;
-    const valueSetter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
-    if (valueSetter) {
-      valueSetter.call(htmlElement, value);
-      htmlElement.dispatchEvent(new Event('input', { bubbles: true }));
-    }
+
+    htmlElement.setRangeText(clipboardText, start, end, 'end');
+    htmlElement.dispatchEvent(new Event('input', { bubbles: true }));
 
     closeMenu();
   }, [htmlElement, closeMenu]);
