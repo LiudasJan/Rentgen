@@ -46,9 +46,11 @@ export default function GlobalContextMenuProvider({ children }: PropsWithChildre
   }, [htmlElement, menuState.selectedText, closeMenu]);
 
   const handleCopy = useCallback(async () => {
+    if (isInputOrTextarea(htmlElement)) htmlElement.focus();
+
     await navigator.clipboard.writeText(menuState.selectedText);
     closeMenu();
-  }, [menuState.selectedText, closeMenu]);
+  }, [htmlElement, menuState.selectedText, closeMenu]);
 
   const handlePaste = useCallback(async () => {
     if (!isInputOrTextarea(htmlElement)) {
