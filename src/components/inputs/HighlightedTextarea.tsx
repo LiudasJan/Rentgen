@@ -42,7 +42,7 @@ export default function HighlightedTextarea({
     >
       <AutosizeTextarea
         className={cn(
-          'relative w-full min-h-28 m-0 py-2 px-3 font-monospace text-xs text-transparent bg-transparent border-none caret-text box-border resize-y overflow-y-scroll outline-none z-1',
+          'relative w-full min-h-28 m-0 py-2 px-3 font-monospace text-xs text-transparent bg-transparent border-none caret-text box-border resize-y [scrollbar-gutter:stable] outline-none z-1',
           'dark:placeholder:text-text-secondary dark:caret-dark-text',
         )}
         value={value}
@@ -53,7 +53,7 @@ export default function HighlightedTextarea({
         {...otherProps}
       />
       <div
-        className="absolute inset-0 ml-3 mr-7 py-2 font-monospace text-xs wrap-break-word whitespace-pre-wrap overflow-hidden"
+        className="absolute inset-0 mx-3 py-2 font-monospace text-xs wrap-break-word whitespace-pre-wrap overflow-hidden [scrollbar-gutter:stable]"
         ref={highlighterRef}
       >
         <VariableHighlighter
