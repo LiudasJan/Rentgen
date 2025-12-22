@@ -3,6 +3,7 @@ import MonacoEditor, { Monaco, OnMount, loader } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 import { rentgenLightTheme, rentgenDarkTheme } from './monaco/themes';
 import { useContextMenu } from './context-menu';
+import cn from "classnames";
 
 // Configure Monaco to use local ESM bundle instead of CDN (required for Electron)
 loader.config({ monaco });
@@ -56,8 +57,6 @@ export function JsonViewer({ source, className }: Props) {
   }
 
   const jsonString = JSON.stringify(source, null, 2);
-  const lineCount = jsonString.split('\n').length;
-  const height = Math.min(Math.max(lineCount * 19 + 16, 100), 360);
 
   const handleEditorDidMount: OnMount = (editor, monacoInstance) => {
     editorRef.current = editor;
@@ -82,7 +81,8 @@ export function JsonViewer({ source, className }: Props) {
   };
 
   return (
-    <div className={className} style={{ height }}>
+    <div
+        className={cn('h-[360px]', className)}>
       <MonacoEditor
         height="100%"
         language="json"
@@ -116,7 +116,8 @@ export function JsonViewer({ source, className }: Props) {
           occurrencesHighlight: 'off',
           renderWhitespace: 'none',
           guides: {
-            indentation: false,
+            indentation: true,
+            bracketPairs: false,
           },
         }}
       />

@@ -16,6 +16,10 @@ export const rentgenLightTheme: editor.IStandaloneThemeData = {
     'editorLineNumber.activeForeground': '#000000',
     'editor.selectionBackground': '#add6ff',
     'editor.lineHighlightBackground': '#ffffff',
+    'editorIndentGuide.background': '#d0d0d0',
+    'editorIndentGuide.activeBackground': '#a0a0a0',
+    'editorBracketPairGuide.background1': '#d0d0d0',
+    'editorBracketPairGuide.activeBackground1': '#a0a0a0',
   },
 };
 
@@ -35,5 +39,9 @@ export const rentgenDarkTheme: editor.IStandaloneThemeData = {
     'editorLineNumber.activeForeground': '#ffffff',
     'editor.selectionBackground': '#264f78',
     'editor.lineHighlightBackground': '#343a46',
+    'editorIndentGuide.background': '#4a5263',
+    'editorIndentGuide.activeBackground': '#6a7285',
+    'editorBracketPairGuide.background1': '#4a5263',
+    'editorBracketPairGuide.activeBackground1': '#6a7285',
   },
 };
