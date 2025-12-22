@@ -42,7 +42,7 @@ export default function HighlightedTextarea({
     >
       <AutosizeTextarea
         className={cn(
-          'relative w-full min-h-28 m-0 py-2 px-3 font-monospace text-xs text-transparent bg-transparent border-none caret-text box-border resize-y [scrollbar-width:none] outline-none z-1',
+          'relative w-full min-h-28 m-0 py-2 px-3 font-monospace text-xs text-transparent bg-transparent border-none caret-text box-border resize-y [scrollbar-gutter:stable] outline-none z-1',
           'dark:placeholder:text-text-secondary dark:caret-dark-text',
         )}
         value={value}
@@ -53,11 +53,11 @@ export default function HighlightedTextarea({
         {...otherProps}
       />
       <div
-        className="absolute inset-0 mx-3 py-2 font-monospace text-xs wrap-break-word whitespace-pre-wrap overflow-y-auto [scrollbar-width:none]"
+        className="absolute inset-0 mx-3 py-2 font-monospace text-xs wrap-break-word whitespace-pre-wrap overflow-hidden [scrollbar-gutter:stable]"
         ref={highlighterRef}
       >
         <VariableHighlighter
-          text={textValue}
+          text={textValue + '\u200B'} // ensure trailing newlines are rendered
           highlightColor={highlightColor || DEFAULT_HIGHLIGHT_COLOR}
           variables={variables}
         />
