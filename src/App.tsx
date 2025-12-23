@@ -18,6 +18,7 @@ import Textarea from './components/inputs/Textarea';
 import { JsonViewer } from './components/JsonViewer';
 import Loader from './components/loaders/Loader';
 import TestRunningLoader from './components/loaders/TestRunningLoader';
+import ImportConflictModal from './components/modals/ImportConflictModal';
 import Modal from './components/modals/Modal';
 import SetAsVariableModal from './components/modals/SetAsVariableModal';
 import ParametersPanel from './components/panels/ParametersPanel';
@@ -1103,6 +1104,7 @@ export default function App() {
         </div>
       </Modal>
       <SetAsVariableModal />
+      <ImportConflictModal />
     </div>
   );
 }

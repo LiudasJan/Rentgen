@@ -1,4 +1,5 @@
 import { PostmanCollection, PostmanHeader, PostmanItem, PostmanRequest } from '../types';
+import { ImportConflict, ImportConflictSummary } from '../store/slices/uiSlice';
 
 const DEFAULT_FOLDER_ID = 'default';
 const DEFAULT_FOLDER_NAME = 'All Requests';
@@ -338,4 +339,114 @@ export function moveRequestToFolder(
       return folder;
     }),
   };
+}
+
+/**
+ * Detects conflicts between existing collection and imported collection
+ * Empty folders are ignored - they don't count as conflicts
+ */
+export function detectImportConflicts(existing: PostmanCollection, imported: PostmanCollection): ImportConflictSummary {
+  const folderConflicts: ImportConflict[] = [];
+  const requestConflicts: ImportConflict[] = [];
+
+  // Check collection name match
+  const collectionNameMatch = existing.info.name === imported.info.name;
+
+  // Check folder conflicts
+  for (const importedFolder of imported.item) {
+    // Skip empty imported folders - nothing to import
+    if (importedFolder.item.length === 0) continue;
+
+    const existingFolder = existing.item.find((f) => f.name === importedFolder.name);
+
+    // Skip if no matching folder OR existing folder is empty (no conflict)
+    if (!existingFolder || existingFolder.item.length === 0) continue;
+
+    // Both folders have items - check for actual request conflicts
+    let hasRequestConflicts = false;
+
+    for (const importedRequest of importedFolder.item) {
+      // Check for URL+Method match
+      const urlMethodMatch = existingFolder.item.find(
+        (r) => r.request.url === importedRequest.request.url && r.request.method === importedRequest.request.method,
+      );
+
+      // Check for name match
+      const nameMatch = existingFolder.item.find((r) => r.name === importedRequest.name);
+
+      if (urlMethodMatch) {
+        hasRequestConflicts = true;
+        requestConflicts.push({
+          type: 'request',
+          existingName: urlMethodMatch.name,
+          importedName: importedRequest.name,
+          folderId: existingFolder.id,
+          folderName: existingFolder.name,
+          requestMethod: importedRequest.request.method,
+          requestUrl: importedRequest.request.url,
+        });
+      } else if (nameMatch) {
+        // Name matches but URL+Method doesn't (different request with same name)
+        hasRequestConflicts = true;
+        requestConflicts.push({
+          type: 'request',
+          existingName: nameMatch.name,
+          importedName: importedRequest.name,
+          folderId: existingFolder.id,
+          folderName: existingFolder.name,
+        });
+      }
+    }
+
+    // Only count folder as conflict if there are actual request conflicts
+    if (hasRequestConflicts) {
+      folderConflicts.push({
+        type: 'folder',
+        existingName: existingFolder.name,
+        importedName: importedFolder.name,
+        folderId: existingFolder.id,
+      });
+    }
+  }
+
+  return {
+    hasConflicts: folderConflicts.length > 0 || requestConflicts.length > 0,
+    collectionNameMatch,
+    folderConflicts,
+    requestConflicts,
+  };
+}
+
+/**
+ * Counts the number of unique items that would be added during merge
+ */
+export function countMergeAdditions(
+  existing: PostmanCollection,
+  imported: PostmanCollection,
+): { folders: number; requests: number } {
+  let newFolders = 0;
+  let newRequests = 0;
+
+  for (const importedFolder of imported.item) {
+    const existingFolder = existing.item.find((f) => f.name === importedFolder.name);
+
+    if (!existingFolder) {
+      newFolders++;
+      newRequests += importedFolder.item.length;
+    } else {
+      // Count non-duplicate requests
+      for (const request of importedFolder.item) {
+        const isDuplicate = existingFolder.item.some(
+          (existing) =>
+            (existing.request.url === request.request.url && existing.request.method === request.request.method) ||
+            existing.name === request.name,
+        );
+        if (!isDuplicate) {
+          newRequests++;
+        }
+      }
+    }
+  }
+
+  return { folders: newFolders, requests: newRequests };
 }
