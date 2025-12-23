@@ -10,7 +10,11 @@ interface MenuState {
   selectedText: string;
 }
 
-const ContextMenuContext = createContext<MenuState | undefined>(undefined);
+interface ContextMenuValue extends MenuState {
+  showContextMenu: (x: number, y: number, text: string) => void;
+}
+
+const ContextMenuContext = createContext<ContextMenuValue | undefined>(undefined);
 
 export const useContextMenu = () => useContext(ContextMenuContext);
 
@@ -25,6 +29,15 @@ export default function GlobalContextMenuProvider({ children }: PropsWithChildre
   const hasSelection = useMemo(() => menuState.selectedText.length > 0, [menuState.selectedText]);
 
   const closeMenu = useCallback(() => setMenuState((prev) => ({ ...prev, isOpen: false })), []);
+
+  const showContextMenu = useCallback((x: number, y: number, text: string) => {
+    setHtmlElement(null);
+    setMenuState({
+      isOpen: true,
+      position: { x, y },
+      selectedText: text,
+    });
+  }, []);
 
   const handleCut = useCallback(async () => {
     const selectedText = getSelectedText();
@@ -100,7 +113,7 @@ export default function GlobalContextMenuProvider({ children }: PropsWithChildre
   }, []);
 
   return (
-    <ContextMenuContext.Provider value={{ ...menuState }}>
+    <ContextMenuContext.Provider value={{ ...menuState, showContextMenu }}>
       {children}
       <ContextMenu isOpen={menuState.isOpen} position={menuState.position} onClose={closeMenu}>
         {htmlElement && isInputOrTextarea(htmlElement) && (
@@ -114,8 +127,8 @@ export default function GlobalContextMenuProvider({ children }: PropsWithChildre
   );
 }
 
-function isInputOrTextarea(element: Element): element is HTMLInputElement | HTMLTextAreaElement {
-  return element.tagName === 'INPUT' || element.tagName === 'TEXTAREA';
+function isInputOrTextarea(element: Element | null): element is HTMLInputElement | HTMLTextAreaElement {
+  return element !== null && (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA');
 }
 
 function getSelectedText() {

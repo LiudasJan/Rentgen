@@ -15,6 +15,7 @@ import HighlightedInput from './components/inputs/HighlightedInput';
 import HighlightedTextarea from './components/inputs/HighlightedTextarea';
 import Select, { SelectOption } from './components/inputs/Select';
 import Textarea from './components/inputs/Textarea';
+import { GlobalContextMenuProvider } from './components/context-menu';
 import { JsonViewer } from './components/JsonViewer';
 import Loader from './components/loaders/Loader';
 import TestRunningLoader from './components/loaders/TestRunningLoader';
@@ -249,11 +250,7 @@ export default function App() {
       }
     };
 
-    const ipcRenderer = window.electronAPI.onWssEvent(messagesListener);
-
-    return () => {
-      ipcRenderer?.off('wss-event', messagesListener);
-    };
+    return window.electronAPI.onWssEvent(messagesListener);
   }, [dispatch]);
 
   // Execute tests when testOptions changes
@@ -543,568 +540,578 @@ export default function App() {
   useCtrlS(!disabled && saveRequest);
 
   return (
-    <div className="flex">
-      <Sidebar />
-      <div className="flex-1 min-w-0 flex flex-col gap-4 py-5 px-7 overflow-y-auto">
-        {isEditingEnvironment ? (
-          <EnvironmentEditor
-            environment={environments.find((e) => e.id === editingEnvironmentId) || null}
-            isNew={editingEnvironmentId === null}
-            onSave={handleSaveEnvironment}
-          />
-        ) : (
-          <>
-            <div className="flex items-center gap-2">
-              <Select
-                className="font-bold"
-                isSearchable={false}
-                options={modeOptions}
-                placeholder="MODE"
-                value={modeOptions.find((option) => option.value == mode)}
-                onChange={(option: SelectOption<Mode>) => {
-                  dispatch(requestActions.setMode(option.value));
-                  reset();
-                }}
-              />
-              {mode === 'HTTP' && (
-                <>
-                  <ActionsButton
-                    actions={[{ label: 'Create', onClick: reset }]}
-                    onClick={() => dispatch(uiActions.openCurlModal())}
+    <GlobalContextMenuProvider>
+      <div className="flex">
+        <Sidebar />
+        <div className="flex-1 min-w-0 flex flex-col gap-4 py-5 px-7 overflow-y-auto">
+          {isEditingEnvironment ? (
+            <EnvironmentEditor
+              environment={environments.find((e) => e.id === editingEnvironmentId) || null}
+              isNew={editingEnvironmentId === null}
+              onSave={handleSaveEnvironment}
+            />
+          ) : (
+            <>
+              <div className="flex items-center gap-2">
+                <Select
+                  className="font-bold"
+                  isSearchable={false}
+                  options={modeOptions}
+                  placeholder="MODE"
+                  value={modeOptions.find((option) => option.value == mode)}
+                  onChange={(option: SelectOption<Mode>) => {
+                    dispatch(requestActions.setMode(option.value));
+                    reset();
+                  }}
+                />
+                {mode === 'HTTP' && (
+                  <>
+                    <ActionsButton
+                      actions={[{ label: 'Create', onClick: reset }]}
+                      onClick={() => dispatch(uiActions.openCurlModal())}
+                    >
+                      Import cURL
+                    </ActionsButton>
+                    <Modal isOpen={openCurlModal} onClose={() => dispatch(uiActions.closeCurlModal())}>
+                      <div className="flex flex-col gap-4">
+                        <h4 className="m-0">Import cURL</h4>
+                        <Textarea
+                          autoFocus={true}
+                          className="min-h-40"
+                          placeholder="Enter cURL or paste text"
+                          value={curl}
+                          onChange={(event) => dispatch(uiActions.setCurl(event.target.value))}
+                        />
+                        {curlError && <p className="m-0 text-xs text-red-600">{curlError}</p>}
+                        <div className="flex items-center justify-end gap-4">
+                          <Button onClick={importCurl}>Import</Button>
+                          <Button
+                            buttonType={ButtonType.SECONDARY}
+                            onClick={() => dispatch(uiActions.closeCurlModal())}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    </Modal>
+                  </>
+                )}
+                <div className="flex-auto flex items-center justify-end gap-2">
+                  <EnvironmentSelector
+                    environments={environments}
+                    selectedEnvironmentId={selectedEnvironmentId}
+                    onSelect={(id) => dispatch(environmentActions.selectEnvironment(id))}
+                  />
+                  <IconButton
+                    onClick={async () => {
+                      const theme = await window.themeAPI.getTheme();
+                      if (theme === 'dark') {
+                        document.documentElement.classList.remove('dark');
+                        window.themeAPI.setTheme('light');
+                      } else {
+                        document.documentElement.classList.add('dark');
+                        window.themeAPI.setTheme('dark');
+                      }
+                    }}
                   >
-                    Import cURL
-                  </ActionsButton>
-                  <Modal isOpen={openCurlModal} onClose={() => dispatch(uiActions.closeCurlModal())}>
+                    <DarkModeIcon className="h-5 w-5 dark:hidden" />
+                    <LightModeIcon className="hidden dark:block h-6 w-6" />
+                  </IconButton>
+                  <IconButton onClick={() => dispatch(uiActions.openReloadModal())}>
+                    <ReloadIcon className="h-5 w-5" />
+                  </IconButton>
+                  <Modal
+                    className="[&>div]:w-[400px]!"
+                    isOpen={openReloadModal}
+                    onClose={() => dispatch(uiActions.closeReloadModal())}
+                  >
                     <div className="flex flex-col gap-4">
-                      <h4 className="m-0">Import cURL</h4>
-                      <Textarea
-                        autoFocus={true}
-                        className="min-h-40"
-                        placeholder="Enter cURL or paste text"
-                        value={curl}
-                        onChange={(event) => dispatch(uiActions.setCurl(event.target.value))}
-                      />
-                      {curlError && <p className="m-0 text-xs text-red-600">{curlError}</p>}
+                      <h4 className="m-0">Reload</h4>
+                      <p className="m-0 text-sm dark:text-text-secondary">Only current tests results will be lost</p>
                       <div className="flex items-center justify-end gap-4">
-                        <Button onClick={importCurl}>Import</Button>
-                        <Button buttonType={ButtonType.SECONDARY} onClick={() => dispatch(uiActions.closeCurlModal())}>
+                        <Button buttonType={ButtonType.DANGER} onClick={() => window.location.reload()}>
+                          Reload
+                        </Button>
+                        <Button
+                          buttonType={ButtonType.SECONDARY}
+                          onClick={() => dispatch(uiActions.closeReloadModal())}
+                        >
                           Cancel
                         </Button>
                       </div>
                     </div>
                   </Modal>
-                </>
-              )}
-              <div className="flex-auto flex items-center justify-end gap-2">
-                <EnvironmentSelector
-                  environments={environments}
-                  selectedEnvironmentId={selectedEnvironmentId}
-                  onSelect={(id) => dispatch(environmentActions.selectEnvironment(id))}
-                />
-                <IconButton
-                  onClick={async () => {
-                    const theme = await window.themeAPI.getTheme();
-                    if (theme === 'dark') {
-                      document.documentElement.classList.remove('dark');
-                      window.themeAPI.setTheme('light');
-                    } else {
-                      document.documentElement.classList.add('dark');
-                      window.themeAPI.setTheme('dark');
-                    }
-                  }}
-                >
-                  <DarkModeIcon className="h-5 w-5 dark:hidden" />
-                  <LightModeIcon className="hidden dark:block h-6 w-6" />
-                </IconButton>
-                <IconButton onClick={() => dispatch(uiActions.openReloadModal())}>
-                  <ReloadIcon className="h-5 w-5" />
-                </IconButton>
-                <Modal
-                  className="[&>div]:w-[400px]!"
-                  isOpen={openReloadModal}
-                  onClose={() => dispatch(uiActions.closeReloadModal())}
-                >
-                  <div className="flex flex-col gap-4">
-                    <h4 className="m-0">Reload</h4>
-                    <p className="m-0 text-sm dark:text-text-secondary">Only current tests results will be lost</p>
-                    <div className="flex items-center justify-end gap-4">
-                      <Button buttonType={ButtonType.DANGER} onClick={() => window.location.reload()}>
-                        Reload
-                      </Button>
-                      <Button buttonType={ButtonType.SECONDARY} onClick={() => dispatch(uiActions.closeReloadModal())}>
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
-                </Modal>
+                </div>
               </div>
-            </div>
 
-            <div className="flex items-center gap-2">
-              <div className="flex-auto flex items-center">
-                {mode === 'HTTP' && (
-                  <Select
-                    className="font-bold uppercase"
-                    classNames={{
-                      control: () =>
-                        cn(
-                          'min-h-auto! bg-white! border! border-border! rounded-none! rounded-l-md! transition-none! shadow-none!',
-                          'dark:bg-dark-input! dark:border-dark-border! dark:border-r-dark-body!',
-                        ),
-                      input: () => 'm-0! p-0! [&>:first-child]:uppercase text-text! dark:text-dark-text!',
-                    }}
-                    isCreatable={true}
-                    options={methodOptions}
-                    placeholder="METHOD"
-                    value={methodOptions.find((option) => option.value == method) || { value: method, label: method }}
-                    onChange={(option: SelectOption<Method>) => dispatch(requestActions.setMethod(option.value))}
+              <div className="flex items-center gap-2">
+                <div className="flex-auto flex items-center">
+                  {mode === 'HTTP' && (
+                    <Select
+                      className="font-bold uppercase"
+                      classNames={{
+                        control: () =>
+                          cn(
+                            'min-h-auto! bg-white! border! border-border! rounded-none! rounded-l-md! transition-none! shadow-none!',
+                            'dark:bg-dark-input! dark:border-dark-border! dark:border-r-dark-body!',
+                          ),
+                        input: () => 'm-0! p-0! [&>:first-child]:uppercase text-text! dark:text-dark-text!',
+                      }}
+                      isCreatable={true}
+                      options={methodOptions}
+                      placeholder="METHOD"
+                      value={methodOptions.find((option) => option.value == method) || { value: method, label: method }}
+                      onChange={(option: SelectOption<Method>) => dispatch(requestActions.setMethod(option.value))}
+                    />
+                  )}
+                  <HighlightedInput
+                    className={cn('flex-auto', { 'border-l-0 rounded-l-none': mode === 'HTTP' })}
+                    highlightColor={selectedEnvironment?.color}
+                    placeholder="Enter URL or paste text"
+                    value={url}
+                    variables={variables}
+                    onBlur={autoSaveRequest}
+                    onChange={(event) => dispatch(requestActions.setUrl(event.target.value))}
                   />
+                </div>
+                {mode === 'HTTP' && (
+                  <>
+                    <Button disabled={disabled} onClick={sendHttp}>
+                      Send
+                    </Button>
+                    <Button buttonType={ButtonType.SECONDARY} disabled={disabled} onClick={saveRequest}>
+                      {saved ? 'Saved ✅' : 'Save'}
+                    </Button>
+                  </>
                 )}
-                <HighlightedInput
-                  className={cn('flex-auto', { 'border-l-0 rounded-l-none': mode === 'HTTP' })}
-                  highlightColor={selectedEnvironment?.color}
-                  placeholder="Enter URL or paste text"
-                  value={url}
-                  variables={variables}
-                  onBlur={autoSaveRequest}
-                  onChange={(event) => dispatch(requestActions.setUrl(event.target.value))}
-                />
+                {mode === 'WSS' && (
+                  <>
+                    <Button
+                      buttonType={wssConnected ? ButtonType.SECONDARY : ButtonType.PRIMARY}
+                      disabled={!wssConnected && !url}
+                      onClick={wssConnected ? window.electronAPI.disconnectWss : connectWss}
+                    >
+                      {wssConnected ? 'Disconnect' : 'Connect'}
+                    </Button>
+                    <Button disabled={!wssConnected} onClick={sendWss}>
+                      Send
+                    </Button>
+                  </>
+                )}
               </div>
-              {mode === 'HTTP' && (
-                <>
-                  <Button disabled={disabled} onClick={sendHttp}>
-                    Send
-                  </Button>
-                  <Button buttonType={ButtonType.SECONDARY} disabled={disabled} onClick={saveRequest}>
-                    {saved ? 'Saved ✅' : 'Save'}
-                  </Button>
-                </>
-              )}
-              {mode === 'WSS' && (
-                <>
-                  <Button
-                    buttonType={wssConnected ? ButtonType.SECONDARY : ButtonType.PRIMARY}
-                    disabled={!wssConnected && !url}
-                    onClick={wssConnected ? window.electronAPI.disconnectWss : connectWss}
-                  >
-                    {wssConnected ? 'Disconnect' : 'Connect'}
-                  </Button>
-                  <Button disabled={!wssConnected} onClick={sendWss}>
-                    Send
-                  </Button>
-                </>
-              )}
-            </div>
 
-            <HighlightedTextarea
-              highlightColor={selectedEnvironment?.color}
-              maxRows={10}
-              placeholder="Header-Key: value"
-              value={headers}
-              variables={variables}
-              onBlur={autoSaveRequest}
-              onChange={(event) => dispatch(requestActions.setHeaders(event.target.value))}
-            />
-
-            <div className="relative">
               <HighlightedTextarea
                 highlightColor={selectedEnvironment?.color}
-                maxRows={15}
-                placeholder={mode === 'HTTP' ? 'Enter request body (JSON or Form Data)' : 'Message body'}
-                value={body}
+                maxRows={10}
+                placeholder="Header-Key: value"
+                value={headers}
                 variables={variables}
                 onBlur={autoSaveRequest}
-                onChange={(event) => dispatch(requestActions.setBody(event.target.value))}
+                onChange={(event) => dispatch(requestActions.setHeaders(event.target.value))}
               />
-              <Button
-                className="absolute top-3 right-4 z-10"
-                buttonSize={ButtonSize.SMALL}
-                buttonType={ButtonType.SECONDARY}
-                onClick={() => dispatch(requestActions.setBody(formatBody(body, parseHeaders(headers))))}
-              >
-                Beautify
-              </Button>
-            </div>
 
-            {mode === 'HTTP' && (
-              <div>
-                <label className="block mb-1 font-bold text-sm">Protobuf Schema & Message Type</label>
-                <div className="mb-3 text-xs text-text-secondary">
-                  Experimental and optional section. If used, both fields must be completed
-                </div>
-                <div className="flex items-center gap-2">
-                  <FileInput
-                    accept=".proto"
-                    onChange={async (event) => {
-                      const file = event.target.files?.[0];
-                      if (!file) return;
-
-                      const fileExtension = file.name.split('.').pop()?.toLowerCase();
-                      if (fileExtension !== 'proto') return;
-
-                      try {
-                        await loadProtoSchema(file);
-                        dispatch(requestActions.setProtoFile(file));
-                        dispatch(websocketActions.addMessage({ direction: 'system', data: '🟢 Proto schema loaded' }));
-                      } catch (error) {
-                        dispatch(
-                          websocketActions.addMessage({
-                            direction: 'system',
-                            data: '🔴 Failed to parse proto: ' + error,
-                          }),
-                        );
-                      }
-                    }}
-                  />
-
-                  <HighlightedInput
-                    className="flex-auto"
-                    highlightColor={selectedEnvironment?.color}
-                    placeholder="Message type (e.g. mypackage.MyMessage)"
-                    value={messageType}
-                    variables={variables}
-                    onChange={(event) => dispatch(requestActions.setMessageType(event.target.value))}
-                  />
-                </div>
-              </div>
-            )}
-
-            {mode === 'HTTP' && httpResponse && (
-              <ResponsePanel title="Response">
-                <div
-                  className={cn(
-                    'flex items-center gap-2 p-4 font-bold bg-body dark:bg-dark-body border-t border-border dark:border-dark-body',
-                    {
-                      'text-green-500': httpResponse.status.startsWith('2'),
-                      'text-blue-500': httpResponse.status.startsWith('3'),
-                      'text-orange-500': httpResponse.status.startsWith('4'),
-                      'text-red-500': httpResponse.status.startsWith('5') || httpResponse.status === NETWORK_ERROR,
-                    },
-                  )}
+              <div className="relative">
+                <HighlightedTextarea
+                  highlightColor={selectedEnvironment?.color}
+                  maxRows={15}
+                  placeholder={mode === 'HTTP' ? 'Enter request body (JSON or Form Data)' : 'Message body'}
+                  value={body}
+                  variables={variables}
+                  onBlur={autoSaveRequest}
+                  onChange={(event) => dispatch(requestActions.setBody(event.target.value))}
+                />
+                <Button
+                  className="absolute top-3 right-4 z-10"
+                  buttonSize={ButtonSize.SMALL}
+                  buttonType={ButtonType.SECONDARY}
+                  onClick={() => dispatch(requestActions.setBody(formatBody(body, parseHeaders(headers))))}
                 >
-                  {httpResponse.status === SENDING && <Loader className="h-5 w-5" />}
-                  {httpResponse.status}
-                </div>
-                {httpResponse.status !== SENDING && (
-                  <div className="grid grid-cols-2 items-stretch max-h-100 py-4 border-t border-border dark:border-dark-body overflow-y-auto">
-                    <div className="relative flex-1 px-4">
-                      <h4 className="m-0 mb-4">Headers</h4>
-                      {httpResponse.headers && (
-                        <CopyButton
-                          className="absolute top-0 right-4"
-                          textToCopy={JSON.stringify(httpResponse.headers, null, 2)}
-                        >
-                          Copy
-                        </CopyButton>
-                      )}
-                      <JsonViewer source={httpResponse.headers} />
-                    </div>
-                    <div className="relative flex-1 px-4 border-l border-border dark:border-dark-body">
-                      <h4 className="m-0 mb-4">Body</h4>
-                      {httpResponse.body && (
-                        <CopyButton
-                          className="absolute top-0 right-4"
-                          textToCopy={
-                            typeof httpResponse.body === 'string'
-                              ? httpResponse.body
-                              : JSON.stringify(httpResponse.body, null, 2)
-                          }
-                        >
-                          Copy
-                        </CopyButton>
-                      )}
-                      <JsonViewer source={extractBodyFromResponse(httpResponse)} />
-                    </div>
-                  </div>
-                )}
-              </ResponsePanel>
-            )}
+                  Beautify
+                </Button>
+              </div>
 
-            {messages.length > 0 && (
-              <ResponsePanel title="Messages">
-                <div className="max-h-[400px] p-4 text-xs border-t border-border dark:border-dark-body overflow-y-auto">
-                  {messages.map(({ data, decoded, direction }, index) => (
-                    <div
-                      key={index}
-                      className="not-first:pt-3 not-last:pb-3 border-b last:border-none border-border dark:border-dark-body"
-                    >
-                      <div className="flex items-center gap-4">
-                        {direction !== 'system' && (
-                          <span
-                            className={cn('w-5 h-5 font-bold rounded-xs text-center leading-normal rotate-90', {
-                              'text-method-post bg-method-post/10': direction === 'sent',
-                              'text-method-put bg-method-put/10': direction === 'received',
-                            })}
+              {mode === 'HTTP' && (
+                <div>
+                  <label className="block mb-1 font-bold text-sm">Protobuf Schema & Message Type</label>
+                  <div className="mb-3 text-xs text-text-secondary">
+                    Experimental and optional section. If used, both fields must be completed
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <FileInput
+                      accept=".proto"
+                      onChange={async (event) => {
+                        const file = event.target.files?.[0];
+                        if (!file) return;
+
+                        const fileExtension = file.name.split('.').pop()?.toLowerCase();
+                        if (fileExtension !== 'proto') return;
+
+                        try {
+                          await loadProtoSchema(file);
+                          dispatch(requestActions.setProtoFile(file));
+                          dispatch(
+                            websocketActions.addMessage({ direction: 'system', data: '🟢 Proto schema loaded' }),
+                          );
+                        } catch (error) {
+                          dispatch(
+                            websocketActions.addMessage({
+                              direction: 'system',
+                              data: '🔴 Failed to parse proto: ' + error,
+                            }),
+                          );
+                        }
+                      }}
+                    />
+
+                    <HighlightedInput
+                      className="flex-auto"
+                      highlightColor={selectedEnvironment?.color}
+                      placeholder="Message type (e.g. mypackage.MyMessage)"
+                      value={messageType}
+                      variables={variables}
+                      onChange={(event) => dispatch(requestActions.setMessageType(event.target.value))}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {mode === 'HTTP' && httpResponse && (
+                <ResponsePanel title="Response">
+                  <div
+                    className={cn(
+                      'flex items-center gap-2 p-4 font-bold bg-body dark:bg-dark-body border-t border-border dark:border-dark-body',
+                      {
+                        'text-green-500': httpResponse.status.startsWith('2'),
+                        'text-blue-500': httpResponse.status.startsWith('3'),
+                        'text-orange-500': httpResponse.status.startsWith('4'),
+                        'text-red-500': httpResponse.status.startsWith('5') || httpResponse.status === NETWORK_ERROR,
+                      },
+                    )}
+                  >
+                    {httpResponse.status === SENDING && <Loader className="h-5 w-5" />}
+                    {httpResponse.status}
+                  </div>
+                  {httpResponse.status !== SENDING && (
+                    <div className="grid grid-cols-2 items-stretch max-h-100 py-4 border-t border-border dark:border-dark-body overflow-y-auto">
+                      <div className="relative flex-1 px-4">
+                        <h4 className="m-0 mb-4">Headers</h4>
+                        {httpResponse.headers && (
+                          <CopyButton
+                            className="absolute top-0 right-4"
+                            textToCopy={JSON.stringify(httpResponse.headers, null, 2)}
                           >
-                            {direction === 'sent' ? '⬅' : direction === 'received' ? '➡' : ''}
-                          </span>
+                            Copy
+                          </CopyButton>
                         )}
-                        <div>
-                          <pre className="my-0 whitespace-pre-wrap break-all">{data}</pre>
-                          {decoded && (
-                            <>
-                              <div className="mt-2 font-monospace font-bold">Decoded Protobuf:</div>
-                              <pre className="my-0 whitespace-pre-wrap break-all">dfd</pre>
-                            </>
-                          )}
-                        </div>
+                        <JsonViewer source={httpResponse.headers} />
+                      </div>
+                      <div className="relative flex-1 px-4 border-l border-border dark:border-dark-body">
+                        <h4 className="m-0 mb-4">Body</h4>
+                        {httpResponse.body && (
+                          <CopyButton
+                            className="absolute top-0 right-4"
+                            textToCopy={
+                              typeof httpResponse.body === 'string'
+                                ? httpResponse.body
+                                : JSON.stringify(httpResponse.body, null, 2)
+                            }
+                          >
+                            Copy
+                          </CopyButton>
+                        )}
+                        <JsonViewer source={extractBodyFromResponse(httpResponse)} />
                       </div>
                     </div>
-                  ))}
-                </div>
-              </ResponsePanel>
-            )}
+                  )}
+                </ResponsePanel>
+              )}
 
-            {(Object.keys(bodyParameters).length > 0 || Object.keys(queryParameters).length > 0) && (
-              <div className="grid lg:grid-cols-2 gap-4 items-stretch">
-                {Object.keys(bodyParameters).length > 0 && (
-                  <ParametersPanel
-                    title="Body Parameters"
-                    parameters={bodyParameters}
-                    onChange={(parameters) => dispatch(requestActions.mergeBodyParameters(parameters))}
-                  />
-                )}
-
-                {Object.keys(queryParameters).length > 0 && (
-                  <ParametersPanel
-                    title="Query Parameters"
-                    parameters={queryParameters}
-                    onChange={(parameters) => dispatch(requestActions.mergeQueryParameters(parameters))}
-                  />
-                )}
-              </div>
-            )}
-
-            {mode === 'HTTP' && (
-              <div className="flex justify-between">
-                <Button
-                  disabled={disabledRunTests}
-                  onClick={() => {
-                    dispatch(
-                      testActions.setTestOptions({
-                        ...substituteRequestVariables(url, headers, body, messageType, selectedEnvironment),
-                        bodyParameters,
-                        method,
-                        protoFile,
-                        queryParameters,
-                      }),
-                    );
-                  }}
-                >
-                  {isRunningTests ? `Running tests... (${currentTest}/${testsCount})` : 'Generate & Run Tests'}
-                </Button>
-
-                {testOptions && (
-                  <div className="flex items-center justify-end gap-2">
-                    <Select
-                      isSearchable={false}
-                      options={exportFormatOptions}
-                      placeholder="Format"
-                      value={exportFormatOptions.find((option) => option.value === exportFormat)}
-                      onChange={(option: SelectOption<ReportFormat>) =>
-                        dispatch(uiActions.setExportFormat(option.value))
-                      }
-                    />
-                    <Button
-                      buttonType={ButtonType.SECONDARY}
-                      className="min-w-28"
-                      disabled={isRunningTests}
-                      onClick={exportReport}
-                    >
-                      {exported ? 'Exported ✅' : 'Export'}
-                    </Button>
+              {messages.length > 0 && (
+                <ResponsePanel title="Messages">
+                  <div className="max-h-[400px] p-4 text-xs border-t border-border dark:border-dark-body overflow-y-auto">
+                    {messages.map(({ data, decoded, direction }, index) => (
+                      <div
+                        key={index}
+                        className="not-first:pt-3 not-last:pb-3 border-b last:border-none border-border dark:border-dark-body"
+                      >
+                        <div className="flex items-center gap-4">
+                          {direction !== 'system' && (
+                            <span
+                              className={cn('w-5 h-5 font-bold rounded-xs text-center leading-normal rotate-90', {
+                                'text-method-post bg-method-post/10': direction === 'sent',
+                                'text-method-put bg-method-put/10': direction === 'received',
+                              })}
+                            >
+                              {direction === 'sent' ? '⬅' : direction === 'received' ? '➡' : ''}
+                            </span>
+                          )}
+                          <div>
+                            <pre className="my-0 whitespace-pre-wrap break-all">{data}</pre>
+                            {decoded && (
+                              <>
+                                <div className="mt-2 font-monospace font-bold">Decoded Protobuf:</div>
+                                <pre className="my-0 whitespace-pre-wrap break-all">dfd</pre>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                )}
-              </div>
-            )}
-
-            {(testOptions || requestTestResults) && (
-              <>
-                <ResponsePanel title="Security Tests">
-                  <TestsTable
-                    columns={[
-                      ...getTestsTableColumns(['Check', 'Expected', 'Actual']),
-                      {
-                        name: 'Result',
-                        selector: (row) => row.status,
-                        width: securityTests.find((test) =>
-                          [TestStatus.Bug, TestStatus.Fail, TestStatus.Warning].includes(test.status),
-                        )
-                          ? '190px'
-                          : '150px',
-                        cell: (row, id) => (
-                          <TestResultControls
-                            className={cn('py-1', { 'items-end': row.name === LARGE_PAYLOAD_TEST_NAME })}
-                            data-column-id={id}
-                            data-tag="allowRowEvents"
-                            testResult={row}
-                            testType="security"
-                          >
-                            {row.name === LARGE_PAYLOAD_TEST_NAME ? (
-                              <LargePayloadTestControls
-                                isRunning={isLargePayloadTestRunning}
-                                executeTest={(size: number) =>
-                                  executeLargePayloadTest({ ...testOptions, bodyParameters, queryParameters }, size)
-                                }
-                              />
-                            ) : (
-                              <p className="m-0 mr-2 whitespace-nowrap" data-column-id={id} data-tag="allowRowEvents">
-                                {row.status}
-                              </p>
-                            )}
-                          </TestResultControls>
-                        ),
-                      },
-                    ]}
-                    expandableRows
-                    expandableRowsComponent={ExpandedTestComponent}
-                    expandableRowsComponentProps={{ headers: parseHeaders(headers), protoFile, messageType }}
-                    expandOnRowClicked
-                    data={securityTests}
-                    progressComponent={<TestRunningLoader text="Running Security Tests..." />}
-                    progressPending={isSecurityRunning}
-                  />
                 </ResponsePanel>
+              )}
 
-                <ResponsePanel title="Performance Insights">
-                  <TestsTable
-                    columns={[
-                      ...getTestsTableColumns(['Check', 'Expected']),
-                      {
-                        name: 'Actual',
-                        selector: (row) => row.actual,
-                        cell: (row) => <div className="py-1">{row.actual}</div>,
-                      },
-                      {
-                        name: 'Result',
-                        selector: (row) => row.status,
-                        width: performanceTests.find((test) =>
-                          [TestStatus.Bug, TestStatus.Fail, TestStatus.Warning].includes(test.status),
-                        )
-                          ? '240px'
-                          : '220px',
-                        cell: (row) => (
-                          <TestResultControls
-                            className={cn('py-1', { 'items-end': row.name === LOAD_TEST_NAME })}
-                            testResult={row}
-                            testType="performance"
-                          >
-                            {row.name === LOAD_TEST_NAME ? (
-                              <LoadTestControls
-                                isRunning={isLoadTestRunning}
-                                executeTest={(threadCount: number, requestCount: number) =>
-                                  executeLoadTest(
-                                    { ...testOptions, bodyParameters, queryParameters },
-                                    threadCount,
-                                    requestCount,
-                                  )
-                                }
-                              />
-                            ) : (
-                              <p className="m-0 mr-2 whitespace-nowrap">{row.status}</p>
-                            )}
-                          </TestResultControls>
-                        ),
-                      },
-                    ]}
-                    expandableRows
-                    expandableRowsComponent={ExpandedTestComponent}
-                    expandableRowsComponentProps={{ headers: parseHeaders(headers), protoFile, messageType }}
-                    expandableRowDisabled={(row) =>
-                      (row.name !== RESPONSE_SIZE_CHECK_TEST_NAME &&
-                        row.name !== ARRAY_LIST_WITHOUT_PAGINATION_TEST_NAME) ||
-                      !row.response
-                    }
-                    expandOnRowClicked
-                    data={performanceTests}
-                    progressComponent={<TestRunningLoader text="Running Performance Insights..." />}
-                    progressPending={isPerformanceRunning}
-                  />
-                </ResponsePanel>
+              {(Object.keys(bodyParameters).length > 0 || Object.keys(queryParameters).length > 0) && (
+                <div className="grid lg:grid-cols-2 gap-4 items-stretch">
+                  {Object.keys(bodyParameters).length > 0 && (
+                    <ParametersPanel
+                      title="Body Parameters"
+                      parameters={bodyParameters}
+                      onChange={(parameters) => dispatch(requestActions.mergeBodyParameters(parameters))}
+                    />
+                  )}
 
-                <ResponsePanel title="Data-Driven Tests">
-                  <TestsTable
-                    columns={getTestsTableColumns(['Parameter', 'Value', 'Expected', 'Actual', 'Result'])}
-                    expandableRows
-                    expandableRowsComponent={ExpandedTestComponent}
-                    expandableRowsComponentProps={{ headers: parseHeaders(headers), protoFile, messageType }}
-                    expandOnRowClicked
-                    data={dataDrivenTests}
-                    fixedHeader={true}
-                    fixedHeaderScrollHeight="720px"
-                    progressComponent={<TestRunningLoader text="Running Data-Driven Tests..." />}
-                    progressPending={isDataDrivenRunning}
-                  />
-                </ResponsePanel>
+                  {Object.keys(queryParameters).length > 0 && (
+                    <ParametersPanel
+                      title="Query Parameters"
+                      parameters={queryParameters}
+                      onChange={(parameters) => dispatch(requestActions.mergeQueryParameters(parameters))}
+                    />
+                  )}
+                </div>
+              )}
 
-                <ResponsePanel title="CRUD">
-                  <TestsTable
-                    columns={getTestsTableColumns(['Method', 'Expected', 'Actual', 'Result'])}
-                    expandableRows
-                    expandableRowsComponent={ExpandedTestComponent}
-                    expandableRowsComponentProps={{ headers: parseHeaders(headers), protoFile, messageType }}
-                    expandOnRowClicked
-                    data={crudTests}
-                    progressComponent={<TestRunningLoader text="Preparing CRUD…" />}
-                    progressPending={crudTests.length === 0}
-                  />
-                </ResponsePanel>
-              </>
-            )}
-          </>
-        )}
+              {mode === 'HTTP' && (
+                <div className="flex justify-between">
+                  <Button
+                    disabled={disabledRunTests}
+                    onClick={() => {
+                      dispatch(
+                        testActions.setTestOptions({
+                          ...substituteRequestVariables(url, headers, body, messageType, selectedEnvironment),
+                          bodyParameters,
+                          method,
+                          protoFile,
+                          queryParameters,
+                        }),
+                      );
+                    }}
+                  >
+                    {isRunningTests ? `Running tests... (${currentTest}/${testsCount})` : 'Generate & Run Tests'}
+                  </Button>
+
+                  {testOptions && (
+                    <div className="flex items-center justify-end gap-2">
+                      <Select
+                        isSearchable={false}
+                        options={exportFormatOptions}
+                        placeholder="Format"
+                        value={exportFormatOptions.find((option) => option.value === exportFormat)}
+                        onChange={(option: SelectOption<ReportFormat>) =>
+                          dispatch(uiActions.setExportFormat(option.value))
+                        }
+                      />
+                      <Button
+                        buttonType={ButtonType.SECONDARY}
+                        className="min-w-28"
+                        disabled={isRunningTests}
+                        onClick={exportReport}
+                      >
+                        {exported ? 'Exported ✅' : 'Export'}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {(testOptions || requestTestResults) && (
+                <>
+                  <ResponsePanel title="Security Tests">
+                    <TestsTable
+                      columns={[
+                        ...getTestsTableColumns(['Check', 'Expected', 'Actual']),
+                        {
+                          name: 'Result',
+                          selector: (row) => row.status,
+                          width: securityTests.find((test) =>
+                            [TestStatus.Bug, TestStatus.Fail, TestStatus.Warning].includes(test.status),
+                          )
+                            ? '190px'
+                            : '150px',
+                          cell: (row, id) => (
+                            <TestResultControls
+                              className={cn('py-1', { 'items-end': row.name === LARGE_PAYLOAD_TEST_NAME })}
+                              data-column-id={id}
+                              data-tag="allowRowEvents"
+                              testResult={row}
+                              testType="security"
+                            >
+                              {row.name === LARGE_PAYLOAD_TEST_NAME ? (
+                                <LargePayloadTestControls
+                                  isRunning={isLargePayloadTestRunning}
+                                  executeTest={(size: number) =>
+                                    executeLargePayloadTest({ ...testOptions, bodyParameters, queryParameters }, size)
+                                  }
+                                />
+                              ) : (
+                                <p className="m-0 mr-2 whitespace-nowrap" data-column-id={id} data-tag="allowRowEvents">
+                                  {row.status}
+                                </p>
+                              )}
+                            </TestResultControls>
+                          ),
+                        },
+                      ]}
+                      expandableRows
+                      expandableRowsComponent={ExpandedTestComponent}
+                      expandableRowsComponentProps={{ headers: parseHeaders(headers), protoFile, messageType }}
+                      expandOnRowClicked
+                      data={securityTests}
+                      progressComponent={<TestRunningLoader text="Running Security Tests..." />}
+                      progressPending={isSecurityRunning}
+                    />
+                  </ResponsePanel>
+
+                  <ResponsePanel title="Performance Insights">
+                    <TestsTable
+                      columns={[
+                        ...getTestsTableColumns(['Check', 'Expected']),
+                        {
+                          name: 'Actual',
+                          selector: (row) => row.actual,
+                          cell: (row) => <div className="py-1">{row.actual}</div>,
+                        },
+                        {
+                          name: 'Result',
+                          selector: (row) => row.status,
+                          width: performanceTests.find((test) =>
+                            [TestStatus.Bug, TestStatus.Fail, TestStatus.Warning].includes(test.status),
+                          )
+                            ? '240px'
+                            : '220px',
+                          cell: (row) => (
+                            <TestResultControls
+                              className={cn('py-1', { 'items-end': row.name === LOAD_TEST_NAME })}
+                              testResult={row}
+                              testType="performance"
+                            >
+                              {row.name === LOAD_TEST_NAME ? (
+                                <LoadTestControls
+                                  isRunning={isLoadTestRunning}
+                                  executeTest={(threadCount: number, requestCount: number) =>
+                                    executeLoadTest(
+                                      { ...testOptions, bodyParameters, queryParameters },
+                                      threadCount,
+                                      requestCount,
+                                    )
+                                  }
+                                />
+                              ) : (
+                                <p className="m-0 mr-2 whitespace-nowrap">{row.status}</p>
+                              )}
+                            </TestResultControls>
+                          ),
+                        },
+                      ]}
+                      expandableRows
+                      expandableRowsComponent={ExpandedTestComponent}
+                      expandableRowsComponentProps={{ headers: parseHeaders(headers), protoFile, messageType }}
+                      expandableRowDisabled={(row) =>
+                        (row.name !== RESPONSE_SIZE_CHECK_TEST_NAME &&
+                          row.name !== ARRAY_LIST_WITHOUT_PAGINATION_TEST_NAME) ||
+                        !row.response
+                      }
+                      expandOnRowClicked
+                      data={performanceTests}
+                      progressComponent={<TestRunningLoader text="Running Performance Insights..." />}
+                      progressPending={isPerformanceRunning}
+                    />
+                  </ResponsePanel>
+
+                  <ResponsePanel title="Data-Driven Tests">
+                    <TestsTable
+                      columns={getTestsTableColumns(['Parameter', 'Value', 'Expected', 'Actual', 'Result'])}
+                      expandableRows
+                      expandableRowsComponent={ExpandedTestComponent}
+                      expandableRowsComponentProps={{ headers: parseHeaders(headers), protoFile, messageType }}
+                      expandOnRowClicked
+                      data={dataDrivenTests}
+                      fixedHeader={true}
+                      fixedHeaderScrollHeight="720px"
+                      progressComponent={<TestRunningLoader text="Running Data-Driven Tests..." />}
+                      progressPending={isDataDrivenRunning}
+                    />
+                  </ResponsePanel>
+
+                  <ResponsePanel title="CRUD">
+                    <TestsTable
+                      columns={getTestsTableColumns(['Method', 'Expected', 'Actual', 'Result'])}
+                      expandableRows
+                      expandableRowsComponent={ExpandedTestComponent}
+                      expandableRowsComponentProps={{ headers: parseHeaders(headers), protoFile, messageType }}
+                      expandOnRowClicked
+                      data={crudTests}
+                      progressComponent={<TestRunningLoader text="Preparing CRUD…" />}
+                      progressPending={crudTests.length === 0}
+                    />
+                  </ResponsePanel>
+                </>
+              )}
+            </>
+          )}
+        </div>
+        <Modal
+          className="[&>div]:w-[400px]!"
+          isOpen={!!environmentToDelete}
+          onClose={() => dispatch(environmentActions.setEnvironmentToDelete(null))}
+        >
+          <div className="flex flex-col gap-4">
+            <h4 className="m-0">Delete Environment</h4>
+            <p className="m-0 text-sm dark:text-text-secondary">Are you sure you want to delete this environment?</p>
+            <div className="flex items-center justify-end gap-4">
+              <Button
+                buttonType={ButtonType.DANGER}
+                onClick={() => {
+                  if (environmentToDelete) {
+                    handleDeleteEnvironment(environmentToDelete);
+                  }
+                  dispatch(environmentActions.setEnvironmentToDelete(null));
+                }}
+              >
+                Delete
+              </Button>
+              <Button
+                buttonType={ButtonType.SECONDARY}
+                onClick={() => dispatch(environmentActions.setEnvironmentToDelete(null))}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </Modal>
+        <Modal
+          className="[&>div]:w-[400px]!"
+          isOpen={deleteFolderModal.isOpen}
+          onClose={() => dispatch(uiActions.closeDeleteFolderModal())}
+        >
+          <div className="flex flex-col gap-4">
+            <h4 className="m-0">Delete Folder</h4>
+            <p className="m-0 text-sm dark:text-text-secondary">
+              This folder contains requests. Are you sure you want to delete it?
+            </p>
+            <div className="flex items-center justify-end gap-4">
+              <Button buttonType={ButtonType.DANGER} onClick={confirmDeleteFolder}>
+                Delete
+              </Button>
+              <Button buttonType={ButtonType.SECONDARY} onClick={() => dispatch(uiActions.closeDeleteFolderModal())}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </Modal>
+        <SetAsVariableModal />
       </div>
-      <Modal
-        className="[&>div]:w-[400px]!"
-        isOpen={!!environmentToDelete}
-        onClose={() => dispatch(environmentActions.setEnvironmentToDelete(null))}
-      >
-        <div className="flex flex-col gap-4">
-          <h4 className="m-0">Delete Environment</h4>
-          <p className="m-0 text-sm dark:text-text-secondary">Are you sure you want to delete this environment?</p>
-          <div className="flex items-center justify-end gap-4">
-            <Button
-              buttonType={ButtonType.DANGER}
-              onClick={() => {
-                if (environmentToDelete) {
-                  handleDeleteEnvironment(environmentToDelete);
-                }
-                dispatch(environmentActions.setEnvironmentToDelete(null));
-              }}
-            >
-              Delete
-            </Button>
-            <Button
-              buttonType={ButtonType.SECONDARY}
-              onClick={() => dispatch(environmentActions.setEnvironmentToDelete(null))}
-            >
-              Cancel
-            </Button>
-          </div>
-        </div>
-      </Modal>
-      <Modal
-        className="[&>div]:w-[400px]!"
-        isOpen={deleteFolderModal.isOpen}
-        onClose={() => dispatch(uiActions.closeDeleteFolderModal())}
-      >
-        <div className="flex flex-col gap-4">
-          <h4 className="m-0">Delete Folder</h4>
-          <p className="m-0 text-sm dark:text-text-secondary">
-            This folder contains requests. Are you sure you want to delete it?
-          </p>
-          <div className="flex items-center justify-end gap-4">
-            <Button buttonType={ButtonType.DANGER} onClick={confirmDeleteFolder}>
-              Delete
-            </Button>
-            <Button buttonType={ButtonType.SECONDARY} onClick={() => dispatch(uiActions.closeDeleteFolderModal())}>
-              Cancel
-            </Button>
-          </div>
-        </div>
-      </Modal>
-      <SetAsVariableModal />
-    </div>
+    </GlobalContextMenuProvider>
   );
 }
 
