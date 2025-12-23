@@ -8,6 +8,7 @@ import {
   removeFolderFromCollection,
   removeRequestFromCollection,
   renameFolderInCollection,
+  renameRequestInCollection,
   reorderFolderInCollection,
   reorderRequestInCollection,
   updateRequestInCollection,
@@ -84,6 +85,10 @@ export const collectionSlice = createSlice({
       if (state.selectedRequestId === action.payload) {
         state.selectedRequestId = null;
       }
+    },
+    renameRequest: (state, action: PayloadAction<{ requestId: string; newName: string }>) => {
+      const { requestId, newName } = action.payload;
+      state.data = renameRequestInCollection(state.data, requestId, newName);
     },
     reorderRequest: (state, action: PayloadAction<{ activeId: string; overId: string }>) => {
       const { activeId, overId } = action.payload;

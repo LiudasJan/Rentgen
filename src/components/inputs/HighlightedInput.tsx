@@ -19,7 +19,6 @@ export default function HighlightedInput({
 }: Props) {
   const highlighterRef = useRef<HTMLDivElement>(null);
   const [scrollValue, setScrollValue] = useState<number>(0);
-
   const textValue = typeof value === 'string' ? value : '';
 
   useEffect(() => {
