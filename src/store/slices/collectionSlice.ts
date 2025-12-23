@@ -4,6 +4,8 @@ import {
   addFolderToCollection,
   addRequestToCollection,
   createEmptyCollection,
+  generateFolderId,
+  generateRequestId,
   moveRequestToFolder,
   removeFolderFromCollection,
   removeRequestFromCollection,
@@ -13,6 +15,8 @@ import {
   reorderRequestInCollection,
   updateRequestInCollection,
 } from '../../utils/collection';
+
+export type ImportMode = 'replace' | 'merge' | 'copy';
 
 interface CollectionState {
   data: PostmanCollection;
@@ -118,6 +122,86 @@ export const collectionSlice = createSlice({
     reorderFolder: (state, action: PayloadAction<{ activeId: string; overId: string }>) => {
       const { activeId, overId } = action.payload;
       state.data = reorderFolderInCollection(state.data, activeId, overId);
+    },
+    importCollection: (state, action: PayloadAction<{ collection: PostmanCollection; mode: ImportMode }>) => {
+      const { collection, mode } = action.payload;
+
+      if (mode === 'replace') {
+        // Replace only matching folders, keep non-matching ones
+        for (const importedFolder of collection.item) {
+          const existingFolderIndex = state.data.item.findIndex((f) => f.name === importedFolder.name);
+
+          if (existingFolderIndex !== -1) {
+            // Replace existing folder with imported one (new IDs)
+            state.data.item[existingFolderIndex] = {
+              ...importedFolder,
+              id: generateFolderId(),
+              item: importedFolder.item.map((request) => ({
+                ...request,
+                id: generateRequestId(),
+              })),
+            };
+          } else {
+            // Add new folder
+            state.data.item.push({
+              ...importedFolder,
+              id: generateFolderId(),
+              item: importedFolder.item.map((request) => ({
+                ...request,
+                id: generateRequestId(),
+              })),
+            });
+          }
+        }
+      } else if (mode === 'copy') {
+        // Import as Copy: Generate new IDs and append "(copy)" to folder names
+        for (const folder of collection.item) {
+          const newFolder = {
+            ...folder,
+            id: generateFolderId(),
+            name: `${folder.name} (copy)`,
+            item: folder.item.map((request) => ({
+              ...request,
+              id: generateRequestId(),
+            })),
+          };
+          state.data.item.push(newFolder);
+        }
+      } else {
+        // Merge with deduplication: add only non-duplicate requests
+        for (const folder of collection.item) {
+          const existingFolder = state.data.item.find((f) => f.name === folder.name);
+          if (existingFolder) {
+            // Add only non-duplicate requests
+            for (const request of folder.item) {
+              const isDuplicate = existingFolder.item.some(
+                (existing) =>
+                  // Duplicate by URL+Method
+                  (existing.request.url === request.request.url &&
+                    existing.request.method === request.request.method) ||
+                  // Duplicate by name
+                  existing.name === request.name,
+              );
+              if (!isDuplicate) {
+                existingFolder.item.push({
+                  ...request,
+                  id: generateRequestId(), // Generate new ID to avoid collisions
+                });
+              }
+            }
+          } else {
+            // New folder - add with new IDs
+            state.data.item.push({
+              ...folder,
+              id: generateFolderId(),
+              item: folder.item.map((request) => ({
+                ...request,
+                id: generateRequestId(),
+              })),
+            });
+          }
+        }
+      }
     },
   },
   extraReducers: (builder) => {

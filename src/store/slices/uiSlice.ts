@@ -1,4 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { PostmanCollection } from '../../types';
 
 type ReportFormat = 'json' | 'md' | 'csv';
 type SidebarTab = 'collections' | 'environments' | null;
@@ -6,6 +7,30 @@ type SidebarTab = 'collections' | 'environments' | null;
 interface SetAsVariableModalState {
   isOpen: boolean;
   initialValue: string;
+}
+
+export interface ImportConflict {
+  type: 'collection' | 'folder' | 'request';
+  existingName: string;
+  importedName: string;
+  folderId?: string;
+  folderName?: string;
+  requestMethod?: string;
+  requestUrl?: string;
+}
+
+export interface ImportConflictSummary {
+  hasConflicts: boolean;
+  collectionNameMatch: boolean;
+  folderConflicts: ImportConflict[];
+  requestConflicts: ImportConflict[];
+}
+
+interface ImportConflictModalState {
+  isOpen: boolean;
+  importedCollection: PostmanCollection | null;
+  conflictSummary: ImportConflictSummary | null;
+  warnings: string[];
 }
 
 interface UIState {
@@ -17,6 +42,7 @@ interface UIState {
     folderId: string | null;
   };
   setAsVariableModal: SetAsVariableModalState;
+  importConflictModal: ImportConflictModalState;
 
   // Feedback states
   saved: boolean;
@@ -41,6 +67,12 @@ const initialState: UIState = {
   openReloadModal: false,
   deleteFolderModal: { isOpen: false, folderId: null },
   setAsVariableModal: { isOpen: false, initialValue: '' },
+  importConflictModal: {
+    isOpen: false,
+    importedCollection: null,
+    conflictSummary: null,
+    warnings: [],
+  },
   saved: false,
   exported: false,
   curl: '',
@@ -80,6 +112,29 @@ export const uiSlice = createSlice({
     },
     closeSetAsVariableModal: (state) => {
       state.setAsVariableModal = { isOpen: false, initialValue: '' };
+    },
+    openImportConflictModal: (
+      state,
+      action: PayloadAction<{
+        collection: PostmanCollection;
+        conflictSummary: ImportConflictSummary;
+        warnings: string[];
+      }>,
+    ) => {
+      state.importConflictModal = {
+        isOpen: true,
+        importedCollection: action.payload.collection,
+        conflictSummary: action.payload.conflictSummary,
+        warnings: action.payload.warnings,
+      };
+    },
+    closeImportConflictModal: (state) => {
+      state.importConflictModal = {
+        isOpen: false,
+        importedCollection: null,
+        conflictSummary: null,
+        warnings: [],
+      };
     },
 
     // cURL

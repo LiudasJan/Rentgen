@@ -7,6 +7,7 @@ import {
   registerCollectionHandlers,
   registerEnvironmentHandlers,
   registerHttpHandlers,
+  registerImportExportHandlers,
   registerThemeHandlers,
   registerWssHandlers,
 } from './handlers';
@@ -87,6 +88,7 @@ registerWssHandlers();
 registerThemeHandlers(store);
 registerCollectionHandlers();
 registerEnvironmentHandlers();
+registerImportExportHandlers();
 
 ipcMain.handle('get-app-version', () => app.getVersion());
 ipcMain.on('open-external', (_, url: string) => shell.openExternal(url));

@@ -95,4 +95,6 @@ export enum TestStatus {
 }
 
 export * from './environment';
+export * from './ipc';
 export * from './postman';
+export * from './postman-full';
