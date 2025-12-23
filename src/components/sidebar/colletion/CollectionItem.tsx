@@ -2,7 +2,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Method } from 'axios';
 import cn from 'classnames';
-import { useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useCollectionRunner } from '../../../hooks/useCollectionRunner';
 import { useReset } from '../../../hooks/useReset';
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
@@ -18,24 +18,27 @@ import { requestActions } from '../../../store/slices/requestSlice';
 import { responseActions } from '../../../store/slices/responseSlice';
 import { testActions } from '../../../store/slices/testSlice';
 import {
+  CollectionItemData,
   findFolderIdByRequestId,
   findRequestById,
   headersRecordToString,
   postmanHeadersToRecord,
-  SidebarItemData,
 } from '../../../utils/collection';
+import { useContextMenu } from '../../context-menu/GlobalContextMenuProvider';
 import MethodBadge from '../../MethodBadge';
 
 import ClearCrossIcon from '../../../assets/icons/clear-cross-icon.svg';
+import EditIcon from '../../../assets/icons/edit-icon.svg';
 import PlayIcon from '../../../assets/icons/play-icon.svg';
 
 interface Props {
-  item: SidebarItemData;
+  item: CollectionItemData;
 }
 
 export default function CollectionItem({ item }: Props) {
   const dispatch = useAppDispatch();
   const { runRequest } = useCollectionRunner();
+  const { isOpen } = useContextMenu();
   const reset = useReset();
 
   const collection = useAppSelector(selectCollectionData);
@@ -44,6 +47,9 @@ export default function CollectionItem({ item }: Props) {
   const requestTestResults = useAppSelector(selectRequestTestResults(item.id));
   const selectedRequestId = useAppSelector(selectSelectedRequestId);
 
+  const [isEditing, setIsEditing] = useState<boolean>(false);
+  const [editingName, setEditingName] = useState<string>(item.name);
+
   const runResult = runResults[item.id] || null;
   const isSelected = item.id === selectedRequestId;
   const { attributes, isDragging, listeners, transform, transition, setNodeRef } = useSortable({
@@ -51,7 +57,9 @@ export default function CollectionItem({ item }: Props) {
     data: { type: 'item', folderId: item.folderId },
   });
 
-  const handleClick = useCallback(
+  useEffect(() => setEditingName(item.name), [isEditing, item.name]);
+
+  const onClick = useCallback(
     (id: string) => {
       if (isSelected || isDragging) return;
 
@@ -88,6 +96,13 @@ export default function CollectionItem({ item }: Props) {
     [collection, isDragging, isSelected, runResult, requestTestResults, dispatch, reset],
   );
 
+  const onSaveEdit = useCallback(() => {
+    if (editingName.trim() && editingName !== item.name)
+      dispatch(collectionActions.renameRequest({ requestId: item.id, newName: editingName.trim() }));
+
+    setIsEditing(false);
+  }, [editingName, item, dispatch]);
+
   return (
     <div
       ref={setNodeRef}
@@ -103,7 +118,7 @@ export default function CollectionItem({ item }: Props) {
           'opacity-50 shadow-lg z-50': isDragging,
         },
       )}
-      onClick={() => handleClick(item.id)}
+      onClick={() => onClick(item.id)}
       {...attributes}
       {...listeners}
     >
@@ -117,30 +132,55 @@ export default function CollectionItem({ item }: Props) {
         />
       )}
       <MethodBadge method={item.method} />
-      <span className="flex-1 text-xs truncate" title={item.url}>
-        {item.url}
-      </span>
-      <div className="absolute top-0 bottom-0 right-0 pl-2 pr-3 flex items-center gap-2 bg-button-secondary dark:bg-dark-input opacity-0 group-hover:opacity-100">
-        <PlayIcon
-          className={cn('h-4 w-4 text-green-500 hover:text-green-600 transition-opacity', {
-            'cursor-pointer': runningRequestId !== item.id,
-            'opacity-50 cursor-not-allowed': runningRequestId === item.id,
-          })}
-          onClick={(event: MouseEvent) => {
+      {isEditing && (
+        <input
+          autoFocus
+          className="flex-1 py-px px-1 text-xs leading-none bg-transparent border border-border dark:border-dark-input dark:text-dark-text rounded outline-none"
+          value={editingName}
+          type="text"
+          onBlur={() => !isOpen && onSaveEdit()}
+          onChange={(event) => setEditingName(event.target.value)}
+          onClick={(event) => event.stopPropagation()}
+          onKeyDown={(event) => {
             event.stopPropagation();
+            if (event.key === 'Enter') onSaveEdit();
+            else if (event.key === 'Escape') setIsEditing(false);
+          }}
+          onPointerDown={(event) => event.stopPropagation()}
+        />
+      )}
+      {!isEditing && (
+        <>
+          <span className="flex-1 text-xs truncate" title={item.name}>
+            {item.name}
+          </span>
+          <div className="absolute top-0 bottom-0 right-0 pl-2 pr-3 flex items-center gap-2 bg-button-secondary dark:bg-dark-input opacity-0 group-hover:opacity-100">
+            <PlayIcon
+              className={cn('h-4 w-4 text-green-500 hover:text-green-600 transition-opacity', {
+                'cursor-pointer': runningRequestId !== item.id,
+                'opacity-50 cursor-not-allowed': runningRequestId === item.id,
+              })}
+              onClick={(event: MouseEvent) => {
+                event.stopPropagation();
 
-            if (runningRequestId === item.id) return;
-            runRequest(item.id);
-          }}
-        />
-        <ClearCrossIcon
-          className="h-4.5 w-4.5 text-button-text-secondary dark:text-text-secondary hover:text-button-danger cursor-pointer"
-          onClick={(event: MouseEvent) => {
-            event.stopPropagation();
-            dispatch(collectionActions.removeRequest(item.id));
-          }}
-        />
-      </div>
+                if (runningRequestId === item.id) return;
+                runRequest(item.id);
+              }}
+            />
+            <EditIcon
+              className="h-4 w-4 text-button-text-secondary dark:text-text-secondary hover:text-button-primary cursor-pointer"
+              onClick={() => setIsEditing(true)}
+            />
+            <ClearCrossIcon
+              className="h-4.5 w-4.5 text-button-text-secondary dark:text-text-secondary hover:text-button-danger cursor-pointer"
+              onClick={(event: MouseEvent) => {
+                event.stopPropagation();
+                dispatch(collectionActions.removeRequest(item.id));
+              }}
+            />
+          </div>
+        </>
+      )}
     </div>
   );
 }

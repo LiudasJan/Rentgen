@@ -7,7 +7,7 @@ import { useAppDispatch, useAppSelector } from '../../../store/hooks';
 import { selectCollectionRunResults, selectRunningFolderId, selectSelectedFolderId } from '../../../store/selectors';
 import { collectionActions } from '../../../store/slices/collectionSlice';
 import { uiActions } from '../../../store/slices/uiSlice';
-import { SidebarFolderData } from '../../../utils/collection';
+import { CollectionFolderData } from '../../../utils/collection';
 import { useContextMenu } from '../../context-menu/GlobalContextMenuProvider';
 import CollectionItem from './CollectionItem';
 
@@ -19,7 +19,7 @@ import PlayIcon from '../../../assets/icons/play-icon.svg';
 import StopIcon from '../../../assets/icons/stop-icon.svg';
 
 interface Props {
-  folder: SidebarFolderData;
+  folder: CollectionFolderData;
   folderCount: number;
   isEditing: boolean;
   editingName: string;
@@ -46,7 +46,6 @@ export default function CollectionGroup({
   const { runFolder, cancelRun } = useCollectionRunner();
   const [isExpanded, setIsExpanded] = useState(folderCount === 1);
   const isSelected = folder.id === selectedFolderId;
-  const canEdit = true;
   const isThisFolderRunning = runningFolderId === folder.id;
   const isOtherFolderRunning = runningFolderId !== null && runningFolderId !== folder.id;
   const runResults = useAppSelector(selectCollectionRunResults);
@@ -97,6 +96,7 @@ export default function CollectionGroup({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    e.stopPropagation();
     if (e.key === 'Enter') {
       onSaveEdit(folder.id, editingName);
     } else if (e.key === 'Escape') {
@@ -146,15 +146,15 @@ export default function CollectionGroup({
 
           {isEditing ? (
             <input
-              type="text"
-              value={editingName}
-              onChange={(e) => onEditingNameChange(e.target.value)}
-              onKeyDown={handleKeyDown}
-              onBlur={() => !isOpen && onSaveEdit(folder.id, editingName)}
-              onClick={(e) => e.stopPropagation()}
-              onPointerDown={(e) => e.stopPropagation()}
-              className="flex-1 text-xs bg-transparent border border-border dark:border-dark-input dark:text-dark-text rounded px-1 py-0.5 outline-none focus:border-button-primary"
               autoFocus
+              className="flex-1 py-px px-1 text-xs leading-none bg-transparent border border-border dark:border-dark-input dark:text-dark-text rounded outline-none"
+              value={editingName}
+              type="text"
+              onBlur={() => !isOpen && onSaveEdit(folder.id, editingName)}
+              onChange={(e) => onEditingNameChange(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={handleKeyDown}
+              onPointerDown={(e) => e.stopPropagation()}
             />
           ) : (
             <span className="text-xs truncate">{folder.name}</span>
@@ -177,7 +177,7 @@ export default function CollectionGroup({
               />
             ))}
 
-          {canEdit && !isEditing && (
+          {!isEditing && (
             <EditIcon
               className="h-4 w-4 shrink-0 text-button-text-secondary dark:text-text-secondary hover:text-button-primary cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
               onClick={handleEditClick}
