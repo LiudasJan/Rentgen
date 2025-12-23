@@ -1,65 +1,44 @@
-## [v1.5.0]
+## v1.6.0
 
-### 🔍 Smarter Test Generation
+### ⚡ Performance & API Health Insights
 
-- **TEST: Required vs Optional fields**  
-  You can now mark any request field as **mandatory** or **optional**.  
-  Rentgen automatically generates:
-  - **missing-required-field tests** → expect **4xx**
-  - **optional-field-omitted tests** → expect **2xx**  
-    This gives you instant coverage for “what happens if this field is not sent?” without writing a single script.
+- **TEST: Network Latency vs API Latency**
+  Rentgen now detects whether slowness is caused by **network latency** or by **API processing time**.
+  You get a clear signal:
+- network is slow → not your API
+- API is slow → real backend problem
 
-### 🐛 One-Click Bug Reports
+No guessing. No finger-pointing.
 
-- **Copy Bug Report**  
-  When a test fails, you shouldn’t waste time writing tickets by hand.  
-  Each failed test now has a **“Copy Bug Report”** button that:
-  - pre-fills the bug title with the test name,
-  - includes request, response, expectations and severity,
-  - is formatted as clean plaintext ready to paste into Jira, Trello, Linear, or GitHub Issues.
+- **TEST: Response Size Check**
+  If any request returns a response larger than recommended limits, Rentgen raises a warning and explains:
+- why large payloads are dangerous,
+- how they impact performance and memory,
+- and what to fix.
 
-  Fail → click → paste into your tracker → done.
+- **TEST: Array List Without Pagination**
+  If Rentgen detects an array response without pagination or limits, it raises a warning explaining:
+- why unbounded lists are risky,
+- how they hurt scalability,
+- and why pagination or limits are required.
 
-### 📦 Test Export (kudos to Aivaras)
+### 🚀 Workflow Improvements
 
-- **Test Export for all generated checks**  
-  Huge thanks to **Aivaras St.** – he implemented export of all generated tests and shared the code with us.  
-  Now Rentgen can export your tests so you can:
-  - review them outside the app,
-  - share them with the team,
-  - keep a versioned snapshot of your API hygiene checks.
+- Requests are now **auto-saved into Collections** together with generated assertions.
+- Requests can be grouped into folders inside a Collection.
+- You can run requests directly from a Collection using a simple **Play** button — no test runner ceremony.
 
-### 🗂 Collections: your work is finally persistent
+- **Generate & Run Tests** now stores full execution results,
+  allowing comparison between different request versions.
 
-- **Save all your work into Collections**  
-  No more “start from scratch every time.”  
-  You can now:
-  - add requests into **Collections**,
-  - group them by feature / service,
-  - reopen Rentgen and continue exactly where you left off.
+- **Auto Save**: forgot to save request changes?
+  Rentgen now saves automatically — no lost work.
 
-  Collections are the first building block for bigger test suites and regression packs.
+- **Create Request**: besides importing cURL, you can now create requests manually for fast experiments.
 
-### 🌍 Environment Support (Test / Staging / Prod)
+### 🛠 Performance & Stability
 
-- **Environment profiles** for dev, test, staging, prod (or anything you like).
-- Each environment can have its own:
-  - base URL,
-  - headers / tokens,
-  - and **color theme**, so you instantly see where you are running tests.
+- Optimized handling of very large JSON responses.
+  Performance issues reported by Tomasevicius are now fixed.
 
-This also means you can make staging bright and friendly, and keep prod visually “scary” enough to think twice before firing **200 heavy tests** against it.
-
-### 💻 How to Run on macOS
-
-macOS may block the app (“developer cannot be verified”).  
-To run it normally:
-
-Move `Rentgen.app` to the Applications folder.  
-Open Terminal and run:
-
-```
-xattr -d com.apple.quarantine /Applications/Rentgen.app
-```
-
-Then launch Rentgen as usual.
+- Multiple internal improvements and bug fixes across request execution, collections, and test generation.
