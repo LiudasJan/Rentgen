@@ -10,14 +10,13 @@ interface Props {
 export default function VariableHighlighter({ highlightColor, variables = [], text }: Props) {
   const segments = useMemo(() => parseVariables(text), [text]);
   const variableKeys = useMemo(() => new Set(variables.map((variable) => variable.trim())), [variables]);
-
   const variableExists = (segmentText: string): boolean => {
     const varName = segmentText.slice(2, -2).trim();
     return variableKeys.has(varName);
   };
 
   return (
-    <span>
+    <>
       {segments.map((segment, index) =>
         segment.isVariable && variableExists(segment.text) ? (
           <span
@@ -34,6 +33,6 @@ export default function VariableHighlighter({ highlightColor, variables = [], te
           <span key={index}>{segment.text}</span>
         ),
       )}
-    </span>
+    </>
   );
 }
