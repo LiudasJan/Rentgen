@@ -25,6 +25,43 @@ export const selectSelectedEnvironment = createSelector(
   (environments, selectedId) => environments.find((env) => env.id === selectedId) || null,
 );
 
+// Dynamic variables selectors
+export const selectDynamicVariables = (state: RootState) => state.environment.dynamicVariables;
+
+export const selectDynamicVariablesForEnvironment = createSelector(
+  [selectDynamicVariables, (_: RootState, envId: string | null) => envId],
+  (dynamicVariables, envId) => dynamicVariables.filter((dv) => dv.environmentId === null || dv.environmentId === envId),
+);
+
+export const selectDynamicVariablesByRequest = createSelector(
+  [selectDynamicVariables, (_: RootState, requestId: string) => requestId],
+  (dynamicVariables, requestId) => dynamicVariables.filter((dv) => dv.requestId === requestId),
+);
+
+export const selectVariableNameExists = createSelector(
+  [
+    selectEnvironments,
+    selectDynamicVariables,
+    (_: RootState, name: string) => name,
+    (_: RootState, _name: string, envId: string | null) => envId,
+  ],
+  (environments, dynamicVariables, name, envId) => {
+    // Check static variables
+    const staticExists = environments.some((env) => {
+      if (envId !== null && env.id !== envId) return false;
+      return env.variables.some((v) => v.key === name);
+    });
+
+    // Check dynamic variables
+    const dynamicExists = dynamicVariables.some((dv) => {
+      if (envId !== null && dv.environmentId !== null && dv.environmentId !== envId) return false;
+      return dv.key === name;
+    });
+
+    return staticExists || dynamicExists;
+  },
+);
+
 // Request selectors
 export const selectMode = (state: RootState) => state.request.mode;
 export const selectMethod = (state: RootState) => state.request.method;
@@ -98,3 +135,4 @@ export const selectRunningRequestId = (state: RootState) => state.collectionRun.
 export const selectCollectionRunResults = (state: RootState) => state.collectionRun.results;
 export const selectSetAsVariableModal = (state: RootState) => state.ui.setAsVariableModal;
 export const selectImportConflictModal = (state: RootState) => state.ui.importConflictModal;
+export const selectSetAsDynamicVariableModal = (state: RootState) => state.ui.setAsDynamicVariableModal;

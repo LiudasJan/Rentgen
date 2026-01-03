@@ -1,4 +1,7 @@
-import { Middleware, Action } from '@reduxjs/toolkit';
+import { Middleware, Action, PayloadAction } from '@reduxjs/toolkit';
+import { DynamicVariable, HttpResponse } from '../../types';
+import { extractDynamicVariableFromResponse } from '../../utils/dynamicVariable';
+import { environmentActions } from '../slices/environmentSlice';
 
 // Actions that should NOT trigger auto-save (read-only or loading actions)
 const collectionReadOnlyActions = [
@@ -13,11 +16,23 @@ const environmentReadOnlyActions = [
   'environment/load/pending',
   'environment/load/fulfilled',
   'environment/load/rejected',
+  'environment/loadDynamicVariables/pending',
+  'environment/loadDynamicVariables/fulfilled',
+  'environment/loadDynamicVariables/rejected',
   'environment/selectEnvironment',
   'environment/startEditing',
   'environment/stopEditing',
   'environment/startAddEnvironment',
   'environment/setEnvironmentToDelete',
+  'environment/setDynamicVariables',
+];
+
+// Dynamic variable actions that should trigger auto-save of dynamic variables
+const dynamicVariableActions = [
+  'environment/addDynamicVariable',
+  'environment/updateDynamicVariable',
+  'environment/removeDynamicVariable',
+  'environment/updateDynamicVariableValue',
 ];
 
 export const electronMiddleware: Middleware = (store) => (next) => (action: Action) => {
@@ -31,10 +46,48 @@ export const electronMiddleware: Middleware = (store) => (next) => (action: Acti
     window.electronAPI.saveCollection(state.collection.data);
   }
 
-  // Auto-save environments after mutation actions
-  if (actionType && actionType.startsWith('environment/') && !environmentReadOnlyActions.includes(actionType)) {
+  // Auto-save environments after mutation actions (excluding dynamic variable actions)
+  if (
+    actionType &&
+    actionType.startsWith('environment/') &&
+    !environmentReadOnlyActions.includes(actionType) &&
+    !dynamicVariableActions.includes(actionType)
+  ) {
     const state = store.getState();
     window.electronAPI.saveEnvironments(state.environment.environments);
+  }
+
+  // Auto-save dynamic variables after their mutation actions
+  if (actionType && dynamicVariableActions.includes(actionType)) {
+    const state = store.getState();
+    window.electronAPI.saveDynamicVariables(state.environment.dynamicVariables);
+  }
+
+  // Auto-update dynamic variables when a response is received
+  if (actionType === 'response/setResponse') {
+    const state = store.getState();
+    const currentRequestId = state.collection.selectedRequestId;
+
+    if (currentRequestId) {
+      const dynamicVars = (state.environment.dynamicVariables as DynamicVariable[]).filter(
+        (dv) => dv.requestId === currentRequestId,
+      );
+
+      const response = (action as PayloadAction<HttpResponse>).payload;
+
+      for (const dvar of dynamicVars) {
+        const extractedValue = extractDynamicVariableFromResponse(dvar, response);
+
+        if (extractedValue !== null) {
+          store.dispatch(
+            environmentActions.updateDynamicVariableValue({
+              id: dvar.id,
+              value: extractedValue,
+            }),
+          );
+        }
+      }
+    }
   }
 
   return result;

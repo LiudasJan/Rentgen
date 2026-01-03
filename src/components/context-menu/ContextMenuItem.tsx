@@ -5,10 +5,11 @@ interface Props {
   label: string;
   disabled?: boolean;
   divider?: boolean;
+  title?: string;
   onClick: (event: MouseEvent) => void;
 }
 
-export default function ContextMenuItem({ label, disabled = false, divider = false, onClick }: Props) {
+export default function ContextMenuItem({ label, disabled = false, divider = false, title, onClick }: Props) {
   return (
     <>
       {divider && <div className="my-1 border-t border-border dark:border-dark-body" />}
@@ -24,6 +25,7 @@ export default function ContextMenuItem({ label, disabled = false, divider = fal
         )}
         onClick={(event: MouseEvent) => !disabled && onClick(event)}
         disabled={disabled}
+        title={title}
       >
         {label}
       </button>
