@@ -1,6 +1,8 @@
 import { createContext, PropsWithChildren, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { useAppDispatch } from '../../store/hooks';
+import { useAppDispatch, useAppSelector } from '../../store/hooks';
+import { selectCollectionData, selectSelectedRequestId } from '../../store/selectors';
 import { uiActions } from '../../store/slices/uiSlice';
+import { findRequestWithFolder } from '../../utils/collection';
 import ContextMenu from './ContextMenu';
 import ContextMenuItem from './ContextMenuItem';
 
@@ -10,8 +12,15 @@ interface MenuState {
   selectedText: string;
 }
 
+export interface ResponsePanelContext {
+  isResponsePanel: boolean;
+  source: 'body' | 'header';
+  jsonPath?: string | null;
+  jsonValue?: string | null;
+}
+
 interface ContextMenuValue extends MenuState {
-  showContextMenu: (x: number, y: number, text: string) => void;
+  showContextMenu: (x: number, y: number, text: string, responsePanelContext?: ResponsePanelContext) => void;
 }
 
 const ContextMenuContext = createContext<ContextMenuValue | undefined>(undefined);
@@ -20,18 +29,33 @@ export const useContextMenu = () => useContext(ContextMenuContext);
 
 export default function GlobalContextMenuProvider({ children }: PropsWithChildren) {
   const dispatch = useAppDispatch();
+  const collection = useAppSelector(selectCollectionData);
+  const selectedRequestId = useAppSelector(selectSelectedRequestId);
+
   const [htmlElement, setHtmlElement] = useState<HTMLElement>(null);
   const [menuState, setMenuState] = useState<MenuState>({
     isOpen: false,
     position: { x: 0, y: 0 },
     selectedText: '',
   });
+  const [responsePanelContext, setResponsePanelContext] = useState<ResponsePanelContext | null>(null);
+
   const hasSelection = useMemo(() => menuState.selectedText.length > 0, [menuState.selectedText]);
+  const isInResponsePanel = responsePanelContext !== null;
+
+  // Check if current request is saved in collection and get folder info
+  const currentRequestWithFolder = useMemo(() => {
+    if (!selectedRequestId) return null;
+    return findRequestWithFolder(collection, selectedRequestId);
+  }, [collection, selectedRequestId]);
+
+  const isRequestInCollection = !!currentRequestWithFolder;
 
   const closeMenu = useCallback(() => setMenuState((prev) => ({ ...prev, isOpen: false })), []);
 
-  const showContextMenu = useCallback((x: number, y: number, text: string) => {
+  const showContextMenu = useCallback((x: number, y: number, text: string, panelContext?: ResponsePanelContext) => {
     setHtmlElement(null);
+    setResponsePanelContext(panelContext || null);
     setMenuState({
       isOpen: true,
       position: { x, y },
@@ -87,6 +111,30 @@ export default function GlobalContextMenuProvider({ children }: PropsWithChildre
     closeMenu();
   }, [menuState.selectedText, closeMenu, dispatch]);
 
+  const handleSetAsDynamicVariable = useCallback(() => {
+    if (!currentRequestWithFolder || !selectedRequestId) return;
+
+    const { folder, request } = currentRequestWithFolder;
+    const jsonPath = responsePanelContext?.jsonPath;
+    const jsonValue = responsePanelContext?.jsonValue;
+    const source = responsePanelContext?.source || 'body';
+
+    dispatch(
+      uiActions.openSetAsDynamicVariableModal({
+        initialSelector: jsonPath || menuState.selectedText,
+        initialValue: jsonValue || menuState.selectedText,
+        source,
+        collectionId: folder.id,
+        requestId: selectedRequestId,
+        collectionName: folder.name,
+        requestName: request.name,
+        editingVariableId: null,
+        editingVariableName: null,
+      }),
+    );
+    closeMenu();
+  }, [currentRequestWithFolder, selectedRequestId, responsePanelContext, menuState.selectedText, closeMenu, dispatch]);
+
   useEffect(() => {
     const handleContextMenu = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
@@ -96,6 +144,29 @@ export default function GlobalContextMenuProvider({ children }: PropsWithChildre
 
       event.preventDefault();
       setHtmlElement(target);
+
+      // Check if we're in a response panel (body or headers)
+      const responsePanel = target.closest('[data-response-panel]');
+      const inResponsePanel = !!responsePanel;
+
+      if (inResponsePanel) {
+        // Detect source (body or header)
+        const headerPanel = target.closest('[data-response-headers]');
+        const source = headerPanel ? 'header' : 'body';
+
+        // Try to extract JSON path from data attributes (if using JsonViewer)
+        const jsonPathAttr = target.closest('[data-json-path]')?.getAttribute('data-json-path');
+
+        setResponsePanelContext({
+          isResponsePanel: true,
+          source,
+          jsonPath: jsonPathAttr || null,
+          jsonValue: null,
+        });
+      } else {
+        setResponsePanelContext(null);
+      }
+
       setMenuState({
         isOpen: true,
         position: { x: event.clientX, y: event.clientY },
@@ -110,7 +181,7 @@ export default function GlobalContextMenuProvider({ children }: PropsWithChildre
       document.removeEventListener('contextmenu', handleContextMenu);
       document.removeEventListener('scroll', closeMenu);
     };
-  }, []);
+  }, [closeMenu]);
 
   return (
     <ContextMenuContext.Provider value={{ ...menuState, showContextMenu }}>
@@ -122,6 +193,14 @@ export default function GlobalContextMenuProvider({ children }: PropsWithChildre
         <ContextMenuItem label="Copy" onClick={handleCopy} disabled={!hasSelection} />
         {htmlElement && isInputOrTextarea(htmlElement) && <ContextMenuItem label="Paste" onClick={handlePaste} />}
         <ContextMenuItem label="Set as Variable" onClick={handleSetAsVariable} disabled={!hasSelection} divider />
+        {isInResponsePanel && (
+          <ContextMenuItem
+            label="Set as Dynamic Variable"
+            onClick={handleSetAsDynamicVariable}
+            disabled={!hasSelection || !isRequestInCollection}
+            title={!isRequestInCollection ? 'Save request to collection first' : undefined}
+          />
+        )}
       </ContextMenu>
     </ContextMenuContext.Provider>
   );

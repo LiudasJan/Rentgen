@@ -5,8 +5,11 @@ import { generateEnvironmentId } from '../../utils';
 import Button from '../buttons/Button';
 import Input from '../inputs/Input';
 import ResponsePanel from '../panels/ResponsePanel';
+import DynamicVariablesList from './DynamicVariablesList';
 
 const COLOR_OPTIONS = ['#EF4444', '#F97316', '#EAB308', '#22C55E', '#3B82F6', '#8B5CF6', '#EC4899', '#6B7280'];
+
+type TabType = 'static' | 'dynamic';
 
 interface Props {
   environment: Environment | null;
@@ -19,6 +22,7 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
   const [color, setColor] = useState(COLOR_OPTIONS[4]); // Default blue
   const [variables, setVariables] = useState<EnvironmentVariable[]>([]);
   const [saved, setSaved] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabType>('static');
   const savedTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   // Check if current state differs from environment prop
@@ -161,38 +165,70 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
             </div>
           </div>
 
-          {/* Variables Table */}
+          {/* Tabs */}
           <div className="mb-4">
             <label className="block mb-1 font-bold text-sm">Variables</label>
+            <div className="flex gap-1 mb-2">
+              <button
+                className={cn(
+                  'px-4 py-2 text-sm font-medium rounded-t-md border border-b-0 transition-colors',
+                  activeTab === 'static'
+                    ? 'bg-white dark:bg-dark-input border-border dark:border-dark-border text-text dark:text-dark-text'
+                    : 'bg-body dark:bg-dark-body border-transparent text-text-secondary dark:text-dark-text-secondary hover:text-text dark:hover:text-dark-text',
+                )}
+                onClick={() => setActiveTab('static')}
+              >
+                Static
+              </button>
+              <button
+                className={cn(
+                  'px-4 py-2 text-sm font-medium rounded-t-md border border-b-0 transition-colors',
+                  activeTab === 'dynamic'
+                    ? 'bg-white dark:bg-dark-input border-border dark:border-dark-border text-text dark:text-dark-text'
+                    : 'bg-body dark:bg-dark-body border-transparent text-text-secondary dark:text-dark-text-secondary hover:text-text dark:hover:text-dark-text',
+                )}
+                onClick={() => setActiveTab('dynamic')}
+              >
+                Dynamic
+              </button>
+            </div>
+
+            {/* Tab Content */}
             <div className="border border-border dark:border-dark-body rounded-md overflow-hidden">
-              {/* Table Header */}
-              <div className="flex bg-body dark:bg-dark-body border-b border-border dark:border-dark-border">
-                <div className="flex-1 px-3 py-2 font-bold text-xs">Variable Name</div>
-                <div className="flex-1 px-3 py-2 font-bold text-xs">Value</div>
-              </div>
-              {/* Table Body - scrollable */}
-              <div className="max-h-[400px] overflow-y-auto">
-                {variables.map((variable, index) => (
-                  <div key={index} className="flex border-b border-border dark:border-dark-body last:border-b-0">
-                    <div className="flex-1 p-1">
-                      <Input
-                        className="w-full border-0 bg-transparent"
-                        placeholder="variable_name"
-                        value={variable.key}
-                        onChange={(e) => handleVariableChange(index, 'key', e.target.value)}
-                      />
-                    </div>
-                    <div className="flex-1 p-1 border-l border-border dark:border-dark-body">
-                      <Input
-                        className="w-full border-0 bg-transparent"
-                        placeholder="value"
-                        value={variable.value}
-                        onChange={(e) => handleVariableChange(index, 'value', e.target.value)}
-                      />
-                    </div>
+              {activeTab === 'static' ? (
+                <>
+                  {/* Table Header */}
+                  <div className="flex bg-body dark:bg-dark-body border-b border-border dark:border-dark-border">
+                    <div className="flex-1 px-3 py-2 font-bold text-xs">Variable Name</div>
+                    <div className="flex-1 px-3 py-2 font-bold text-xs">Value</div>
                   </div>
-                ))}
-              </div>
+                  {/* Table Body - scrollable */}
+                  <div className="max-h-[400px] overflow-y-auto">
+                    {variables.map((variable, index) => (
+                      <div key={index} className="flex border-b border-border dark:border-dark-body last:border-b-0">
+                        <div className="flex-1 p-1">
+                          <Input
+                            className="w-full border-0 bg-transparent"
+                            placeholder="variable_name"
+                            value={variable.key}
+                            onChange={(e) => handleVariableChange(index, 'key', e.target.value)}
+                          />
+                        </div>
+                        <div className="flex-1 p-1 border-l border-border dark:border-dark-body">
+                          <Input
+                            className="w-full border-0 bg-transparent"
+                            placeholder="value"
+                            value={variable.value}
+                            onChange={(e) => handleVariableChange(index, 'value', e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <DynamicVariablesList />
+              )}
             </div>
           </div>
 

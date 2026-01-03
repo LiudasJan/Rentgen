@@ -1,4 +1,4 @@
-import { PostmanCollection, PostmanHeader, PostmanItem, PostmanRequest } from '../types';
+import { PostmanCollection, PostmanFolder, PostmanHeader, PostmanItem, PostmanRequest } from '../types';
 
 const DEFAULT_FOLDER_ID = 'default';
 const DEFAULT_FOLDER_NAME = 'All Requests';
@@ -167,6 +167,25 @@ export function findRequestById(collection: PostmanCollection, requestId: string
   for (const folder of collection.item) {
     const item = folder.item.find((i) => i.id === requestId);
     if (item) return item;
+  }
+  return null;
+}
+
+export interface RequestWithFolder {
+  folder: PostmanFolder;
+  request: PostmanItem;
+}
+
+/**
+ * Find a request by ID and also return the containing folder.
+ * Useful when you need both the request and folder context (e.g., for dynamic variables).
+ */
+export function findRequestWithFolder(collection: PostmanCollection, requestId: string): RequestWithFolder | null {
+  for (const folder of collection.item) {
+    const item = folder.item.find((i) => i.id === requestId);
+    if (item) {
+      return { folder, request: item };
+    }
   }
   return null;
 }

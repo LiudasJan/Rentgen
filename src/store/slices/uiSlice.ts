@@ -8,6 +8,19 @@ interface SetAsVariableModalState {
   initialValue: string;
 }
 
+interface SetAsDynamicVariableModalState {
+  isOpen: boolean;
+  initialSelector: string;
+  initialValue: string;
+  source: 'body' | 'header';
+  collectionId: string;
+  requestId: string;
+  collectionName: string;
+  requestName: string;
+  editingVariableId: string | null;
+  editingVariableName: string | null;
+}
+
 interface UIState {
   // Modal states
   openCurlModal: boolean;
@@ -17,6 +30,7 @@ interface UIState {
     folderId: string | null;
   };
   setAsVariableModal: SetAsVariableModalState;
+  setAsDynamicVariableModal: SetAsDynamicVariableModalState;
 
   // Feedback states
   saved: boolean;
@@ -41,6 +55,18 @@ const initialState: UIState = {
   openReloadModal: false,
   deleteFolderModal: { isOpen: false, folderId: null },
   setAsVariableModal: { isOpen: false, initialValue: '' },
+  setAsDynamicVariableModal: {
+    isOpen: false,
+    initialSelector: '',
+    initialValue: '',
+    source: 'body',
+    collectionId: '',
+    requestId: '',
+    collectionName: '',
+    requestName: '',
+    editingVariableId: null,
+    editingVariableName: null,
+  },
   saved: false,
   exported: false,
   curl: '',
@@ -80,6 +106,23 @@ export const uiSlice = createSlice({
     },
     closeSetAsVariableModal: (state) => {
       state.setAsVariableModal = { isOpen: false, initialValue: '' };
+    },
+    openSetAsDynamicVariableModal: (state, action: PayloadAction<Omit<SetAsDynamicVariableModalState, 'isOpen'>>) => {
+      state.setAsDynamicVariableModal = { ...action.payload, isOpen: true };
+    },
+    closeSetAsDynamicVariableModal: (state) => {
+      state.setAsDynamicVariableModal = {
+        isOpen: false,
+        initialSelector: '',
+        initialValue: '',
+        source: 'body',
+        collectionId: '',
+        requestId: '',
+        collectionName: '',
+        requestName: '',
+        editingVariableId: null,
+        editingVariableName: null,
+      };
     },
 
     // cURL
