@@ -1,93 +1,78 @@
 # 🔬 Rentgen
 
-### 🌐 Rentgen website
+👉 Landing page: [rentgen.io](https://rentgen.io)  
+👉 Download: [Latest Release](https://github.com/LiudasJan/Rentgen/releases/latest)
 
-👉 https://rentgen.io
-
-**Rentgen** is an API testing tool that works like an X-ray: it **exposes what’s really happening inside your APIs**.
-
-but built for:
-
-- 🚀 **Generate hundreds of tests** - from one simple request
-- 🔌 **WebSockets (WSS)** — live bi-directional testing
-- 📦 **Protobuf payloads** — load `.proto` schemas, encode requests, decode responses
-- 🛠️ **Raw testing freedom** — send malformed or ugly payloads without restrictions
-- 🏗️ **Lightweight** and no complex setup
+**Rentgen** is a local-first API testing tool that exposes how your API actually behaves — not how you hope it behaves. No cloud. No accounts. No telemetry. Built by a tester, for a testers and developers.
 
 ---
 
-## ✨ Why Rentgen?
+## Why Rentgen
 
-Fokus on what to test not how to test.
+Most API tools focus on _how to send requests_.  
+Rentgen focuses on **what your API does under pressure**.
 
-**Rentgen** lets you do all of this in a familiar Postman-like interface.
+From a single known-good request, Rentgen automatically checks:
+
+- HTTP behavior
+- error handling
+- security headers
+- edge cases that cause real production bugs
+- performance insights
+
+This is **behavior-first API testing**, not scripting.
+
+---
+
+## What Rentgen does
+
+- Generate dozens of API tests from one request
+- Detect misleading HTTP statuses (401 vs 403, 400 vs 413, etc.)
+- Catch security and caching issues before production
+- Test HTTP, WebSockets (WSS), and Protobuf APIs
+- Run locally — your data never leaves your machine
 
 ---
 
-## 🚀 Key Features
+## Real bugs, not theory
 
-- 🧪 **Data-Driven Testing** — generate dozens of tests from a single request using smart datasets and field type detection - (`string`, `number`, `email`, etc.)
-- 🔒 **Security & Headers Audit** — built-in OWASP checks for headers, methods, CORS, and authorization handling
-- ⚡ **Performance Insights** — median response time, ping latency, and load test with live `p50/p90/p95` metrics
-- 📬 **HTTP & WebSocket Support** — send requests or connect to WSS endpoints, both JSON and Protobuf
-- 🐛 **Protobuf Integration** — import `.proto` schemas to encode requests and decode binary responses
-- 🧷 **Randomized Payloads** — `randomInt`, `random32`, and `randomEmail` for unique data in each request
-- 🔁 **Load & Stress Testing** — multi-threaded (up to 100 concurrent) requests with automatic abort on slowdowns
-- 🧩 **Automatic Field Mapping** — detects all body and query params with editable type selection
-- 🖥️ **Postman-like UI** — instant usability, “Import cURL” support, and “Copy as cURL” for reproducibility
-- 🌐 **CORS & SSL Controls** — detect public vs private APIs, and optionally bypass SSL for staging servers
+Rentgen has already found real issues in production APIs, including:
 
-…and more.  
-Built for **QA engineers** who need _real testing_, not just “sending requests.”
+- broken payload size handling (DoS risk)
+- missing cache-control on private data
+- incorrect authorization responses
+- unsafe CORS configurations
+
+📖 Read real API Stories → [rentgen.io/api-stories](https://rentgen.io/api-stories)
 
 ---
+
+## Get started (30 seconds)
+
+1. Download the [latest Release](https://github.com/LiudasJan/Rentgen/releases/latest)
+2. Open Rentgen
+3. Import a cURL
+4. Run tests
+
+That’s it. If something fails just copy bug report and share with a team.
 
 ## 🎬 Demo
 
 ![Rentgen Demo](./public/demo.gif)
 
-## 🧠 Real-world API test example and results
+---
 
-I tested **ChatGPT’s backend API** using RENTGEN — the exact same endpoint used by the web app:
+## Who this is for
 
-**Endpoint:** `https://chatgpt.com/backend-api/f/conversation/prepare`
+- QA engineers
+- API developers
+- security-conscious teams
+- anyone tired of “it works on my machine”
 
-In less than a minute, RENTGEN automatically generated and executed 200+ API tests, including security, headers, and input validation checks.
+---
 
-Here’s what was found:
+## Philosophy
 
-1️⃣ **CORS policy wide open** – API accepts requests from any domain (no CORS restriction).
-2️⃣ **Missing security headers** – no `X-Frame-Options` or `Cache-Control`.
-3️⃣ **OPTIONS method not supported** – violates API interoperability rules.
-4️⃣ **Body size handling broken** – server returns 500 instead of 413 Payload Too Large.
-5️⃣ **Authorization handling inconsistent** – returns 403 instead of expected 401.
-6️⃣ **Input validation missing** – incorrect field types still return 200 OK.
-7️⃣ **404 handling correct** – works as expected.
-8️⃣ **Performance solid** – median 184 ms response time.
+> Boring bugs cost the most.
 
-📖 **Read the full case study here:**
-👉 [I tested ChatGPT’s backend API using RENTGEN, and found more issues than expected](https://www.linkedin.com/pulse/i-tested-chatgpts-backend-api-using-rentgen-found-more-jankauskas-ixsnf/)
-
-## 🔧 Installation
-
-### Dev mode
-
-```bash
-git clone https://github.com/LiudasJan/Rentgen.git
-cd rentgen
-npm install
-npm start
-
-```
-
-### 🖥️ Building executables
-
-**You can package Rentgen into a standalone app (.exe for Windows, .dmg for macOS, .AppImage for Linux)**
-
-```bash
-### If you want to package the app (bundle it for distribution)
-npm run package
-
-### If you want a ready-to-distribute installer
-npm run make
-```
+Rentgen exists because the most expensive API bugs are the ones nobody thinks to test.
