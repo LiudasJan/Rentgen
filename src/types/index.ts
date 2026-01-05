@@ -18,6 +18,8 @@ export type DataType =
 
 export type ParameterType = 'body' | 'query';
 
+export type ReportFormat = 'json' | 'md' | 'csv';
+
 export interface DynamicValue {
   mandatory?: boolean;
   type: DataType;
@@ -92,6 +94,38 @@ export enum TestStatus {
   Manual = '⚪ Manual',
   Pass = '🟢 Pass',
   Warning = '🟠 Warning',
+}
+
+export interface ReportSuiteTest {
+  name?: string;
+  status: TestResult['status'];
+  expected: string;
+  actual: string;
+  responseTime?: number;
+  request?: TestResult['request'];
+  response?: TestResult['response'];
+  value?: any;
+}
+
+export interface ReportSuite {
+  name: string;
+  summary: { total: number; byStatus: Record<string, number> };
+  tests: ReportSuiteTest[];
+}
+
+export interface ExportReport {
+  generatedAt: string;
+  generatedBy: string;
+  target: {
+    url: string;
+    method: Method | string;
+    headers: Record<string, string>;
+    body: any;
+    messageType: string;
+    protoFileName: string | null;
+  };
+  lastHttpResponse: HttpResponse | null;
+  suites: ReportSuite[];
 }
 
 export * from './environment';

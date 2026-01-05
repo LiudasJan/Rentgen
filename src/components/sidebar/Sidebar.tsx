@@ -1,5 +1,6 @@
 import cn from 'classnames';
 import { useEffect, useState } from 'react';
+import { appConfig } from '../../constants/appConfig';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { selectSidebarActiveTab } from '../../store/selectors';
 import { environmentActions } from '../../store/slices/environmentSlice';
@@ -62,7 +63,7 @@ export default function Sidebar() {
           <SidebarButton
             label="Check for updates"
             onClick={() =>
-              window.electronAPI.openExternal(`https://rentgen.io/check-for-update.html?current_version=${appVersion}`)
+              window.electronAPI.openExternal(`${appConfig.origin}/check-for-update.html?current_version=${appVersion}`)
             }
           >
             <UpgradeStarIcon className="w-5 h-5" />

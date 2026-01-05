@@ -1,5 +1,5 @@
 import dotenv from 'dotenv';
-import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from 'electron';
 import { installExtension, REACT_DEVELOPER_TOOLS, REDUX_DEVTOOLS } from 'electron-devtools-installer';
 import Store from 'electron-store';
 import { writeFileSync } from 'fs';
@@ -63,10 +63,43 @@ const createWindow = async (): Promise<void> => {
   }
 };
 
+const createHelpMenu = (): void => {
+  const menu = Menu.getApplicationMenu();
+  if (!menu) return;
+
+  const helpSubmenu = Menu.buildFromTemplate([
+    {
+      label: 'API Stories',
+      click: () => shell.openExternal('https://rentgen.io/api-stories/'),
+    },
+    {
+      label: 'GitHub Wiki',
+      click: () => shell.openExternal('https://github.com/LiudasJan/Rentgen/wiki'),
+    },
+    {
+      label: 'Report an Issue',
+      click: () => shell.openExternal('https://github.com/LiudasJan/Rentgen/issues/new'),
+    },
+  ]);
+
+  Menu.setApplicationMenu(
+    Menu.buildFromTemplate(
+      menu.items.map(({ label, role, submenu }) => ({
+        label,
+        role,
+        submenu: role === 'help' ? helpSubmenu : submenu,
+      })),
+    ),
+  );
+};
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.on('ready', createWindow);
+app.on('ready', async () => {
+  createHelpMenu();
+  await createWindow();
+});
 
 // Quit when all windows are closed, except on macOS. There, it's common
 // for applications and their menu bar to stay active until the user quits

@@ -1,4 +1,5 @@
 import { Method } from 'axios';
+import { appConfig } from '../constants/appConfig';
 import { getResponseStatusTitle, RESPONSE_STATUS } from '../constants/responseStatus';
 import { Abortable, Test } from '../decorators';
 import { HttpRequest, HttpResponse, TestOptions, TestResult, TestStatus } from '../types';
@@ -304,7 +305,7 @@ export class SecurityTests extends BaseTests {
     const request = createTestHttpRequest(this.options);
     const modifiedRequest: HttpRequest = {
       ...request,
-      headers: { ...request.headers, Origin: 'https://rentgen.io/' },
+      headers: { ...request.headers, Origin: appConfig.origin },
     };
 
     try {
