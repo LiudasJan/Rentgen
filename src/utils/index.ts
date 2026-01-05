@@ -6,6 +6,7 @@ export * from './number';
 export * from './object';
 export * from './proto';
 export * from './random';
+export * from './report';
 export * from './statistics';
 export * from './string';
 export * from './url';

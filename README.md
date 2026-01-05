@@ -1,6 +1,6 @@
 # 🔬 Rentgen
 
-👉 Landing page: [rentgen.io](https://rentgen.io)  
+👉 Landing page: [rentgen.io](https://rentgen.io)
 👉 Download: [Latest Release](https://github.com/LiudasJan/Rentgen/releases/latest)
 
 **Rentgen** is a local-first API testing tool that exposes how your API actually behaves — not how you hope it behaves. No cloud. No accounts. No telemetry. Built by a tester, for a testers and developers.
@@ -9,7 +9,7 @@
 
 ## Why Rentgen
 
-Most API tools focus on _how to send requests_.  
+Most API tools focus on _how to send requests_.
 Rentgen focuses on **what your API does under pressure**.
 
 From a single known-good request, Rentgen automatically checks:
