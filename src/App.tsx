@@ -929,7 +929,7 @@ export default function App() {
                         width: securityTests.find((test) =>
                           [TestStatus.Bug, TestStatus.Fail, TestStatus.Warning].includes(test.status),
                         )
-                          ? '190px'
+                          ? '270px'
                           : '150px',
                         cell: (row, id) => (
                           <TestResultControls
@@ -980,7 +980,7 @@ export default function App() {
                         width: performanceTests.find((test) =>
                           [TestStatus.Bug, TestStatus.Fail, TestStatus.Warning].includes(test.status),
                         )
-                          ? '240px'
+                          ? '325px'
                           : '220px',
                         cell: (row) => (
                           <TestResultControls

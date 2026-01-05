@@ -15,8 +15,6 @@ import { TestResult, TestStatus } from '../../types';
 import { generateCurl } from '../../utils';
 import { CopyButton } from '../buttons/CopyButton';
 
-import BugIcon from '../../assets/icons/bug-icon.svg';
-
 type TestType = 'security' | 'performance';
 
 interface Props extends HTMLAttributes<HTMLDivElement> {
@@ -102,12 +100,10 @@ function renderControl({ actual, name, request, response, status, value }: TestR
 
       return (
         <CopyButton
-          className="h-6 w-6 p-0 leading-0 text-button-text-secondary! hover:text-button-text-secondary-hover! bg-transparent! border-0"
-          copiedFallback="✅"
+          className="text-[13px] leading-normal font-normal text-button-primary! hover:text-button-primary/80! bg-transparent! border-0"
           textToCopy={filledTemplate}
-          title="Copy Bug Report"
         >
-          <BugIcon className="h-4 w-4" />
+          Copy Bug Report
         </CopyButton>
       );
     }
