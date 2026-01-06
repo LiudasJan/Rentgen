@@ -12,6 +12,7 @@ interface UIState {
   // Modal states
   openCurlModal: boolean;
   openReloadModal: boolean;
+  openSendHttpSuccessModal: boolean;
   deleteFolderModal: {
     isOpen: boolean;
     folderId: string | null;
@@ -39,6 +40,7 @@ interface UIState {
 const initialState: UIState = {
   openCurlModal: false,
   openReloadModal: false,
+  openSendHttpSuccessModal: false,
   deleteFolderModal: { isOpen: false, folderId: null },
   setAsVariableModal: { isOpen: false, initialValue: '' },
   saved: false,
@@ -68,6 +70,13 @@ export const uiSlice = createSlice({
     },
     closeReloadModal: (state) => {
       state.openReloadModal = false;
+    },
+    openSendHttpSuccessModal: (state) => {
+      const stored = localStorage.getItem('sendHttpSuccessModalDoNotShowAgain');
+      state.openSendHttpSuccessModal = stored === null ? true : stored !== 'true';
+    },
+    closeSendHttpSuccessModal: (state) => {
+      state.openSendHttpSuccessModal = false;
     },
     openDeleteFolderModal: (state, action: PayloadAction<string>) => {
       state.deleteFolderModal = { isOpen: true, folderId: action.payload };

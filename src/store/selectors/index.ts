@@ -79,6 +79,7 @@ export const selectRequestTestResults = (requestId: string) =>
 // UI selectors
 export const selectOpenCurlModal = (state: RootState) => state.ui.openCurlModal;
 export const selectOpenReloadModal = (state: RootState) => state.ui.openReloadModal;
+export const selectOpenSendHttpSuccessModal = (state: RootState) => state.ui.openSendHttpSuccessModal;
 export const selectDeleteFolderModal = (state: RootState) => state.ui.deleteFolderModal;
 export const selectSaved = (state: RootState) => state.ui.saved;
 export const selectExported = (state: RootState) => state.ui.exported;
