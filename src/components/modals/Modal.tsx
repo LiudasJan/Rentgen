@@ -1,8 +1,9 @@
 import cn from 'classnames';
 import { HTMLAttributes } from 'react';
+import { twMerge } from 'tailwind-merge';
 import useClickOutside from '../../hooks/useClickOutside';
 
-interface Props extends HTMLAttributes<HTMLDivElement> {
+export interface Props extends HTMLAttributes<HTMLDivElement> {
   isOpen: boolean;
   onClose?: () => void;
 }
@@ -14,10 +15,12 @@ export default function Modal({ className, children, isOpen, onClose }: Props) {
 
   return (
     <div
-      className={cn(
-        'fixed top-0 left-0 right-0 bottom-0 flex items-center justify-center bg-black/40 z-50',
-        'dark:bg-dark-input/80',
-        className,
+      className={twMerge(
+        cn(
+          'fixed top-0 left-0 right-0 bottom-0 flex items-center justify-center bg-black/40 z-50',
+          'dark:bg-dark-input/80',
+          className,
+        ),
       )}
     >
       <div

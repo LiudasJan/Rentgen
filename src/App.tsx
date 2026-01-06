@@ -1,6 +1,6 @@
 import { Method } from 'axios';
 import cn from 'classnames';
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import ActionsButton from './components/buttons/ActionsButton';
 import Button, { ButtonSize, ButtonType } from './components/buttons/Button';
 import { CopyButton } from './components/buttons/CopyButton';
@@ -79,6 +79,7 @@ import {
   selectMode,
   selectOpenCurlModal,
   selectOpenReloadModal,
+  selectOpenSendHttpSuccessModal,
   selectProtoFile,
   selectQueryParameters,
   selectRequestTestResults,
@@ -104,6 +105,7 @@ import { websocketActions } from './store/slices/websocketSlice';
 import DarkModeIcon from './assets/icons/dark-mode-icon.svg';
 import LightModeIcon from './assets/icons/light-mode-icon.svg';
 import ReloadIcon from './assets/icons/reload-icon.svg';
+import ConfirmationModal from './components/modals/ConfirmationModal';
 
 type Mode = 'HTTP' | 'WSS';
 
@@ -188,6 +190,7 @@ export default function App() {
   // UI state
   const openCurlModal = useAppSelector(selectOpenCurlModal);
   const openReloadModal = useAppSelector(selectOpenReloadModal);
+  const openSendHttpSuccessModal = useAppSelector(selectOpenSendHttpSuccessModal);
   const deleteFolderModal = useAppSelector(selectDeleteFolderModal);
   const saved = useAppSelector(selectSaved);
   const exported = useAppSelector(selectExported);
@@ -216,6 +219,7 @@ export default function App() {
   // Reset hook
   const reset = useReset();
 
+  const parametersRef = useRef<HTMLDivElement | null>(null);
   const disabled = useMemo(() => !url || isRunningTests, [url, isRunningTests]);
 
   // Load initial data
@@ -344,6 +348,7 @@ export default function App() {
 
         dispatch(requestActions.setBodyParameters(bodyParameters));
         dispatch(requestActions.setQueryParameters(queryParameters));
+        dispatch(uiActions.openSendHttpSuccessModal());
       }
 
       if (selectedRequestId)
@@ -618,24 +623,6 @@ export default function App() {
                 <IconButton onClick={() => dispatch(uiActions.openReloadModal())}>
                   <ReloadIcon className="h-5 w-5" />
                 </IconButton>
-                <Modal
-                  className="[&>div]:w-[400px]!"
-                  isOpen={openReloadModal}
-                  onClose={() => dispatch(uiActions.closeReloadModal())}
-                >
-                  <div className="flex flex-col gap-4">
-                    <h4 className="m-0">Reload</h4>
-                    <p className="m-0 text-sm dark:text-text-secondary">Only current tests results will be lost</p>
-                    <div className="flex items-center justify-end gap-4">
-                      <Button buttonType={ButtonType.DANGER} onClick={() => window.location.reload()}>
-                        Reload
-                      </Button>
-                      <Button buttonType={ButtonType.SECONDARY} onClick={() => dispatch(uiActions.closeReloadModal())}>
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
-                </Modal>
               </div>
             </div>
 
@@ -855,7 +842,7 @@ export default function App() {
             )}
 
             {(Object.keys(bodyParameters).length > 0 || Object.keys(queryParameters).length > 0) && (
-              <div className="grid lg:grid-cols-2 gap-4 items-stretch">
+              <div ref={parametersRef} className="grid lg:grid-cols-2 gap-4 items-stretch">
                 {Object.keys(bodyParameters).length > 0 && (
                   <ParametersPanel
                     title="Body Parameters"
@@ -1053,55 +1040,56 @@ export default function App() {
           </>
         )}
       </div>
-      <Modal
-        className="[&>div]:w-[400px]!"
+      <ConfirmationModal
+        confirmText="Reload"
+        description="Only current tests results will be lost"
+        title="Reload"
+        isOpen={openReloadModal}
+        onClose={() => dispatch(uiActions.closeReloadModal())}
+        onConfirm={() => window.location.reload()}
+      />
+      <ConfirmationModal
+        cancelText="Close"
+        confirmText="Review & Generate Tests"
+        confirmType={ButtonType.PRIMARY}
+        description="Rentgen now has a valid request to work with. Before generating tests, quickly review the mapped fields to make sure everything looks right"
+        title="Request Looks Good!"
+        isOpen={openSendHttpSuccessModal}
+        onClose={() => dispatch(uiActions.closeSendHttpSuccessModal())}
+        onConfirm={() => {
+          parametersRef.current?.scrollIntoView({ behavior: 'smooth' });
+          dispatch(uiActions.closeSendHttpSuccessModal());
+        }}
+      >
+        <label className="flex items-center gap-1 text-xs">
+          <input
+            className="m-0"
+            type="checkbox"
+            onChange={(e) => localStorage.setItem('sendHttpSuccessModalDoNotShowAgain', e.target.checked.toString())}
+          />
+          Do not show again
+        </label>
+      </ConfirmationModal>
+      <ConfirmationModal
+        confirmText="Delete"
+        description="Are you sure you want to delete this environment?"
+        title="Delete Environment"
         isOpen={!!environmentToDelete}
         onClose={() => dispatch(environmentActions.setEnvironmentToDelete(null))}
-      >
-        <div className="flex flex-col gap-4">
-          <h4 className="m-0">Delete Environment</h4>
-          <p className="m-0 text-sm dark:text-text-secondary">Are you sure you want to delete this environment?</p>
-          <div className="flex items-center justify-end gap-4">
-            <Button
-              buttonType={ButtonType.DANGER}
-              onClick={() => {
-                if (environmentToDelete) {
-                  handleDeleteEnvironment(environmentToDelete);
-                }
-                dispatch(environmentActions.setEnvironmentToDelete(null));
-              }}
-            >
-              Delete
-            </Button>
-            <Button
-              buttonType={ButtonType.SECONDARY}
-              onClick={() => dispatch(environmentActions.setEnvironmentToDelete(null))}
-            >
-              Cancel
-            </Button>
-          </div>
-        </div>
-      </Modal>
-      <Modal
-        className="[&>div]:w-[400px]!"
+        onConfirm={() => {
+          if (environmentToDelete) handleDeleteEnvironment(environmentToDelete);
+
+          dispatch(environmentActions.setEnvironmentToDelete(null));
+        }}
+      />
+      <ConfirmationModal
+        confirmText="Delete"
+        description="This folder contains requests. Are you sure you want to delete it?"
+        title="Delete Folder"
         isOpen={deleteFolderModal.isOpen}
         onClose={() => dispatch(uiActions.closeDeleteFolderModal())}
-      >
-        <div className="flex flex-col gap-4">
-          <h4 className="m-0">Delete Folder</h4>
-          <p className="m-0 text-sm dark:text-text-secondary">
-            This folder contains requests. Are you sure you want to delete it?
-          </p>
-          <div className="flex items-center justify-end gap-4">
-            <Button buttonType={ButtonType.DANGER} onClick={confirmDeleteFolder}>
-              Delete
-            </Button>
-            <Button buttonType={ButtonType.SECONDARY} onClick={() => dispatch(uiActions.closeDeleteFolderModal())}>
-              Cancel
-            </Button>
-          </div>
-        </div>
-      </Modal>
+        onConfirm={confirmDeleteFolder}
+      />
       <SetAsVariableModal />
     </div>
   );
