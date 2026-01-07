@@ -1,11 +1,14 @@
 import { contextBridge, ipcRenderer } from 'electron';
+import type { ExportResult, ImportResult } from '../src/types';
 
 interface ElectronApi {
   connectWss: (payload: any) => void;
   disconnectWss: () => void;
+  exportPostmanCollection: (collection: any) => Promise<ExportResult>;
+  getAppVersion: () => Promise<string>;
+  importPostmanCollection: () => Promise<ImportResult>;
   loadCollection: () => Promise<any>;
   loadEnvironments: () => Promise<any>;
-  getAppVersion: () => Promise<string>;
   onWssEvent: (callback: (data: any) => void) => () => void;
   openExternal: (url: string) => void;
   pingHost: (host: string) => Promise<any>;
@@ -28,9 +31,12 @@ interface ThemeAPI {
 contextBridge.exposeInMainWorld('electronAPI', {
   connectWss: (payload: any): void => ipcRenderer.send('wss-connect', payload),
   disconnectWss: (): void => ipcRenderer.send('wss-disconnect'),
+  exportPostmanCollection: (collection: any): Promise<ExportResult> =>
+    ipcRenderer.invoke('export-postman-collection', collection),
+  getAppVersion: (): Promise<string> => ipcRenderer.invoke('get-app-version'),
+  importPostmanCollection: (): Promise<ImportResult> => ipcRenderer.invoke('import-postman-collection'),
   loadCollection: (): Promise<any> => ipcRenderer.invoke('load-collection'),
   loadEnvironments: (): Promise<any> => ipcRenderer.invoke('load-environments'),
-  getAppVersion: (): Promise<string> => ipcRenderer.invoke('get-app-version'),
   onWssEvent: (callback): (() => void) => {
     const handler = (_: Electron.IpcRendererEvent, data: any) => callback(data);
     ipcRenderer.on('wss-event', handler);

@@ -11,16 +11,73 @@ import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrate
 import { useMemo, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
 import { collectionActions } from '../../../store/slices/collectionSlice';
-import { selectSidebarFolders } from '../../../store/selectors';
+import { uiActions } from '../../../store/slices/uiSlice';
+import { selectCollectionData, selectSidebarFolders } from '../../../store/selectors';
+import { detectImportConflicts } from '../../../utils/collection';
 import CollectionGroup from './CollectionGroup';
 
 import AddIcon from '../../../assets/icons/add-icon.svg';
+import ExportIcon from '../../../assets/icons/export-icon.svg';
+import ImportIcon from '../../../assets/icons/import-icon.svg';
 
 export default function CollectionsPanel() {
   const dispatch = useAppDispatch();
   const folders = useAppSelector(selectSidebarFolders);
+  const collection = useAppSelector(selectCollectionData);
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
+  const [importStatus, setImportStatus] = useState<string | null>(null);
+
+  const handleImport = async () => {
+    const result = await window.electronAPI.importPostmanCollection();
+
+    if (result.canceled) return;
+
+    if (result.error) {
+      setImportStatus(`Import failed: ${result.error}`);
+      setTimeout(() => setImportStatus(null), 3000);
+      return;
+    }
+
+    if (result.collection) {
+      // Detect conflicts
+      const conflictSummary = detectImportConflicts(collection, result.collection);
+
+      if (conflictSummary.hasConflicts) {
+        // Open conflict resolution modal
+        dispatch(
+          uiActions.openImportConflictModal({
+            collection: result.collection,
+            conflictSummary,
+            warnings: result.warnings || [],
+          }),
+        );
+      } else {
+        // No conflicts - proceed with merge (adds all items since no duplicates)
+        dispatch(collectionActions.importCollection({ collection: result.collection, mode: 'merge' }));
+
+        const warningCount = result.warnings?.length || 0;
+        const successMsg = warningCount > 0 ? `Imported with ${warningCount} warning(s)` : 'Collection imported';
+        setImportStatus(successMsg);
+        setTimeout(() => setImportStatus(null), 3000);
+      }
+    }
+  };
+
+  const handleExport = async () => {
+    const result = await window.electronAPI.exportPostmanCollection(collection);
+
+    if (result.canceled) return;
+
+    if (result.error) {
+      setImportStatus(`Export failed: ${result.error}`);
+      setTimeout(() => setImportStatus(null), 3000);
+      return;
+    }
+
+    setImportStatus('Collection exported');
+    setTimeout(() => setImportStatus(null), 3000);
+  };
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -108,13 +165,34 @@ export default function CollectionsPanel() {
 
   return (
     <>
-      <div
-        className="flex items-center gap-2 px-3 py-2 border-b border-border dark:border-dark-border hover:bg-button-secondary dark:hover:bg-dark-input cursor-pointer outline-none"
-        onClick={() => dispatch(collectionActions.addFolder('New Folder'))}
-      >
-        <AddIcon className="w-4 h-4 text-text-secondary dark:text-dark-text-secondary" />
-        <span className="text-xs text-text-secondary dark:text-dark-text-secondary">New Folder</span>
+      <div className="flex items-center justify-between px-3 py-2 border-b border-border dark:border-dark-border gap-2">
+        <div
+          className="flex items-center gap-2 hover:bg-button-secondary dark:hover:bg-dark-input cursor-pointer rounded px-1 py-0.5 h-6.5 w-full"
+          onClick={() => dispatch(collectionActions.addFolder('New Folder'))}
+          title="New Folder"
+        >
+          <AddIcon className="w-4 h-4 text-text-secondary dark:text-dark-text-secondary" />
+          <span className="text-xs text-text-secondary dark:text-dark-text-secondary">New Folder</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <ImportIcon
+            className="w-4 h-4 text-text-secondary dark:text-dark-text-secondary hover:text-button-primary cursor-pointer transition-colors"
+            onClick={handleImport}
+            title="Import Collection"
+          />
+          <ExportIcon
+            className="w-4 h-4 text-text-secondary dark:text-dark-text-secondary hover:text-button-primary cursor-pointer transition-colors"
+            onClick={handleExport}
+            title="Export Collection"
+          />
+        </div>
       </div>
+
+      {importStatus && (
+        <div className="px-3 py-1.5 text-xs text-text-secondary dark:text-dark-text-secondary bg-button-secondary dark:bg-dark-input">
+          {importStatus}
+        </div>
+      )}
 
       {folders.length > 0 ? (
         <div className="h-full overflow-x-hidden overflow-y-auto">
