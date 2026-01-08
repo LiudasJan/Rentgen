@@ -105,7 +105,6 @@ export default function DynamicVariablesList() {
       uiActions.openSetAsDynamicVariableModal({
         initialSelector: variable.selector,
         initialValue: variable.currentValue || '',
-        source: variable.source,
         collectionId: variable.collectionId,
         requestId: variable.requestId,
         collectionName,

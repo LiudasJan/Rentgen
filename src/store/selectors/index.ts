@@ -128,5 +128,4 @@ export const selectSidebarActiveTab = (state: RootState) => state.ui.sidebarActi
 export const selectRunningFolderId = (state: RootState) => state.collectionRun.runningFolderId;
 export const selectRunningRequestId = (state: RootState) => state.collectionRun.runningRequestId;
 export const selectCollectionRunResults = (state: RootState) => state.collectionRun.results;
-export const selectSetAsVariableModal = (state: RootState) => state.ui.setAsVariableModal;
 export const selectSetAsDynamicVariableModal = (state: RootState) => state.ui.setAsDynamicVariableModal;

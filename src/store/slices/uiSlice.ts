@@ -3,16 +3,10 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 type ReportFormat = 'json' | 'md' | 'csv';
 type SidebarTab = 'collections' | 'environments' | null;
 
-interface SetAsVariableModalState {
-  isOpen: boolean;
-  initialValue: string;
-}
-
 interface SetAsDynamicVariableModalState {
   isOpen: boolean;
   initialSelector: string;
   initialValue: string;
-  source: 'body' | 'header';
   collectionId: string;
   requestId: string;
   collectionName: string;
@@ -29,7 +23,6 @@ interface UIState {
     isOpen: boolean;
     folderId: string | null;
   };
-  setAsVariableModal: SetAsVariableModalState;
   setAsDynamicVariableModal: SetAsDynamicVariableModalState;
 
   // Feedback states
@@ -54,12 +47,10 @@ const initialState: UIState = {
   openCurlModal: false,
   openReloadModal: false,
   deleteFolderModal: { isOpen: false, folderId: null },
-  setAsVariableModal: { isOpen: false, initialValue: '' },
   setAsDynamicVariableModal: {
     isOpen: false,
     initialSelector: '',
     initialValue: '',
-    source: 'body',
     collectionId: '',
     requestId: '',
     collectionName: '',
@@ -101,12 +92,6 @@ export const uiSlice = createSlice({
     closeDeleteFolderModal: (state) => {
       state.deleteFolderModal = { isOpen: false, folderId: null };
     },
-    openSetAsVariableModal: (state, action: PayloadAction<string>) => {
-      state.setAsVariableModal = { isOpen: true, initialValue: action.payload };
-    },
-    closeSetAsVariableModal: (state) => {
-      state.setAsVariableModal = { isOpen: false, initialValue: '' };
-    },
     openSetAsDynamicVariableModal: (state, action: PayloadAction<Omit<SetAsDynamicVariableModalState, 'isOpen'>>) => {
       state.setAsDynamicVariableModal = { ...action.payload, isOpen: true };
     },
@@ -115,7 +100,6 @@ export const uiSlice = createSlice({
         isOpen: false,
         initialSelector: '',
         initialValue: '',
-        source: 'body',
         collectionId: '',
         requestId: '',
         collectionName: '',

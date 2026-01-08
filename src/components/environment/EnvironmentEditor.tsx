@@ -1,15 +1,17 @@
 import cn from 'classnames';
-import { useEffect, useRef, useState } from 'react';
-import { Environment, EnvironmentVariable } from '../../types';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useAppDispatch, useAppSelector } from '../../store/hooks';
+import { selectCollectionData, selectDynamicVariables, selectSelectedEnvironmentId } from '../../store/selectors';
+import { environmentActions } from '../../store/slices/environmentSlice';
+import { DynamicVariable, Environment, EnvironmentVariable } from '../../types';
+import { findRequestWithFolder } from '../../utils/collection';
+import { extractMultipleDynamicVariablesFromResponse } from '../../utils/dynamicVariable';
 import { generateEnvironmentId } from '../../utils';
-import Button from '../buttons/Button';
+import Button, { ButtonType } from '../buttons/Button';
 import Input from '../inputs/Input';
 import ResponsePanel from '../panels/ResponsePanel';
-import DynamicVariablesList from './DynamicVariablesList';
 
 const COLOR_OPTIONS = ['#EF4444', '#F97316', '#EAB308', '#22C55E', '#3B82F6', '#8B5CF6', '#EC4899', '#6B7280'];
-
-type TabType = 'static' | 'dynamic';
 
 interface Props {
   environment: Environment | null;
@@ -18,12 +20,21 @@ interface Props {
 }
 
 export default function EnvironmentEditor({ environment, isNew, onSave }: Props) {
+  const dispatch = useAppDispatch();
+  const collection = useAppSelector(selectCollectionData);
+  const allDynamicVariables = useAppSelector(selectDynamicVariables);
+  const selectedEnvironmentId = useAppSelector(selectSelectedEnvironmentId);
+
   const [title, setTitle] = useState('');
   const [color, setColor] = useState(COLOR_OPTIONS[4]); // Default blue
   const [variables, setVariables] = useState<EnvironmentVariable[]>([]);
   const [saved, setSaved] = useState(false);
-  const [activeTab, setActiveTab] = useState<TabType>('static');
   const savedTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
+
+  // Filter dynamic variables applicable to current environment
+  const dynamicVariables = useMemo(() => {
+    return allDynamicVariables.filter((dv) => dv.environmentId === null || dv.environmentId === selectedEnvironmentId);
+  }, [allDynamicVariables, selectedEnvironmentId]);
 
   // Check if current state differs from environment prop
   const hasChanges = () => {
@@ -124,6 +135,89 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
     }
   };
 
+  // Dynamic variable handlers
+  const handleDynamicVariableKeyChange = useCallback(
+    (dv: DynamicVariable, newKey: string) => {
+      if (newKey.trim() === '') {
+        // Delete by clearing name
+        dispatch(environmentActions.removeDynamicVariable({ id: dv.id }));
+      } else {
+        dispatch(
+          environmentActions.updateDynamicVariable({
+            id: dv.id,
+            updates: { key: newKey },
+          }),
+        );
+      }
+    },
+    [dispatch],
+  );
+
+  const handleRefreshDynamicVariable = useCallback(
+    async (dv: DynamicVariable) => {
+      const result = findRequestWithFolder(collection, dv.requestId);
+      if (!result) return;
+
+      try {
+        const response = await window.electronAPI.sendHttp({
+          method: result.request.request.method,
+          url: result.request.request.url,
+          headers: Object.fromEntries((result.request.request.header || []).map((h) => [h.key, h.value])),
+          body: result.request.request.body?.raw || null,
+        });
+
+        const extractedValues = extractMultipleDynamicVariablesFromResponse([dv], response);
+        for (const [variableId, value] of extractedValues) {
+          dispatch(
+            environmentActions.updateDynamicVariableValue({
+              id: variableId,
+              value,
+            }),
+          );
+        }
+      } catch (error) {
+        console.error('Failed to refresh dynamic variable:', error);
+      }
+    },
+    [collection, dispatch],
+  );
+
+  const handleRefreshAllDynamicVariables = useCallback(async () => {
+    // Group variables by request to avoid duplicate HTTP calls
+    const variablesByRequest = new Map<string, DynamicVariable[]>();
+    for (const dv of dynamicVariables) {
+      const existing = variablesByRequest.get(dv.requestId) || [];
+      existing.push(dv);
+      variablesByRequest.set(dv.requestId, existing);
+    }
+
+    for (const [requestId, vars] of variablesByRequest) {
+      const result = findRequestWithFolder(collection, requestId);
+      if (!result) continue;
+
+      try {
+        const response = await window.electronAPI.sendHttp({
+          method: result.request.request.method,
+          url: result.request.request.url,
+          headers: Object.fromEntries((result.request.request.header || []).map((h) => [h.key, h.value])),
+          body: result.request.request.body?.raw || null,
+        });
+
+        const extractedValues = extractMultipleDynamicVariablesFromResponse(vars, response);
+        for (const [variableId, value] of extractedValues) {
+          dispatch(
+            environmentActions.updateDynamicVariableValue({
+              id: variableId,
+              value,
+            }),
+          );
+        }
+      } catch (error) {
+        console.error('Failed to refresh dynamic variables:', error);
+      }
+    }
+  }, [dynamicVariables, collection, dispatch]);
+
   return (
     <div className="flex flex-col gap-4">
       <ResponsePanel title={isNew ? 'New Environment' : 'Edit Environment'}>
@@ -165,69 +259,103 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
             </div>
           </div>
 
-          {/* Tabs */}
+          {/* Variables Table */}
           <div className="mb-4">
             <label className="block mb-1 font-bold text-sm">Variables</label>
-            <div className="flex gap-1 mb-2">
-              <button
-                className={cn(
-                  'px-4 py-2 text-sm font-medium rounded-t-md border border-b-0 transition-colors',
-                  activeTab === 'static'
-                    ? 'bg-white dark:bg-dark-input border-border dark:border-dark-border text-text dark:text-dark-text'
-                    : 'bg-body dark:bg-dark-body border-transparent text-text-secondary dark:text-dark-text-secondary hover:text-text dark:hover:text-dark-text',
-                )}
-                onClick={() => setActiveTab('static')}
-              >
-                Static
-              </button>
-              <button
-                className={cn(
-                  'px-4 py-2 text-sm font-medium rounded-t-md border border-b-0 transition-colors',
-                  activeTab === 'dynamic'
-                    ? 'bg-white dark:bg-dark-input border-border dark:border-dark-border text-text dark:text-dark-text'
-                    : 'bg-body dark:bg-dark-body border-transparent text-text-secondary dark:text-dark-text-secondary hover:text-text dark:hover:text-dark-text',
-                )}
-                onClick={() => setActiveTab('dynamic')}
-              >
-                Dynamic
-              </button>
-            </div>
-
-            {/* Tab Content */}
             <div className="border border-border dark:border-dark-body rounded-md overflow-hidden">
-              {activeTab === 'static' ? (
-                <>
-                  {/* Table Header */}
-                  <div className="flex bg-body dark:bg-dark-body border-b border-border dark:border-dark-border">
-                    <div className="flex-1 px-3 py-2 font-bold text-xs">Variable Name</div>
-                    <div className="flex-1 px-3 py-2 font-bold text-xs">Value</div>
-                  </div>
-                  {/* Table Body - scrollable */}
-                  <div className="max-h-[400px] overflow-y-auto">
+              <div className="max-h-[440px] overflow-y-auto">
+                <table className="w-full table-fixed">
+                  <thead className="sticky top-0 z-10">
+                    <tr className="bg-body dark:bg-dark-body border-b border-border dark:border-dark-border">
+                      <th className="w-[25%] px-3 py-2 font-bold text-xs text-left">Variable Name</th>
+                      <th className="w-[30%] px-3 py-2 font-bold text-xs text-left">Value</th>
+                      <th className="w-[25%] px-3 py-2 font-bold text-xs text-left">Selector</th>
+                      <th className="w-[10%] px-3 py-2 font-bold text-xs text-left">Source</th>
+                      <th className="w-[10%]"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {/* Dynamic variables */}
+                    {dynamicVariables.map((dv) => (
+                      <tr key={dv.id} className="border-b border-border dark:border-dark-body last:border-b-0">
+                        <td className="w-[25%] p-1">
+                          <Input
+                            className="w-full border-0 bg-transparent"
+                            placeholder="variable_name"
+                            value={dv.key}
+                            onChange={(e) => handleDynamicVariableKeyChange(dv, e.target.value)}
+                          />
+                        </td>
+                        <td className="w-[30%] p-1 border-l border-border dark:border-dark-body">
+                          <span className="px-2 text-sm text-text-secondary dark:text-dark-text-secondary truncate block">
+                            {dv.currentValue || '—'}
+                          </span>
+                        </td>
+                        <td className="w-[25%] p-1 border-l border-border dark:border-dark-body">
+                          <span className="px-2 text-xs text-text-secondary dark:text-dark-text-secondary truncate block">
+                            {dv.selector}
+                          </span>
+                        </td>
+                        <td className="w-[10%] p-1 border-l border-border dark:border-dark-body text-center">
+                          <span className="px-2 py-0.5 text-xs font-medium rounded bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+                            Body
+                          </span>
+                        </td>
+                        <td className="w-[10%] p-1 border-l border-border dark:border-dark-body text-center">
+                          <button
+                            className="p-1 hover:bg-body dark:hover:bg-dark-body rounded text-text-secondary hover:text-text dark:text-dark-text-secondary dark:hover:text-dark-text"
+                            onClick={() => handleRefreshDynamicVariable(dv)}
+                            title="Refresh value"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                              />
+                            </svg>
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {/* Static variables */}
                     {variables.map((variable, index) => (
-                      <div key={index} className="flex border-b border-border dark:border-dark-body last:border-b-0">
-                        <div className="flex-1 p-1">
+                      <tr
+                        key={`static-${index}`}
+                        className="border-b border-border dark:border-dark-body last:border-b-0"
+                      >
+                        <td className="w-[25%] p-1">
                           <Input
                             className="w-full border-0 bg-transparent"
                             placeholder="variable_name"
                             value={variable.key}
                             onChange={(e) => handleVariableChange(index, 'key', e.target.value)}
                           />
-                        </div>
-                        <div className="flex-1 p-1 border-l border-border dark:border-dark-body">
+                        </td>
+                        <td className="w-[30%] p-1 border-l border-border dark:border-dark-body">
                           <Input
                             className="w-full border-0 bg-transparent"
                             placeholder="value"
                             value={variable.value}
                             onChange={(e) => handleVariableChange(index, 'value', e.target.value)}
                           />
-                        </div>
-                      </div>
+                        </td>
+                        <td className="w-[25%] p-1 border-l border-border dark:border-dark-body"></td>
+                        <td className="w-[10%] p-1 border-l border-border dark:border-dark-body"></td>
+                        <td className="w-[10%] p-1 border-l border-border dark:border-dark-body"></td>
+                      </tr>
                     ))}
-                  </div>
-                </>
-              ) : (
-                <DynamicVariablesList />
+                  </tbody>
+                </table>
+              </div>
+              {/* Footer with Refresh All button */}
+              {dynamicVariables.length > 0 && (
+                <div className="flex justify-end p-2 border-t border-border dark:border-dark-body bg-body dark:bg-dark-body">
+                  <Button buttonType={ButtonType.SECONDARY} onClick={handleRefreshAllDynamicVariables}>
+                    Refresh All
+                  </Button>
+                </div>
               )}
             </div>
           </div>

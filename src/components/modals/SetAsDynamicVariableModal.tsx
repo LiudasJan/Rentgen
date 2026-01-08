@@ -32,9 +32,8 @@ export default function SetAsDynamicVariableModal() {
 
   const [name, setName] = useState('');
   const [selector, setSelector] = useState('');
-  const [source, setSource] = useState<'body' | 'header'>('body');
   const [selectedEnvironment, setSelectedEnvironment] = useState<EnvironmentOption | null>(null);
-  const [showDuplicateWarning, setShowDuplicateWarning] = useState(false);
+  const [duplicateToOverwrite, setDuplicateToOverwrite] = useState<string | null>(null); // ID of dynamic var to overwrite
   const [error, setError] = useState('');
 
   const isEditing = !!modalState.editingVariableId;
@@ -49,12 +48,11 @@ export default function SetAsDynamicVariableModal() {
         setName(sanitizeToVariableName(modalState.initialSelector));
       }
       setSelector(modalState.initialSelector);
-      setSource(modalState.source);
       setSelectedEnvironment({ value: ALL_ENVIRONMENTS_VALUE, label: 'All Environments' });
-      setShowDuplicateWarning(false);
+      setDuplicateToOverwrite(null);
       setError('');
     }
-  }, [modalState.isOpen, modalState.initialSelector, modalState.source, modalState.editingVariableName]);
+  }, [modalState.isOpen, modalState.initialSelector, modalState.editingVariableName]);
 
   const environmentOptions: EnvironmentOption[] = useMemo(() => {
     const options: EnvironmentOption[] = [{ value: ALL_ENVIRONMENTS_VALUE, label: 'All Environments' }];
@@ -68,31 +66,27 @@ export default function SetAsDynamicVariableModal() {
     dispatch(uiActions.closeSetAsDynamicVariableModal());
   };
 
-  const checkForDuplicates = (): boolean => {
+  // Check for existing dynamic variable with same name and return its ID for overwriting
+  const findDuplicateDynamicVariable = (): string | null => {
     const sanitizedName = name.trim();
-    if (!selectedEnvironment) return false;
+    if (!selectedEnvironment) return null;
 
-    // When editing and name hasn't changed, don't show duplicate warning
+    // When editing and name hasn't changed, no duplicate
     if (isEditing && sanitizedName === modalState.editingVariableName) {
-      return false;
+      return null;
     }
 
     const envId = selectedEnvironment.value === ALL_ENVIRONMENTS_VALUE ? null : selectedEnvironment.value;
 
-    // Check static variables
-    const staticExists = environments.some((env) => {
-      if (envId !== null && env.id !== envId) return false;
-      return env.variables.some((v) => v.key === sanitizedName);
-    });
-
-    // Check dynamic variables (excluding the one being edited)
-    const dynamicExists = dynamicVariables.some((dv) => {
+    // Find existing dynamic variable with same name (excluding the one being edited)
+    const existingDynamic = dynamicVariables.find((dv) => {
       if (isEditing && dv.id === modalState.editingVariableId) return false;
+      // Match if either is global (null) or same environment
       if (envId !== null && dv.environmentId !== null && dv.environmentId !== envId) return false;
       return dv.key === sanitizedName;
     });
 
-    return staticExists || dynamicExists;
+    return existingDynamic?.id || null;
   };
 
   const handleSave = () => {
@@ -115,9 +109,13 @@ export default function SetAsDynamicVariableModal() {
       return;
     }
 
-    // Check for duplicates
-    if (!showDuplicateWarning && checkForDuplicates()) {
-      setShowDuplicateWarning(true);
+    const envId = selectedEnvironment.value === ALL_ENVIRONMENTS_VALUE ? null : selectedEnvironment.value;
+
+    // Check for existing variable to overwrite
+    const existingId = findDuplicateDynamicVariable();
+    if (existingId && !duplicateToOverwrite) {
+      // Show overwrite message and set the ID to overwrite on next save
+      setDuplicateToOverwrite(existingId);
       return;
     }
 
@@ -129,8 +127,25 @@ export default function SetAsDynamicVariableModal() {
           updates: {
             key: sanitizedName,
             selector: sanitizedSelector,
-            source,
-            environmentId: selectedEnvironment.value === ALL_ENVIRONMENTS_VALUE ? null : selectedEnvironment.value,
+            source: 'body',
+            environmentId: envId,
+          },
+        }),
+      );
+    } else if (duplicateToOverwrite) {
+      // Overwrite existing dynamic variable
+      dispatch(
+        environmentActions.updateDynamicVariable({
+          id: duplicateToOverwrite,
+          updates: {
+            key: sanitizedName,
+            selector: sanitizedSelector,
+            source: 'body',
+            collectionId: modalState.collectionId,
+            requestId: modalState.requestId,
+            environmentId: envId,
+            currentValue: modalState.initialValue || null,
+            lastUpdated: modalState.initialValue ? Date.now() : null,
           },
         }),
       );
@@ -140,10 +155,10 @@ export default function SetAsDynamicVariableModal() {
         environmentActions.addDynamicVariable({
           key: sanitizedName,
           selector: sanitizedSelector,
-          source,
+          source: 'body',
           collectionId: modalState.collectionId,
           requestId: modalState.requestId,
-          environmentId: selectedEnvironment.value === ALL_ENVIRONMENTS_VALUE ? null : selectedEnvironment.value,
+          environmentId: envId,
           initialValue: modalState.initialValue || null,
         }),
       );
@@ -168,46 +183,17 @@ export default function SetAsDynamicVariableModal() {
             onChange={(e) => {
               setName(e.target.value);
               setError('');
-              setShowDuplicateWarning(false);
+              setDuplicateToOverwrite(null);
             }}
             autoFocus
           />
         </div>
 
-        {/* Source Toggle */}
-        <div className="flex flex-col gap-1">
-          <label className="text-xs text-text dark:text-dark-text">Source</label>
-          <div className="flex gap-4">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                name="source"
-                checked={source === 'body'}
-                onChange={() => setSource('body')}
-                className="accent-button-primary"
-              />
-              <span className="text-sm text-text dark:text-dark-text">Response Body</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                name="source"
-                checked={source === 'header'}
-                onChange={() => setSource('header')}
-                className="accent-button-primary"
-              />
-              <span className="text-sm text-text dark:text-dark-text">Response Header</span>
-            </label>
-          </div>
-        </div>
-
         {/* Selector */}
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-text dark:text-dark-text">
-            {source === 'body' ? 'Selector (dot notation)' : 'Header Name'}
-          </label>
+          <label className="text-xs text-text dark:text-dark-text">Selector (dot notation)</label>
           <Input
-            placeholder={source === 'body' ? 'data.user.id' : 'X-Request-Id'}
+            placeholder="data.user.id"
             value={selector}
             onChange={(e) => {
               setSelector(e.target.value);
@@ -234,7 +220,7 @@ export default function SetAsDynamicVariableModal() {
             onChange={(option) => {
               setSelectedEnvironment(option as EnvironmentOption);
               setError('');
-              setShowDuplicateWarning(false);
+              setDuplicateToOverwrite(null);
             }}
             placeholder="Select environment..."
           />
@@ -251,9 +237,9 @@ export default function SetAsDynamicVariableModal() {
 
         {error && <p className="text-xs text-button-danger m-0">{error}</p>}
 
-        {showDuplicateWarning && (
-          <p className="text-xs text-button-danger m-0">
-            A variable with this name already exists. Click again to create anyway.
+        {duplicateToOverwrite && (
+          <p className="text-xs text-yellow-600 dark:text-yellow-400 m-0">
+            A variable with this name already exists. It will be overwritten.
           </p>
         )}
 
@@ -262,7 +248,7 @@ export default function SetAsDynamicVariableModal() {
             Cancel
           </Button>
           <Button onClick={handleSave}>
-            {showDuplicateWarning ? 'Create Anyway' : isEditing ? 'Update Variable' : 'Save Variable'}
+            {duplicateToOverwrite ? 'Overwrite' : isEditing ? 'Update Variable' : 'Save Variable'}
           </Button>
         </div>
       </div>
