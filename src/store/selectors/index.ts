@@ -133,6 +133,5 @@ export const selectTheme = (state: RootState) => state.ui.theme;
 export const selectRunningFolderId = (state: RootState) => state.collectionRun.runningFolderId;
 export const selectRunningRequestId = (state: RootState) => state.collectionRun.runningRequestId;
 export const selectCollectionRunResults = (state: RootState) => state.collectionRun.results;
-export const selectSetAsVariableModal = (state: RootState) => state.ui.setAsVariableModal;
 export const selectImportConflictModal = (state: RootState) => state.ui.importConflictModal;
 export const selectSetAsDynamicVariableModal = (state: RootState) => state.ui.setAsDynamicVariableModal;

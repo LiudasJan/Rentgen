@@ -32,7 +32,6 @@ interface SetAsDynamicVariableModalState {
   isOpen: boolean;
   initialSelector: string;
   initialValue: string;
-  source: 'body' | 'header';
   collectionId: string;
   requestId: string;
   collectionName: string;
@@ -86,7 +85,6 @@ const initialState: UIState = {
     isOpen: false,
     initialSelector: '',
     initialValue: '',
-    source: 'body',
     collectionId: '',
     requestId: '',
     collectionName: '',
@@ -170,7 +168,6 @@ export const uiSlice = createSlice({
         isOpen: false,
         initialSelector: '',
         initialValue: '',
-        source: 'body',
         collectionId: '',
         requestId: '',
         collectionName: '',

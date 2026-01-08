@@ -107,23 +107,16 @@ export default function GlobalContextMenuProvider({ children }: PropsWithChildre
   }, [htmlElement, closeMenu]);
 
   const handleSetAsVariable = useCallback(() => {
-    dispatch(uiActions.openSetAsVariableModal(menuState.selectedText));
-    closeMenu();
-  }, [menuState.selectedText, closeMenu, dispatch]);
-
-  const handleSetAsDynamicVariable = useCallback(() => {
     if (!currentRequestWithFolder || !selectedRequestId) return;
 
     const { folder, request } = currentRequestWithFolder;
     const jsonPath = responsePanelContext?.jsonPath;
     const jsonValue = responsePanelContext?.jsonValue;
-    const source = responsePanelContext?.source || 'body';
 
     dispatch(
       uiActions.openSetAsDynamicVariableModal({
         initialSelector: jsonPath || menuState.selectedText,
         initialValue: jsonValue || menuState.selectedText,
-        source,
         collectionId: folder.id,
         requestId: selectedRequestId,
         collectionName: folder.name,
@@ -192,13 +185,13 @@ export default function GlobalContextMenuProvider({ children }: PropsWithChildre
         )}
         <ContextMenuItem label="Copy" onClick={handleCopy} disabled={!hasSelection} />
         {htmlElement && isInputOrTextarea(htmlElement) && <ContextMenuItem label="Paste" onClick={handlePaste} />}
-        <ContextMenuItem label="Set as Variable" onClick={handleSetAsVariable} disabled={!hasSelection} divider />
         {isInResponsePanel && (
           <ContextMenuItem
-            label="Set as Dynamic Variable"
-            onClick={handleSetAsDynamicVariable}
+            label="Set as Variable"
+            onClick={handleSetAsVariable}
             disabled={!hasSelection || !isRequestInCollection}
             title={!isRequestInCollection ? 'Save request to collection first' : undefined}
+            divider
           />
         )}
       </ContextMenu>
