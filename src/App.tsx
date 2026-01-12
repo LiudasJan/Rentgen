@@ -556,7 +556,7 @@ export default function App() {
   return (
     <div className="flex">
       <Sidebar />
-      <div className="flex-1 min-w-0 flex flex-col gap-4 py-5 px-7 overflow-y-auto">
+      <div className="@container flex-1 min-w-0 flex flex-col gap-4 py-5 px-7 overflow-y-auto">
         {isEditingEnvironment && (
           <EnvironmentEditor
             environment={environments.find((e) => e.id === editingEnvironmentId) || null}
@@ -577,49 +577,56 @@ export default function App() {
         )}
         {!isEditingEnvironment && !isComparingTestResults && (
           <>
-            <div className="flex items-center gap-2">
-              <Select
-                className="font-bold"
-                isSearchable={false}
-                options={modeOptions}
-                placeholder="MODE"
-                value={modeOptions.find((option) => option.value == mode)}
-                onChange={(option: SelectOption<Mode>) => {
-                  dispatch(requestActions.setMode(option.value));
-                  reset();
-                }}
-              />
-              {mode === 'HTTP' && (
-                <>
-                  <ActionsButton
-                    actions={[{ label: 'Create', onClick: reset }]}
-                    onClick={() => dispatch(uiActions.openCurlModal())}
-                  >
-                    Import cURL
-                  </ActionsButton>
-                  <Modal isOpen={openCurlModal} onClose={() => dispatch(uiActions.closeCurlModal())}>
-                    <div className="flex flex-col gap-4">
-                      <h4 className="m-0">Import cURL</h4>
-                      <Textarea
-                        autoFocus={true}
-                        className="min-h-40"
-                        placeholder="Enter cURL or paste text"
-                        value={curl}
-                        onChange={(event) => dispatch(uiActions.setCurl(event.target.value))}
-                      />
-                      {curlError && <p className="m-0 text-xs text-red-600">{curlError}</p>}
-                      <div className="flex items-center justify-end gap-4">
-                        <Button onClick={importCurl}>Import</Button>
-                        <Button buttonType={ButtonType.SECONDARY} onClick={() => dispatch(uiActions.closeCurlModal())}>
-                          Cancel
-                        </Button>
+            <div className="flex flex-col @lg:flex-row @lg:items-center gap-4 @lg:gap-2">
+              <div className="flex flex-col @lg:flex-row @lg:items-center gap-2">
+                <Select
+                  className="font-bold"
+                  isSearchable={false}
+                  options={modeOptions}
+                  placeholder="MODE"
+                  value={modeOptions.find((option) => option.value == mode)}
+                  onChange={(option: SelectOption<Mode>) => {
+                    dispatch(requestActions.setMode(option.value));
+                    reset();
+                  }}
+                />
+                {mode === 'HTTP' && (
+                  <>
+                    <ActionsButton
+                      actions={[{ label: 'Create', onClick: reset }]}
+                      className="[&>*:first-child]:w-full @lg:[&>*:first-child]:w-auto"
+                      onClick={() => dispatch(uiActions.openCurlModal())}
+                    >
+                      Import cURL
+                    </ActionsButton>
+                    <Modal isOpen={openCurlModal} onClose={() => dispatch(uiActions.closeCurlModal())}>
+                      <div className="flex flex-col gap-4">
+                        <h4 className="m-0">Import cURL</h4>
+                        <Textarea
+                          autoFocus={true}
+                          className="min-h-40"
+                          placeholder="Enter cURL or paste text"
+                          value={curl}
+                          onChange={(event) => dispatch(uiActions.setCurl(event.target.value))}
+                        />
+                        {curlError && <p className="m-0 text-xs text-red-600">{curlError}</p>}
+                        <div className="flex items-center justify-end gap-4">
+                          <Button onClick={importCurl}>Import</Button>
+                          <Button
+                            buttonType={ButtonType.SECONDARY}
+                            onClick={() => dispatch(uiActions.closeCurlModal())}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  </Modal>
-                </>
-              )}
+                    </Modal>
+                  </>
+                )}
+              </div>
               <div className="flex-auto flex items-center justify-end gap-2">
                 <EnvironmentSelector
+                  className="flex-auto @lg:flex-none"
                   environments={environments}
                   selectedEnvironmentId={selectedEnvironmentId}
                   onSelect={(id) => dispatch(environmentActions.selectEnvironment(id))}
@@ -645,7 +652,7 @@ export default function App() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col @lg:flex-row @lg:items-center gap-2">
               <div className="flex-auto flex items-center">
                 {mode === 'HTTP' && (
                   <Select
@@ -737,7 +744,7 @@ export default function App() {
                 <div className="mb-3 text-xs text-text-secondary">
                   Experimental and optional section. If used, both fields must be completed
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col @lg:flex-row @lg:items-center gap-2">
                   <FileInput
                     accept=".proto"
                     onChange={async (event) => {
@@ -881,26 +888,37 @@ export default function App() {
             )}
 
             {mode === 'HTTP' && (
-              <div className="flex justify-between gap-2">
-                <Button
-                  disabled={disabledRunTests}
-                  onClick={() => {
-                    dispatch(
-                      testActions.setTestOptions({
-                        ...substituteRequestVariables(url, headers, body, messageType, selectedEnvironment),
-                        bodyParameters,
-                        method,
-                        protoFile,
-                        queryParameters,
-                      }),
-                    );
-                  }}
-                >
-                  {isRunningTests ? `Running tests... (${currentTest}/${testsCount})` : 'Generate & Run Tests'}
-                </Button>
+              <div className="flex flex-col @lg:flex-row @lg:items-center @lg:justify-between gap-4 @lg:gap-2">
+                <div className="flex flex-col @lg:flex-row @lg:items-center gap-4 @lg:gap-2">
+                  <Button
+                    disabled={disabledRunTests}
+                    onClick={() => {
+                      dispatch(
+                        testActions.setTestOptions({
+                          ...substituteRequestVariables(url, headers, body, messageType, selectedEnvironment),
+                          bodyParameters,
+                          method,
+                          protoFile,
+                          queryParameters,
+                        }),
+                      );
+                    }}
+                  >
+                    {isRunningTests ? `Running tests... (${currentTest}/${testsCount})` : 'Generate & Run Tests'}
+                  </Button>
+                  {(testOptions || requestTestResults) && (
+                    <Button
+                      buttonType={ButtonType.SECONDARY}
+                      disabled={isRunningTests}
+                      onClick={() => dispatch(testActions.addResultToCompare(requestTestResults))}
+                    >
+                      {testResultsToCompare.length < 1 ? 'Select For Compare' : 'Compare With Selected'}
+                    </Button>
+                  )}
+                </div>
 
                 {(testOptions || requestTestResults) && (
-                  <div className="flex items-center justify-end gap-2">
+                  <div className="flex flex-col @lg:flex-row @lg:justify-end @lg:items-center gap-2">
                     <Select
                       isSearchable={false}
                       options={exportFormatOptions}
@@ -917,12 +935,6 @@ export default function App() {
                       onClick={exportReport}
                     >
                       {exported ? 'Exported ✅' : 'Export'}
-                    </Button>
-                    <Button
-                      disabled={isRunningTests}
-                      onClick={() => dispatch(testActions.addResultToCompare(requestTestResults))}
-                    >
-                      {testResultsToCompare.length < 1 ? 'Select For Compare' : 'Compare With Selected'}
                     </Button>
                   </div>
                 )}
