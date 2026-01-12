@@ -1,12 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { TestOptions, TestResult } from '../../types';
-
-export interface TestResults {
-  crudTests: TestResult[];
-  dataDrivenTests: TestResult[];
-  performanceTests: TestResult[];
-  securityTests: TestResult[];
-}
+import { TestOptions, TestResult, TestResults } from '../../types';
 
 interface TestState extends TestResults {
   // Running states
@@ -26,6 +19,10 @@ interface TestState extends TestResults {
 
   // All results by collection/request id
   results: Record<string, TestResults>;
+
+  // Test results comparison
+  isComparing: boolean;
+  resultsToCompare: TestResults[];
 }
 
 const initialState: TestState = {
@@ -43,6 +40,8 @@ const initialState: TestState = {
   loadProgress: 0,
   testOptions: null,
   results: {},
+  isComparing: false,
+  resultsToCompare: [],
 };
 
 export const testSlice = createSlice({
@@ -117,7 +116,16 @@ export const testSlice = createSlice({
     },
 
     // Reset
-    resetTests: (state) => ({ ...initialState, results: state.results }),
+    resetTests: (state) => ({
+      ...initialState,
+      results: state.results,
+      ...(state.resultsToCompare.length >= 2
+        ? { isComparing: false, resultsToCompare: [] }
+        : {
+            isComparing: state.isComparing,
+            resultsToCompare: state.resultsToCompare,
+          }),
+    }),
 
     // Start all tests
     startAllTests: (state) => {
@@ -134,6 +142,15 @@ export const testSlice = createSlice({
 
     addResults: (state, action: PayloadAction<{ requestId: string; results: TestResults }>) => {
       state.results[action.payload.requestId] = action.payload.results;
+    },
+
+    addResultToCompare: (state, action: PayloadAction<TestResults>) => {
+      state.resultsToCompare.push(action.payload);
+      state.isComparing = state.resultsToCompare.length >= 2;
+    },
+    clearResultsToCompare: (state) => {
+      state.resultsToCompare = [];
+      state.isComparing = false;
     },
   },
 });

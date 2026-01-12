@@ -86,6 +86,13 @@ export interface TestResult {
   value?: any;
 }
 
+export interface TestResults {
+  crudTests: TestResult[];
+  dataDrivenTests: TestResult[];
+  performanceTests: TestResult[];
+  securityTests: TestResult[];
+}
+
 export enum TestStatus {
   Bug = '🟣 Bug',
   Fail = '🔴 Fail',

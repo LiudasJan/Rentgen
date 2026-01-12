@@ -1,3 +1,4 @@
+import cn from 'classnames';
 import { Environment } from '../../types';
 import Select, { SelectOption } from '../inputs/Select';
 
@@ -11,12 +12,13 @@ function isColorDark(hexColor: string): boolean {
 }
 
 interface Props {
+  className?: string;
   environments: Environment[];
   selectedEnvironmentId: string | null;
   onSelect: (id: string | null) => void;
 }
 
-export default function EnvironmentSelector({ environments, selectedEnvironmentId, onSelect }: Props) {
+export default function EnvironmentSelector({ className, environments, selectedEnvironmentId, onSelect }: Props) {
   const selectedEnvironment = environments.find((env) => env.id === selectedEnvironmentId);
   const hasColor = selectedEnvironment?.color;
   const needsLightText = hasColor && isColorDark(selectedEnvironment.color);
@@ -31,7 +33,7 @@ export default function EnvironmentSelector({ environments, selectedEnvironmentI
 
   return (
     <Select
-      className="min-w-[150px]"
+      className={cn('min-w-[150px]', className)}
       isSearchable={false}
       options={options}
       placeholder="Select Environment"

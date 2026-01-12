@@ -18,11 +18,13 @@ import Textarea from './components/inputs/Textarea';
 import { JsonViewer } from './components/JsonViewer';
 import Loader from './components/loaders/Loader';
 import TestRunningLoader from './components/loaders/TestRunningLoader';
+import ConfirmationModal from './components/modals/ConfirmationModal';
 import ImportConflictModal from './components/modals/ImportConflictModal';
 import Modal from './components/modals/Modal';
 import SetAsVariableModal from './components/modals/SetAsVariableModal';
+import Panel from './components/panels/Panel';
 import ParametersPanel from './components/panels/ParametersPanel';
-import ResponsePanel from './components/panels/ResponsePanel';
+import TestResultsComparisonPanel from './components/panels/TestResultsComparisonPanel';
 import Sidebar from './components/sidebar/Sidebar';
 import TestsTable, { ExpandedTestComponent, getTestsTableColumns } from './components/tables/TestsTable';
 import { appConfig } from './constants/appConfig';
@@ -73,6 +75,7 @@ import {
   selectExportFormat,
   selectHeaders,
   selectHttpResponse,
+  selectIsComparingTestResults,
   selectIsEditingEnvironment,
   selectIsRunningTests,
   selectMessageType,
@@ -90,6 +93,7 @@ import {
   selectSelectedFolderId,
   selectSelectedRequestId,
   selectTestOptions,
+  selectTestResultsToCompare,
   selectUrl,
   selectWssConnected,
   selectWssMessages,
@@ -103,10 +107,10 @@ import { testActions } from './store/slices/testSlice';
 import { uiActions } from './store/slices/uiSlice';
 import { websocketActions } from './store/slices/websocketSlice';
 
+import CloseIcon from './assets/icons/clear-cross-icon.svg';
 import DarkModeIcon from './assets/icons/dark-mode-icon.svg';
 import LightModeIcon from './assets/icons/light-mode-icon.svg';
 import ReloadIcon from './assets/icons/reload-icon.svg';
-import ConfirmationModal from './components/modals/ConfirmationModal';
 
 type Mode = 'HTTP' | 'WSS';
 
@@ -187,6 +191,8 @@ export default function App() {
   const isRunningTests = useAppSelector(selectIsRunningTests);
   const disabledRunTests = useAppSelector(selectDisabledRunTests);
   const requestTestResults = useAppSelector(selectRequestTestResults(selectedRequestId));
+  const testResultsToCompare = useAppSelector(selectTestResultsToCompare);
+  const isComparingTestResults = useAppSelector(selectIsComparingTestResults);
 
   // UI state
   const openCurlModal = useAppSelector(selectOpenCurlModal);
@@ -550,58 +556,77 @@ export default function App() {
   return (
     <div className="flex">
       <Sidebar />
-      <div className="flex-1 min-w-0 flex flex-col gap-4 py-5 px-7 overflow-y-auto">
-        {isEditingEnvironment ? (
+      <div className="@container flex-1 min-w-0 flex flex-col gap-4 py-5 px-7 overflow-y-auto">
+        {isEditingEnvironment && (
           <EnvironmentEditor
             environment={environments.find((e) => e.id === editingEnvironmentId) || null}
             isNew={editingEnvironmentId === null}
             onSave={handleSaveEnvironment}
           />
-        ) : (
+        )}
+        {!isEditingEnvironment && isComparingTestResults && (
+          <div className="relative">
+            <TestResultsComparisonPanel title="Test Results Comparison" items={testResultsToCompare} />
+            <IconButton
+              className="absolute top-2.5 right-4"
+              onClick={() => dispatch(testActions.clearResultsToCompare())}
+            >
+              <CloseIcon className="h-5 w-5" />
+            </IconButton>
+          </div>
+        )}
+        {!isEditingEnvironment && !isComparingTestResults && (
           <>
-            <div className="flex items-center gap-2">
-              <Select
-                className="font-bold"
-                isSearchable={false}
-                options={modeOptions}
-                placeholder="MODE"
-                value={modeOptions.find((option) => option.value == mode)}
-                onChange={(option: SelectOption<Mode>) => {
-                  dispatch(requestActions.setMode(option.value));
-                  reset();
-                }}
-              />
-              {mode === 'HTTP' && (
-                <>
-                  <ActionsButton
-                    actions={[{ label: 'Create', onClick: reset }]}
-                    onClick={() => dispatch(uiActions.openCurlModal())}
-                  >
-                    Import cURL
-                  </ActionsButton>
-                  <Modal isOpen={openCurlModal} onClose={() => dispatch(uiActions.closeCurlModal())}>
-                    <div className="flex flex-col gap-4">
-                      <h4 className="m-0">Import cURL</h4>
-                      <Textarea
-                        autoFocus={true}
-                        className="min-h-40"
-                        placeholder="Enter cURL or paste text"
-                        value={curl}
-                        onChange={(event) => dispatch(uiActions.setCurl(event.target.value))}
-                      />
-                      {curlError && <p className="m-0 text-xs text-red-600">{curlError}</p>}
-                      <div className="flex items-center justify-end gap-4">
-                        <Button onClick={importCurl}>Import</Button>
-                        <Button buttonType={ButtonType.SECONDARY} onClick={() => dispatch(uiActions.closeCurlModal())}>
-                          Cancel
-                        </Button>
+            <div className="flex flex-col @lg:flex-row @lg:items-center gap-4 @lg:gap-2">
+              <div className="flex flex-col @lg:flex-row @lg:items-center gap-2">
+                <Select
+                  className="font-bold"
+                  isSearchable={false}
+                  options={modeOptions}
+                  placeholder="MODE"
+                  value={modeOptions.find((option) => option.value == mode)}
+                  onChange={(option: SelectOption<Mode>) => {
+                    dispatch(requestActions.setMode(option.value));
+                    reset();
+                  }}
+                />
+                {mode === 'HTTP' && (
+                  <>
+                    <ActionsButton
+                      actions={[{ label: 'Create', onClick: reset }]}
+                      className="[&>*:first-child]:w-full @lg:[&>*:first-child]:w-auto"
+                      onClick={() => dispatch(uiActions.openCurlModal())}
+                    >
+                      Import cURL
+                    </ActionsButton>
+                    <Modal isOpen={openCurlModal} onClose={() => dispatch(uiActions.closeCurlModal())}>
+                      <div className="flex flex-col gap-4">
+                        <h4 className="m-0">Import cURL</h4>
+                        <Textarea
+                          autoFocus={true}
+                          className="min-h-40"
+                          placeholder="Enter cURL or paste text"
+                          value={curl}
+                          onChange={(event) => dispatch(uiActions.setCurl(event.target.value))}
+                        />
+                        {curlError && <p className="m-0 text-xs text-red-600">{curlError}</p>}
+                        <div className="flex items-center justify-end gap-4">
+                          <Button onClick={importCurl}>Import</Button>
+                          <Button
+                            buttonType={ButtonType.SECONDARY}
+                            onClick={() => dispatch(uiActions.closeCurlModal())}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  </Modal>
-                </>
-              )}
+                    </Modal>
+                  </>
+                )}
+              </div>
               <div className="flex-auto flex items-center justify-end gap-2">
                 <EnvironmentSelector
+                  className="flex-auto @lg:flex-none"
                   environments={environments}
                   selectedEnvironmentId={selectedEnvironmentId}
                   onSelect={(id) => dispatch(environmentActions.selectEnvironment(id))}
@@ -627,7 +652,7 @@ export default function App() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col @lg:flex-row @lg:items-center gap-2">
               <div className="flex-auto flex items-center">
                 {mode === 'HTTP' && (
                   <Select
@@ -719,7 +744,7 @@ export default function App() {
                 <div className="mb-3 text-xs text-text-secondary">
                   Experimental and optional section. If used, both fields must be completed
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col @lg:flex-row @lg:items-center gap-2">
                   <FileInput
                     accept=".proto"
                     onChange={async (event) => {
@@ -757,7 +782,7 @@ export default function App() {
             )}
 
             {mode === 'HTTP' && httpResponse && (
-              <ResponsePanel title="Response">
+              <Panel title="Response">
                 <div
                   className={cn(
                     'flex items-center gap-2 p-4 font-bold bg-body dark:bg-dark-body border-t border-border dark:border-dark-body',
@@ -804,11 +829,11 @@ export default function App() {
                     </div>
                   </div>
                 )}
-              </ResponsePanel>
+              </Panel>
             )}
 
             {messages.length > 0 && (
-              <ResponsePanel title="Messages">
+              <Panel title="Messages">
                 <div className="max-h-[400px] p-4 text-xs border-t border-border dark:border-dark-body overflow-y-auto">
                   {messages.map(({ data, decoded, direction }, index) => (
                     <div
@@ -839,7 +864,7 @@ export default function App() {
                     </div>
                   ))}
                 </div>
-              </ResponsePanel>
+              </Panel>
             )}
 
             {(Object.keys(bodyParameters).length > 0 || Object.keys(queryParameters).length > 0) && (
@@ -863,26 +888,37 @@ export default function App() {
             )}
 
             {mode === 'HTTP' && (
-              <div className="flex justify-between">
-                <Button
-                  disabled={disabledRunTests}
-                  onClick={() => {
-                    dispatch(
-                      testActions.setTestOptions({
-                        ...substituteRequestVariables(url, headers, body, messageType, selectedEnvironment),
-                        bodyParameters,
-                        method,
-                        protoFile,
-                        queryParameters,
-                      }),
-                    );
-                  }}
-                >
-                  {isRunningTests ? `Running tests... (${currentTest}/${testsCount})` : 'Generate & Run Tests'}
-                </Button>
+              <div className="flex flex-col @lg:flex-row @lg:items-center @lg:justify-between gap-4 @lg:gap-2">
+                <div className="flex flex-col @lg:flex-row @lg:items-center gap-4 @lg:gap-2">
+                  <Button
+                    disabled={disabledRunTests}
+                    onClick={() => {
+                      dispatch(
+                        testActions.setTestOptions({
+                          ...substituteRequestVariables(url, headers, body, messageType, selectedEnvironment),
+                          bodyParameters,
+                          method,
+                          protoFile,
+                          queryParameters,
+                        }),
+                      );
+                    }}
+                  >
+                    {isRunningTests ? `Running tests... (${currentTest}/${testsCount})` : 'Generate & Run Tests'}
+                  </Button>
+                  {(testOptions || requestTestResults) && (
+                    <Button
+                      buttonType={ButtonType.SECONDARY}
+                      disabled={isRunningTests}
+                      onClick={() => dispatch(testActions.addResultToCompare(requestTestResults))}
+                    >
+                      {testResultsToCompare.length < 1 ? 'Select For Compare' : 'Compare With Selected'}
+                    </Button>
+                  )}
+                </div>
 
-                {testOptions && (
-                  <div className="flex items-center justify-end gap-2">
+                {(testOptions || requestTestResults) && (
+                  <div className="flex flex-col @lg:flex-row @lg:justify-end @lg:items-center gap-2">
                     <Select
                       isSearchable={false}
                       options={exportFormatOptions}
@@ -907,7 +943,7 @@ export default function App() {
 
             {(testOptions || requestTestResults) && (
               <>
-                <ResponsePanel title="Security Tests">
+                <Panel title="Security Tests">
                   <TestsTable
                     columns={[
                       ...getTestsTableColumns(['Check', 'Expected', 'Actual']),
@@ -951,9 +987,9 @@ export default function App() {
                     progressComponent={<TestRunningLoader text="Running Security Tests..." />}
                     progressPending={isSecurityRunning}
                   />
-                </ResponsePanel>
+                </Panel>
 
-                <ResponsePanel title="Performance Insights">
+                <Panel title="Performance Insights">
                   <TestsTable
                     columns={[
                       ...getTestsTableColumns(['Check', 'Expected']),
@@ -1007,9 +1043,9 @@ export default function App() {
                     progressComponent={<TestRunningLoader text="Running Performance Insights..." />}
                     progressPending={isPerformanceRunning}
                   />
-                </ResponsePanel>
+                </Panel>
 
-                <ResponsePanel title="Data-Driven Tests">
+                <Panel title="Data-Driven Tests">
                   <TestsTable
                     columns={getTestsTableColumns(['Parameter', 'Value', 'Expected', 'Actual', 'Result'])}
                     expandableRows
@@ -1022,9 +1058,9 @@ export default function App() {
                     progressComponent={<TestRunningLoader text="Running Data-Driven Tests..." />}
                     progressPending={isDataDrivenRunning}
                   />
-                </ResponsePanel>
+                </Panel>
 
-                <ResponsePanel title="CRUD">
+                <Panel title="CRUD">
                   <TestsTable
                     columns={getTestsTableColumns(['Method', 'Expected', 'Actual', 'Result'])}
                     expandableRows
@@ -1035,7 +1071,7 @@ export default function App() {
                     progressComponent={<TestRunningLoader text="Preparing CRUD…" />}
                     progressPending={crudTests.length === 0}
                   />
-                </ResponsePanel>
+                </Panel>
               </>
             )}
           </>

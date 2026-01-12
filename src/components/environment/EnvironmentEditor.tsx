@@ -4,7 +4,7 @@ import { Environment, EnvironmentVariable } from '../../types';
 import { generateEnvironmentId } from '../../utils';
 import Button from '../buttons/Button';
 import Input from '../inputs/Input';
-import ResponsePanel from '../panels/ResponsePanel';
+import Panel from '../panels/Panel';
 
 const COLOR_OPTIONS = ['#EF4444', '#F97316', '#EAB308', '#22C55E', '#3B82F6', '#8B5CF6', '#EC4899', '#6B7280'];
 
@@ -122,7 +122,7 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
 
   return (
     <div className="flex flex-col gap-4">
-      <ResponsePanel title={isNew ? 'New Environment' : 'Edit Environment'}>
+      <Panel title={isNew ? 'New Environment' : 'Edit Environment'}>
         <div className="p-4 border-t border-border dark:border-dark-body">
           {/* Title Input */}
           <div className="mb-4">
@@ -210,7 +210,7 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
             </div>
           )}
         </div>
-      </ResponsePanel>
+      </Panel>
     </div>
   );
 }
