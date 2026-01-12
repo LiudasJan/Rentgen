@@ -44,7 +44,7 @@ export default function TestResultsComparisonPanel({ title, items, ...otherProps
         <>
           <div className="shrink-0 flex p-4 gap-2 text-sm bg-body dark:bg-dark-body border-y border-border dark:border-dark-body">
             <span>
-              Changed: <b>{statistics.percent}%</b>
+              Behavior Change: <b>{statistics.percent}%</b>
             </span>
             <span className="text-method-post dark:text-dark-method-post">+{statistics.added}</span>
             <span className="text-method-delete dark:text-dark-method-delete">-{statistics.removed}</span>
