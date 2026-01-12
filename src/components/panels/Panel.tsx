@@ -5,7 +5,7 @@ export interface Props extends HTMLAttributes<HTMLDivElement> {
   title: string;
 }
 
-export default function ResponsePanel({ children, className, title, ...otherProps }: Props) {
+export default function Panel({ children, className, title, ...otherProps }: Props) {
   return (
     <div
       className={cn(

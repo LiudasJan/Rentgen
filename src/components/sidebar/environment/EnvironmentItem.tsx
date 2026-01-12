@@ -1,9 +1,10 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import cn from 'classnames';
+import { useCallback } from 'react';
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
-import { environmentActions } from '../../../store/slices/environmentSlice';
 import { selectSelectedEnvironmentId } from '../../../store/selectors';
+import { environmentActions } from '../../../store/slices/environmentSlice';
 import { Environment } from '../../../types';
 
 import ClearCrossIcon from '../../../assets/icons/clear-cross-icon.svg';
@@ -20,6 +21,13 @@ export default function EnvironmentItem({ environment }: Props) {
     id: environment.id,
   });
 
+  const onClick = useCallback(() => {
+    if (isDragging) return;
+
+    dispatch(environmentActions.selectEnvironment(environment.id));
+    dispatch(environmentActions.startEditing(environment.id));
+  }, [isDragging, dispatch]);
+
   return (
     <div
       ref={setNodeRef}
@@ -35,12 +43,7 @@ export default function EnvironmentItem({ environment }: Props) {
           'opacity-50 shadow-lg z-50': isDragging,
         },
       )}
-      onClick={() => {
-        if (!isDragging) {
-          dispatch(environmentActions.selectEnvironment(environment.id));
-          dispatch(environmentActions.startEditing(environment.id));
-        }
-      }}
+      onClick={onClick}
       {...attributes}
       {...listeners}
     >

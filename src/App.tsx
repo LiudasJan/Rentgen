@@ -18,11 +18,13 @@ import Textarea from './components/inputs/Textarea';
 import { JsonViewer } from './components/JsonViewer';
 import Loader from './components/loaders/Loader';
 import TestRunningLoader from './components/loaders/TestRunningLoader';
+import ConfirmationModal from './components/modals/ConfirmationModal';
 import ImportConflictModal from './components/modals/ImportConflictModal';
 import Modal from './components/modals/Modal';
 import SetAsVariableModal from './components/modals/SetAsVariableModal';
+import Panel from './components/panels/Panel';
 import ParametersPanel from './components/panels/ParametersPanel';
-import ResponsePanel from './components/panels/ResponsePanel';
+import TestResultsComparisonPanel from './components/panels/TestResultsComparisonPanel';
 import Sidebar from './components/sidebar/Sidebar';
 import TestsTable, { ExpandedTestComponent, getTestsTableColumns } from './components/tables/TestsTable';
 import { appConfig } from './constants/appConfig';
@@ -73,6 +75,7 @@ import {
   selectExportFormat,
   selectHeaders,
   selectHttpResponse,
+  selectIsComparingTestResults,
   selectIsEditingEnvironment,
   selectIsRunningTests,
   selectMessageType,
@@ -90,6 +93,7 @@ import {
   selectSelectedFolderId,
   selectSelectedRequestId,
   selectTestOptions,
+  selectTestResultsToCompare,
   selectUrl,
   selectWssConnected,
   selectWssMessages,
@@ -103,10 +107,10 @@ import { testActions } from './store/slices/testSlice';
 import { uiActions } from './store/slices/uiSlice';
 import { websocketActions } from './store/slices/websocketSlice';
 
+import CloseIcon from './assets/icons/clear-cross-icon.svg';
 import DarkModeIcon from './assets/icons/dark-mode-icon.svg';
 import LightModeIcon from './assets/icons/light-mode-icon.svg';
 import ReloadIcon from './assets/icons/reload-icon.svg';
-import ConfirmationModal from './components/modals/ConfirmationModal';
 
 type Mode = 'HTTP' | 'WSS';
 
@@ -187,6 +191,8 @@ export default function App() {
   const isRunningTests = useAppSelector(selectIsRunningTests);
   const disabledRunTests = useAppSelector(selectDisabledRunTests);
   const requestTestResults = useAppSelector(selectRequestTestResults(selectedRequestId));
+  const testResultsToCompare = useAppSelector(selectTestResultsToCompare);
+  const isComparingTestResults = useAppSelector(selectIsComparingTestResults);
 
   // UI state
   const openCurlModal = useAppSelector(selectOpenCurlModal);
@@ -551,13 +557,25 @@ export default function App() {
     <div className="flex">
       <Sidebar />
       <div className="flex-1 min-w-0 flex flex-col gap-4 py-5 px-7 overflow-y-auto">
-        {isEditingEnvironment ? (
+        {isEditingEnvironment && (
           <EnvironmentEditor
             environment={environments.find((e) => e.id === editingEnvironmentId) || null}
             isNew={editingEnvironmentId === null}
             onSave={handleSaveEnvironment}
           />
-        ) : (
+        )}
+        {!isEditingEnvironment && isComparingTestResults && (
+          <div className="relative">
+            <TestResultsComparisonPanel title="Test Results Comparison" items={testResultsToCompare} />
+            <IconButton
+              className="absolute top-2.5 right-4"
+              onClick={() => dispatch(testActions.clearResultsToCompare())}
+            >
+              <CloseIcon className="h-5 w-5" />
+            </IconButton>
+          </div>
+        )}
+        {!isEditingEnvironment && !isComparingTestResults && (
           <>
             <div className="flex items-center gap-2">
               <Select
@@ -757,7 +775,7 @@ export default function App() {
             )}
 
             {mode === 'HTTP' && httpResponse && (
-              <ResponsePanel title="Response">
+              <Panel title="Response">
                 <div
                   className={cn(
                     'flex items-center gap-2 p-4 font-bold bg-body dark:bg-dark-body border-t border-border dark:border-dark-body',
@@ -804,11 +822,11 @@ export default function App() {
                     </div>
                   </div>
                 )}
-              </ResponsePanel>
+              </Panel>
             )}
 
             {messages.length > 0 && (
-              <ResponsePanel title="Messages">
+              <Panel title="Messages">
                 <div className="max-h-[400px] p-4 text-xs border-t border-border dark:border-dark-body overflow-y-auto">
                   {messages.map(({ data, decoded, direction }, index) => (
                     <div
@@ -839,7 +857,7 @@ export default function App() {
                     </div>
                   ))}
                 </div>
-              </ResponsePanel>
+              </Panel>
             )}
 
             {(Object.keys(bodyParameters).length > 0 || Object.keys(queryParameters).length > 0) && (
@@ -863,7 +881,7 @@ export default function App() {
             )}
 
             {mode === 'HTTP' && (
-              <div className="flex justify-between">
+              <div className="flex justify-between gap-2">
                 <Button
                   disabled={disabledRunTests}
                   onClick={() => {
@@ -881,7 +899,7 @@ export default function App() {
                   {isRunningTests ? `Running tests... (${currentTest}/${testsCount})` : 'Generate & Run Tests'}
                 </Button>
 
-                {testOptions && (
+                {(testOptions || requestTestResults) && (
                   <div className="flex items-center justify-end gap-2">
                     <Select
                       isSearchable={false}
@@ -900,6 +918,12 @@ export default function App() {
                     >
                       {exported ? 'Exported ✅' : 'Export'}
                     </Button>
+                    <Button
+                      disabled={isRunningTests}
+                      onClick={() => dispatch(testActions.addResultToCompare(requestTestResults))}
+                    >
+                      {testResultsToCompare.length < 1 ? 'Select For Compare' : 'Compare With Selected'}
+                    </Button>
                   </div>
                 )}
               </div>
@@ -907,7 +931,7 @@ export default function App() {
 
             {(testOptions || requestTestResults) && (
               <>
-                <ResponsePanel title="Security Tests">
+                <Panel title="Security Tests">
                   <TestsTable
                     columns={[
                       ...getTestsTableColumns(['Check', 'Expected', 'Actual']),
@@ -951,9 +975,9 @@ export default function App() {
                     progressComponent={<TestRunningLoader text="Running Security Tests..." />}
                     progressPending={isSecurityRunning}
                   />
-                </ResponsePanel>
+                </Panel>
 
-                <ResponsePanel title="Performance Insights">
+                <Panel title="Performance Insights">
                   <TestsTable
                     columns={[
                       ...getTestsTableColumns(['Check', 'Expected']),
@@ -1007,9 +1031,9 @@ export default function App() {
                     progressComponent={<TestRunningLoader text="Running Performance Insights..." />}
                     progressPending={isPerformanceRunning}
                   />
-                </ResponsePanel>
+                </Panel>
 
-                <ResponsePanel title="Data-Driven Tests">
+                <Panel title="Data-Driven Tests">
                   <TestsTable
                     columns={getTestsTableColumns(['Parameter', 'Value', 'Expected', 'Actual', 'Result'])}
                     expandableRows
@@ -1022,9 +1046,9 @@ export default function App() {
                     progressComponent={<TestRunningLoader text="Running Data-Driven Tests..." />}
                     progressPending={isDataDrivenRunning}
                   />
-                </ResponsePanel>
+                </Panel>
 
-                <ResponsePanel title="CRUD">
+                <Panel title="CRUD">
                   <TestsTable
                     columns={getTestsTableColumns(['Method', 'Expected', 'Actual', 'Result'])}
                     expandableRows
@@ -1035,7 +1059,7 @@ export default function App() {
                     progressComponent={<TestRunningLoader text="Preparing CRUD…" />}
                     progressPending={crudTests.length === 0}
                   />
-                </ResponsePanel>
+                </Panel>
               </>
             )}
           </>

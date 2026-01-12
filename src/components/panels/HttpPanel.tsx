@@ -2,9 +2,9 @@ import cn from 'classnames';
 import { HttpRequest, HttpResponse } from '../../types';
 import { CopyButton } from '../buttons/CopyButton';
 import { JsonViewer } from '../JsonViewer';
-import { Props as ResponsePanelProps } from './ResponsePanel';
+import { Props as PanelProps } from './Panel';
 
-interface Props extends ResponsePanelProps {
+interface Props extends PanelProps {
   source: HttpRequest | HttpResponse | string;
 }
 
