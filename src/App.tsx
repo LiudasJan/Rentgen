@@ -21,7 +21,7 @@ import TestRunningLoader from './components/loaders/TestRunningLoader';
 import ConfirmationModal from './components/modals/ConfirmationModal';
 import ImportConflictModal from './components/modals/ImportConflictModal';
 import Modal from './components/modals/Modal';
-import SetAsVariableModal from './components/modals/SetAsVariableModal';
+import SetAsDynamicVariableModal from './components/modals/SetAsDynamicVariableModal';
 import Panel from './components/panels/Panel';
 import ParametersPanel from './components/panels/ParametersPanel';
 import TestResultsComparisonPanel from './components/panels/TestResultsComparisonPanel';
@@ -68,6 +68,7 @@ import {
   selectCurlError,
   selectDeleteFolderModal,
   selectDisabledRunTests,
+  selectDynamicVariables,
   selectEditingEnvironmentId,
   selectEnvironments,
   selectEnvironmentToDelete,
@@ -100,7 +101,7 @@ import {
 } from './store/selectors';
 import { collectionRunActions } from './store/slices/collectionRunSlice';
 import { collectionActions, loadCollection } from './store/slices/collectionSlice';
-import { environmentActions, loadEnvironments } from './store/slices/environmentSlice';
+import { environmentActions, loadDynamicVariables, loadEnvironments } from './store/slices/environmentSlice';
 import { requestActions } from './store/slices/requestSlice';
 import { responseActions } from './store/slices/responseSlice';
 import { testActions } from './store/slices/testSlice';
@@ -159,6 +160,7 @@ export default function App() {
   const environments = useAppSelector(selectEnvironments);
   const selectedEnvironmentId = useAppSelector(selectSelectedEnvironmentId);
   const selectedEnvironment = useAppSelector(selectSelectedEnvironment);
+  const dynamicVariables = useAppSelector(selectDynamicVariables);
   const isEditingEnvironment = useAppSelector(selectIsEditingEnvironment);
   const editingEnvironmentId = useAppSelector(selectEditingEnvironmentId);
   const environmentToDelete = useAppSelector(selectEnvironmentToDelete);
@@ -236,6 +238,7 @@ export default function App() {
 
   useEffect(() => {
     dispatch(loadEnvironments());
+    dispatch(loadDynamicVariables());
   }, [dispatch]);
 
   useEffect(() => {
@@ -327,7 +330,7 @@ export default function App() {
         headers: substitutedHeaders,
         body: substitutedBody,
         messageType: substitutedMessageType,
-      } = substituteRequestVariables(url, headers, body, messageType, selectedEnvironment);
+      } = substituteRequestVariables(url, headers, body, messageType, selectedEnvironment, dynamicVariables);
 
       const parsedHeaders = parseHeaders(substitutedHeaders);
       const parsedBody = parseBody(substitutedBody, parsedHeaders, substitutedMessageType, protoFile);
@@ -374,7 +377,18 @@ export default function App() {
         }),
       );
     }
-  }, [url, headers, body, messageType, selectedEnvironment, selectedRequestId, protoFile, method, dispatch]);
+  }, [
+    url,
+    headers,
+    body,
+    messageType,
+    selectedEnvironment,
+    dynamicVariables,
+    selectedRequestId,
+    protoFile,
+    method,
+    dispatch,
+  ]);
 
   // Save request
   const saveRequest = useCallback(async () => {
@@ -783,7 +797,10 @@ export default function App() {
                   {httpResponse.status}
                 </div>
                 {httpResponse.status !== SENDING && (
-                  <div className="grid grid-cols-2 items-stretch max-h-100 py-4 border-t border-border dark:border-dark-body overflow-y-auto">
+                  <div
+                    className="grid grid-cols-2 items-stretch max-h-100 py-4 border-t border-border dark:border-dark-body overflow-y-auto"
+                    data-response-headers
+                  >
                     <div className="relative flex-1 px-4">
                       <h4 className="m-0 mb-4">Headers</h4>
                       {httpResponse.headers && (
@@ -794,9 +811,15 @@ export default function App() {
                           Copy
                         </CopyButton>
                       )}
-                      <JsonViewer source={httpResponse.headers} />
+                      <JsonViewer
+                        source={httpResponse.headers}
+                        responsePanelContext={{ isResponsePanel: true, source: 'header' }}
+                      />
                     </div>
-                    <div className="relative flex-1 px-4 border-l border-border dark:border-dark-body">
+                    <div
+                      className="relative flex-1 px-4 border-l border-border dark:border-dark-body"
+                      data-response-body
+                    >
                       <h4 className="m-0 mb-4">Body</h4>
                       {httpResponse.body && (
                         <CopyButton
@@ -810,7 +833,10 @@ export default function App() {
                           Copy
                         </CopyButton>
                       )}
-                      <JsonViewer source={extractBodyFromResponse(httpResponse)} />
+                      <JsonViewer
+                        source={extractBodyFromResponse(httpResponse)}
+                        responsePanelContext={{ isResponsePanel: true, source: 'body' }}
+                      />
                     </div>
                   </div>
                 )}
@@ -880,7 +906,14 @@ export default function App() {
                     onClick={() => {
                       dispatch(
                         testActions.setTestOptions({
-                          ...substituteRequestVariables(url, headers, body, messageType, selectedEnvironment),
+                          ...substituteRequestVariables(
+                            url,
+                            headers,
+                            body,
+                            messageType,
+                            selectedEnvironment,
+                            dynamicVariables,
+                          ),
                           bodyParameters,
                           method,
                           protoFile,
@@ -1112,7 +1145,7 @@ export default function App() {
         onClose={() => dispatch(uiActions.closeDeleteFolderModal())}
         onConfirm={confirmDeleteFolder}
       />
-      <SetAsVariableModal />
+      <SetAsDynamicVariableModal />
       <ImportConflictModal />
     </div>
   );

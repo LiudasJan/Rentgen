@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { Environment, EnvironmentVariable } from '../../types';
+import { DynamicVariable, Environment, EnvironmentVariable } from '../../types';
 
 interface EnvironmentState {
   environments: Environment[];
@@ -9,6 +9,8 @@ interface EnvironmentState {
   environmentToDelete: string | null;
   loading: boolean;
   error: string | null;
+  // Dynamic variables stored at root level
+  dynamicVariables: DynamicVariable[];
 }
 
 const initialState: EnvironmentState = {
@@ -19,10 +21,22 @@ const initialState: EnvironmentState = {
   environmentToDelete: null,
   loading: false,
   error: null,
+  dynamicVariables: [],
 };
+
+/**
+ * Generate a unique ID for dynamic variables
+ */
+function generateDynamicVariableId(): string {
+  return `dvar_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+}
 
 export const loadEnvironments = createAsyncThunk('environment/load', async () => {
   return await window.electronAPI.loadEnvironments();
+});
+
+export const loadDynamicVariables = createAsyncThunk('environment/loadDynamicVariables', async () => {
+  return await window.electronAPI.loadDynamicVariables();
 });
 
 export const environmentSlice = createSlice({
@@ -111,6 +125,47 @@ export const environmentSlice = createSlice({
         }
       }
     },
+
+    // Dynamic Variables CRUD actions
+    addDynamicVariable: (
+      state,
+      action: PayloadAction<
+        Omit<DynamicVariable, 'id' | 'currentValue' | 'lastUpdated'> & { initialValue?: string | null }
+      >,
+    ) => {
+      const { initialValue, ...rest } = action.payload;
+      const newVariable: DynamicVariable = {
+        ...rest,
+        id: generateDynamicVariableId(),
+        currentValue: initialValue || null,
+        lastUpdated: initialValue ? Date.now() : null,
+      };
+      state.dynamicVariables.push(newVariable);
+    },
+    updateDynamicVariable: (
+      state,
+      action: PayloadAction<{ id: string; updates: Partial<Omit<DynamicVariable, 'id'>> }>,
+    ) => {
+      const { id, updates } = action.payload;
+      const index = state.dynamicVariables.findIndex((v) => v.id === id);
+      if (index >= 0) {
+        state.dynamicVariables[index] = { ...state.dynamicVariables[index], ...updates };
+      }
+    },
+    removeDynamicVariable: (state, action: PayloadAction<{ id: string }>) => {
+      state.dynamicVariables = state.dynamicVariables.filter((v) => v.id !== action.payload.id);
+    },
+    updateDynamicVariableValue: (state, action: PayloadAction<{ id: string; value: string }>) => {
+      const { id, value } = action.payload;
+      const variable = state.dynamicVariables.find((v) => v.id === id);
+      if (variable) {
+        variable.currentValue = value;
+        variable.lastUpdated = Date.now();
+      }
+    },
+    setDynamicVariables: (state, action: PayloadAction<DynamicVariable[]>) => {
+      state.dynamicVariables = action.payload;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -125,6 +180,9 @@ export const environmentSlice = createSlice({
       .addCase(loadEnvironments.rejected, (state, action) => {
         state.error = action.error.message || 'Failed to load environments';
         state.loading = false;
+      })
+      .addCase(loadDynamicVariables.fulfilled, (state, action) => {
+        state.dynamicVariables = action.payload || [];
       });
   },
 });

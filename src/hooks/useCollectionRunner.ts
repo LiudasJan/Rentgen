@@ -1,8 +1,9 @@
 import { useCallback, useRef } from 'react';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { selectCollectionData, selectSelectedEnvironment } from '../store/selectors';
+import { selectCollectionData, selectDynamicVariables, selectSelectedEnvironment } from '../store/selectors';
 import { collectionRunActions } from '../store/slices/collectionRunSlice';
-import { HttpResponse, PostmanItem } from '../types';
+import { environmentActions } from '../store/slices/environmentSlice';
+import { DynamicVariable, HttpResponse, PostmanItem } from '../types';
 import {
   createHttpRequest,
   detectDataType,
@@ -15,11 +16,15 @@ import {
   substituteRequestVariables,
 } from '../utils';
 import { findRequestById, headersRecordToString, postmanHeadersToRecord } from '../utils/collection';
+import { extractDynamicVariableFromResponse } from '../utils/dynamicVariable';
 
 export function useCollectionRunner() {
   const dispatch = useAppDispatch();
   const collection = useAppSelector(selectCollectionData);
   const selectedEnvironment = useAppSelector(selectSelectedEnvironment);
+  const dynamicVariables = useAppSelector(selectDynamicVariables);
+  const dynamicVariablesRef = useRef<DynamicVariable[]>(dynamicVariables);
+  dynamicVariablesRef.current = dynamicVariables;
   const cancelRef = useRef(false);
 
   const runFolder = useCallback(
@@ -75,13 +80,14 @@ export function useCollectionRunner() {
         const headersString = headersRecordToString(headers);
         const body = request.body?.raw || '';
 
-        // Apply environment variable substitution
+        // Apply environment variable substitution (including dynamic variables)
         const substituted = substituteRequestVariables(
           request.url,
           headersString,
           body,
           '', // messageType - not stored in collection
           selectedEnvironment,
+          dynamicVariablesRef.current,
         );
 
         const parsedHeaders = parseHeaders(substituted.headers);
@@ -113,6 +119,22 @@ export function useCollectionRunner() {
             error: null,
           }),
         );
+
+        // Extract and update dynamic variables for this request
+        const requestDynamicVars = dynamicVariablesRef.current.filter((dv) => dv.requestId === item.id);
+
+        for (const dvar of requestDynamicVars) {
+          const extractedValue = extractDynamicVariableFromResponse(dvar, response);
+
+          if (extractedValue !== null) {
+            dispatch(
+              environmentActions.updateDynamicVariableValue({
+                id: dvar.id,
+                value: extractedValue,
+              }),
+            );
+          }
+        }
       } catch (error) {
         dispatch(
           collectionRunActions.addResult({

@@ -4,11 +4,6 @@ import { PostmanCollection } from '../../types';
 type ReportFormat = 'json' | 'md' | 'csv';
 type SidebarTab = 'collections' | 'environments' | null;
 
-interface SetAsVariableModalState {
-  isOpen: boolean;
-  initialValue: string;
-}
-
 export interface ImportConflict {
   type: 'collection' | 'folder' | 'request';
   existingName: string;
@@ -33,6 +28,18 @@ interface ImportConflictModalState {
   warnings: string[];
 }
 
+interface SetAsDynamicVariableModalState {
+  isOpen: boolean;
+  initialSelector: string;
+  initialValue: string;
+  collectionId: string;
+  requestId: string;
+  collectionName: string;
+  requestName: string;
+  editingVariableId: string | null;
+  editingVariableName: string | null;
+}
+
 interface UIState {
   // Modal states
   openCurlModal: boolean;
@@ -42,8 +49,8 @@ interface UIState {
     isOpen: boolean;
     folderId: string | null;
   };
-  setAsVariableModal: SetAsVariableModalState;
   importConflictModal: ImportConflictModalState;
+  setAsDynamicVariableModal: SetAsDynamicVariableModalState;
 
   // Feedback states
   saved: boolean;
@@ -68,12 +75,22 @@ const initialState: UIState = {
   openReloadModal: false,
   openSendHttpSuccessModal: false,
   deleteFolderModal: { isOpen: false, folderId: null },
-  setAsVariableModal: { isOpen: false, initialValue: '' },
   importConflictModal: {
     isOpen: false,
     importedCollection: null,
     conflictSummary: null,
     warnings: [],
+  },
+  setAsDynamicVariableModal: {
+    isOpen: false,
+    initialSelector: '',
+    initialValue: '',
+    collectionId: '',
+    requestId: '',
+    collectionName: '',
+    requestName: '',
+    editingVariableId: null,
+    editingVariableName: null,
   },
   saved: false,
   exported: false,
@@ -120,12 +137,6 @@ export const uiSlice = createSlice({
     closeDeleteFolderModal: (state) => {
       state.deleteFolderModal = { isOpen: false, folderId: null };
     },
-    openSetAsVariableModal: (state, action: PayloadAction<string>) => {
-      state.setAsVariableModal = { isOpen: true, initialValue: action.payload };
-    },
-    closeSetAsVariableModal: (state) => {
-      state.setAsVariableModal = { isOpen: false, initialValue: '' };
-    },
     openImportConflictModal: (
       state,
       action: PayloadAction<{
@@ -147,6 +158,22 @@ export const uiSlice = createSlice({
         importedCollection: null,
         conflictSummary: null,
         warnings: [],
+      };
+    },
+    openSetAsDynamicVariableModal: (state, action: PayloadAction<Omit<SetAsDynamicVariableModalState, 'isOpen'>>) => {
+      state.setAsDynamicVariableModal = { ...action.payload, isOpen: true };
+    },
+    closeSetAsDynamicVariableModal: (state) => {
+      state.setAsDynamicVariableModal = {
+        isOpen: false,
+        initialSelector: '',
+        initialValue: '',
+        collectionId: '',
+        requestId: '',
+        collectionName: '',
+        requestName: '',
+        editingVariableId: null,
+        editingVariableName: null,
       };
     },
 
