@@ -104,7 +104,7 @@ import { environmentActions, loadEnvironments } from './store/slices/environment
 import { requestActions } from './store/slices/requestSlice';
 import { responseActions } from './store/slices/responseSlice';
 import { testActions } from './store/slices/testSlice';
-import { uiActions } from './store/slices/uiSlice';
+import { loadTheme, uiActions } from './store/slices/uiSlice';
 import { websocketActions } from './store/slices/websocketSlice';
 
 import CloseIcon from './assets/icons/clear-cross-icon.svg';
@@ -239,12 +239,8 @@ export default function App() {
   }, [dispatch]);
 
   useEffect(() => {
-    const setTheme = async () => {
-      const theme = await window.themeAPI.getTheme();
-      if (theme === 'dark') document.documentElement.classList.add('dark');
-    };
-    setTheme();
-  }, []);
+    dispatch(loadTheme());
+  }, [dispatch]);
 
   // WebSocket event listener
   useEffect(() => {
@@ -631,18 +627,7 @@ export default function App() {
                   selectedEnvironmentId={selectedEnvironmentId}
                   onSelect={(id) => dispatch(environmentActions.selectEnvironment(id))}
                 />
-                <IconButton
-                  onClick={async () => {
-                    const theme = await window.themeAPI.getTheme();
-                    if (theme === 'dark') {
-                      document.documentElement.classList.remove('dark');
-                      window.themeAPI.setTheme('light');
-                    } else {
-                      document.documentElement.classList.add('dark');
-                      window.themeAPI.setTheme('dark');
-                    }
-                  }}
-                >
+                <IconButton onClick={() => dispatch(uiActions.toggleTheme())}>
                   <DarkModeIcon className="h-5 w-5 dark:hidden" />
                   <LightModeIcon className="hidden dark:block h-6 w-6" />
                 </IconButton>

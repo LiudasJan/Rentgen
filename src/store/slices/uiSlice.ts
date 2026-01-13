@@ -1,4 +1,4 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { PostmanCollection } from '../../types';
 
 type ReportFormat = 'json' | 'md' | 'csv';
@@ -83,6 +83,10 @@ const initialState: UIState = {
   sidebarActiveTab: null,
   theme: 'light',
 };
+
+export const loadTheme = createAsyncThunk('ui/theme/load', async () => {
+  return await window.themeAPI.getTheme();
+});
 
 export const uiSlice = createSlice({
   name: 'ui',
@@ -176,12 +180,23 @@ export const uiSlice = createSlice({
     },
 
     // Theme
-    setTheme: (state, action: PayloadAction<'light' | 'dark'>) => {
-      state.theme = action.payload;
-    },
     toggleTheme: (state) => {
       state.theme = state.theme === 'light' ? 'dark' : 'light';
+
+      if (state.theme === 'light') {
+        document.documentElement.classList.remove('dark');
+        window.themeAPI.setTheme('light');
+      } else {
+        document.documentElement.classList.add('dark');
+        window.themeAPI.setTheme('dark');
+      }
     },
+  },
+  extraReducers: (builder) => {
+    builder.addCase(loadTheme.fulfilled, (state, action: PayloadAction<'light' | 'dark'>) => {
+      state.theme = action.payload;
+      if (action.payload === 'dark') document.documentElement.classList.add('dark');
+    });
   },
 });
 

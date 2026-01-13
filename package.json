@@ -57,7 +57,6 @@
     "@tailwindcss/postcss": "^4.1.17",
     "axios": "^1.13.2",
     "classnames": "^2.5.1",
-    "diff": "^8.0.2",
     "dotenv": "^17.2.3",
     "electron-squirrel-startup": "^1.0.1",
     "electron-store": "^11.0.2",
