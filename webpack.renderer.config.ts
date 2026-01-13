@@ -29,7 +29,7 @@ export const rendererConfig: Configuration & { devServer?: DevServerConfiguratio
         errors: true,
         warnings: false,
         // Suppress ResizeObserver errors (caused by Monaco Editor's automaticLayout)
-        runtimeErrors: (error: Error) => !error?.message?.includes('RessdasdasizeObserver loop'),
+        runtimeErrors: (error: Error) => !error?.message?.includes('ResizeObserver loop'),
       },
     },
   },
