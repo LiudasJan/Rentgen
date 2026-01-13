@@ -90,6 +90,7 @@ export const selectCurl = (state: RootState) => state.ui.curl;
 export const selectCurlError = (state: RootState) => state.ui.curlError;
 export const selectExportFormat = (state: RootState) => state.ui.exportFormat;
 export const selectSidebarActiveTab = (state: RootState) => state.ui.sidebarActiveTab;
+export const selectTheme = (state: RootState) => state.ui.theme;
 
 // Collection Run selectors
 export const selectRunningFolderId = (state: RootState) => state.collectionRun.runningFolderId;

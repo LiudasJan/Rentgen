@@ -1,9 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
-import MonacoEditor, { Monaco, OnMount, loader } from '@monaco-editor/react';
-import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
-import { rentgenLightTheme, rentgenDarkTheme } from './monaco/themes';
-import { useContextMenu } from './context-menu';
+import MonacoEditor, { OnMount, loader } from '@monaco-editor/react';
 import cn from 'classnames';
+import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
+import { useMemo, useRef } from 'react';
+import { useAppSelector } from '../store/hooks';
+import { selectTheme } from '../store/selectors';
+import { useContextMenu } from './context-menu';
+import { rentgenDarkTheme, rentgenLightTheme } from './monaco/themes';
 
 // Configure Monaco to use local ESM bundle instead of CDN (required for Electron)
 loader.config({ monaco });
@@ -13,59 +15,24 @@ interface Props {
   className?: string;
 }
 
-const getInitialTheme = () => document.documentElement.classList.contains('dark');
-
 export function JsonViewer({ source, className }: Props) {
-  const [isDark, setIsDark] = useState(getInitialTheme);
-  const monacoRef = useRef<Monaco | null>(null);
+  const theme = useAppSelector(selectTheme);
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
-  const { showContextMenu } = useContextMenu() ?? {};
-  const showContextMenuRef = useRef(showContextMenu);
-
-  useEffect(() => {
-    showContextMenuRef.current = showContextMenu;
-  }, [showContextMenu]);
-
-  useEffect(() => {
-    const checkTheme = () => {
-      const dark = document.documentElement.classList.contains('dark');
-      setIsDark(dark);
-    };
-
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        if (mutation.attributeName === 'class') {
-          checkTheme();
-        }
-      });
-    });
-
-    observer.observe(document.documentElement, { attributes: true });
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    if (monacoRef.current) {
-      monacoRef.current.editor.setTheme(isDark ? 'rentgen-dark' : 'rentgen-light');
-    }
-  }, [isDark]);
+  const { showContextMenu } = useContextMenu();
+  const isDark = useMemo(() => theme === 'dark', [theme]);
 
   if (!source || typeof source === 'string') {
     return (
-      <pre className="m-0! text-[#0451a5] dark:text-[#c3612f] whitespace-pre-wrap break-all">{String(source)}</pre>
+      <pre className="m-0! text-[#0451a5] dark:text-[#ce9178] whitespace-pre-wrap break-all">{String(source)}</pre>
     );
   }
 
-  const jsonString = JSON.stringify(source, null, 2);
-
-  const handleEditorDidMount: OnMount = (editor, monacoInstance) => {
+  const onMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
-    monacoRef.current = monacoInstance;
 
-    monacoInstance.editor.defineTheme('rentgen-light', rentgenLightTheme);
-    monacoInstance.editor.defineTheme('rentgen-dark', rentgenDarkTheme);
-
-    monacoInstance.editor.setTheme(isDark ? 'rentgen-dark' : 'rentgen-light');
+    monaco.editor.defineTheme('rentgen-light', rentgenLightTheme);
+    monaco.editor.defineTheme('rentgen-dark', rentgenDarkTheme);
+    monaco.editor.setTheme(isDark ? 'rentgen-dark' : 'rentgen-light');
 
     editor.onContextMenu((e) => {
       e.event.preventDefault();
@@ -76,7 +43,7 @@ export function JsonViewer({ source, className }: Props) {
       const selectedText = selection && model ? model.getValueInRange(selection) : '';
       const browserEvent = e.event.browserEvent as MouseEvent;
 
-      showContextMenuRef.current?.(browserEvent.clientX, browserEvent.clientY, selectedText);
+      showContextMenu(browserEvent.clientX, browserEvent.clientY, selectedText);
     });
   };
 
@@ -85,9 +52,6 @@ export function JsonViewer({ source, className }: Props) {
       <MonacoEditor
         height="100%"
         language="json"
-        value={jsonString}
-        theme={isDark ? 'rentgen-dark' : 'rentgen-light'}
-        onMount={handleEditorDidMount}
         options={{
           readOnly: true,
           minimap: { enabled: false },
@@ -119,6 +83,9 @@ export function JsonViewer({ source, className }: Props) {
             bracketPairs: false,
           },
         }}
+        theme={isDark ? 'rentgen-dark' : 'rentgen-light'}
+        value={JSON.stringify(source, null, 2)}
+        onMount={onMount}
       />
     </div>
   );
