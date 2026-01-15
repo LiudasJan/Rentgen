@@ -8,7 +8,6 @@ export function registerThemeHandlers(): void {
   ipcMain.handle('get-theme', () => {
     try {
       const themePath = getThemePath();
-      console.log('Theme path:', themePath);
       if (fs.existsSync(themePath)) return fs.readFileSync(themePath, 'utf-8');
     } catch (error) {
       console.error(error);
