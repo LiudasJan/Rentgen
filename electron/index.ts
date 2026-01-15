@@ -1,7 +1,6 @@
-import dotenv from 'dotenv';
+import { config } from 'dotenv';
 import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from 'electron';
 import { installExtension, REACT_DEVELOPER_TOOLS, REDUX_DEVTOOLS } from 'electron-devtools-installer';
-import Store from 'electron-store';
 import { writeFileSync } from 'fs';
 import {
   registerCollectionHandlers,
@@ -12,7 +11,7 @@ import {
   registerWssHandlers,
 } from './handlers';
 
-dotenv.config();
+config();
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
@@ -21,10 +20,6 @@ process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 // whether you're running in development or production).
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
 declare const MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY: string;
-
-const store = new Store<{ theme: 'light' | 'dark' }>({
-  defaults: { theme: 'light' },
-}) as any;
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) app.quit();
@@ -118,7 +113,7 @@ app.on('activate', () => {
 // Register handlers
 registerHttpHandlers();
 registerWssHandlers();
-registerThemeHandlers(store);
+registerThemeHandlers();
 registerCollectionHandlers();
 registerEnvironmentHandlers();
 registerImportExportHandlers();

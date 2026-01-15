@@ -272,6 +272,7 @@ export function JsonViewer({ source, className, responsePanelContext }: Props) {
             horizontal: 'auto',
             verticalScrollbarSize: 8,
             horizontalScrollbarSize: 8,
+            alwaysConsumeMouseWheel: false,
           },
           fontSize: 13,
           fontFamily: 'monospace',
