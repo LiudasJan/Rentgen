@@ -798,7 +798,7 @@ export default function App() {
                 </div>
                 {httpResponse.status !== SENDING && (
                   <div
-                    className="grid grid-cols-2 items-stretch max-h-100 py-4 border-t border-border dark:border-dark-body overflow-y-auto"
+                    className="grid grid-cols-2 items-stretch max-h-100 py-4 border-t border-border dark:border-dark-body overflow-hidden"
                     data-response-headers
                   >
                     <div className="relative flex-1 px-4">
