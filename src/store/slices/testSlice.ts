@@ -11,7 +11,6 @@ interface TestState extends TestResults {
 
   // Progress tracking
   currentTest: number;
-  testsCount: number;
   loadProgress: number;
 
   // Test configuration
@@ -26,6 +25,8 @@ interface TestState extends TestResults {
 }
 
 const initialState: TestState = {
+  timestamp: null,
+  domain: '',
   crudTests: [],
   dataDrivenTests: [],
   performanceTests: [],
@@ -36,7 +37,7 @@ const initialState: TestState = {
   isPerformanceRunning: false,
   isSecurityRunning: false,
   currentTest: 0,
-  testsCount: 0,
+  count: 0,
   loadProgress: 0,
   testOptions: null,
   results: {},
@@ -48,11 +49,17 @@ export const testSlice = createSlice({
   name: 'tests',
   initialState,
   reducers: {
-    setTestOptions: (state, action: PayloadAction<TestOptions | null>) => {
+    setOptions: (state, action: PayloadAction<TestOptions | null>) => {
       state.testOptions = action.payload;
     },
-    setTestsCount: (state, action: PayloadAction<number>) => {
-      state.testsCount = action.payload;
+    setCount: (state, action: PayloadAction<number>) => {
+      state.count = action.payload;
+    },
+    setDomain: (state, action: PayloadAction<string>) => {
+      state.domain = action.payload;
+    },
+    setTimestamp: (state, action: PayloadAction<number | null>) => {
+      state.timestamp = action.payload;
     },
     incrementCurrentTest: (state) => {
       state.currentTest += 1;
@@ -129,6 +136,8 @@ export const testSlice = createSlice({
 
     // Start all tests
     startAllTests: (state) => {
+      state.timestamp = null;
+      state.domain = '';
       state.isDataDrivenRunning = true;
       state.isPerformanceRunning = true;
       state.isSecurityRunning = true;
@@ -137,7 +146,7 @@ export const testSlice = createSlice({
       state.performanceTests = [];
       state.securityTests = [];
       state.currentTest = 0;
-      state.testsCount = 0;
+      state.count = 0;
     },
 
     addResults: (state, action: PayloadAction<{ requestId: string; results: TestResults }>) => {

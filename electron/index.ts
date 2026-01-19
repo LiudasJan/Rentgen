@@ -4,6 +4,7 @@ import { installExtension, REACT_DEVELOPER_TOOLS, REDUX_DEVTOOLS } from 'electro
 import { existsSync, unlinkSync, writeFileSync } from 'fs';
 import path from 'path';
 import {
+  registerCertificateHandlers,
   registerCollectionHandlers,
   registerEnvironmentHandlers,
   registerHttpHandlers,
@@ -134,6 +135,7 @@ registerThemeHandlers();
 registerCollectionHandlers();
 registerEnvironmentHandlers();
 registerImportExportHandlers();
+registerCertificateHandlers();
 
 ipcMain.handle('get-app-version', () => app.getVersion());
 ipcMain.on('open-external', (_, url: string) => shell.openExternal(url));

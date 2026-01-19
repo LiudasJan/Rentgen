@@ -89,7 +89,9 @@ export const selectDataDrivenTests = (state: RootState) => state.tests.dataDrive
 export const selectPerformanceTests = (state: RootState) => state.tests.performanceTests;
 export const selectSecurityTests = (state: RootState) => state.tests.securityTests;
 export const selectCurrentTest = (state: RootState) => state.tests.currentTest;
-export const selectTestsCount = (state: RootState) => state.tests.testsCount;
+export const selectTestsCount = (state: RootState) => state.tests.count;
+export const selectTestsDomain = (state: RootState) => state.tests.domain;
+export const selectTestsTimestamp = (state: RootState) => state.tests.timestamp;
 
 export const selectIsSecurityRunning = (state: RootState) => state.tests.isSecurityRunning;
 export const selectIsPerformanceRunning = (state: RootState) => state.tests.isPerformanceRunning;
@@ -123,11 +125,13 @@ export const selectOpenSendHttpSuccessModal = (state: RootState) => state.ui.ope
 export const selectDeleteFolderModal = (state: RootState) => state.ui.deleteFolderModal;
 export const selectSaved = (state: RootState) => state.ui.saved;
 export const selectExported = (state: RootState) => state.ui.exported;
+export const selectCertificated = (state: RootState) => state.ui.certificated;
 export const selectCurl = (state: RootState) => state.ui.curl;
 export const selectCurlError = (state: RootState) => state.ui.curlError;
 export const selectExportFormat = (state: RootState) => state.ui.exportFormat;
 export const selectSidebarActiveTab = (state: RootState) => state.ui.sidebarActiveTab;
 export const selectTheme = (state: RootState) => state.ui.theme;
+export const selectCertificateError = (state: RootState) => state.ui.certificateError;
 
 // Collection Run selectors
 export const selectRunningFolderId = (state: RootState) => state.collectionRun.runningFolderId;

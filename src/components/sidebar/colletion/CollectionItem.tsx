@@ -79,6 +79,9 @@ export default function CollectionItem({ item }: Props) {
       }
 
       if (requestTestResults) {
+        dispatch(testActions.setCount(requestTestResults.count));
+        dispatch(testActions.setDomain(requestTestResults.domain));
+        dispatch(testActions.setTimestamp(requestTestResults.timestamp));
         dispatch(testActions.setCrudTests(requestTestResults.crudTests));
         dispatch(testActions.setDataDrivenTests(requestTestResults.dataDrivenTests));
         dispatch(testActions.setPerformanceTests(requestTestResults.performanceTests));
