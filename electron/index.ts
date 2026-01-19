@@ -3,6 +3,7 @@ import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from 'electron';
 import { installExtension, REACT_DEVELOPER_TOOLS, REDUX_DEVTOOLS } from 'electron-devtools-installer';
 import { writeFileSync } from 'fs';
 import {
+  registerCertificateHandlers,
   registerCollectionHandlers,
   registerEnvironmentHandlers,
   registerHttpHandlers,
@@ -117,6 +118,7 @@ registerThemeHandlers();
 registerCollectionHandlers();
 registerEnvironmentHandlers();
 registerImportExportHandlers();
+registerCertificateHandlers();
 
 ipcMain.handle('get-app-version', () => app.getVersion());
 ipcMain.on('open-external', (_, url: string) => shell.openExternal(url));

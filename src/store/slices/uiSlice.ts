@@ -56,6 +56,10 @@ interface UIState {
   saved: boolean;
   exported: boolean;
 
+  // Certificate
+  certificated: boolean;
+  certificateError: string;
+
   // cURL import
   curl: string;
   curlError: string;
@@ -94,6 +98,8 @@ const initialState: UIState = {
   },
   saved: false,
   exported: false,
+  certificated: false,
+  certificateError: '',
   curl: '',
   curlError: '',
   exportFormat: 'json',
@@ -191,6 +197,14 @@ export const uiSlice = createSlice({
     },
     setExported: (state, action: PayloadAction<boolean>) => {
       state.exported = action.payload;
+    },
+
+    // Certificate
+    setCertificated: (state, action: PayloadAction<boolean>) => {
+      state.certificated = action.payload;
+    },
+    setCertificateError: (state, action: PayloadAction<string>) => {
+      state.certificateError = action.payload;
     },
 
     // Export format
