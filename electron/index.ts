@@ -1,7 +1,8 @@
 import { config } from 'dotenv';
 import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from 'electron';
 import { installExtension, REACT_DEVELOPER_TOOLS, REDUX_DEVTOOLS } from 'electron-devtools-installer';
-import { writeFileSync } from 'fs';
+import { existsSync, unlinkSync, writeFileSync } from 'fs';
+import path from 'path';
 import {
   registerCollectionHandlers,
   registerEnvironmentHandlers,
@@ -23,6 +24,21 @@ declare const MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY: string;
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) app.quit();
+
+function cleanupLegacyStore(): void {
+  try {
+    const userDataPath = app.getPath('userData');
+    const legacyFile = path.join(userDataPath, 'config.json');
+
+    if (existsSync(legacyFile)) {
+      unlinkSync(legacyFile);
+      console.log('Cleaned up legacy electron-store file');
+    }
+
+  } catch (error) {
+    console.error('Failed to cleanup legacy store:', error);
+  }
+}
 
 const createWindow = async (): Promise<void> => {
   const icon =
@@ -93,6 +109,7 @@ const createHelpMenu = (): void => {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.on('ready', async () => {
+  cleanupLegacyStore();
   createHelpMenu();
   await createWindow();
 });
