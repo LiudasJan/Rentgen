@@ -38,6 +38,7 @@ interface SetAsDynamicVariableModalState {
   requestName: string;
   editingVariableId: string | null;
   editingVariableName: string | null;
+  source: 'body' | 'header';
 }
 
 interface UIState {
@@ -95,6 +96,7 @@ const initialState: UIState = {
     requestName: '',
     editingVariableId: null,
     editingVariableName: null,
+    source: 'body',
   },
   saved: false,
   exported: false,
@@ -180,6 +182,7 @@ export const uiSlice = createSlice({
         requestName: '',
         editingVariableId: null,
         editingVariableName: null,
+        source: 'body',
       };
     },
 

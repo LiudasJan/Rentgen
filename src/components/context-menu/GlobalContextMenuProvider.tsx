@@ -31,7 +31,6 @@ export default function GlobalContextMenuProvider({ children }: PropsWithChildre
   const dispatch = useAppDispatch();
   const collection = useAppSelector(selectCollectionData);
   const selectedRequestId = useAppSelector(selectSelectedRequestId);
-
   const [htmlElement, setHtmlElement] = useState<HTMLElement>(null);
   const [menuState, setMenuState] = useState<MenuState>({
     isOpen: false,
@@ -39,17 +38,13 @@ export default function GlobalContextMenuProvider({ children }: PropsWithChildre
     selectedText: '',
   });
   const [responsePanelContext, setResponsePanelContext] = useState<ResponsePanelContext | null>(null);
-
   const hasSelection = useMemo(() => menuState.selectedText.length > 0, [menuState.selectedText]);
-  const isInResponsePanel = responsePanelContext !== null;
 
   // Check if current request is saved in collection and get folder info
   const currentRequestWithFolder = useMemo(() => {
     if (!selectedRequestId) return null;
     return findRequestWithFolder(collection, selectedRequestId);
   }, [collection, selectedRequestId]);
-
-  const isRequestInCollection = !!currentRequestWithFolder;
 
   const closeMenu = useCallback(() => setMenuState((prev) => ({ ...prev, isOpen: false })), []);
 
@@ -110,19 +105,18 @@ export default function GlobalContextMenuProvider({ children }: PropsWithChildre
     if (!currentRequestWithFolder || !selectedRequestId) return;
 
     const { folder, request } = currentRequestWithFolder;
-    const jsonPath = responsePanelContext?.jsonPath;
-    const jsonValue = responsePanelContext?.jsonValue;
-
+    console.log(responsePanelContext);
     dispatch(
       uiActions.openSetAsDynamicVariableModal({
-        initialSelector: jsonPath || menuState.selectedText,
-        initialValue: jsonValue || menuState.selectedText,
+        initialSelector: responsePanelContext?.jsonPath || menuState.selectedText,
+        initialValue: responsePanelContext?.jsonValue || menuState.selectedText,
         collectionId: folder.id,
         requestId: selectedRequestId,
         collectionName: folder.name,
         requestName: request.name,
         editingVariableId: null,
         editingVariableName: null,
+        source: responsePanelContext?.source || 'body',
       }),
     );
     closeMenu();
@@ -137,29 +131,6 @@ export default function GlobalContextMenuProvider({ children }: PropsWithChildre
 
       event.preventDefault();
       setHtmlElement(target);
-
-      // Check if we're in a response panel (body or headers)
-      const responsePanel = target.closest('[data-response-panel]');
-      const inResponsePanel = !!responsePanel;
-
-      if (inResponsePanel) {
-        // Detect source (body or header)
-        const headerPanel = target.closest('[data-response-headers]');
-        const source = headerPanel ? 'header' : 'body';
-
-        // Try to extract JSON path from data attributes (if using JsonViewer)
-        const jsonPathAttr = target.closest('[data-json-path]')?.getAttribute('data-json-path');
-
-        setResponsePanelContext({
-          isResponsePanel: true,
-          source,
-          jsonPath: jsonPathAttr || null,
-          jsonValue: null,
-        });
-      } else {
-        setResponsePanelContext(null);
-      }
-
       setMenuState({
         isOpen: true,
         position: { x: event.clientX, y: event.clientY },
@@ -185,12 +156,12 @@ export default function GlobalContextMenuProvider({ children }: PropsWithChildre
         )}
         <ContextMenuItem label="Copy" onClick={handleCopy} disabled={!hasSelection} />
         {htmlElement && isInputOrTextarea(htmlElement) && <ContextMenuItem label="Paste" onClick={handlePaste} />}
-        {isInResponsePanel && (
+        {responsePanelContext && (
           <ContextMenuItem
             label="Set as Variable"
             onClick={handleSetAsVariable}
-            disabled={!hasSelection || !isRequestInCollection}
-            title={!isRequestInCollection ? 'Save request to collection first' : undefined}
+            disabled={!hasSelection || !currentRequestWithFolder}
+            title={!currentRequestWithFolder ? 'Save request to collection first' : undefined}
             divider
           />
         )}

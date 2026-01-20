@@ -29,7 +29,6 @@ export default function SetAsDynamicVariableModal() {
   const modalState = useAppSelector(selectSetAsDynamicVariableModal);
   const environments = useAppSelector(selectEnvironments);
   const dynamicVariables = useAppSelector(selectDynamicVariables);
-
   const [name, setName] = useState('');
   const [selector, setSelector] = useState('');
   const [selectedEnvironment, setSelectedEnvironment] = useState<EnvironmentOption | null>(null);
@@ -127,7 +126,7 @@ export default function SetAsDynamicVariableModal() {
           updates: {
             key: sanitizedName,
             selector: sanitizedSelector,
-            source: 'body',
+            source: modalState.source,
             environmentId: envId,
           },
         }),
@@ -140,7 +139,7 @@ export default function SetAsDynamicVariableModal() {
           updates: {
             key: sanitizedName,
             selector: sanitizedSelector,
-            source: 'body',
+            source: modalState.source,
             collectionId: modalState.collectionId,
             requestId: modalState.requestId,
             environmentId: envId,
@@ -155,7 +154,7 @@ export default function SetAsDynamicVariableModal() {
         environmentActions.addDynamicVariable({
           key: sanitizedName,
           selector: sanitizedSelector,
-          source: 'body',
+          source: modalState.source,
           collectionId: modalState.collectionId,
           requestId: modalState.requestId,
           environmentId: envId,

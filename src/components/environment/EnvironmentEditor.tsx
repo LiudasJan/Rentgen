@@ -262,8 +262,8 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
           {/* Variables Table */}
           <div className="mb-4">
             <label className="block mb-1 font-bold text-sm">Variables</label>
-            <div className="border border-border dark:border-dark-body rounded-md overflow-hidden">
-              <div className="max-h-[440px] overflow-y-auto">
+            <div className="border border-border dark:border-dark-body rounded-md">
+              <div className="max-h-[440px] overflow-y-auto overflow-x-hidden">
                 <table className="w-full table-fixed border-collapse">
                   <thead className="sticky top-0 z-10">
                     <tr className="bg-body dark:bg-dark-body border-b border-border dark:border-dark-border">
@@ -286,12 +286,12 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
                           />
                         </td>
                         <td className="w-[30%] p-1 border-l border-b border-border dark:border-dark-body">
-                          <span className="px-2 text-sm text-text-secondary dark:text-dark-text-secondary truncate block">
+                          <span className="px-2 text-xs font-monospace text-text-secondary dark:text-dark-text-secondary truncate block">
                             {dv.currentValue || '—'}
                           </span>
                         </td>
                         <td className="w-[30%] p-1 border-l border-b border-border dark:border-dark-body">
-                          <span className="px-2 text-xs text-text-secondary dark:text-dark-text-secondary truncate block">
+                          <span className="px-2 text-xs font-monospace text-text-secondary dark:text-dark-text-secondary truncate block">
                             {dv.selector}
                           </span>
                         </td>

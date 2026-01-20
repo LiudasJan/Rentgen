@@ -167,10 +167,18 @@ export default function App() {
   const editingEnvironmentId = useAppSelector(selectEditingEnvironmentId);
   const environmentToDelete = useAppSelector(selectEnvironmentToDelete);
 
-  const variables = useMemo(
-    () => selectedEnvironment?.variables?.map((variable) => variable.key) || [],
-    [selectedEnvironment],
-  );
+  const variables = useMemo(() => {
+    const environmentDynamicVariables =
+      dynamicVariables
+        .filter(
+          (dynamicVariable) =>
+            dynamicVariable.environmentId === selectedEnvironment?.id || !dynamicVariable.environmentId,
+        )
+        .map((dynamicVariable) => dynamicVariable.key) ?? [];
+    const environmentVariables = selectedEnvironment?.variables?.map((variable) => variable.key) ?? [];
+
+    return [...environmentVariables, ...environmentDynamicVariables];
+  }, [selectedEnvironment, dynamicVariables]);
 
   // Request state
   const mode = useAppSelector(selectMode);
@@ -830,10 +838,7 @@ export default function App() {
                   {httpResponse.status}
                 </div>
                 {httpResponse.status !== SENDING && (
-                  <div
-                    className="grid grid-cols-2 items-stretch max-h-100 py-4 border-t border-border dark:border-dark-body overflow-hidden"
-                    data-response-headers
-                  >
+                  <div className="grid grid-cols-2 items-stretch max-h-100 py-4 border-t border-border dark:border-dark-body overflow-hidden">
                     <div className="relative flex-1 px-4">
                       <h4 className="m-0 mb-4">Headers</h4>
                       {httpResponse.headers && (
@@ -849,10 +854,7 @@ export default function App() {
                         responsePanelContext={{ isResponsePanel: true, source: 'header' }}
                       />
                     </div>
-                    <div
-                      className="relative flex-1 px-4 border-l border-border dark:border-dark-body"
-                      data-response-body
-                    >
+                    <div className="relative flex-1 px-4 border-l border-border dark:border-dark-body">
                       <h4 className="m-0 mb-4">Body</h4>
                       {httpResponse.body && (
                         <CopyButton
