@@ -267,10 +267,9 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
                 <table className="w-full table-fixed border-collapse">
                   <thead className="sticky top-0 z-10">
                     <tr className="bg-body dark:bg-dark-body border-b border-border dark:border-dark-border">
-                      <th className="w-[25%] px-3 py-2 font-bold text-xs text-left">Variable Name</th>
+                      <th className="w-[30%] px-3 py-2 font-bold text-xs text-left">Variable Name</th>
                       <th className="w-[30%] px-3 py-2 font-bold text-xs text-left">Value</th>
-                      <th className="w-[25%] px-3 py-2 font-bold text-xs text-left">Selector</th>
-                      <th className="w-[10%] px-3 py-2 font-bold text-xs text-left">Source</th>
+                      <th className="w-[30%] px-3 py-2 font-bold text-xs text-left">Selector</th>
                       <th className="w-[10%]"></th>
                     </tr>
                   </thead>
@@ -278,7 +277,7 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
                     {/* Dynamic variables */}
                     {dynamicVariables.map((dv) => (
                       <tr key={dv.id} className="last:[&>td]:border-b-0">
-                        <td className="w-[25%] p-1 border-b border-border dark:border-dark-body">
+                        <td className="w-[30%] p-1 border-b border-border dark:border-dark-body">
                           <Input
                             className="w-full border-0 bg-transparent"
                             placeholder="variable_name"
@@ -291,14 +290,9 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
                             {dv.currentValue || '—'}
                           </span>
                         </td>
-                        <td className="w-[25%] p-1 border-l border-b border-border dark:border-dark-body">
+                        <td className="w-[30%] p-1 border-l border-b border-border dark:border-dark-body">
                           <span className="px-2 text-xs text-text-secondary dark:text-dark-text-secondary truncate block">
                             {dv.selector}
-                          </span>
-                        </td>
-                        <td className="w-[10%] p-1 border-l border-b border-border dark:border-dark-body text-center">
-                          <span className="px-2 py-0.5 text-xs font-medium rounded bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
-                            Body
                           </span>
                         </td>
                         <td className="w-[10%] p-1 border-l border-b border-border dark:border-dark-body text-center">
