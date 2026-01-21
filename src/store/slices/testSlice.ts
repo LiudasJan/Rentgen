@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { TestOptions, TestResult, TestResults } from '../../types';
+import { HttpResponse, TestOptions, TestResult, TestResults } from '../../types';
 
 interface TestState extends TestResults {
   // Running states
@@ -20,6 +20,7 @@ interface TestState extends TestResults {
   results: Record<string, TestResults>;
 
   // Test results comparison
+  compareResponse: HttpResponse | null;
   isComparing: boolean;
   resultsToCompare: TestResults[];
 }
@@ -41,6 +42,7 @@ const initialState: TestState = {
   loadProgress: 0,
   testOptions: null,
   results: {},
+  compareResponse: null,
   isComparing: false,
   resultsToCompare: [],
 };
@@ -127,8 +129,9 @@ export const testSlice = createSlice({
       ...initialState,
       results: state.results,
       ...(state.resultsToCompare.length >= 2
-        ? { isComparing: false, resultsToCompare: [] }
+        ? { compareResponse: null, isComparing: false, resultsToCompare: [] }
         : {
+            compareResponse: state.compareResponse,
             isComparing: state.isComparing,
             resultsToCompare: state.resultsToCompare,
           }),
@@ -158,8 +161,12 @@ export const testSlice = createSlice({
       state.isComparing = state.resultsToCompare.length >= 2;
     },
     clearResultsToCompare: (state) => {
-      state.resultsToCompare = [];
+      state.compareResponse = null;
       state.isComparing = false;
+      state.resultsToCompare = [];
+    },
+    setCompareResponse: (state, action: PayloadAction<HttpResponse | null>) => {
+      state.compareResponse = action.payload;
     },
   },
 });

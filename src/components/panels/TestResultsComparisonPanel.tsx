@@ -3,17 +3,20 @@ import { editor } from 'monaco-editor/esm/vs/editor/editor.api';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAppSelector } from '../../store/hooks';
 import { selectTheme } from '../../store/selectors';
-import { TestResults } from '../../types';
+import { ORIGINAL_REQUEST_TEST_PARAMETER_NAME } from '../../tests';
+import { HttpResponse, TestResults } from '../../types';
 import { rentgenDarkTheme, rentgenLightTheme } from '../monaco/themes';
 import Panel, { Props as PanelProps } from './Panel';
 
 interface Props extends PanelProps {
   items: TestResults[];
+  response: HttpResponse;
 }
 
-export default function TestResultsComparisonPanel({ title, items, ...otherProps }: Props) {
+export default function TestResultsComparisonPanel({ items, title, response, ...otherProps }: Props) {
   const theme = useAppSelector(selectTheme);
   const diffEditorRef = useRef<editor.IStandaloneDiffEditor | null>(null);
+  const [showNoise, setShowNoise] = useState<boolean>(false);
   const [statistics, setStatistics] = useState({
     percent: 0,
     added: 0,
@@ -21,6 +24,47 @@ export default function TestResultsComparisonPanel({ title, items, ...otherProps
     unchanged: 0,
   });
   const isDark = useMemo(() => theme === 'dark', [theme]);
+
+  const noisePaths = useMemo(() => {
+    if (items.length < 2) return null;
+
+    const originalResponse = items[0].dataDrivenTests.find(
+      (test) => test.name === ORIGINAL_REQUEST_TEST_PARAMETER_NAME,
+    )?.response;
+    if (!originalResponse) return null;
+
+    return findNoiseFields(originalResponse, response).filter((noise) => noise.startsWith('headers'));
+  }, [items, response]);
+
+  const filteredItems = useMemo(() => {
+    const filterTestArray = (
+      tests: TestResults[keyof Pick<
+        TestResults,
+        'crudTests' | 'dataDrivenTests' | 'performanceTests' | 'securityTests'
+      >],
+    ) =>
+      tests.map((test) => {
+        if (showNoise) return test;
+
+        return removeNoiseFields(
+          {
+            ...test,
+            response:
+              !noisePaths || noisePaths.length === 0 || !test.response
+                ? test.response
+                : removeNoiseFields(test.response, noisePaths),
+          },
+          ['responseTime'],
+        );
+      });
+
+    return items.map((item) => ({
+      crudTests: filterTestArray(item.crudTests),
+      dataDrivenTests: filterTestArray(item.dataDrivenTests),
+      performanceTests: filterTestArray(item.performanceTests),
+      securityTests: filterTestArray(item.securityTests),
+    }));
+  }, [items, noisePaths, showNoise]);
 
   const calculateStatistics = () => {
     const editor = diffEditorRef.current;
@@ -45,7 +89,7 @@ export default function TestResultsComparisonPanel({ title, items, ...otherProps
     });
 
     const unchanged = Math.max(originalLines, modifiedLines) - Math.max(added, removed);
-    const percent = Math.round(((added + removed) / (originalLines + modifiedLines)) * 100);
+    const percent = Number((((added + removed) / (originalLines + modifiedLines)) * 100).toFixed(2));
 
     setStatistics({ percent, added, removed, unchanged });
   };
@@ -62,31 +106,39 @@ export default function TestResultsComparisonPanel({ title, items, ...otherProps
 
   useEffect(() => {
     return () => {
-      diffEditorRef.current.dispose();
-      diffEditorRef.current = null;
+      if (diffEditorRef.current) {
+        diffEditorRef.current.dispose();
+        diffEditorRef.current = null;
+      }
     };
   }, []);
 
   return (
     <Panel className="flex flex-col h-[calc(100vh-2.5rem)] box-border" title={title} {...otherProps}>
-      {items.length < 2 ? (
+      {filteredItems.length < 2 ? (
         <p className="p-4 m-0">No test results to compare</p>
       ) : (
         <>
-          <div className="shrink-0 flex p-4 gap-2 text-sm bg-body dark:bg-dark-body border-y border-border dark:border-dark-body">
-            <span>
-              Behavior Change: <b>{statistics.percent}%</b>
-            </span>
-            <span className="text-green-500">+{statistics.added}</span>
-            <span className="text-red-500">-{statistics.removed}</span>
-            <span>={statistics.unchanged}</span>
+          <div className="shrink-0 flex flex-col p-4 gap-4 text-sm bg-body dark:bg-dark-body border-y border-border dark:border-dark-body">
+            <div className="flex items-center gap-2">
+              <span>
+                Behavior Change: <b>{statistics.percent}%</b>
+              </span>
+              <span className="text-green-500">+{statistics.added}</span>
+              <span className="text-red-500">-{statistics.removed}</span>
+              <span>={statistics.unchanged}</span>
+            </div>
+            <label className="flex items-center gap-2">
+              <input className="m-0" type="checkbox" onChange={(e) => setShowNoise(e.target.checked)} />
+              Show noise
+            </label>
           </div>
           <div className="flex-1 p-4">
             <DiffEditor
               height="100%"
               language="json"
-              modified={JSON.stringify(items[1], null, 2)}
-              original={JSON.stringify(items[0], null, 2)}
+              modified={JSON.stringify(filteredItems[1], null, 2)}
+              original={JSON.stringify(filteredItems[0], null, 2)}
               options={{
                 readOnly: true,
                 minimap: { enabled: false },
@@ -124,4 +176,47 @@ export default function TestResultsComparisonPanel({ title, items, ...otherProps
       )}
     </Panel>
   );
+}
+
+function findNoiseFields(firstObject: Record<string, any>, secondObject: Record<string, any>, path = ''): string[] {
+  if (!firstObject || !secondObject) return [];
+
+  const result: string[] = [];
+  const keys = new Set<string>([...Object.keys(firstObject), ...Object.keys(secondObject)]);
+
+  for (const key of keys) {
+    const currentPath = path ? `${path}.${key}` : key;
+    const firstValue = firstObject[key];
+    const secondValue = secondObject[key];
+    const bothObjects =
+      typeof firstValue === 'object' &&
+      typeof secondValue === 'object' &&
+      firstValue !== null &&
+      secondValue !== null &&
+      !Array.isArray(firstValue) &&
+      !Array.isArray(secondValue);
+
+    if (bothObjects) result.push(...findNoiseFields(firstValue, secondValue, currentPath));
+    else if (firstValue !== secondValue) result.push(currentPath);
+  }
+
+  return result;
+}
+
+function removeNoiseFields<T extends object>(object: T, noisePaths: string[]): T {
+  const clone = structuredClone(object);
+
+  for (const path of noisePaths) {
+    const keys = path.split('.');
+    let current: any = clone;
+
+    for (let i = 0; i < keys.length - 1; i++) {
+      if (!current[keys[i]]) break;
+      current = current[keys[i]];
+    }
+
+    if (current && keys[keys.length - 1] in current) delete current[keys[keys.length - 1]];
+  }
+
+  return clone;
 }

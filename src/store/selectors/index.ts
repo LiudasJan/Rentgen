@@ -115,8 +115,9 @@ export const selectAllTestResults = (state: RootState) => state.tests.results;
 export const selectRequestTestResults = (requestId: string) =>
   createSelector([selectAllTestResults], (results) => results[requestId] || null);
 
-export const selectTestResultsToCompare = (state: RootState) => state.tests.resultsToCompare;
+export const selectCompareResponse = (state: RootState) => state.tests.compareResponse;
 export const selectIsComparingTestResults = (state: RootState) => state.tests.isComparing;
+export const selectTestResultsToCompare = (state: RootState) => state.tests.resultsToCompare;
 
 // UI selectors
 export const selectOpenCurlModal = (state: RootState) => state.ui.openCurlModal;

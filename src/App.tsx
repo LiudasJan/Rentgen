@@ -66,6 +66,7 @@ import {
   selectCertificateError,
   selectCollectionData,
   selectCollectionRunResults,
+  selectCompareResponse,
   selectCurl,
   selectCurlError,
   selectDeleteFolderModal,
@@ -202,8 +203,9 @@ export default function App() {
   const testOptions = useAppSelector(selectTestOptions);
   const isRunningTests = useAppSelector(selectIsRunningTests);
   const disabledRunTests = useAppSelector(selectDisabledRunTests);
-  const testResultsToCompare = useAppSelector(selectTestResultsToCompare);
+  const compareResponse = useAppSelector(selectCompareResponse);
   const isComparingTestResults = useAppSelector(selectIsComparingTestResults);
+  const testResultsToCompare = useAppSelector(selectTestResultsToCompare);
 
   // UI state
   const openCurlModal = useAppSelector(selectOpenCurlModal);
@@ -617,7 +619,11 @@ export default function App() {
         )}
         {!isEditingEnvironment && isComparingTestResults && (
           <div className="relative">
-            <TestResultsComparisonPanel title="Test Results Comparison" items={testResultsToCompare} />
+            <TestResultsComparisonPanel
+              items={testResultsToCompare}
+              response={compareResponse}
+              title="Test Results Comparison"
+            />
             <IconButton
               className="absolute top-2.5 right-4"
               onClick={() => dispatch(testActions.clearResultsToCompare())}
@@ -966,9 +972,12 @@ export default function App() {
                         className="@xl:truncate"
                         buttonType={ButtonType.SECONDARY}
                         disabled={isRunningTests}
-                        onClick={() => dispatch(testActions.addResultToCompare(testResults))}
+                        onClick={() => {
+                          dispatch(testActions.addResultToCompare(testResults));
+                          if (testResultsToCompare.length < 1) dispatch(testActions.setCompareResponse(httpResponse));
+                        }}
                       >
-                        {testResultsToCompare.length < 1 ? 'Select For Compare' : 'Compare With Selected'}
+                        {testResultsToCompare.length < 1 ? 'Select for Compare' : 'Compare with Selected'}
                       </Button>
                     )}
                   </div>
