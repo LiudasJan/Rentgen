@@ -45,22 +45,13 @@ export default function TestResultsComparisonPanel({ items, title, response, ...
         delete updatedTest.request;
 
         const normalizedResponse = normalizeResponse(updatedTest.response);
-        if (showNoise)
-          return {
-            ...updatedTest,
-            response: normalizedResponse,
-          };
-
-        return removeNoiseFields(
-          {
-            ...updatedTest,
-            response:
-              !noisePaths || noisePaths.length === 0 || !normalizedResponse
-                ? normalizedResponse
-                : removeNoiseFields(normalizedResponse, noisePaths),
-          },
-          ['responseTime'],
-        );
+        return {
+          ...updatedTest,
+          response:
+            !noisePaths || noisePaths.length === 0 || !normalizedResponse || showNoise
+              ? normalizedResponse
+              : removeNoiseFields(normalizedResponse, noisePaths),
+        };
       });
 
     return items.map((item) => ({
