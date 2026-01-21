@@ -4,7 +4,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAppSelector } from '../../store/hooks';
 import { selectTheme } from '../../store/selectors';
 import { ORIGINAL_REQUEST_TEST_PARAMETER_NAME } from '../../tests';
-import { HttpResponse, TestResults } from '../../types';
+import { HttpResponse, TestResult, TestResults } from '../../types';
+import { extractBodyFromResponse } from '../../utils';
 import { rentgenDarkTheme, rentgenLightTheme } from '../monaco/themes';
 import Panel, { Props as PanelProps } from './Panel';
 
@@ -33,26 +34,29 @@ export default function TestResultsComparisonPanel({ items, title, response, ...
     )?.response;
     if (!originalResponse) return null;
 
-    return findNoiseFields(originalResponse, response).filter((noise) => noise.startsWith('headers'));
+    return findNoiseFields(normalizeResponse(originalResponse), normalizeResponse(response));
   }, [items, response]);
 
   const filteredItems = useMemo(() => {
-    const filterTestArray = (
-      tests: TestResults[keyof Pick<
-        TestResults,
-        'crudTests' | 'dataDrivenTests' | 'performanceTests' | 'securityTests'
-      >],
-    ) =>
+    const filterTestArray = (tests: TestResult[]) =>
       tests.map((test) => {
-        if (showNoise) return test;
+        const updatedTest = { ...test };
+        delete updatedTest.request;
+
+        const normalizedResponse = normalizeResponse(updatedTest.response);
+        if (showNoise)
+          return {
+            ...updatedTest,
+            response: normalizedResponse,
+          };
 
         return removeNoiseFields(
           {
-            ...test,
+            ...updatedTest,
             response:
-              !noisePaths || noisePaths.length === 0 || !test.response
-                ? test.response
-                : removeNoiseFields(test.response, noisePaths),
+              !noisePaths || noisePaths.length === 0 || !normalizedResponse
+                ? normalizedResponse
+                : removeNoiseFields(normalizedResponse, noisePaths),
           },
           ['responseTime'],
         );
@@ -178,6 +182,15 @@ export default function TestResultsComparisonPanel({ items, title, response, ...
   );
 }
 
+function normalizeResponse(response: HttpResponse): HttpResponse | null {
+  if (!response) return null;
+
+  return {
+    ...response,
+    body: response.body ? (extractBodyFromResponse(response) as any) : response.body,
+  };
+}
+
 function findNoiseFields(firstObject: Record<string, any>, secondObject: Record<string, any>, path = ''): string[] {
   if (!firstObject || !secondObject) return [];
 
@@ -211,11 +224,16 @@ function removeNoiseFields<T extends object>(object: T, noisePaths: string[]): T
     let current: any = clone;
 
     for (let i = 0; i < keys.length - 1; i++) {
-      if (!current[keys[i]]) break;
+      if (!current || typeof current !== 'object') {
+        current = null;
+        break;
+      }
       current = current[keys[i]];
     }
 
-    if (current && keys[keys.length - 1] in current) delete current[keys[keys.length - 1]];
+    const lastKey = keys[keys.length - 1];
+    if (current && typeof current === 'object' && Object.prototype.hasOwnProperty.call(current, lastKey))
+      delete current[lastKey];
   }
 
   return clone;
