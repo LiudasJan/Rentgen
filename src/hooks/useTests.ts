@@ -16,6 +16,8 @@ import {
   selectSelectedRequestId,
   selectTestOptions,
   selectTestsCount,
+  selectTestsDomain,
+  selectTestsTimestamp,
 } from '../store/selectors';
 import { testActions } from '../store/slices/testSlice';
 import {
@@ -44,6 +46,8 @@ const useTests = () => {
   const testOptions = useAppSelector(selectTestOptions);
   const currentTest = useAppSelector(selectCurrentTest);
   const testsCount = useAppSelector(selectTestsCount);
+  const testsDomain = useAppSelector(selectTestsDomain);
+  const testsTimestamp = useAppSelector(selectTestsTimestamp);
 
   const crudTests = useAppSelector(selectCrudTests);
   const dataDrivenTests = useAppSelector(selectDataDrivenTests);
@@ -141,13 +145,17 @@ const useTests = () => {
     abortAllTests = false;
     dispatch(testActions.startAllTests());
 
-    const totalTests =
+    const count =
       (await calculateDataDrivenTestsCount(testOptions)) +
       getTestCount(DataDrivenTests) +
       getTestCount(SecurityTests) +
       getTestCount(PerformanceInsights);
+    const domain = new URL(testOptions.url).hostname;
+    const timestamp = new Date().getTime();
 
-    dispatch(testActions.setTestsCount(totalTests));
+    dispatch(testActions.setCount(count));
+    dispatch(testActions.setDomain(domain));
+    dispatch(testActions.setTimestamp(timestamp));
 
     const { crudTests, securityTests } = await executeSecurityTests(testOptions, !abortAllTests);
     const dataDrivenTests = await executeDataDrivenTests(testOptions, !abortAllTests);
@@ -158,6 +166,9 @@ const useTests = () => {
         testActions.addResults({
           requestId: selectedRequestId,
           results: {
+            count,
+            timestamp,
+            domain,
             crudTests,
             dataDrivenTests,
             performanceTests,
@@ -275,6 +286,8 @@ const useTests = () => {
     performanceTests,
     securityTests,
     testsCount,
+    testsDomain,
+    testsTimestamp,
     cancelAllTests,
     executeAllTests,
     executeDataDrivenTests,

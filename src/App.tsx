@@ -62,8 +62,11 @@ import { useAppDispatch, useAppSelector } from './store/hooks';
 import {
   selectBody,
   selectBodyParameters,
+  selectCertificated,
+  selectCertificateError,
   selectCollectionData,
   selectCollectionRunResults,
+  selectCompareResponse,
   selectCurl,
   selectCurlError,
   selectDeleteFolderModal,
@@ -87,7 +90,6 @@ import {
   selectOpenSendHttpSuccessModal,
   selectProtoFile,
   selectQueryParameters,
-  selectRequestTestResults,
   selectSaved,
   selectSelectedEnvironment,
   selectSelectedEnvironmentId,
@@ -117,6 +119,7 @@ type Mode = 'HTTP' | 'WSS';
 
 let savedTimeout: NodeJS.Timeout;
 let exportedTimeout: NodeJS.Timeout;
+let certificateTimeout: NodeJS.Timeout;
 
 const SENDING = 'Sending...';
 const NETWORK_ERROR = 'Network Error';
@@ -165,10 +168,18 @@ export default function App() {
   const editingEnvironmentId = useAppSelector(selectEditingEnvironmentId);
   const environmentToDelete = useAppSelector(selectEnvironmentToDelete);
 
-  const variables = useMemo(
-    () => selectedEnvironment?.variables?.map((variable) => variable.key) || [],
-    [selectedEnvironment],
-  );
+  const variables = useMemo(() => {
+    const environmentDynamicVariables =
+      dynamicVariables
+        .filter(
+          (dynamicVariable) =>
+            dynamicVariable.environmentId === selectedEnvironment?.id || !dynamicVariable.environmentId,
+        )
+        .map((dynamicVariable) => dynamicVariable.key) ?? [];
+    const environmentVariables = selectedEnvironment?.variables?.map((variable) => variable.key) ?? [];
+
+    return [...environmentVariables, ...environmentDynamicVariables];
+  }, [selectedEnvironment, dynamicVariables]);
 
   // Request state
   const mode = useAppSelector(selectMode);
@@ -192,9 +203,9 @@ export default function App() {
   const testOptions = useAppSelector(selectTestOptions);
   const isRunningTests = useAppSelector(selectIsRunningTests);
   const disabledRunTests = useAppSelector(selectDisabledRunTests);
-  const requestTestResults = useAppSelector(selectRequestTestResults(selectedRequestId));
-  const testResultsToCompare = useAppSelector(selectTestResultsToCompare);
+  const compareResponse = useAppSelector(selectCompareResponse);
   const isComparingTestResults = useAppSelector(selectIsComparingTestResults);
+  const testResultsToCompare = useAppSelector(selectTestResultsToCompare);
 
   // UI state
   const openCurlModal = useAppSelector(selectOpenCurlModal);
@@ -203,9 +214,11 @@ export default function App() {
   const deleteFolderModal = useAppSelector(selectDeleteFolderModal);
   const saved = useAppSelector(selectSaved);
   const exported = useAppSelector(selectExported);
+  const certificated = useAppSelector(selectCertificated);
   const curl = useAppSelector(selectCurl);
   const curlError = useAppSelector(selectCurlError);
   const exportFormat = useAppSelector(selectExportFormat);
+  const certificateError = useAppSelector(selectCertificateError);
 
   // Tests hook
   const {
@@ -220,6 +233,8 @@ export default function App() {
     performanceTests,
     securityTests,
     testsCount,
+    testsDomain,
+    testsTimestamp,
     executeAllTests,
     executeLoadTest,
     executeLargePayloadTest,
@@ -230,6 +245,19 @@ export default function App() {
 
   const parametersRef = useRef<HTMLDivElement | null>(null);
   const disabled = useMemo(() => !url || isRunningTests, [url, isRunningTests]);
+  const testResults = useMemo(() => {
+    if (!testsCount) return null;
+
+    return {
+      count: testsCount,
+      domain: testsDomain,
+      timestamp: testsTimestamp,
+      crudTests,
+      dataDrivenTests,
+      performanceTests,
+      securityTests,
+    };
+  }, [testsCount, testsDomain, testsTimestamp, crudTests, dataDrivenTests, performanceTests, securityTests]);
 
   // Load initial data
   useEffect(() => {
@@ -428,16 +456,11 @@ export default function App() {
           }),
         );
 
-      if (crudTests.length > 0 && dataDrivenTests.length > 0 && performanceTests.length > 0 && securityTests.length > 0)
+      if (testResults)
         dispatch(
           testActions.addResults({
             requestId,
-            results: {
-              crudTests,
-              dataDrivenTests,
-              performanceTests,
-              securityTests,
-            },
+            results: testResults,
           }),
         );
     }
@@ -449,16 +472,13 @@ export default function App() {
     body,
     bodyParameters,
     collection,
-    crudTests,
-    dataDrivenTests,
     headers,
     httpResponse,
     method,
-    performanceTests,
     queryParameters,
-    securityTests,
     selectedFolderId,
     selectedRequestId,
+    testResults,
     url,
     dispatch,
   ]);
@@ -561,6 +581,29 @@ export default function App() {
     }
   }, [testOptions, exportFormat, securityTests, performanceTests, dataDrivenTests, crudTests, httpResponse, dispatch]);
 
+  // Generate certificate
+  const generateCertificate = useCallback(async () => {
+    try {
+      if (!testResults || testResults.count < 70) {
+        dispatch(uiActions.setCertificateError('Not eligible (need at least 70 tests)'));
+        clearTimeout(certificateTimeout);
+        certificateTimeout = setTimeout(() => dispatch(uiActions.setCertificateError('')), 5000);
+        return;
+      }
+
+      const result = await window.electronAPI.generateCertificate(testResults);
+
+      if (result?.error) throw new Error(result.error);
+      if (result?.canceled) return;
+
+      dispatch(uiActions.setCertificated(true));
+      clearTimeout(certificateTimeout);
+      certificateTimeout = setTimeout(() => dispatch(uiActions.setCertificated(false)), 2000);
+    } catch (error) {
+      console.error('Failed to generate certificate', error);
+    }
+  }, [testResults, dispatch]);
+
   useCtrlS(!disabled && saveRequest);
 
   return (
@@ -576,7 +619,11 @@ export default function App() {
         )}
         {!isEditingEnvironment && isComparingTestResults && (
           <div className="relative">
-            <TestResultsComparisonPanel title="Test Results Comparison" items={testResultsToCompare} />
+            <TestResultsComparisonPanel
+              items={testResultsToCompare}
+              response={compareResponse}
+              title="Test Results Comparison"
+            />
             <IconButton
               className="absolute top-2.5 right-4"
               onClick={() => dispatch(testActions.clearResultsToCompare())}
@@ -797,10 +844,7 @@ export default function App() {
                   {httpResponse.status}
                 </div>
                 {httpResponse.status !== SENDING && (
-                  <div
-                    className="grid grid-cols-2 items-stretch max-h-100 py-4 border-t border-border dark:border-dark-body overflow-hidden"
-                    data-response-headers
-                  >
+                  <div className="grid grid-cols-2 items-stretch max-h-100 py-4 border-t border-border dark:border-dark-body overflow-hidden">
                     <div className="relative flex-1 px-4">
                       <h4 className="m-0 mb-4">Headers</h4>
                       {httpResponse.headers && (
@@ -816,10 +860,7 @@ export default function App() {
                         responsePanelContext={{ isResponsePanel: true, source: 'header' }}
                       />
                     </div>
-                    <div
-                      className="relative flex-1 px-4 border-l border-border dark:border-dark-body"
-                      data-response-body
-                    >
+                    <div className="relative flex-1 px-4 border-l border-border dark:border-dark-body">
                       <h4 className="m-0 mb-4">Body</h4>
                       {httpResponse.body && (
                         <CopyButton
@@ -899,67 +940,82 @@ export default function App() {
             )}
 
             {mode === 'HTTP' && (
-              <div className="flex flex-col @lg:flex-row @lg:items-center @lg:justify-between gap-4 @lg:gap-2">
-                <div className="flex flex-col @lg:flex-row @lg:items-center gap-4 @lg:gap-2">
-                  <Button
-                    disabled={disabledRunTests}
-                    onClick={() => {
-                      dispatch(
-                        testActions.setTestOptions({
-                          ...substituteRequestVariables(
-                            url,
-                            headers,
-                            body,
-                            messageType,
-                            selectedEnvironment,
-                            dynamicVariables,
-                          ),
-                          bodyParameters,
-                          method,
-                          protoFile,
-                          queryParameters,
-                        }),
-                      );
-                    }}
-                  >
-                    {isRunningTests ? `Running tests... (${currentTest}/${testsCount})` : 'Generate & Run Tests'}
-                  </Button>
-                  {(testOptions || requestTestResults) && (
+              <>
+                <div className="flex flex-col @xl:flex-row @xl:items-center @xl:justify-between gap-4 @xl:gap-2">
+                  <div className="flex flex-col @xl:flex-row @xl:items-center gap-4 @xl:gap-2 @xl:min-w-0">
                     <Button
-                      buttonType={ButtonType.SECONDARY}
-                      disabled={isRunningTests}
-                      onClick={() => dispatch(testActions.addResultToCompare(requestTestResults))}
+                      className="@xl:shrink-0 @xl:whitespace-nowrap"
+                      disabled={disabledRunTests}
+                      onClick={() => {
+                        dispatch(
+                          testActions.setOptions({
+                            ...substituteRequestVariables(
+                              url,
+                              headers,
+                              body,
+                              messageType,
+                              selectedEnvironment,
+                              dynamicVariables,
+                            ),
+                            bodyParameters,
+                            method,
+                            protoFile,
+                            queryParameters,
+                          }),
+                        );
+                      }}
                     >
-                      {testResultsToCompare.length < 1 ? 'Select For Compare' : 'Compare With Selected'}
+                      {isRunningTests ? `Running tests... (${currentTest}/${testsCount})` : 'Generate & Run Tests'}
                     </Button>
+                    {(testOptions || testResults) && (
+                      <Button
+                        className="@xl:truncate"
+                        buttonType={ButtonType.SECONDARY}
+                        disabled={isRunningTests}
+                        onClick={() => {
+                          dispatch(testActions.addResultToCompare(testResults));
+                          if (testResultsToCompare.length < 1) dispatch(testActions.setCompareResponse(httpResponse));
+                        }}
+                      >
+                        {testResultsToCompare.length < 1 ? 'Select for Compare' : 'Compare with Selected'}
+                      </Button>
+                    )}
+                  </div>
+
+                  {(testOptions || testResults) && (
+                    <div className="flex flex-col @xl:flex-row @xl:justify-end @xl:items-center gap-4 @xl:gap-2 @xl:min-w-0">
+                      <div className="flex flex-col @xl:flex-row @xl:items-center gap-2">
+                        <Select
+                          isSearchable={false}
+                          options={exportFormatOptions}
+                          placeholder="Format"
+                          value={exportFormatOptions.find((option) => option.value === exportFormat)}
+                          onChange={(option: SelectOption<ReportFormat>) =>
+                            dispatch(uiActions.setExportFormat(option.value))
+                          }
+                        />
+                        <Button
+                          buttonType={ButtonType.SECONDARY}
+                          className="min-w-28"
+                          disabled={isRunningTests}
+                          onClick={exportReport}
+                        >
+                          {exported ? 'Exported ✅' : 'Export'}
+                        </Button>
+                      </div>
+                      <Button className="@xl:truncate" disabled={isRunningTests} onClick={generateCertificate}>
+                        {certificated ? 'Certificated ✅' : 'Generate Certificate'}
+                      </Button>
+                    </div>
                   )}
                 </div>
-
-                {(testOptions || requestTestResults) && (
-                  <div className="flex flex-col @lg:flex-row @lg:justify-end @lg:items-center gap-2">
-                    <Select
-                      isSearchable={false}
-                      options={exportFormatOptions}
-                      placeholder="Format"
-                      value={exportFormatOptions.find((option) => option.value === exportFormat)}
-                      onChange={(option: SelectOption<ReportFormat>) =>
-                        dispatch(uiActions.setExportFormat(option.value))
-                      }
-                    />
-                    <Button
-                      buttonType={ButtonType.SECONDARY}
-                      className="min-w-28"
-                      disabled={isRunningTests}
-                      onClick={exportReport}
-                    >
-                      {exported ? 'Exported ✅' : 'Export'}
-                    </Button>
-                  </div>
+                {certificateError && (
+                  <p className="m-0 -mt-2 text-xs text-red-600 @xl:text-right">{certificateError}</p>
                 )}
-              </div>
+              </>
             )}
 
-            {(testOptions || requestTestResults) && (
+            {(testOptions || testResults) && (
               <>
                 <Panel title="Security Tests">
                   <TestsTable

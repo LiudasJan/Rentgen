@@ -229,6 +229,7 @@ export function JsonViewer({ source, className, responsePanelContext }: Props) {
       // Extract JSON path at cursor position
       let jsonPath: string | null = null;
       let jsonValue: string | null = null;
+
       if (model && selection) {
         const offset = model.getOffsetAt(selection.getStartPosition());
         const content = model.getValue();

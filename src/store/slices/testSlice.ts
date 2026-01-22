@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { TestOptions, TestResult, TestResults } from '../../types';
+import { HttpResponse, TestOptions, TestResult, TestResults } from '../../types';
 
 interface TestState extends TestResults {
   // Running states
@@ -11,7 +11,6 @@ interface TestState extends TestResults {
 
   // Progress tracking
   currentTest: number;
-  testsCount: number;
   loadProgress: number;
 
   // Test configuration
@@ -21,11 +20,14 @@ interface TestState extends TestResults {
   results: Record<string, TestResults>;
 
   // Test results comparison
+  compareResponse: HttpResponse | null;
   isComparing: boolean;
   resultsToCompare: TestResults[];
 }
 
 const initialState: TestState = {
+  timestamp: null,
+  domain: '',
   crudTests: [],
   dataDrivenTests: [],
   performanceTests: [],
@@ -36,10 +38,11 @@ const initialState: TestState = {
   isPerformanceRunning: false,
   isSecurityRunning: false,
   currentTest: 0,
-  testsCount: 0,
+  count: 0,
   loadProgress: 0,
   testOptions: null,
   results: {},
+  compareResponse: null,
   isComparing: false,
   resultsToCompare: [],
 };
@@ -48,11 +51,17 @@ export const testSlice = createSlice({
   name: 'tests',
   initialState,
   reducers: {
-    setTestOptions: (state, action: PayloadAction<TestOptions | null>) => {
+    setOptions: (state, action: PayloadAction<TestOptions | null>) => {
       state.testOptions = action.payload;
     },
-    setTestsCount: (state, action: PayloadAction<number>) => {
-      state.testsCount = action.payload;
+    setCount: (state, action: PayloadAction<number>) => {
+      state.count = action.payload;
+    },
+    setDomain: (state, action: PayloadAction<string>) => {
+      state.domain = action.payload;
+    },
+    setTimestamp: (state, action: PayloadAction<number | null>) => {
+      state.timestamp = action.payload;
     },
     incrementCurrentTest: (state) => {
       state.currentTest += 1;
@@ -120,8 +129,9 @@ export const testSlice = createSlice({
       ...initialState,
       results: state.results,
       ...(state.resultsToCompare.length >= 2
-        ? { isComparing: false, resultsToCompare: [] }
+        ? { compareResponse: null, isComparing: false, resultsToCompare: [] }
         : {
+            compareResponse: state.compareResponse,
             isComparing: state.isComparing,
             resultsToCompare: state.resultsToCompare,
           }),
@@ -129,6 +139,8 @@ export const testSlice = createSlice({
 
     // Start all tests
     startAllTests: (state) => {
+      state.timestamp = null;
+      state.domain = '';
       state.isDataDrivenRunning = true;
       state.isPerformanceRunning = true;
       state.isSecurityRunning = true;
@@ -137,7 +149,7 @@ export const testSlice = createSlice({
       state.performanceTests = [];
       state.securityTests = [];
       state.currentTest = 0;
-      state.testsCount = 0;
+      state.count = 0;
     },
 
     addResults: (state, action: PayloadAction<{ requestId: string; results: TestResults }>) => {
@@ -149,8 +161,12 @@ export const testSlice = createSlice({
       state.isComparing = state.resultsToCompare.length >= 2;
     },
     clearResultsToCompare: (state) => {
-      state.resultsToCompare = [];
+      state.compareResponse = null;
       state.isComparing = false;
+      state.resultsToCompare = [];
+    },
+    setCompareResponse: (state, action: PayloadAction<HttpResponse | null>) => {
+      state.compareResponse = action.payload;
     },
   },
 });

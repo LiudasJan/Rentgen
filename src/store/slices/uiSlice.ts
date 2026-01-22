@@ -38,6 +38,7 @@ interface SetAsDynamicVariableModalState {
   requestName: string;
   editingVariableId: string | null;
   editingVariableName: string | null;
+  source: 'body' | 'header';
 }
 
 interface UIState {
@@ -55,6 +56,10 @@ interface UIState {
   // Feedback states
   saved: boolean;
   exported: boolean;
+
+  // Certificate
+  certificated: boolean;
+  certificateError: string;
 
   // cURL import
   curl: string;
@@ -91,9 +96,12 @@ const initialState: UIState = {
     requestName: '',
     editingVariableId: null,
     editingVariableName: null,
+    source: 'body',
   },
   saved: false,
   exported: false,
+  certificated: false,
+  certificateError: '',
   curl: '',
   curlError: '',
   exportFormat: 'json',
@@ -174,6 +182,7 @@ export const uiSlice = createSlice({
         requestName: '',
         editingVariableId: null,
         editingVariableName: null,
+        source: 'body',
       };
     },
 
@@ -191,6 +200,14 @@ export const uiSlice = createSlice({
     },
     setExported: (state, action: PayloadAction<boolean>) => {
       state.exported = action.payload;
+    },
+
+    // Certificate
+    setCertificated: (state, action: PayloadAction<boolean>) => {
+      state.certificated = action.payload;
+    },
+    setCertificateError: (state, action: PayloadAction<string>) => {
+      state.certificateError = action.payload;
     },
 
     // Export format

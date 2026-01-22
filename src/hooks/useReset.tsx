@@ -18,7 +18,7 @@ export function useReset() {
       dispatch(responseActions.clearResponse());
       dispatch(websocketActions.clearMessages());
       dispatch(websocketActions.setConnected(false));
-      dispatch(testActions.setTestOptions(null));
+      dispatch(testActions.setOptions(null));
       if (clearSelection) dispatch(collectionActions.selectRequest(null));
     },
     [dispatch],
