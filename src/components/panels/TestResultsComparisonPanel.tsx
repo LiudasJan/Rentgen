@@ -182,7 +182,10 @@ export default function TestResultsComparisonPanel({ items, title, response, ...
             />
             {!diffReady && (
               <div className="absolute inset-0 flex z-90">
-                <TestRunningLoader className="justify-center" text="Computing differences…" />
+                <TestRunningLoader
+                  className="justify-center bg-white dark:bg-dark-input"
+                  text="Computing differences…"
+                />
               </div>
             )}
           </div>
