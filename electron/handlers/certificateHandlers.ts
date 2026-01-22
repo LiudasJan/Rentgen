@@ -128,6 +128,7 @@ const BADGE_LEVELS = [
 
 const CANVAS_WIDTH = 1600;
 const CANVAS_HEIGHT = 900;
+const MAX_5XX_COUNT_PER_SOURCE = 3;
 
 export function registerCertificateHandlers(): void {
   ipcMain.handle('generate-certificate', async (_, results: TestResults): Promise<ExportResult> => {
@@ -142,17 +143,18 @@ export function registerCertificateHandlers(): void {
       const test = [...securityTests, ...performanceTests].find((testResult) => testResult.name === testPenalty.name);
       if (!test) continue;
 
-      for (const penalty of testPenalty.penalties) {
+      for (const penalty of testPenalty.penalties)
         if (test.status === penalty.status) {
           score -= penalty.points;
 
           if (penalty.points > 0) appliedPenalties.push({ title: testPenalty.name, points: penalty.points });
-          if (penalty.count5xx) tests5xxCount += 1;
+          if (penalty.count5xx && tests5xxCount < MAX_5XX_COUNT_PER_SOURCE) tests5xxCount += 1;
         }
-      }
     }
 
-    tests5xxCount += dataDrivenTests.filter((testResult) => testResult.status === TestStatus.Bug).length;
+    const dataDrivenBugCount = dataDrivenTests.filter((testResult) => testResult.status === TestStatus.Bug).length;
+    tests5xxCount += dataDrivenBugCount < MAX_5XX_COUNT_PER_SOURCE ? dataDrivenBugCount : MAX_5XX_COUNT_PER_SOURCE;
+
     if (tests5xxCount > 5) tests5xxPenalty = 50;
     else if (tests5xxCount > 2) tests5xxPenalty = 25;
     else if (tests5xxCount > 0) tests5xxPenalty = 15;
