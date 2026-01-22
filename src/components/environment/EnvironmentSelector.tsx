@@ -33,7 +33,7 @@ export default function EnvironmentSelector({ className, environments, selectedE
 
   return (
     <Select
-      className={cn('min-w-[150px]', className)}
+      className={cn('min-w-37.5', className)}
       isSearchable={false}
       options={options}
       placeholder="Select Environment"
