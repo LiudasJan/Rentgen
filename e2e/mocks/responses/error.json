@@ -1,0 +1,11 @@
+{
+  "success": false,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Invalid input provided",
+    "details": [
+      { "field": "email", "message": "Invalid email format" },
+      { "field": "name", "message": "Name is required" }
+    ]
+  }
+}

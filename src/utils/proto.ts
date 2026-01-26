@@ -1,4 +1,4 @@
-import protobuf from 'protobufjs';
+import protobuf, { parse } from 'protobufjs';
 import { HttpResponse } from '../types';
 
 let root: protobuf.Root | null = null;
@@ -22,7 +22,7 @@ export async function loadProtoSchema(file: File): Promise<protobuf.Root> {
     const text = await file.text();
     if (!text.trim()) throw new Error('Protobuf schema file is empty');
 
-    root = protobuf.parse(text).root;
+    root = parse(text).root;
     return root;
   } catch (error) {
     throw new Error(`Failed to load protobuf schema: ${error instanceof Error ? error.message : 'Unknown error'}`);
