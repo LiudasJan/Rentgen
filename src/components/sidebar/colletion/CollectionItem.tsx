@@ -24,7 +24,7 @@ import {
   headersRecordToString,
   postmanHeadersToRecord,
 } from '../../../utils/collection';
-import { useContextMenu } from '../../context-menu/GlobalContextMenuProvider';
+import { useContextMenu } from '../../context-menu';
 import MethodBadge from '../../MethodBadge';
 
 import ClearCrossIcon from '../../../assets/icons/clear-cross-icon.svg';
@@ -127,8 +127,10 @@ export default function CollectionItem({ item }: Props) {
     >
       {runResult && (
         <span
+          title={runResult.warning || undefined}
           className={cn('w-2 h-2 rounded-full shrink-0', {
-            'bg-green-500': runResult.status >= 200 && runResult.status < 400,
+            'bg-yellow-500': runResult.warning && runResult.status >= 200 && runResult.status < 400,
+            'bg-green-500': !runResult.warning && runResult.status >= 200 && runResult.status < 400,
             'bg-orange-500': runResult.status >= 400 && runResult.status < 500,
             'bg-red-500': !runResult.status || runResult.status < 200 || runResult.status >= 500,
           })}

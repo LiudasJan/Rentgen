@@ -8,6 +8,7 @@ export interface CollectionRunResult {
   bodyParameters: RequestParameters | null;
   queryParameters: RequestParameters | null;
   error: string | null;
+  warning?: string | null;
 }
 
 interface CollectionRunState {

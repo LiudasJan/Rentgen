@@ -3,7 +3,7 @@ import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { selectCollectionData, selectDynamicVariables, selectSelectedEnvironment } from '../store/selectors';
 import { collectionRunActions } from '../store/slices/collectionRunSlice';
 import { environmentActions } from '../store/slices/environmentSlice';
-import { DynamicVariable, HttpResponse, PostmanItem } from '../types';
+import { DynamicVariable, ExtractionFailure, HttpResponse, PostmanItem } from '../types';
 import {
   createHttpRequest,
   detectDataType,
@@ -16,7 +16,7 @@ import {
   substituteRequestVariables,
 } from '../utils';
 import { findRequestById, headersRecordToString, postmanHeadersToRecord } from '../utils/collection';
-import { extractDynamicVariableFromResponse } from '../utils/dynamicVariable';
+import { extractDynamicVariableFromResponseWithDetails } from '../utils/dynamicVariable';
 
 export function useCollectionRunner() {
   const dispatch = useAppDispatch();
@@ -109,6 +109,42 @@ export function useCollectionRunner() {
           );
         }
 
+        // Extract and update dynamic variables for this request
+        const requestDynamicVars = dynamicVariablesRef.current.filter((dv) => dv.requestId === item.id);
+        const extractionFailures: ExtractionFailure[] = [];
+
+        for (const dvar of requestDynamicVars) {
+          const extractionResult = extractDynamicVariableFromResponseWithDetails(dvar, response);
+
+          if (extractionResult.success && extractionResult.value !== null) {
+            dispatch(
+              environmentActions.updateDynamicVariableValue({
+                id: dvar.id,
+                value: extractionResult.value,
+              }),
+            );
+          } else {
+            extractionFailures.push({
+              variableName: dvar.key,
+              selector: dvar.selector,
+              source: dvar.source,
+              reason: extractionResult.error || 'unknown error',
+            });
+          }
+        }
+
+        // Build warning message if any extractions failed
+        let warning: string | null = null;
+        if (extractionFailures.length > 0) {
+          if (extractionFailures.length === 1) {
+            const f = extractionFailures[0];
+            warning = `Failed to extract {{${f.variableName}}}: ${f.reason}`;
+          } else {
+            const details = extractionFailures.map((f) => `{{${f.variableName}}})`).join(', ');
+            warning = `Failed to extract: ${details}`;
+          }
+        }
+
         dispatch(
           collectionRunActions.addResult({
             requestId: item.id,
@@ -117,24 +153,9 @@ export function useCollectionRunner() {
             bodyParameters,
             queryParameters,
             error: null,
+            warning,
           }),
         );
-
-        // Extract and update dynamic variables for this request
-        const requestDynamicVars = dynamicVariablesRef.current.filter((dv) => dv.requestId === item.id);
-
-        for (const dvar of requestDynamicVars) {
-          const extractedValue = extractDynamicVariableFromResponse(dvar, response);
-
-          if (extractedValue !== null) {
-            dispatch(
-              environmentActions.updateDynamicVariableValue({
-                id: dvar.id,
-                value: extractedValue,
-              }),
-            );
-          }
-        }
       } catch (error) {
         dispatch(
           collectionRunActions.addResult({
@@ -144,6 +165,7 @@ export function useCollectionRunner() {
             bodyParameters: {},
             queryParameters: {},
             error: String(error),
+            warning: null,
           }),
         );
       }
