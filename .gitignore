@@ -94,3 +94,8 @@ typings/
 
 # Electron-Forge
 out/
+
+# e2e
+e2e/reports/
+e2e/test-results/
+test-results/

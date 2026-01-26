@@ -1,5 +1,5 @@
 import { ipcMain } from 'electron';
-import WebSocket from 'ws';
+import { WebSocket } from 'ws';
 
 let ws: WebSocket | null = null;
 
