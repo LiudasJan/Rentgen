@@ -23,7 +23,7 @@ export default function ConfirmationModal({
   onConfirm,
 }: Props) {
   return (
-    <Modal className="[&>div]:w-[400px]!" isOpen={isOpen} onClose={onClose}>
+    <Modal className="[&>div]:w-100!" isOpen={isOpen} onClose={onClose}>
       <div className="flex flex-col gap-4">
         {title && <h4 className="m-0">{title}</h4>}
         {description && <p className="m-0 text-sm dark:text-text-secondary">{description}</p>}

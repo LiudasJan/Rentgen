@@ -263,7 +263,7 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
           <div className="mb-4">
             <label className="block mb-1 font-bold text-sm">Variables</label>
             <div className="border border-border dark:border-dark-body rounded-md">
-              <div className="max-h-[440px] overflow-y-auto overflow-x-hidden">
+              <div className="max-h-110 overflow-y-auto overflow-x-hidden">
                 <table className="w-full table-fixed border-collapse">
                   <thead className="sticky top-0 z-10">
                     <tr className="bg-body dark:bg-dark-body border-b border-border dark:border-dark-border">
