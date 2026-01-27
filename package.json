@@ -16,7 +16,7 @@
     "name": "Liudas Jankauskas",
     "email": "liudasjan@gmail.com"
   },
-  "license": "MIT",
+  "license": "RSAL-1.0",
   "devDependencies": {
     "@electron-forge/cli": "^7.11.1",
     "@electron-forge/maker-deb": "^7.11.1",

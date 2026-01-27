@@ -44,7 +44,7 @@ const MISSING_ACTUAL = '-';
 const NOT_FOUND_TEST_EXPECTED = `${RESPONSE_STATUS.NOT_FOUND} ${getResponseStatusTitle(RESPONSE_STATUS.NOT_FOUND)}`;
 const OPTIONS_METHOD_HANDLING_TEST_EXPECTED = `${RESPONSE_STATUS.OK} ${getResponseStatusTitle(RESPONSE_STATUS.OK)} or ${RESPONSE_STATUS.NO_CONTENT} ${getResponseStatusTitle(RESPONSE_STATUS.NO_CONTENT)} + Allow Header`;
 const REFLECTED_PAYLOAD_SAFETY_TEST_EXPECTED = `${RESPONSE_STATUS.BAD_REQUEST} ${getResponseStatusTitle(RESPONSE_STATUS.BAD_REQUEST)} or ${RESPONSE_STATUS.UNPROCESSABLE_ENTITY} ${getResponseStatusTitle(RESPONSE_STATUS.UNPROCESSABLE_ENTITY)} + No Mirrored Content`;
-const UPPERCASE_PATH_TEST_EXPECTED = `${RESPONSE_STATUS.NOT_FOUND} ${getResponseStatusTitle(RESPONSE_STATUS.NOT_FOUND)}`;
+const UPPERCASE_PATH_TEST_EXPECTED = `${RESPONSE_STATUS.OK} ${getResponseStatusTitle(RESPONSE_STATUS.OK)} or ${RESPONSE_STATUS.NOT_FOUND} ${getResponseStatusTitle(RESPONSE_STATUS.NOT_FOUND)}`;
 const UNSUPPORTED_METHOD_TEST_EXPECTED = `${RESPONSE_STATUS.METHOD_NOT_ALLOWED} ${getResponseStatusTitle(RESPONSE_STATUS.METHOD_NOT_ALLOWED)} or ${RESPONSE_STATUS.NOT_IMPLEMENTED} ${getResponseStatusTitle(RESPONSE_STATUS.NOT_IMPLEMENTED)}`;
 
 export class SecurityTests extends BaseTests {
@@ -231,13 +231,17 @@ export class SecurityTests extends BaseTests {
 
     try {
       const response = await window.electronAPI.sendHttp(request);
-      const { actual, status } = determineTestStatus(response, (response, statusCode) => {
-        const testStatus = { actual: response.status, status: TestStatus.Fail };
-        if (statusCode === RESPONSE_STATUS.METHOD_NOT_ALLOWED || statusCode === RESPONSE_STATUS.NOT_IMPLEMENTED)
-          testStatus.status = TestStatus.Pass;
+      const { actual, status } = determineTestStatus(
+        response,
+        (response, statusCode) => {
+          const testStatus = { actual: response.status, status: TestStatus.Fail };
+          if (statusCode === RESPONSE_STATUS.METHOD_NOT_ALLOWED || statusCode === RESPONSE_STATUS.NOT_IMPLEMENTED)
+            testStatus.status = TestStatus.Pass;
 
-        return testStatus;
-      });
+          return testStatus;
+        },
+        [RESPONSE_STATUS.NOT_IMPLEMENTED],
+      );
 
       return createTestResult(
         UNSUPPORTED_METHOD_TEST_NAME,
@@ -464,7 +468,8 @@ export class SecurityTests extends BaseTests {
       const response = await window.electronAPI.sendHttp(modifiedRequest);
       const { actual, status } = determineTestStatus(response, (response, statusCode) => {
         const testStatus = { actual: response.status, status: TestStatus.Fail };
-        if (statusCode === RESPONSE_STATUS.NOT_FOUND) testStatus.status = TestStatus.Pass;
+        if (statusCode === RESPONSE_STATUS.OK || statusCode === RESPONSE_STATUS.NOT_FOUND)
+          testStatus.status = TestStatus.Pass;
 
         return testStatus;
       });
