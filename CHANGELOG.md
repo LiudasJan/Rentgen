@@ -1,93 +1,73 @@
-## v1.7.0 RENTGEN
+# v1.8.0 — RENTGEN
 
-### 🔁 Regression Testing — Out of the Box (No regression tests? no problem!)
+## 🏅 Rentgen Certificate — Proof of API Coverage
 
-- TEST: Result Comparison / Regression Detection  
-  Rentgen now supports native regression testing without scripts.
+Rentgen can now generate a **public certificate** after a test run — a concrete signal of API testing depth.
 
-  Workflow:
-  - Run tests against one environment (e.g. production)
-  - Press `Select for compare` button
-  - Switch environment (e.g. test or staging)
-  - Run again and click `Compare with selected`
+### Eligibility Rules
 
-  Rentgen highlights all behavior differences between runs:
-  - status code changes
-  - response body changes
-  - performance shifts
-  - unexpected regressions
+A certificate is generated **only if**:
 
-  No snapshots. No assertions. No manual diffing.  
-  Just clear signals when behavior changes.
+- Generated tests ≥ **70**
+
+If the condition is not met, Rentgen clearly shows:
+
+> Not eligible (need at least 70 tests)
 
 ---
 
-### 💣 Environment Variables Without Scripts (Core Feature)
+## ➕ One-Click Dynamic Variable from Response
 
-- Save Any Response Value to Environment  
-  From any response:
-  - right-click on any value
-  - choose Save to Environment
-  - done
+Saving response values as dynamic variables is now faster and more visible.
 
-- Automatic reuse  
-  The value is:
-  - stored persistently
-  - reused across requests
-  - automatically updated on each run
+### New UI Action
 
-  No scripts. No pre-request hooks. No post-request hacks.
+- A **➕ button** appears next to response values
+- Click once → value is saved as a dynamic variable
 
-  This makes realistic API flows possible without pretending scripting is normal.
+### Behavior
 
----
+- Variable updates automatically on each run
+- Reused across requests and tests
+- No scripts, no hooks, no manual mapping
 
-### 🔄 Team Workflow: Import & Export Collections
+### Built-in Safety
 
-- Import / Export Collections  
-  You can now share your work across team members by exporting and importing collections.
+- If the selected response value is **missing**:
+  - The test is marked **yellow**
+  - Treated as an **automatic assertion warning**
 
-- Rentgen supports Postman Collection schema, making it easy to:
-  - reuse existing API definitions
-  - move between tools
-  - collaborate without lock-in
-
-  Collections stay simple, readable, and runnable — without ceremony.
+This makes broken flows visible without failing the entire run.
 
 ---
 
-### 🌱 First-Run Experience & Onboarding Improvements
+## 🔁 Regression Testing — Noise-Free Comparison
 
-We listened to feedback.
+Regression testing now ignores **non-deterministic noise** by default.
 
-- Clear first-run guidance  
-  After sending the first request, Rentgen now explains what to do next instead of leaving users guessing.
+### Problem
 
-- Auto-scroll to Field Mapping  
-  When it matters, Rentgen automatically scrolls to the relevant configuration, making the next step obvious.
+Previously, regression comparison could report differences caused by:
 
-  Less confusion. Faster `aha` moment.
+- timestamps
+- request IDs
+- dynamic tokens
+- security / data-driven test variance
 
----
+### Solution
 
-### 🐞 Bug Reporting — Visible and Usable
-
-- Bug Report is now clearly visible  
-  When a test fails, Rentgen surfaces the bug report immediately.
-
-- Jira-ready output  
-  The report can be copied and pasted directly into Jira — out of the box.
-
-  No hunting for logs. No rebuilding context.
+Rentgen now automatically detects and excludes noise.
 
 ---
 
-### 🛠 Stability & Internal Improvements
+## 🐞 Bug Fixes & UX Improvements
 
-- Multiple internal improvements across:
-  - request execution
-  - environment handling
-  - regression comparison
-  - UI clarity
+- Improved response comparison stability
+- Cleaner regression result summaries
+- More predictable test reruns
+- Minor UI clarity improvements across test execution and results
 
-- Overall smoother workflows when switching environments and rerunning tests.
+---
+
+Rentgen continues to focus on **early, behavior-level API signals** —  
+before scripts, before CI, before production surprises.
