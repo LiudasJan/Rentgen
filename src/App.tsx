@@ -56,7 +56,7 @@ import {
   parseHeaders,
   substituteRequestVariables,
 } from './utils';
-import { findRequestById } from './utils/collection';
+import { findRequestById, findRequestWithFolder } from './utils/collection';
 
 import { store } from './store';
 import { useAppDispatch, useAppSelector } from './store/hooks';
@@ -159,6 +159,12 @@ export default function App() {
     () => collectionRunResults[selectedRequestId] || null,
     [collectionRunResults, selectedRequestId],
   );
+
+  // Check if request is saved in a collection (needed for dynamic variable buttons)
+  const currentRequestWithFolder = useMemo(() => {
+    if (!selectedRequestId) return null;
+    return findRequestWithFolder(collection, selectedRequestId);
+  }, [collection, selectedRequestId]);
 
   // Environment state
   const environments = useAppSelector(selectEnvironments);
@@ -551,6 +557,28 @@ export default function App() {
     [dispatch],
   );
 
+  // Handler to open the Set as Dynamic Variable modal from JsonViewer
+  const handleSetVariable = useCallback(
+    (path: string, value: string, source: 'body' | 'header') => {
+      if (!currentRequestWithFolder) return;
+      const { folder, request } = currentRequestWithFolder;
+      dispatch(
+        uiActions.openSetAsDynamicVariableModal({
+          initialSelector: path,
+          initialValue: value,
+          collectionId: folder.id,
+          requestId: selectedRequestId,
+          collectionName: folder.name,
+          requestName: request.name,
+          editingVariableId: null,
+          editingVariableName: null,
+          source,
+        }),
+      );
+    },
+    [currentRequestWithFolder, selectedRequestId, dispatch],
+  );
+
   const handleDeleteEnvironment = useCallback(
     (id: string) => {
       dispatch(environmentActions.deleteEnvironment(id));
@@ -897,6 +925,8 @@ export default function App() {
                       <JsonViewer
                         source={httpResponse.headers}
                         responsePanelContext={{ isResponsePanel: true, source: 'header' }}
+                        showVariableButtons={!!currentRequestWithFolder}
+                        onSetVariable={(path, value) => handleSetVariable(path, value, 'header')}
                       />
                     </div>
                     <div className="relative flex-1 px-4 border-l border-border dark:border-dark-body">
@@ -916,6 +946,8 @@ export default function App() {
                       <JsonViewer
                         source={extractBodyFromResponse(httpResponse)}
                         responsePanelContext={{ isResponsePanel: true, source: 'body' }}
+                        showVariableButtons={!!currentRequestWithFolder}
+                        onSetVariable={(path, value) => handleSetVariable(path, value, 'body')}
                       />
                     </div>
                   </div>

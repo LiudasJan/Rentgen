@@ -52,3 +52,51 @@
     @apply m-0 font-segoe-ui bg-body dark:bg-dark-body text-text dark:text-dark-text;
   }
 }
+
+@layer components {
+  /* JSON Plus Button - inline buttons for setting dynamic variables */
+  .json-plus-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    margin-left: 4px;
+    margin-top: 2px;
+    padding: 0;
+    font-size: 12px;
+    font-weight: bold;
+    line-height: 1;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    background-color: transparent;
+    color: #6b7280;
+    opacity: 0;
+    pointer-events: none;
+    cursor: pointer;
+    transition: opacity 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+    vertical-align: middle;
+  }
+
+  /* Show on line hover */
+  .json-plus-button.line-hovered {
+    opacity: 0.6;
+    pointer-events: auto;
+  }
+
+  .json-plus-button.line-hovered:hover {
+    opacity: 1;
+    background-color: #3b82f6;
+    color: white;
+  }
+
+  /* Dark mode */
+  .dark .json-plus-button {
+    color: #9ca3af;
+  }
+
+  .dark .json-plus-button.line-hovered:hover {
+    background-color: #3b82f6;
+    color: white;
+  }
+}

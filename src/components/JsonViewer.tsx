@@ -1,7 +1,7 @@
 import MonacoEditor, { OnMount, loader } from '@monaco-editor/react';
 import cn from 'classnames';
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
-import { useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAppSelector } from '../store/hooks';
 import { selectTheme } from '../store/selectors';
 import { extractValue, stringifyExtractedValue } from '../utils';
@@ -12,189 +12,302 @@ import { rentgenDarkTheme, rentgenLightTheme } from './monaco/themes';
 loader.config({ monaco });
 
 /**
+ * Stack frame for JSON parsing context
+ */
+interface StackFrame {
+  type: 'object' | 'array';
+  key?: string;
+  arrayIndex?: number;
+}
+
+/**
+ * Parser state for JSON traversal
+ */
+interface JsonParserState {
+  stack: StackFrame[];
+  currentKey: string | null;
+  colonFound: boolean;
+}
+
+/**
+ * Build dot-notation path from parser state
+ */
+function buildPathFromState(state: JsonParserState): string {
+  const parts: string[] = [];
+  for (const frame of state.stack) {
+    if (frame.key !== undefined) {
+      parts.push(frame.key);
+    }
+    if (frame.type === 'array' && frame.arrayIndex !== undefined) {
+      parts.push(`[${frame.arrayIndex}]`);
+    }
+  }
+  let path = parts.join('.').replace(/\.\[/g, '[');
+  if (state.currentKey !== null && state.colonFound) {
+    path = path ? `${path}.${state.currentKey}` : state.currentKey;
+  }
+  return path;
+}
+
+/**
+ * Callback types for JSON parser events
+ */
+interface JsonParserCallbacks {
+  onStringValue?: (path: string, startOffset: number, endOffset: number, line: number, endColumn: number) => boolean;
+  onPrimitiveValue?: (path: string, startOffset: number, endOffset: number, line: number, endColumn: number) => boolean;
+}
+
+/**
+ * Generic JSON parser that traverses formatted JSON and calls callbacks for values.
+ * Returns early if any callback returns true (for optimization).
+ */
+function parseJsonWithCallbacks(jsonString: string, callbacks: JsonParserCallbacks, stopAtOffset?: number): void {
+  const state: JsonParserState = {
+    stack: [],
+    currentKey: null,
+    colonFound: false,
+  };
+
+  let inString = false;
+  let stringStart = -1;
+  let escapeNext = false;
+  let currentStringValue = '';
+  let line = 1;
+  let column = 1;
+
+  const maxOffset = stopAtOffset !== undefined ? stopAtOffset : jsonString.length - 1;
+
+  for (let i = 0; i < jsonString.length && i <= maxOffset; i++) {
+    const char = jsonString[i];
+
+    if (escapeNext) {
+      if (inString) currentStringValue += char;
+      escapeNext = false;
+      column++;
+      continue;
+    }
+
+    if (char === '\\') {
+      escapeNext = true;
+      if (inString) currentStringValue += char;
+      column++;
+      continue;
+    }
+
+    if (char === '"') {
+      if (!inString) {
+        inString = true;
+        stringStart = i;
+        currentStringValue = '';
+      } else {
+        inString = false;
+        // Check if this string is a key (next non-whitespace is ':')
+        let j = i + 1;
+        while (j < jsonString.length && /\s/.test(jsonString[j])) j++;
+        if (jsonString[j] === ':') {
+          state.currentKey = currentStringValue;
+          state.colonFound = false;
+        } else {
+          // This is a string value
+          const path = buildPathFromState(state);
+          if (path && callbacks.onStringValue?.(path, stringStart, i, line, column + 1)) {
+            return;
+          }
+        }
+      }
+      column++;
+      continue;
+    }
+
+    if (char === '\n') {
+      line++;
+      column = 1;
+      continue;
+    }
+
+    if (inString) {
+      currentStringValue += char;
+      column++;
+      continue;
+    }
+
+    if (char === ':') {
+      state.colonFound = true;
+      column++;
+      continue;
+    }
+
+    if (char === '{') {
+      const frame: StackFrame = { type: 'object' };
+      if (state.currentKey !== null && state.colonFound) {
+        frame.key = state.currentKey;
+        state.currentKey = null;
+        state.colonFound = false;
+      }
+      const parent = state.stack[state.stack.length - 1];
+      if (parent && parent.type === 'array' && parent.arrayIndex === undefined) {
+        parent.arrayIndex = 0;
+      }
+      state.stack.push(frame);
+      column++;
+      continue;
+    }
+
+    if (char === '}') {
+      state.stack.pop();
+      state.currentKey = null;
+      state.colonFound = false;
+      column++;
+      continue;
+    }
+
+    if (char === '[') {
+      const frame: StackFrame = { type: 'array' };
+      if (state.currentKey !== null && state.colonFound) {
+        frame.key = state.currentKey;
+        state.currentKey = null;
+        state.colonFound = false;
+      }
+      state.stack.push(frame);
+      column++;
+      continue;
+    }
+
+    if (char === ']') {
+      state.stack.pop();
+      column++;
+      continue;
+    }
+
+    if (char === ',') {
+      const current = state.stack[state.stack.length - 1];
+      if (current && current.type === 'array') {
+        current.arrayIndex = (current.arrayIndex ?? -1) + 1;
+      }
+      state.currentKey = null;
+      state.colonFound = false;
+      column++;
+      continue;
+    }
+
+    // Handle numbers, booleans, null (primitive values)
+    if (/[0-9tfn-]/.test(char)) {
+      const valueStart = i;
+      let valueEnd = i;
+      while (valueEnd < jsonString.length && /[0-9a-z.+eE-]/.test(jsonString[valueEnd])) {
+        valueEnd++;
+      }
+      const endCol = column + (valueEnd - i);
+      const path = buildPathFromState(state);
+
+      if (path && callbacks.onPrimitiveValue?.(path, valueStart, valueEnd, line, endCol)) {
+        return;
+      }
+
+      column += valueEnd - i;
+      i = valueEnd - 1;
+      continue;
+    }
+
+    column++;
+  }
+}
+
+/**
  * Extract JSON path at a given offset in a formatted JSON string.
  * Returns the dot-notation path (e.g., "form.email" or "users[0].name")
  */
 function getJsonPathAtOffset(jsonString: string, offset: number): string | null {
+  let result: string | null = null;
+
   try {
-    // Use a stack-based approach to track context at each level
-    interface StackFrame {
-      type: 'object' | 'array';
-      key?: string; // The key that led to this object/array
-      arrayIndex?: number; // Current index if this is an array
-    }
-
-    const stack: StackFrame[] = [];
-    let currentKey: string | null = null;
-    let inString = false;
-    let stringStart = -1;
-    let escapeNext = false;
-    let currentStringValue = '';
-    let colonFound = false;
-
-    const buildPath = (): string => {
-      const parts: string[] = [];
-      for (const frame of stack) {
-        if (frame.key !== undefined) {
-          parts.push(frame.key);
-        }
-        if (frame.type === 'array' && frame.arrayIndex !== undefined) {
-          parts.push(`[${frame.arrayIndex}]`);
-        }
-      }
-      return parts.join('.').replace(/\.\[/g, '[');
-    };
-
-    for (let i = 0; i < jsonString.length && i <= offset; i++) {
-      const char = jsonString[i];
-
-      if (escapeNext) {
-        if (inString) currentStringValue += char;
-        escapeNext = false;
-        continue;
-      }
-
-      if (char === '\\') {
-        escapeNext = true;
-        if (inString) currentStringValue += char;
-        continue;
-      }
-
-      if (char === '"') {
-        if (!inString) {
-          inString = true;
-          stringStart = i;
-          currentStringValue = '';
-        } else {
-          inString = false;
-          // Check if this string is a key (next non-whitespace is ':')
-          let j = i + 1;
-          while (j < jsonString.length && /\s/.test(jsonString[j])) j++;
-          if (jsonString[j] === ':') {
-            currentKey = currentStringValue;
-            colonFound = false;
-          } else {
-            // This is a string value
-            if (offset >= stringStart && offset <= i) {
-              // Build the path including currentKey if we have one
-              let path = buildPath();
-              if (currentKey !== null && colonFound) {
-                path = path ? `${path}.${currentKey}` : currentKey;
-              }
-              return path || null;
-            }
+    parseJsonWithCallbacks(
+      jsonString,
+      {
+        onStringValue: (path, startOffset, endOffset) => {
+          if (offset >= startOffset && offset <= endOffset) {
+            result = path;
+            return true; // Stop parsing
           }
-        }
-        continue;
-      }
-
-      if (inString) {
-        currentStringValue += char;
-        continue;
-      }
-
-      if (char === ':') {
-        colonFound = true;
-        continue;
-      }
-
-      if (char === '{') {
-        // Starting an object
-        const frame: StackFrame = { type: 'object' };
-        if (currentKey !== null && colonFound) {
-          frame.key = currentKey;
-          currentKey = null;
-          colonFound = false;
-        }
-        // Check if parent is an array - need to set arrayIndex on parent
-        const parent = stack[stack.length - 1];
-        if (parent && parent.type === 'array' && parent.arrayIndex === undefined) {
-          parent.arrayIndex = 0;
-        }
-        stack.push(frame);
-        continue;
-      }
-
-      if (char === '}') {
-        // Closing an object
-        stack.pop();
-        currentKey = null;
-        colonFound = false;
-        continue;
-      }
-
-      if (char === '[') {
-        // Starting an array
-        const frame: StackFrame = { type: 'array' };
-        if (currentKey !== null && colonFound) {
-          frame.key = currentKey;
-          currentKey = null;
-          colonFound = false;
-        }
-        stack.push(frame);
-        continue;
-      }
-
-      if (char === ']') {
-        // Closing an array
-        stack.pop();
-        continue;
-      }
-
-      if (char === ',') {
-        // Comma - increment array index if in array context
-        const current = stack[stack.length - 1];
-        if (current && current.type === 'array') {
-          current.arrayIndex = (current.arrayIndex ?? -1) + 1;
-        }
-        currentKey = null;
-        colonFound = false;
-        continue;
-      }
-
-      // Handle numbers, booleans, null (primitive values)
-      if (/[0-9tfn-]/.test(char)) {
-        let valueEnd = i;
-        while (valueEnd < jsonString.length && /[0-9a-z.+eE-]/.test(jsonString[valueEnd])) {
-          valueEnd++;
-        }
-        if (offset >= i && offset < valueEnd) {
-          let path = buildPath();
-          if (currentKey !== null && colonFound) {
-            path = path ? `${path}.${currentKey}` : currentKey;
+          return false;
+        },
+        onPrimitiveValue: (path, startOffset, endOffset) => {
+          if (offset >= startOffset && offset < endOffset) {
+            result = path;
+            return true; // Stop parsing
           }
-          return path || null;
-        }
-        i = valueEnd - 1;
-      }
-    }
-
-    // If we're at the offset and have a current key
-    if (currentKey !== null && colonFound) {
-      let path = buildPath();
-      path = path ? `${path}.${currentKey}` : currentKey;
-      return path;
-    }
-
-    return buildPath() || null;
+          return false;
+        },
+      },
+      offset,
+    );
   } catch {
     return null;
   }
+
+  return result;
+}
+
+/**
+ * Represents a JSON primitive value position in formatted JSON string
+ */
+interface JsonValuePosition {
+  path: string;
+  value: unknown;
+  line: number;
+  endColumn: number;
+}
+
+/**
+ * Get all primitive JSON value positions from a formatted JSON string.
+ * Returns positions for strings, numbers, booleans, and null values (not objects/arrays).
+ */
+function getAllJsonValuePositions(jsonString: string, sourceObject: object): JsonValuePosition[] {
+  const positions: JsonValuePosition[] = [];
+
+  try {
+    parseJsonWithCallbacks(jsonString, {
+      onStringValue: (path, _startOffset, _endOffset, line, endColumn) => {
+        const value = extractValue(sourceObject, path);
+        positions.push({ path, value, line, endColumn });
+        return false; // Continue parsing
+      },
+      onPrimitiveValue: (path, _startOffset, _endOffset, line, endColumn) => {
+        const value = extractValue(sourceObject, path);
+        positions.push({ path, value, line, endColumn });
+        return false; // Continue parsing
+      },
+    });
+  } catch {
+    // Return whatever positions we've collected so far
+  }
+
+  return positions;
 }
 
 interface Props {
   source: string | object;
   className?: string;
   responsePanelContext?: ResponsePanelContext;
+  showVariableButtons?: boolean;
+  onSetVariable?: (path: string, value: string) => void;
 }
 
-export function JsonViewer({ source, className, responsePanelContext }: Props) {
+export function JsonViewer({ source, className, responsePanelContext, showVariableButtons, onSetVariable }: Props) {
   const theme = useAppSelector(selectTheme);
   const { showContextMenu } = useContextMenu();
   const isDark = useMemo(() => theme === 'dark', [theme]);
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const responsePanelContextRef = useRef<ResponsePanelContext | undefined>(responsePanelContext);
   const sourceRef = useRef<string | object>(source);
+  const widgetsRef = useRef<Map<string, monaco.editor.IContentWidget>>(new Map());
+  const widgetDomNodesRef = useRef<Map<string, HTMLButtonElement>>(new Map());
+  const [hoveredLine, setHoveredLine] = useState<number | null>(null);
+  const onSetVariableRef = useRef(onSetVariable);
+
+  useEffect(() => {
+    onSetVariableRef.current = onSetVariable;
+  }, [onSetVariable]);
 
   useEffect(() => {
     responsePanelContextRef.current = responsePanelContext;
@@ -204,18 +317,123 @@ export function JsonViewer({ source, className, responsePanelContext }: Props) {
     sourceRef.current = source;
   }, [source]);
 
+  // Update widget visibility based on hovered line
+  useEffect(() => {
+    widgetDomNodesRef.current.forEach((domNode, id) => {
+      const linePart = id.split('-')[1];
+      const widgetLine = parseInt(linePart, 10);
+      if (widgetLine === hoveredLine) {
+        domNode.classList.add('line-hovered');
+      } else {
+        domNode.classList.remove('line-hovered');
+      }
+    });
+  }, [hoveredLine]);
+
+  // Create content widget for a JSON value position
+  const createPlusWidget = useCallback(
+    (editor: monaco.editor.IStandaloneCodeEditor, position: JsonValuePosition): monaco.editor.IContentWidget => {
+      const domNode = document.createElement('button');
+      domNode.className = 'json-plus-button';
+      domNode.textContent = '+';
+      domNode.title = `Set "${position.path}" as dynamic variable`;
+      domNode.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const valueStr = stringifyExtractedValue(position.value);
+        if (valueStr !== null && onSetVariableRef.current) {
+          onSetVariableRef.current(position.path, valueStr);
+        }
+      };
+
+      const widgetId = `plus-${position.line}-${position.endColumn}`;
+      widgetDomNodesRef.current.set(widgetId, domNode);
+
+      return {
+        getId: () => widgetId,
+        getDomNode: () => domNode,
+        getPosition: () => ({
+          position: { lineNumber: position.line, column: position.endColumn + 1 },
+          preference: [monaco.editor.ContentWidgetPositionPreference.EXACT],
+        }),
+      };
+    },
+    [],
+  );
+
+  // Dispose all widgets
+  const disposeAllWidgets = useCallback(() => {
+    const editor = editorRef.current;
+    if (!editor) return;
+
+    widgetsRef.current.forEach((widget) => {
+      editor.removeContentWidget(widget);
+    });
+    widgetsRef.current.clear();
+    widgetDomNodesRef.current.clear();
+  }, []);
+
+  // Create widgets when showVariableButtons is enabled
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor || !showVariableButtons || typeof source !== 'object') {
+      disposeAllWidgets();
+      return;
+    }
+
+    const jsonString = JSON.stringify(source, null, 2);
+    const positions = getAllJsonValuePositions(jsonString, source);
+
+    // Limit widgets for performance (cap at 500)
+    const limitedPositions = positions.slice(0, 500);
+
+    limitedPositions.forEach((pos) => {
+      const widget = createPlusWidget(editor, pos);
+      editor.addContentWidget(widget);
+      widgetsRef.current.set(widget.getId(), widget);
+    });
+
+    return () => {
+      disposeAllWidgets();
+    };
+  }, [source, showVariableButtons, createPlusWidget, disposeAllWidgets]);
+
   if (!source || typeof source === 'string') {
     return (
       <pre className="m-0! text-[#0451a5] dark:text-[#ce9178] whitespace-pre-wrap break-all">{String(source)}</pre>
     );
   }
 
-  const onMount: OnMount = (editor, monaco) => {
+  const onMount: OnMount = (editor, monacoInstance) => {
     editorRef.current = editor;
 
-    monaco.editor.defineTheme('rentgen-light', rentgenLightTheme);
-    monaco.editor.defineTheme('rentgen-dark', rentgenDarkTheme);
-    monaco.editor.setTheme(isDark ? 'rentgen-dark' : 'rentgen-light');
+    monacoInstance.editor.defineTheme('rentgen-light', rentgenLightTheme);
+    monacoInstance.editor.defineTheme('rentgen-dark', rentgenDarkTheme);
+    monacoInstance.editor.setTheme(isDark ? 'rentgen-dark' : 'rentgen-light');
+
+    // Track hovered line for widget visibility
+    editor.onMouseMove((e) => {
+      if (e.target.position) {
+        setHoveredLine(e.target.position.lineNumber);
+      }
+    });
+
+    editor.onMouseLeave(() => {
+      setHoveredLine(null);
+    });
+
+    // Create widgets if showVariableButtons is enabled
+    if (showVariableButtons && typeof source === 'object') {
+      const jsonString = JSON.stringify(source, null, 2);
+      const positions = getAllJsonValuePositions(jsonString, source);
+      const limitedPositions = positions.slice(0, 500);
+
+      limitedPositions.forEach((pos) => {
+        const widget = createPlusWidget(editor, pos);
+        editor.addContentWidget(widget);
+        widgetsRef.current.set(widget.getId(), widget);
+      });
+    }
 
     editor.onContextMenu((e) => {
       e.event.preventDefault();
