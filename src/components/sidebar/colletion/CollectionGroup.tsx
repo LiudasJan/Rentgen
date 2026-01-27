@@ -8,7 +8,7 @@ import { selectCollectionRunResults, selectRunningFolderId, selectSelectedFolder
 import { collectionActions } from '../../../store/slices/collectionSlice';
 import { uiActions } from '../../../store/slices/uiSlice';
 import { CollectionFolderData } from '../../../utils/collection';
-import { useContextMenu } from '../../context-menu/GlobalContextMenuProvider';
+import { useContextMenu } from '../../context-menu';
 import CollectionItem from './CollectionItem';
 
 import ChevronIcon from '../../../assets/icons/chevron-icon.svg';
@@ -57,9 +57,11 @@ export default function CollectionGroup({
 
     const hasRed = itemResults.some((r) => !r.status || r.status < 200 || r.status >= 500);
     const hasOrange = itemResults.some((r) => r.status >= 400 && r.status < 500);
+    const hasYellow = itemResults.some((r) => r.warning && r.status >= 200 && r.status < 400);
 
     if (hasRed) return 'red';
     if (hasOrange) return 'orange';
+    if (hasYellow) return 'yellow';
     return 'green';
   }, [folder.items, runResults]);
 
@@ -137,6 +139,7 @@ export default function CollectionGroup({
             <span
               className={cn('w-2 h-2 rounded-full shrink-0', {
                 'bg-green-500': folderStatus === 'green',
+                'bg-yellow-500': folderStatus === 'yellow',
                 'bg-orange-500': folderStatus === 'orange',
                 'bg-red-500': folderStatus === 'red',
               })}

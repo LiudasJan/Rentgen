@@ -1,6 +1,6 @@
 import { Middleware, Action, PayloadAction } from '@reduxjs/toolkit';
 import { DynamicVariable, HttpResponse } from '../../types';
-import { extractDynamicVariableFromResponse } from '../../utils/dynamicVariable';
+import { extractDynamicVariableFromResponseWithDetails } from '../../utils/dynamicVariable';
 import { environmentActions } from '../slices/environmentSlice';
 
 // Actions that should NOT trigger auto-save (read-only or loading actions)
@@ -76,16 +76,17 @@ export const electronMiddleware: Middleware = (store) => (next) => (action: Acti
       const response = (action as PayloadAction<HttpResponse>).payload;
 
       for (const dvar of dynamicVars) {
-        const extractedValue = extractDynamicVariableFromResponse(dvar, response);
+        const extractionResult = extractDynamicVariableFromResponseWithDetails(dvar, response);
 
-        if (extractedValue !== null) {
+        if (extractionResult.success && extractionResult.value !== null) {
           store.dispatch(
             environmentActions.updateDynamicVariableValue({
               id: dvar.id,
-              value: extractedValue,
+              value: extractionResult.value,
             }),
           );
         }
+        // Note: Extraction failures are tracked in collectionRunResult.warning
       }
     }
   }

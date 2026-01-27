@@ -35,7 +35,6 @@ function cleanupLegacyStore(): void {
       unlinkSync(legacyFile);
       console.log('Cleaned up legacy electron-store file');
     }
-
   } catch (error) {
     console.error('Failed to cleanup legacy store:', error);
   }

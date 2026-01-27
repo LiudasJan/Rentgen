@@ -1,4 +1,4 @@
-import { DynamicVariable, Environment, EnvironmentVariable } from '../types';
+import { DynamicVariable, Environment, EnvironmentVariable, VariableValidationResult } from '../types';
 
 /**
  * Extract value from object using dot/bracket notation path
@@ -140,4 +140,65 @@ export function createEmptyEnvironment(): Environment {
     color: '#3B82F6', // Default blue
     variables: [],
   };
+}
+
+/**
+ * Extract all {{variable}} names from text strings
+ */
+export function extractReferencedVariables(...texts: (string | null | undefined)[]): string[] {
+  const variableNames = new Set<string>();
+  const regex = /\{\{([^}]+)}}/g;
+
+  for (const text of texts) {
+    if (!text) continue;
+    let match;
+    while ((match = regex.exec(text)) !== null) {
+      variableNames.add(match[1].trim());
+    }
+  }
+
+  return Array.from(variableNames);
+}
+
+/**
+ * Check if referenced dynamic variables have values
+ */
+export function validateDynamicVariables(
+  referencedVarNames: string[],
+  dynamicVariables: DynamicVariable[],
+  selectedEnvironmentId: string | null,
+): VariableValidationResult {
+  const missingVariables: string[] = [];
+
+  for (const varName of referencedVarNames) {
+    // Find matching dynamic variable (scoped to current environment or global)
+    const dynamicVar = dynamicVariables.find(
+      (dv) => dv.key === varName && (dv.environmentId === null || dv.environmentId === selectedEnvironmentId),
+    );
+
+    // Only validate dynamic variables (static env vars are always available or empty)
+    if (dynamicVar && dynamicVar.currentValue === null) {
+      missingVariables.push(varName);
+    }
+  }
+
+  return {
+    isValid: missingVariables.length === 0,
+    missingVariables,
+  };
+}
+
+/**
+ * Validate that all referenced dynamic variables in a request have values
+ */
+export function validateRequestVariables(
+  url: string,
+  headers: string,
+  body: string,
+  messageType: string,
+  dynamicVariables: DynamicVariable[],
+  selectedEnvironmentId: string | null,
+): VariableValidationResult {
+  const referencedVarNames = extractReferencedVariables(url, headers, body, messageType);
+  return validateDynamicVariables(referencedVarNames, dynamicVariables, selectedEnvironmentId);
 }
