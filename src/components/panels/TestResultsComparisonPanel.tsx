@@ -6,6 +6,7 @@ import { selectTheme } from '../../store/selectors';
 import { ORIGINAL_REQUEST_TEST_PARAMETER_NAME } from '../../tests';
 import { HttpResponse, TestResult, TestResults } from '../../types';
 import { extractBodyFromResponse } from '../../utils';
+import TestRunningLoader from '../loaders/TestRunningLoader';
 import { rentgenDarkTheme, rentgenLightTheme } from '../monaco/themes';
 import Panel, { Props as PanelProps } from './Panel';
 
@@ -17,6 +18,7 @@ interface Props extends PanelProps {
 export default function TestResultsComparisonPanel({ items, title, response, ...otherProps }: Props) {
   const theme = useAppSelector(selectTheme);
   const diffEditorRef = useRef<editor.IStandaloneDiffEditor | null>(null);
+  const [diffReady, setDiffReady] = useState<boolean>(false);
   const [showNoise, setShowNoise] = useState<boolean>(false);
   const [statistics, setStatistics] = useState({
     percent: 0,
@@ -97,7 +99,10 @@ export default function TestResultsComparisonPanel({ items, title, response, ...
     monaco.editor.defineTheme('rentgen-dark', rentgenDarkTheme);
     monaco.editor.setTheme(isDark ? 'rentgen-dark' : 'rentgen-light');
 
-    editor.onDidUpdateDiff(() => calculateStatistics());
+    editor.onDidUpdateDiff(() => {
+      calculateStatistics();
+      setDiffReady(true);
+    });
   };
 
   useEffect(() => {
@@ -125,11 +130,19 @@ export default function TestResultsComparisonPanel({ items, title, response, ...
               <span>={statistics.unchanged}</span>
             </div>
             <label className="flex items-center gap-2">
-              <input className="m-0" type="checkbox" onChange={(e) => setShowNoise(e.target.checked)} />
+              <input
+                className="m-0"
+                disabled={!diffReady}
+                type="checkbox"
+                onChange={(e) => {
+                  setShowNoise(e.target.checked);
+                  setDiffReady(false);
+                }}
+              />
               Show noise
             </label>
           </div>
-          <div className="flex-1 p-4">
+          <div className="relative flex-1 p-4">
             <DiffEditor
               height="100%"
               language="json"
@@ -167,6 +180,14 @@ export default function TestResultsComparisonPanel({ items, title, response, ...
               theme={isDark ? 'rentgen-dark' : 'rentgen-light'}
               onMount={onMount}
             />
+            {!diffReady && (
+              <div className="absolute inset-0 flex z-90">
+                <TestRunningLoader
+                  className="justify-center bg-white dark:bg-dark-input"
+                  text="Computing differences…"
+                />
+              </div>
+            )}
           </div>
         </>
       )}

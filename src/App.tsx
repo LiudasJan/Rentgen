@@ -37,7 +37,8 @@ import {
   LOAD_TEST_NAME,
   RESPONSE_SIZE_CHECK_TEST_NAME,
 } from './tests';
-import { Environment, ExportReport, HttpResponse, ReportFormat, TestStatus } from './types';
+import { Environment, ExportReport, ExtractionFailure, HttpResponse, ReportFormat, TestStatus } from './types';
+import { extractDynamicVariableFromResponseWithDetails } from './utils/dynamicVariable';
 import {
   buildSuite,
   createHttpRequest,
@@ -391,7 +392,37 @@ export default function App() {
         dispatch(uiActions.openSendHttpSuccessModal());
       }
 
-      if (selectedRequestId)
+      // Extract dynamic variables and track failures
+      let warning: string | null = null;
+      if (selectedRequestId) {
+        const requestDynamicVars = dynamicVariables.filter((dv) => dv.requestId === selectedRequestId);
+        const extractionFailures: ExtractionFailure[] = [];
+
+        for (const dvar of requestDynamicVars) {
+          const extractionResult = extractDynamicVariableFromResponseWithDetails(dvar, response);
+
+          if (!extractionResult.success) {
+            extractionFailures.push({
+              variableName: dvar.key,
+              selector: dvar.selector,
+              source: dvar.source,
+              reason: extractionResult.error || 'unknown error',
+            });
+          }
+          // Note: The actual variable update is handled by the electronMiddleware
+        }
+
+        // Build warning message if any extractions failed
+        if (extractionFailures.length > 0) {
+          if (extractionFailures.length === 1) {
+            const f = extractionFailures[0];
+            warning = `Failed to extract {{${f.variableName}}}: ${f.reason}`;
+          } else {
+            const details = extractionFailures.map((f) => `{{${f.variableName}}}`).join(', ');
+            warning = `Failed to extract: ${details}`;
+          }
+        }
+
         dispatch(
           collectionRunActions.addResult({
             requestId: selectedRequestId,
@@ -400,8 +431,10 @@ export default function App() {
             bodyParameters,
             queryParameters,
             error: null,
+            warning,
           }),
         );
+      }
     } catch (error) {
       dispatch(
         responseActions.setResponse({
@@ -861,7 +894,8 @@ export default function App() {
                   className={cn(
                     'flex items-center gap-2 p-4 font-bold bg-body dark:bg-dark-body border-t border-border dark:border-dark-body',
                     {
-                      'text-green-500': httpResponse.status.startsWith('2'),
+                      'text-green-500': httpResponse.status.startsWith('2') && !runResult?.warning,
+                      'text-yellow-500': httpResponse.status.startsWith('2') && runResult?.warning,
                       'text-blue-500': httpResponse.status.startsWith('3'),
                       'text-orange-500': httpResponse.status.startsWith('4'),
                       'text-red-500': httpResponse.status.startsWith('5') || httpResponse.status === NETWORK_ERROR,
@@ -871,6 +905,11 @@ export default function App() {
                   {httpResponse.status === SENDING && <Loader className="h-5 w-5" />}
                   {httpResponse.status}
                 </div>
+                {runResult?.warning && (
+                  <div className="px-4 py-2 text-xs bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 border-t border-yellow-200 dark:border-yellow-800">
+                    <span className="font-semibold">Warning:</span> {runResult.warning}
+                  </div>
+                )}
                 {httpResponse.status !== SENDING && (
                   <div className="grid grid-cols-2 items-stretch max-h-100 py-4 border-t border-border dark:border-dark-body overflow-hidden">
                     <div className="relative flex-1 px-4">
@@ -918,7 +957,7 @@ export default function App() {
 
             {messages.length > 0 && (
               <Panel title="Messages">
-                <div className="max-h-[400px] p-4 text-xs border-t border-border dark:border-dark-body overflow-y-auto">
+                <div className="max-h-100 p-4 text-xs border-t border-border dark:border-dark-body overflow-y-auto">
                   {messages.map(({ data, decoded, direction }, index) => (
                     <div
                       key={index}

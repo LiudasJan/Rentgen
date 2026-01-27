@@ -55,3 +55,30 @@ export interface DynamicVariable {
    */
   environmentId: string | null;
 }
+
+/**
+ * Result of validating dynamic variables before request execution
+ */
+export interface VariableValidationResult {
+  isValid: boolean;
+  missingVariables: string[];
+}
+
+/**
+ * Result of extracting a dynamic variable from a response
+ */
+export interface ExtractionResult {
+  value: string | null;
+  success: boolean;
+  error?: string; // e.g., "selector not found in response", "body is not valid JSON"
+}
+
+/**
+ * Details about a failed dynamic variable extraction
+ */
+export interface ExtractionFailure {
+  variableName: string;
+  selector: string;
+  source: 'body' | 'header';
+  reason: string;
+}

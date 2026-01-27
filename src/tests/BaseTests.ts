@@ -64,12 +64,14 @@ export function createErrorTestResult(
 export function determineTestStatus(
   response: HttpResponse,
   determine: (response: HttpResponse, statusCode: number) => { actual: string; status: TestStatus },
+  allowedStatusCodes: number[] = [],
 ): {
   actual: string;
   status: TestStatus;
 } {
   const statusCode = extractStatusCode(response);
-  if (statusCode >= RESPONSE_STATUS.SERVER_ERROR) return { actual: response.status, status: TestStatus.Bug };
+  if (statusCode >= RESPONSE_STATUS.SERVER_ERROR && !allowedStatusCodes.includes(statusCode))
+    return { actual: response.status, status: TestStatus.Bug };
 
   return determine(response, statusCode);
 }

@@ -470,7 +470,7 @@ export function JsonViewer({ source, className, responsePanelContext, showVariab
   };
 
   return (
-    <div className={cn('h-[360px]', className)}>
+    <div className={cn('h-90', className)}>
       <MonacoEditor
         height="100%"
         language="json"
