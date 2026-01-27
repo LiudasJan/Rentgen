@@ -26,7 +26,7 @@ export default function Modal({ className, children, isOpen, onClose }: Props) {
       <div
         ref={refModal}
         className={cn(
-          'w-[600px] max-w-[90%] p-5 bg-white rounded-md shadow-[0_4px_12px_rgba(0,0,0,0.3)]',
+          'w-150 max-w-[90%] p-5 bg-white rounded-md shadow-[0_4px_12px_rgba(0,0,0,0.3)]',
           'dark:bg-dark-body',
         )}
       >

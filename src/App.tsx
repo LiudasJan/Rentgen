@@ -886,7 +886,7 @@ export default function App() {
 
             {messages.length > 0 && (
               <Panel title="Messages">
-                <div className="max-h-[400px] p-4 text-xs border-t border-border dark:border-dark-body overflow-y-auto">
+                <div className="max-h-100 p-4 text-xs border-t border-border dark:border-dark-body overflow-y-auto">
                   {messages.map(({ data, decoded, direction }, index) => (
                     <div
                       key={index}

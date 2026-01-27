@@ -168,7 +168,7 @@ export default function SetAsDynamicVariableModal() {
 
   return (
     <Modal isOpen={modalState.isOpen} onClose={handleClose}>
-      <div className="flex flex-col gap-4 min-w-[400px]">
+      <div className="flex flex-col gap-4 min-w-100">
         <h2 className="text-lg font-bold text-text dark:text-dark-text m-0">
           {isEditing ? 'Edit Dynamic Variable' : 'Set as Dynamic Variable'}
         </h2>

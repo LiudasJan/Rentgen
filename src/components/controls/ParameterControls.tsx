@@ -39,7 +39,7 @@ export function ParameterControls({ dynamicValue, onChange }: Props) {
   const inputClassName = 'w-full p-[5px] rounded-none dark:border-border/20';
 
   return (
-    <div className="w-full max-w-[440px]">
+    <div className="w-full max-w-110">
       {renderLabel()}
       <div className="grid grid-cols-2 gap-2">
         {type === 'enum' && (
