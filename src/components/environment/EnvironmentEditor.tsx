@@ -269,7 +269,6 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
                     <tr className="bg-body dark:bg-dark-body border-b border-border dark:border-dark-border">
                       <th className="w-[30%] px-3 py-2 font-bold text-xs text-left">Variable Name</th>
                       <th className="w-[30%] px-3 py-2 font-bold text-xs text-left">Value</th>
-                      <th className="w-[30%] px-3 py-2 font-bold text-xs text-left">Selector</th>
                       <th className="w-[10%]"></th>
                     </tr>
                   </thead>
@@ -277,7 +276,7 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
                     {/* Dynamic variables */}
                     {dynamicVariables.map((dv) => (
                       <tr key={dv.id} className="last:[&>td]:border-b-0">
-                        <td className="w-[30%] p-1 border-b border-border dark:border-dark-body">
+                        <td className="w-[40%] p-1 border-b border-border dark:border-dark-body">
                           <Input
                             className="w-full border-0 bg-transparent"
                             placeholder="variable_name"
@@ -285,17 +284,12 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
                             onChange={(e) => handleDynamicVariableKeyChange(dv, e.target.value)}
                           />
                         </td>
-                        <td className="w-[30%] p-1 border-l border-b border-border dark:border-dark-body">
+                        <td className="w-[40%] p-1 border-l border-b border-border dark:border-dark-body">
                           <span className="px-2 text-xs font-monospace text-text-secondary dark:text-dark-text-secondary truncate block">
                             {dv.currentValue || '—'}
                           </span>
                         </td>
-                        <td className="w-[30%] p-1 border-l border-b border-border dark:border-dark-body">
-                          <span className="px-2 text-xs font-monospace text-text-secondary dark:text-dark-text-secondary truncate block">
-                            {dv.selector}
-                          </span>
-                        </td>
-                        <td className="w-[10%] p-1 border-l border-b border-border dark:border-dark-body text-center">
+                        <td className="w-[20%] p-1 border-l border-b border-border dark:border-dark-body text-center">
                           <button
                             className="p-1 hover:bg-body dark:hover:bg-dark-body rounded text-text-secondary hover:text-text dark:text-dark-text-secondary dark:hover:text-dark-text"
                             onClick={() => handleRefreshDynamicVariable(dv)}
@@ -316,7 +310,7 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
                     {/* Static variables */}
                     {variables.map((variable, index) => (
                       <tr key={`static-${index}`} className="last:[&>td]:border-b-0">
-                        <td className="w-[25%] p-1 border-b border-border dark:border-dark-body">
+                        <td className="w-[40%] p-1 border-b border-border dark:border-dark-body">
                           <Input
                             className="w-full border-0 bg-transparent"
                             placeholder="variable_name"
@@ -324,7 +318,7 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
                             onChange={(e) => handleVariableChange(index, 'key', e.target.value)}
                           />
                         </td>
-                        <td className="w-[30%] p-1 border-l border-b border-border dark:border-dark-body">
+                        <td className="w-[40%] p-1 border-l border-b border-border dark:border-dark-body">
                           <Input
                             className="w-full border-0 bg-transparent"
                             placeholder="value"
@@ -332,9 +326,7 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
                             onChange={(e) => handleVariableChange(index, 'value', e.target.value)}
                           />
                         </td>
-                        <td className="w-[25%] p-1 border-l border-b border-border dark:border-dark-body"></td>
-                        <td className="w-[10%] p-1 border-l border-b border-border dark:border-dark-body"></td>
-                        <td className="w-[10%] p-1 border-l border-b border-border dark:border-dark-body"></td>
+                        <td className="w-[20%] p-1 border-l border-b border-border dark:border-dark-body"></td>
                       </tr>
                     ))}
                   </tbody>

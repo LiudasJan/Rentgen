@@ -190,15 +190,6 @@ export default function SetAsDynamicVariableModal() {
 
         {/* Selector */}
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-text dark:text-dark-text">Selector (dot notation)</label>
-          <Input
-            placeholder="data.user.id"
-            value={selector}
-            onChange={(e) => {
-              setSelector(e.target.value);
-              setError('');
-            }}
-          />
           {modalState.initialValue && (
             <p className="text-xs text-text-secondary dark:text-dark-text-secondary m-0">
               Preview: &quot;
