@@ -105,6 +105,7 @@ import {
 import { collectionRunActions } from './store/slices/collectionRunSlice';
 import { collectionActions, loadCollection } from './store/slices/collectionSlice';
 import { environmentActions, loadDynamicVariables, loadEnvironments } from './store/slices/environmentSlice';
+import { historyActions, loadHistory } from './store/slices/historySlice';
 import { requestActions } from './store/slices/requestSlice';
 import { responseActions } from './store/slices/responseSlice';
 import { testActions } from './store/slices/testSlice';
@@ -280,6 +281,10 @@ export default function App() {
     dispatch(loadTheme());
   }, [dispatch]);
 
+  useEffect(() => {
+    dispatch(loadHistory());
+  }, [dispatch]);
+
   // WebSocket event listener
   useEffect(() => {
     if (!window.electronAPI.onWssEvent) return;
@@ -359,6 +364,15 @@ export default function App() {
     dispatch(requestActions.setBodyParameters({}));
     dispatch(requestActions.setQueryParameters({}));
 
+    const historyEntry = {
+      id: `hist_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      timestamp: Date.now(),
+      method,
+      url,
+      headers,
+      body,
+    };
+
     try {
       const {
         url: substitutedUrl,
@@ -435,6 +449,8 @@ export default function App() {
           }),
         );
       }
+
+      dispatch(historyActions.addEntry(historyEntry));
     } catch (error) {
       dispatch(
         responseActions.setResponse({
@@ -443,6 +459,7 @@ export default function App() {
           headers: {},
         }),
       );
+      dispatch(historyActions.addEntry(historyEntry));
     }
   }, [
     url,

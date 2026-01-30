@@ -3,6 +3,9 @@ import { DynamicVariable, HttpResponse } from '../../types';
 import { extractDynamicVariableFromResponseWithDetails } from '../../utils/dynamicVariable';
 import { environmentActions } from '../slices/environmentSlice';
 
+// History actions that should NOT trigger auto-save (read-only or loading actions)
+const historyReadOnlyActions = ['history/load/pending', 'history/load/fulfilled', 'history/load/rejected'];
+
 // Actions that should NOT trigger auto-save (read-only or loading actions)
 const collectionReadOnlyActions = [
   'collection/load/pending',
@@ -61,6 +64,12 @@ export const electronMiddleware: Middleware = (store) => (next) => (action: Acti
   if (actionType && dynamicVariableActions.includes(actionType)) {
     const state = store.getState();
     window.electronAPI.saveDynamicVariables(state.environment.dynamicVariables);
+  }
+
+  // Auto-save history after mutation actions
+  if (actionType && actionType.startsWith('history/') && !historyReadOnlyActions.includes(actionType)) {
+    const state = store.getState();
+    window.electronAPI.saveHistory(state.history.entries);
   }
 
   // Auto-update dynamic variables when a response is received

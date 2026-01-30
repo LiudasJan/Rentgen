@@ -11,12 +11,14 @@ interface ElectronApi {
   loadCollection: () => Promise<any>;
   loadEnvironments: () => Promise<any>;
   loadDynamicVariables: () => Promise<any>;
+  loadHistory: () => Promise<any>;
   onWssEvent: (callback: (data: any) => void) => () => void;
   openExternal: (url: string) => void;
   pingHost: (host: string) => Promise<any>;
   saveCollection: (collection: any) => Promise<{ success: boolean; error?: string }>;
   saveEnvironments: (environments: any) => Promise<{ success: boolean; error?: string }>;
   saveDynamicVariables: (variables: any) => Promise<{ success: boolean; error?: string }>;
+  saveHistory: (entries: any) => Promise<{ success: boolean; error?: string }>;
   saveReport: (payload: {
     defaultPath?: string;
     content: string;
@@ -43,6 +45,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   loadCollection: (): Promise<any> => ipcRenderer.invoke('load-collection'),
   loadEnvironments: (): Promise<any> => ipcRenderer.invoke('load-environments'),
   loadDynamicVariables: (): Promise<any> => ipcRenderer.invoke('load-dynamic-variables'),
+  loadHistory: (): Promise<any> => ipcRenderer.invoke('load-history'),
   onWssEvent: (callback): (() => void) => {
     const handler = (_: Electron.IpcRendererEvent, data: any) => callback(data);
     ipcRenderer.on('wss-event', handler);
@@ -58,6 +61,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('save-environments', environments),
   saveDynamicVariables: (variables: any): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke('save-dynamic-variables', variables),
+  saveHistory: (entries: any): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke('save-history', entries),
   saveReport: (payload: { defaultPath?: string; content: string; filters?: Electron.FileFilter[] }) =>
     ipcRenderer.invoke('save-report', payload),
   sendHttp: (payload: any): Promise<any> => ipcRenderer.invoke('http-request', payload),
