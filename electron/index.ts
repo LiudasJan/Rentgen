@@ -12,6 +12,7 @@ import {
   registerThemeHandlers,
   registerWssHandlers,
 } from './handlers';
+import { applyDockIcon, registerThemeIconListener } from './iconManager';
 
 config();
 
@@ -59,6 +60,7 @@ const createWindow = async (): Promise<void> => {
 
   mainWindow.maximize();
   mainWindow.show();
+  applyDockIcon();
 
   // and load the index.html of the app.
   mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
@@ -112,6 +114,7 @@ app.on('ready', async () => {
   cleanupLegacyStore();
   createHelpMenu();
   await createWindow();
+  registerThemeIconListener();
 });
 
 // Quit when all windows are closed, except on macOS. There, it's common

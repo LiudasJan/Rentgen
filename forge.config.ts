@@ -16,6 +16,7 @@ const config: ForgeConfig = {
     asar: true,
     executableName: 'Rentgen',
     icon: './assets/icons/rentgen',
+    extraResource: ['./assets/icons'],
     osxSign: {},
   },
   rebuildConfig: {},
