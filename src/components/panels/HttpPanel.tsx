@@ -18,11 +18,9 @@ export function HttpPanel({ className, children, source, title, ...otherProps }:
         </CopyButton>
       )}
       <div
-        className={cn('flex-auto m-0 p-2.5', {
-          'bg-white border border-border rounded': source,
-          'dark:bg-dark-input dark:border-dark-border': source,
-          'pl-0': !source,
-        })}
+        className={cn(
+          'flex-auto m-0 p-2.5 bg-white border border-border rounded dark:bg-dark-input dark:border-dark-border',
+        )}
       >
         <JsonViewer source={source} />
       </div>

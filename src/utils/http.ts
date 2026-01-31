@@ -143,7 +143,7 @@ export function extractBodyParameters(body: unknown, headers: Record<string, str
       if (value === 'DO_NOT_TEST') parameters[key] = getInitialParameterValue('do-not-test', '', false);
       else {
         // Navigate to the actual value in the parsed body
-        const paths = key.replace(/\[(\d+)\]/g, '.$1').split('.');
+        const paths = key.replace(/\[(\d+)]/g, '.$1').split('.');
         let propertyValue: any = body;
 
         for (const path of paths) {
@@ -163,10 +163,10 @@ export function extractBodyFromResponse(response: HttpResponse): Record<string, 
   try {
     if (typeof response?.body === 'string') return JSON.parse(response.body);
     if (response?.body && typeof response.body === 'object') return response.body;
-    ``;
   } catch {
-    return response.body;
+    // JSON.parse failed
   }
+  return response?.body ?? '';
 }
 
 export function extractStatusCode(response: HttpResponse): number {
@@ -205,7 +205,7 @@ export function getBodyParameterValue(body: unknown, parameterName: string, head
     return formEntries.find(([key]) => key === parameterName)?.[1];
   }
 
-  const paths = parameterName.replace(/\[(\d+)\]/g, '.$1').split('.');
+  const paths = parameterName.replace(/\[(\d+)]/g, '.$1').split('.');
   let value: any = body;
 
   for (const path of paths) {

@@ -1,12 +1,17 @@
 import MonacoEditor, { OnMount, loader } from '@monaco-editor/react';
 import cn from 'classnames';
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAppSelector } from '../store/hooks';
 import { selectTheme } from '../store/selectors';
 import { extractValue, stringifyExtractedValue } from '../utils';
 import { ResponsePanelContext, useContextMenu } from './context-menu';
-import { rentgenDarkTheme, rentgenLightTheme } from './monaco/themes';
+import {
+  rentgenDarkPlaintextTheme,
+  rentgenDarkTheme,
+  rentgenLightPlaintextTheme,
+  rentgenLightTheme,
+} from './monaco/themes';
 
 // Configure Monaco to use local ESM bundle instead of CDN (required for Electron)
 loader.config({ monaco });
@@ -296,13 +301,14 @@ interface Props {
 export function JsonViewer({ source, className, responsePanelContext, showVariableButtons, onSetVariable }: Props) {
   const theme = useAppSelector(selectTheme);
   const { showContextMenu } = useContextMenu();
-  const isDark = useMemo(() => theme === 'dark', [theme]);
+  const isDark = theme === 'dark';
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const responsePanelContextRef = useRef<ResponsePanelContext | undefined>(responsePanelContext);
   const sourceRef = useRef<string | object>(source);
   const widgetsRef = useRef<Map<string, monaco.editor.IContentWidget>>(new Map());
   const widgetDomNodesRef = useRef<Map<string, HTMLButtonElement>>(new Map());
   const [hoveredLine, setHoveredLine] = useState<number | null>(null);
+  const [isEditorMounted, setIsEditorMounted] = useState(false);
   const onSetVariableRef = useRef(onSetVariable);
 
   useEffect(() => {
@@ -396,19 +402,19 @@ export function JsonViewer({ source, className, responsePanelContext, showVariab
     return () => {
       disposeAllWidgets();
     };
-  }, [source, showVariableButtons, createPlusWidget, disposeAllWidgets]);
+  }, [source, showVariableButtons, createPlusWidget, disposeAllWidgets, isEditorMounted]);
 
-  if (!source || typeof source === 'string') {
-    return (
-      <pre className="m-0! text-[#0451a5] dark:text-[#ce9178] whitespace-pre-wrap break-all">{String(source)}</pre>
-    );
-  }
+  const isSourceObject = source != null && typeof source === 'object';
+  const displayValue = isSourceObject ? JSON.stringify(source, null, 2) : String(source);
+  const editorLanguage = isSourceObject ? 'json' : 'plaintext';
 
   const onMount: OnMount = (editor, monacoInstance) => {
     editorRef.current = editor;
 
     monacoInstance.editor.defineTheme('rentgen-light', rentgenLightTheme);
     monacoInstance.editor.defineTheme('rentgen-dark', rentgenDarkTheme);
+    monacoInstance.editor.defineTheme('rentgen-light-plaintext', rentgenLightPlaintextTheme);
+    monacoInstance.editor.defineTheme('rentgen-dark-plaintext', rentgenDarkPlaintextTheme);
     monacoInstance.editor.setTheme(isDark ? 'rentgen-dark' : 'rentgen-light');
 
     // Track hovered line for widget visibility
@@ -422,18 +428,7 @@ export function JsonViewer({ source, className, responsePanelContext, showVariab
       setHoveredLine(null);
     });
 
-    // Create widgets if showVariableButtons is enabled
-    if (showVariableButtons && typeof source === 'object') {
-      const jsonString = JSON.stringify(source, null, 2);
-      const positions = getAllJsonValuePositions(jsonString, source);
-      const limitedPositions = positions.slice(0, 500);
-
-      limitedPositions.forEach((pos) => {
-        const widget = createPlusWidget(editor, pos);
-        editor.addContentWidget(widget);
-        widgetsRef.current.set(widget.getId(), widget);
-      });
-    }
+    setIsEditorMounted(true);
 
     editor.onContextMenu((e) => {
       e.event.preventDefault();
@@ -473,7 +468,7 @@ export function JsonViewer({ source, className, responsePanelContext, showVariab
     <div className={cn('h-90', className)}>
       <MonacoEditor
         height="100%"
-        language="json"
+        language={editorLanguage}
         options={{
           readOnly: true,
           minimap: { enabled: false },
@@ -506,8 +501,16 @@ export function JsonViewer({ source, className, responsePanelContext, showVariab
             bracketPairs: false,
           },
         }}
-        theme={isDark ? 'rentgen-dark' : 'rentgen-light'}
-        value={JSON.stringify(source, null, 2)}
+        theme={
+          isDark
+            ? isSourceObject
+              ? 'rentgen-dark'
+              : 'rentgen-dark-plaintext'
+            : isSourceObject
+              ? 'rentgen-light'
+              : 'rentgen-light-plaintext'
+        }
+        value={displayValue}
         onMount={onMount}
       />
     </div>
