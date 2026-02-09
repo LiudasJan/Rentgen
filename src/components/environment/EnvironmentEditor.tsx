@@ -57,7 +57,7 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
     ];
   }, [dynamicVariables, variables]);
 
-  const isDark = useMemo(() => theme === 'dark', [theme]);
+  const isDark = theme === 'dark';
 
   // Check if current state differs from environment prop
   const hasChanges = () => {
