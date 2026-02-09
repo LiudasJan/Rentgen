@@ -1,17 +1,30 @@
 import cn from 'classnames';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import DataTable from 'react-data-table-component';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import { selectCollectionData, selectDynamicVariables, selectSelectedEnvironmentId } from '../../store/selectors';
+import {
+  selectCollectionData,
+  selectDynamicVariables,
+  selectSelectedEnvironmentId,
+  selectTheme,
+} from '../../store/selectors';
 import { environmentActions } from '../../store/slices/environmentSlice';
-import { DynamicVariable, Environment, EnvironmentVariable } from '../../types';
+import { DataType, DynamicVariable, Environment, EnvironmentVariable } from '../../types';
 import { generateEnvironmentId } from '../../utils';
 import { findRequestWithFolder } from '../../utils/collection';
 import { extractMultipleDynamicVariablesFromResponse } from '../../utils/dynamicVariable';
 import Button, { ButtonType } from '../buttons/Button';
 import Input from '../inputs/Input';
+import Select, { SelectOption } from '../inputs/Select';
 import Panel from '../panels/Panel';
 
 const COLOR_OPTIONS = ['#EF4444', '#F97316', '#EAB308', '#22C55E', '#3B82F6', '#8B5CF6', '#EC4899', '#6B7280'];
+
+const valueOptions: SelectOption<DataType>[] = [
+  { value: 'randomEmail', label: 'Random email' },
+  { value: 'randomInt', label: 'Random integer' },
+  { value: 'random32', label: 'Random string 32' },
+];
 
 interface Props {
   environment: Environment | null;
@@ -24,6 +37,7 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
   const collection = useAppSelector(selectCollectionData);
   const allDynamicVariables = useAppSelector(selectDynamicVariables);
   const selectedEnvironmentId = useAppSelector(selectSelectedEnvironmentId);
+  const theme = useAppSelector(selectTheme);
 
   const [title, setTitle] = useState('');
   const [color, setColor] = useState(COLOR_OPTIONS[4]); // Default blue
@@ -35,6 +49,15 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
   const dynamicVariables = useMemo(() => {
     return allDynamicVariables.filter((dv) => dv.environmentId === null || dv.environmentId === selectedEnvironmentId);
   }, [allDynamicVariables, selectedEnvironmentId]);
+
+  const allVariables = useMemo(() => {
+    return [
+      ...dynamicVariables.map((dynamicVariable, index) => ({ ...dynamicVariable, type: 'dynamic', index })),
+      ...variables.map((variable, index) => ({ ...variable, type: 'static', index })),
+    ];
+  }, [dynamicVariables, variables]);
+
+  const isDark = useMemo(() => theme === 'dark', [theme]);
 
   // Check if current state differs from environment prop
   const hasChanges = () => {
@@ -219,145 +242,193 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
   }, [dynamicVariables, collection, dispatch]);
 
   return (
-    <div className="flex flex-col gap-4">
-      <Panel title={isNew ? 'New Environment' : 'Edit Environment'}>
-        <div className="p-4 border-t border-border dark:border-dark-body">
-          {/* Title Input */}
-          <div className="mb-4">
-            <label className="block mb-1 font-bold text-sm">Environment Name</label>
-            <Input
-              className="w-full dark:bg-dark-body"
-              placeholder="e.g., Production, Staging, Local"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
+    <Panel title={isNew ? 'New Environment' : 'Edit Environment'}>
+      <div className="p-4 border-t border-border dark:border-dark-body">
+        {/* Title Input */}
+        <div className="mb-4">
+          <label className="block mb-1 font-bold text-sm">Environment Name</label>
+          <Input
+            className="w-full dark:bg-dark-body"
+            placeholder="e.g., Production, Staging, Local"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+          />
+        </div>
+
+        {/* Color Picker */}
+        <div className="mb-4">
+          <label className="block mb-1 font-bold text-sm">Color</label>
+          <div className="flex items-center gap-2">
+            {COLOR_OPTIONS.map((c) => (
+              <button
+                key={c}
+                className={cn(
+                  'w-8 h-8 rounded-md border-2 cursor-pointer',
+                  color === c ? 'border-text dark:border-dark-text' : 'border-transparent',
+                )}
+                style={{ backgroundColor: c }}
+                onClick={() => setColor(c)}
+                type="button"
+              />
+            ))}
+            {/* Custom color input */}
+            <input
+              className="w-10 h-8 cursor-pointer border-0 p-0 rounded-md"
+              type="color"
+              value={color}
+              onChange={(e) => setColor(e.target.value)}
             />
           </div>
-
-          {/* Color Picker */}
-          <div className="mb-4">
-            <label className="block mb-1 font-bold text-sm">Color</label>
-            <div className="flex items-center gap-2">
-              {COLOR_OPTIONS.map((c) => (
-                <button
-                  key={c}
-                  className={cn(
-                    'w-8 h-8 rounded-md border-2 cursor-pointer',
-                    color === c ? 'border-text dark:border-dark-text' : 'border-transparent',
-                  )}
-                  style={{ backgroundColor: c }}
-                  onClick={() => setColor(c)}
-                  type="button"
-                />
-              ))}
-              {/* Custom color input */}
-              <input
-                className="w-10 h-8 cursor-pointer border-0 p-0 rounded-md"
-                type="color"
-                value={color}
-                onChange={(e) => setColor(e.target.value)}
-              />
-            </div>
-          </div>
-
-          {/* Variables Table */}
-          <div className="mb-4">
-            <label className="block mb-1 font-bold text-sm">Variables</label>
-            <div className="border border-border dark:border-dark-body rounded-md">
-              <div className="max-h-110 overflow-y-auto overflow-x-hidden">
-                <table className="w-full table-fixed border-collapse">
-                  <thead className="sticky top-0 z-10">
-                    <tr className="bg-body dark:bg-dark-body border-b border-border dark:border-dark-border">
-                      <th className="w-[30%] px-3 py-2 font-bold text-xs text-left">Variable Name</th>
-                      <th className="w-[30%] px-3 py-2 font-bold text-xs text-left">Value</th>
-                      <th className="w-[10%]"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {/* Dynamic variables */}
-                    {dynamicVariables.map((dv) => (
-                      <tr key={dv.id} className="last:[&>td]:border-b-0">
-                        <td className="w-[40%] p-1 border-b border-border dark:border-dark-body">
-                          <Input
-                            className="w-full border-0 bg-transparent"
-                            placeholder="variable_name"
-                            value={dv.key}
-                            onChange={(e) => handleDynamicVariableKeyChange(dv, e.target.value)}
-                          />
-                        </td>
-                        <td className="w-[40%] p-1 border-l border-b border-border dark:border-dark-body">
-                          <span className="px-2 text-xs font-monospace text-text-secondary dark:text-dark-text-secondary truncate block">
-                            {dv.currentValue || '—'}
-                          </span>
-                        </td>
-                        <td className="w-[20%] p-1 border-l border-b border-border dark:border-dark-body text-center">
-                          <button
-                            className="p-1 hover:bg-body dark:hover:bg-dark-body rounded text-text-secondary hover:text-text dark:text-dark-text-secondary dark:hover:text-dark-text"
-                            onClick={() => handleRefreshDynamicVariable(dv)}
-                            title="Refresh value"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                              />
-                            </svg>
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                    {/* Static variables */}
-                    {variables.map((variable, index) => (
-                      <tr key={`static-${index}`} className="last:[&>td]:border-b-0">
-                        <td className="w-[40%] p-1 border-b border-border dark:border-dark-body">
-                          <Input
-                            className="w-full border-0 bg-transparent"
-                            placeholder="variable_name"
-                            value={variable.key}
-                            onChange={(e) => handleVariableChange(index, 'key', e.target.value)}
-                          />
-                        </td>
-                        <td className="w-[40%] p-1 border-l border-b border-border dark:border-dark-body">
-                          <Input
-                            className="w-full border-0 bg-transparent"
-                            placeholder="value"
-                            value={variable.value}
-                            onChange={(e) => handleVariableChange(index, 'value', e.target.value)}
-                          />
-                        </td>
-                        <td className="w-[20%] p-1 border-l border-b border-border dark:border-dark-body"></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              {/* Footer with Refresh All button */}
-              {dynamicVariables.length > 0 && (
-                <div className="flex justify-end p-2 border-t border-border dark:border-dark-body bg-body dark:bg-dark-body">
-                  <Button buttonType={ButtonType.SECONDARY} onClick={handleRefreshAllDynamicVariables}>
-                    Refresh All
-                  </Button>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Action Buttons - only show Create for new environments */}
-          {isNew && (
-            <div className="flex items-center justify-end gap-2">
-              <Button onClick={handleSave}>Create</Button>
-            </div>
-          )}
-
-          {/* Saved indicator for existing environments */}
-          {!isNew && saved && (
-            <div className="flex items-center justify-end">
-              <span className="text-xs text-green-500">Saved</span>
-            </div>
-          )}
         </div>
-      </Panel>
-    </div>
+
+        {/* Variables Table */}
+        <div className="mb-4">
+          <label className="block mb-1 font-bold text-sm">Variables</label>
+          <div className="border border-border dark:border-dark-body rounded-md overflow-hidden">
+            <DataTable
+              className="rounded-none!"
+              columns={[
+                {
+                  name: 'Variable Name',
+                  cell: (row) => (
+                    <Input
+                      className="w-full border-0 bg-transparent"
+                      placeholder="Add variable"
+                      value={row.key}
+                      onChange={(e) =>
+                        row.type === 'static'
+                          ? handleVariableChange(row.index, 'key', e.target.value)
+                          : handleDynamicVariableKeyChange(row as DynamicVariable, e.target.value)
+                      }
+                    />
+                  ),
+                },
+                {
+                  name: 'Value',
+                  cell: (row) => {
+                    if (row.type === 'static')
+                      return (
+                        <Select
+                          classNames={{
+                            container: () => 'w-full text-xs',
+                            control: () =>
+                              'min-h-auto! border-none! bg-white! dark:bg-dark-input! shadow-none! transition-none!',
+                          }}
+                          isCreatable={true}
+                          menuPosition="fixed"
+                          options={valueOptions}
+                          placeholder="value"
+                          value={
+                            valueOptions.find((option) => option.value == (row as EnvironmentVariable).value) || {
+                              value: (row as EnvironmentVariable).value,
+                              label: (row as EnvironmentVariable).value,
+                            }
+                          }
+                          onChange={(option: SelectOption<DataType>) =>
+                            handleVariableChange(row.index, 'value', option.value)
+                          }
+                        />
+                      );
+
+                    return (
+                      <span className="px-2 text-xs font-monospace text-text-secondary dark:text-dark-text-secondary truncate block">
+                        {(row as DynamicVariable).currentValue || '—'}
+                      </span>
+                    );
+                  },
+                },
+                {
+                  name: '',
+                  cell: (row) => {
+                    if (row.type === 'static') return null;
+
+                    return (
+                      <button
+                        className="p-1 hover:bg-body dark:hover:bg-dark-body rounded text-text-secondary hover:text-text dark:text-dark-text-secondary dark:hover:text-dark-text"
+                        onClick={() => handleRefreshDynamicVariable(row as DynamicVariable)}
+                        title="Refresh value"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                          />
+                        </svg>
+                      </button>
+                    );
+                  },
+                  width: '10%',
+                  style: { justifyContent: 'center' },
+                },
+              ]}
+              customStyles={{
+                headRow: {
+                  style: {
+                    minHeight: 'auto',
+                    color: isDark ? 'white' : 'black',
+                    backgroundColor: isDark ? '#23272f' : '#fafafa',
+                  },
+                },
+                headCells: {
+                  style: {
+                    padding: '8px 12px',
+                  },
+                },
+                cells: {
+                  style: {
+                    padding: '4px',
+                    '&:not(:last-of-type)': {
+                      borderRight: isDark ? '1px solid #23272f' : '1px solid #cccccc',
+                    },
+                  },
+                },
+                rows: {
+                  style: {
+                    minHeight: 'auto',
+                    backgroundColor: 'transparent',
+                    '&:not(:last-of-type)': {
+                      borderBottomColor: isDark ? '#23272f' : '#cccccc',
+                    },
+                  },
+                },
+                table: {
+                  style: {
+                    backgroundColor: 'transparent',
+                  },
+                },
+              }}
+              data={allVariables}
+              fixedHeader={true}
+              fixedHeaderScrollHeight="440px"
+            />
+
+            {/* Footer with Refresh All button */}
+            {dynamicVariables.length > 0 && (
+              <div className="flex justify-end p-2 border-t border-border dark:border-dark-body bg-body dark:bg-dark-body">
+                <Button buttonType={ButtonType.SECONDARY} onClick={handleRefreshAllDynamicVariables}>
+                  Refresh All
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Action Buttons - only show Create for new environments */}
+        {isNew && (
+          <div className="flex items-center justify-end gap-2">
+            <Button onClick={handleSave}>Create</Button>
+          </div>
+        )}
+
+        {/* Saved indicator for existing environments */}
+        {!isNew && saved && (
+          <div className="flex items-center justify-end">
+            <span className="text-xs text-green-500">Saved</span>
+          </div>
+        )}
+      </div>
+    </Panel>
   );
 }

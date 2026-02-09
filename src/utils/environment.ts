@@ -1,4 +1,5 @@
-import { DynamicVariable, Environment, EnvironmentVariable, VariableValidationResult } from '../types';
+import { DataType, DynamicVariable, Environment, EnvironmentVariable, VariableValidationResult } from '../types';
+import { generateRandomValue } from './random';
 
 /**
  * Extract value from object using dot/bracket notation path
@@ -47,7 +48,9 @@ export function buildEffectiveVariables(
   // Add static variables first
   staticVars.forEach((v) => {
     if (v.key && v.value) {
-      result.set(v.key, v.value);
+      const randomValue = generateRandomValue(v.value as DataType);
+
+      result.set(v.key, String(randomValue ?? v.value));
     }
   });
 
@@ -67,29 +70,9 @@ export function buildEffectiveVariables(
  * Substitute variables in text using effective variables map
  */
 export function substituteWithVariables(text: string, variables: Map<string, string>): string {
-  return text.replace(/\{\{([^}]+)}}/g, (match, varName) => {
+  return text.replace(/\{\{([^}]+)}}/g, (_, varName) => {
     const value = variables.get(varName.trim());
     return value !== undefined ? value : '';
-  });
-}
-
-/**
- * Substitutes {{variable_name}} placeholders in a string with values from the environment.
- * If a variable is not found, the placeholder is replaced with an empty string.
- */
-export function substituteVariables(text: string, variables: EnvironmentVariable[]): string {
-  if (!text || variables.length === 0) return text;
-
-  // Create a map for O(1) lookups
-  const variableMap = new Map<string, string>();
-  for (const { key, value } of variables) {
-    if (key) variableMap.set(key, value);
-  }
-
-  // Replace all {{variable_name}} occurrences
-  return text.replace(/\{\{([^}]+)}}/g, (match, variableName) => {
-    const trimmedName = variableName.trim();
-    return variableMap.get(trimmedName) ?? '';
   });
 }
 

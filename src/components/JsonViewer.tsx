@@ -332,7 +332,7 @@ export function JsonViewer({ source, className, responsePanelContext, showVariab
 
   // Create content widget for a JSON value position
   const createPlusWidget = useCallback(
-    (editor: monaco.editor.IStandaloneCodeEditor, position: JsonValuePosition): monaco.editor.IContentWidget => {
+    (_: monaco.editor.IStandaloneCodeEditor, position: JsonValuePosition): monaco.editor.IContentWidget => {
       const domNode = document.createElement('button');
       domNode.className = 'json-plus-button';
       domNode.textContent = '+';

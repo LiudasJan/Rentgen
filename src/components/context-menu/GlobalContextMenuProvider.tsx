@@ -105,7 +105,6 @@ export default function GlobalContextMenuProvider({ children }: PropsWithChildre
     if (!currentRequestWithFolder || !selectedRequestId) return;
 
     const { folder, request } = currentRequestWithFolder;
-    console.log(responsePanelContext);
     dispatch(
       uiActions.openSetAsDynamicVariableModal({
         initialSelector: responsePanelContext?.jsonPath || menuState.selectedText,
