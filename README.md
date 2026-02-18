@@ -3,7 +3,7 @@
 👉 Landing page: [rentgen.io](https://rentgen.io)
 👉 Download: [Latest Release](https://github.com/LiudasJan/Rentgen/releases/latest)
 
-**Rentgen** is a local-first API testing tool that exposes how your API actually behaves — not how you hope it behaves. No cloud. No accounts. No telemetry. Built by a tester, for a testers and developers.
+**Rentgen** - Automation before automation. Finding API bugs when you have no tests.
 
 ---
 
