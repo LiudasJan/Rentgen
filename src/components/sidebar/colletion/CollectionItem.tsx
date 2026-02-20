@@ -30,12 +30,14 @@ import MethodBadge from '../../MethodBadge';
 import ClearCrossIcon from '../../../assets/icons/clear-cross-icon.svg';
 import EditIcon from '../../../assets/icons/edit-icon.svg';
 import PlayIcon from '../../../assets/icons/play-icon.svg';
+import SearchHighlight from './SearchHighlight';
 
 interface Props {
   item: CollectionItemData;
+  searchTerm?: string;
 }
 
-export default function CollectionItem({ item }: Props) {
+export default function CollectionItem({ item, searchTerm }: Props) {
   const dispatch = useAppDispatch();
   const { runRequest } = useCollectionRunner();
   const { isOpen } = useContextMenu();
@@ -157,7 +159,7 @@ export default function CollectionItem({ item }: Props) {
       {!isEditing && (
         <>
           <span className="flex-1 text-xs truncate" title={item.name}>
-            {item.name}
+            {searchTerm ? <SearchHighlight text={item.name} term={searchTerm} /> : item.name}
           </span>
           <div className="absolute top-0 bottom-0 right-0 pl-2 pr-3 flex items-center gap-2 bg-button-secondary dark:bg-dark-input opacity-0 group-hover:opacity-100">
             <PlayIcon

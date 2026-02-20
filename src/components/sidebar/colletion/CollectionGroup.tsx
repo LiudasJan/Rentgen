@@ -10,6 +10,7 @@ import { uiActions } from '../../../store/slices/uiSlice';
 import { CollectionFolderData } from '../../../utils/collection';
 import { useContextMenu } from '../../context-menu';
 import CollectionItem from './CollectionItem';
+import SearchHighlight from './SearchHighlight';
 
 import ChevronIcon from '../../../assets/icons/chevron-icon.svg';
 import ClearCrossIcon from '../../../assets/icons/clear-cross-icon.svg';
@@ -27,6 +28,7 @@ interface Props {
   onSaveEdit: (folderId: string, newName: string) => void;
   onCancelEdit: () => void;
   onEditingNameChange: (name: string) => void;
+  searchTerm?: string;
 }
 
 export default function CollectionGroup({
@@ -38,6 +40,7 @@ export default function CollectionGroup({
   onSaveEdit,
   onCancelEdit,
   onEditingNameChange,
+  searchTerm,
 }: Props) {
   const dispatch = useAppDispatch();
   const { isOpen } = useContextMenu();
@@ -45,6 +48,8 @@ export default function CollectionGroup({
   const runningFolderId = useAppSelector(selectRunningFolderId);
   const { runFolder, cancelRun } = useCollectionRunner();
   const [isExpanded, setIsExpanded] = useState(folderCount === 1);
+  const isSearching = Boolean(searchTerm?.trim());
+  const effectiveExpanded = isSearching || isExpanded;
   const isSelected = folder.id === selectedFolderId;
   const isThisFolderRunning = runningFolderId === folder.id;
   const isOtherFolderRunning = runningFolderId !== null && runningFolderId !== folder.id;
@@ -132,7 +137,7 @@ export default function CollectionGroup({
         >
           <ChevronIcon
             className={cn('h-4 w-4 text-text-secondary transition-transform', {
-              'rotate-90': isExpanded,
+              'rotate-90': effectiveExpanded,
             })}
           />
           {folderStatus && (
@@ -160,7 +165,9 @@ export default function CollectionGroup({
               onPointerDown={(e) => e.stopPropagation()}
             />
           ) : (
-            <span className="text-xs truncate">{folder.name}</span>
+            <span className="text-xs truncate">
+              {searchTerm ? <SearchHighlight text={folder.name} term={searchTerm} /> : folder.name}
+            </span>
           )}
 
           <span className={cn('text-xs text-text-secondary', { 'flex-auto': !isEditing })}>{folder.items.length}</span>
@@ -196,10 +203,10 @@ export default function CollectionGroup({
         </div>
       </div>
 
-      {isExpanded && folder.items.length > 0 && (
+      {effectiveExpanded && folder.items.length > 0 && (
         <div>
           {folder.items.map((item) => (
-            <CollectionItem key={item.id} item={item} />
+            <CollectionItem key={item.id} item={item} searchTerm={searchTerm} />
           ))}
         </div>
       )}
