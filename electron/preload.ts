@@ -8,6 +8,7 @@ interface ElectronApi {
   generateCertificate: (results: TestResults) => Promise<ExportResult>;
   getAppVersion: () => Promise<string>;
   importPostmanCollection: () => Promise<ImportResult>;
+  readHarFile: () => Promise<{ canceled?: boolean; content?: string; error?: string }>;
   loadCollection: () => Promise<any>;
   loadEnvironments: () => Promise<any>;
   loadDynamicVariables: () => Promise<any>;
@@ -40,6 +41,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('generate-certificate', results),
   getAppVersion: (): Promise<string> => ipcRenderer.invoke('get-app-version'),
   importPostmanCollection: (): Promise<ImportResult> => ipcRenderer.invoke('import-postman-collection'),
+  readHarFile: (): Promise<{ canceled?: boolean; content?: string; error?: string }> =>
+    ipcRenderer.invoke('read-har-file'),
   loadCollection: (): Promise<any> => ipcRenderer.invoke('load-collection'),
   loadEnvironments: (): Promise<any> => ipcRenderer.invoke('load-environments'),
   loadDynamicVariables: (): Promise<any> => ipcRenderer.invoke('load-dynamic-variables'),

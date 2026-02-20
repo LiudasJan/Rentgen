@@ -1,10 +1,15 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import cn from 'classnames';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useCollectionRunner } from '../../../hooks/useCollectionRunner';
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
-import { selectCollectionRunResults, selectRunningFolderId, selectSelectedFolderId } from '../../../store/selectors';
+import {
+  selectCollectionRunResults,
+  selectRecentlyImportedFolderNames,
+  selectRunningFolderId,
+  selectSelectedFolderId,
+} from '../../../store/selectors';
 import { collectionActions } from '../../../store/slices/collectionSlice';
 import { uiActions } from '../../../store/slices/uiSlice';
 import { CollectionFolderData } from '../../../utils/collection';
@@ -45,6 +50,15 @@ export default function CollectionGroup({
   const runningFolderId = useAppSelector(selectRunningFolderId);
   const { runFolder, cancelRun } = useCollectionRunner();
   const [isExpanded, setIsExpanded] = useState(folderCount === 1);
+  const recentlyImportedFolderNames = useAppSelector(selectRecentlyImportedFolderNames);
+
+  useEffect(() => {
+    if (recentlyImportedFolderNames.includes(folder.name)) {
+      setIsExpanded(true);
+      dispatch(uiActions.clearRecentlyImportedFolderNames());
+    }
+  }, [recentlyImportedFolderNames, folder.name, dispatch]);
+
   const isSelected = folder.id === selectedFolderId;
   const isThisFolderRunning = runningFolderId === folder.id;
   const isOtherFolderRunning = runningFolderId !== null && runningFolderId !== folder.id;

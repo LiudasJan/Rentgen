@@ -37,7 +37,7 @@ import {
   LOAD_TEST_NAME,
   RESPONSE_SIZE_CHECK_TEST_NAME,
 } from './tests';
-import { Environment, ExportReport, ExtractionFailure, HttpResponse, ReportFormat, TestStatus } from './types';
+import { Environment, ExportReport, ExtractionFailure, HarFile, HttpResponse, ReportFormat, TestStatus } from './types';
 import { extractDynamicVariableFromResponseWithDetails } from './utils/dynamicVariable';
 import {
   buildSuite,
@@ -56,7 +56,8 @@ import {
   parseHeaders,
   substituteRequestVariables,
 } from './utils';
-import { findRequestById, findRequestWithFolder } from './utils/collection';
+import { detectImportConflicts, findRequestById, findRequestWithFolder } from './utils/collection';
+import { harToRentgen, validateHarFile } from './utils/har-converter';
 
 import { store } from './store';
 import { useAppDispatch, useAppSelector } from './store/hooks';
@@ -78,6 +79,8 @@ import {
   selectEnvironmentToDelete,
   selectExported,
   selectExportFormat,
+  selectHarError,
+  selectHarInput,
   selectHeaders,
   selectHttpResponse,
   selectIsComparingTestResults,
@@ -87,6 +90,7 @@ import {
   selectMethod,
   selectMode,
   selectOpenCurlModal,
+  selectOpenHarModal,
   selectOpenReloadModal,
   selectOpenSendHttpSuccessModal,
   selectProtoFile,
@@ -224,6 +228,9 @@ export default function App() {
   const certificated = useAppSelector(selectCertificated);
   const curl = useAppSelector(selectCurl);
   const curlError = useAppSelector(selectCurlError);
+  const openHarModal = useAppSelector(selectOpenHarModal);
+  const harInput = useAppSelector(selectHarInput);
+  const harError = useAppSelector(selectHarError);
   const exportFormat = useAppSelector(selectExportFormat);
   const certificateError = useAppSelector(selectCertificateError);
 
@@ -352,6 +359,68 @@ export default function App() {
       );
     }
   }, [curl, dispatch]);
+
+  // HAR import — browse file
+  const handleBrowseHarFile = useCallback(async () => {
+    const result = await window.electronAPI.readHarFile();
+    if (result.canceled) return;
+    if (result.error) {
+      dispatch(uiActions.setHarError(result.error));
+      return;
+    }
+    if (result.content) {
+      dispatch(uiActions.setHarInput(result.content));
+      dispatch(uiActions.setHarError(''));
+    }
+  }, [dispatch]);
+
+  // HAR import — parse & import
+  const importHar = useCallback(() => {
+    try {
+      if (harInput.length > 10_000_000) {
+        dispatch(uiActions.setHarError('File is too large (max 10 MB)'));
+        return;
+      }
+
+      const parsed = JSON.parse(harInput);
+      const validation = validateHarFile(parsed);
+      if (!validation.valid && 'error' in validation) {
+        dispatch(uiActions.setHarError(validation.error));
+        return;
+      }
+
+      const { collection: importedCollection, warnings } = harToRentgen(parsed as HarFile);
+
+      if (importedCollection.item.length === 0) {
+        dispatch(uiActions.setHarError('No importable requests found (all entries were static assets or preflight)'));
+        return;
+      }
+
+      const conflictSummary = detectImportConflicts(collection, importedCollection);
+
+      if (conflictSummary.hasConflicts) {
+        dispatch(
+          uiActions.openImportConflictModal({
+            collection: importedCollection,
+            conflictSummary,
+            warnings,
+          }),
+        );
+      } else {
+        dispatch(collectionActions.importCollection({ collection: importedCollection, mode: 'merge' }));
+        dispatch(uiActions.setSidebarActiveTab('collections'));
+        dispatch(uiActions.setRecentlyImportedFolderNames(importedCollection.item.map((f) => f.name)));
+      }
+
+      dispatch(uiActions.closeHarModal());
+    } catch (error) {
+      if (error instanceof SyntaxError) {
+        dispatch(uiActions.setHarError('Invalid JSON — could not parse HAR file'));
+      } else {
+        dispatch(uiActions.setHarError(String(error)));
+      }
+    }
+  }, [harInput, collection, dispatch]);
 
   // Send HTTP request
   const sendHttp = useCallback(async () => {
@@ -711,7 +780,10 @@ export default function App() {
                 {mode === 'HTTP' && (
                   <>
                     <ActionsButton
-                      actions={[{ label: 'Create', onClick: reset }]}
+                      actions={[
+                        { label: 'Create', onClick: reset },
+                        { label: 'Import HAR', onClick: () => dispatch(uiActions.openHarModal()) },
+                      ]}
                       className="[&>*:first-child]:w-full @lg:[&>*:first-child]:w-auto"
                       onClick={() => dispatch(uiActions.openCurlModal())}
                     >
@@ -734,6 +806,31 @@ export default function App() {
                             buttonType={ButtonType.SECONDARY}
                             onClick={() => dispatch(uiActions.closeCurlModal())}
                           >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    </Modal>
+                    <Modal isOpen={openHarModal} onClose={() => dispatch(uiActions.closeHarModal())}>
+                      <div className="flex flex-col gap-4">
+                        <h4 className="m-0">Import HAR</h4>
+                        <p className="m-0 text-xs text-text-secondary">
+                          Requests will be imported as a collection, grouped by domain
+                        </p>
+                        <Textarea
+                          autoFocus={true}
+                          className="min-h-40"
+                          placeholder="Paste HAR JSON content"
+                          value={harInput}
+                          onChange={(event) => dispatch(uiActions.setHarInput(event.target.value))}
+                        />
+                        {harError && <p className="m-0 text-xs text-red-600">{harError}</p>}
+                        <div className="flex items-center justify-end gap-4">
+                          <Button buttonType={ButtonType.SECONDARY} onClick={handleBrowseHarFile}>
+                            Choose .har file
+                          </Button>
+                          <Button onClick={importHar}>Import</Button>
+                          <Button buttonType={ButtonType.SECONDARY} onClick={() => dispatch(uiActions.closeHarModal())}>
                             Cancel
                           </Button>
                         </div>

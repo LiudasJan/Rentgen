@@ -129,6 +129,9 @@ export const selectExported = (state: RootState) => state.ui.exported;
 export const selectCertificated = (state: RootState) => state.ui.certificated;
 export const selectCurl = (state: RootState) => state.ui.curl;
 export const selectCurlError = (state: RootState) => state.ui.curlError;
+export const selectOpenHarModal = (state: RootState) => state.ui.openHarModal;
+export const selectHarInput = (state: RootState) => state.ui.harInput;
+export const selectHarError = (state: RootState) => state.ui.harError;
 export const selectExportFormat = (state: RootState) => state.ui.exportFormat;
 export const selectSidebarActiveTab = (state: RootState) => state.ui.sidebarActiveTab;
 export const selectTheme = (state: RootState) => state.ui.theme;
@@ -140,3 +143,4 @@ export const selectRunningRequestId = (state: RootState) => state.collectionRun.
 export const selectCollectionRunResults = (state: RootState) => state.collectionRun.results;
 export const selectImportConflictModal = (state: RootState) => state.ui.importConflictModal;
 export const selectSetAsDynamicVariableModal = (state: RootState) => state.ui.setAsDynamicVariableModal;
+export const selectRecentlyImportedFolderNames = (state: RootState) => state.ui.recentlyImportedFolderNames;

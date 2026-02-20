@@ -24,6 +24,8 @@ export default function ImportConflictModal() {
   const handleImport = (mode: ImportMode) => {
     if (importedCollection) {
       dispatch(collectionActions.importCollection({ collection: importedCollection, mode }));
+      dispatch(uiActions.setSidebarActiveTab('collections'));
+      dispatch(uiActions.setRecentlyImportedFolderNames(importedCollection.item.map((f) => f.name)));
     }
     handleClose();
   };

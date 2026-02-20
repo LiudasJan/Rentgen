@@ -139,6 +139,7 @@ export interface ExportReport {
 }
 
 export * from './environment';
+export * from './har';
 export * from './ipc';
 export * from './postman';
 export * from './postman-full';
