@@ -65,6 +65,12 @@ interface UIState {
   curl: string;
   curlError: string;
 
+  // HAR import
+  openHarModal: boolean;
+  harInput: string;
+  harError: string;
+  recentlyImportedFolderNames: string[];
+
   // Export
   exportFormat: ReportFormat;
 
@@ -104,6 +110,10 @@ const initialState: UIState = {
   certificateError: '',
   curl: '',
   curlError: '',
+  openHarModal: false,
+  harInput: '',
+  harError: '',
+  recentlyImportedFolderNames: [],
   exportFormat: 'json',
   sidebarActiveTab: null,
   theme: 'light',
@@ -192,6 +202,28 @@ export const uiSlice = createSlice({
     },
     setCurlError: (state, action: PayloadAction<string>) => {
       state.curlError = action.payload;
+    },
+
+    // HAR
+    openHarModal: (state) => {
+      state.openHarModal = true;
+    },
+    closeHarModal: (state) => {
+      state.openHarModal = false;
+      state.harInput = '';
+      state.harError = '';
+    },
+    setHarInput: (state, action: PayloadAction<string>) => {
+      state.harInput = action.payload;
+    },
+    setHarError: (state, action: PayloadAction<string>) => {
+      state.harError = action.payload;
+    },
+    setRecentlyImportedFolderNames: (state, action: PayloadAction<string[]>) => {
+      state.recentlyImportedFolderNames = action.payload;
+    },
+    clearRecentlyImportedFolderNames: (state) => {
+      state.recentlyImportedFolderNames = [];
     },
 
     // Feedback

@@ -47,6 +47,30 @@ export function registerImportExportHandlers(): void {
     }
   });
 
+  // Read HAR file (validation handled by renderer)
+  ipcMain.handle('read-har-file', async (): Promise<{ canceled?: boolean; content?: string; error?: string }> => {
+    const result = await dialog.showOpenDialog({
+      title: 'Import HAR File',
+      filters: [
+        { name: 'HAR Files', extensions: ['har'] },
+        { name: 'JSON Files', extensions: ['json'] },
+        { name: 'All Files', extensions: ['*'] },
+      ],
+      properties: ['openFile'],
+    });
+
+    if (result.canceled || result.filePaths.length === 0) {
+      return { canceled: true };
+    }
+
+    try {
+      const content = fs.readFileSync(result.filePaths[0], 'utf-8');
+      return { content };
+    } catch (error) {
+      return { error: String(error) };
+    }
+  });
+
   // Export collection to Postman format
   ipcMain.handle('export-postman-collection', async (_, collection: PostmanCollection): Promise<ExportResult> => {
     const fileName = collection.info.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
