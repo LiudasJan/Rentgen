@@ -13,8 +13,9 @@ import { useAppDispatch, useAppSelector } from '../../../store/hooks';
 import { collectionActions } from '../../../store/slices/collectionSlice';
 import { uiActions } from '../../../store/slices/uiSlice';
 import { selectCollectionData, selectSidebarFolders } from '../../../store/selectors';
-import { detectImportConflicts } from '../../../utils/collection';
+import { detectImportConflicts, filterCollectionsBySearch } from '../../../utils/collection';
 import CollectionGroup from './CollectionGroup';
+import CollectionSearch from './CollectionSearch';
 
 import AddIcon from '../../../assets/icons/add-icon.svg';
 import ExportIcon from '../../../assets/icons/export-icon.svg';
@@ -24,9 +25,16 @@ export default function CollectionsPanel() {
   const dispatch = useAppDispatch();
   const folders = useAppSelector(selectSidebarFolders);
   const collection = useAppSelector(selectCollectionData);
+  const [searchTerm, setSearchTerm] = useState('');
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
   const [importStatus, setImportStatus] = useState<string | null>(null);
+
+  const isSearching = searchTerm.trim().length > 0;
+  const filteredFolders = useMemo(
+    () => (isSearching ? filterCollectionsBySearch(folders, collection, searchTerm) : folders),
+    [folders, collection, searchTerm, isSearching],
+  );
 
   const handleImport = async () => {
     const result = await window.electronAPI.importPostmanCollection();
@@ -194,29 +202,48 @@ export default function CollectionsPanel() {
         </div>
       )}
 
-      {folders.length > 0 ? (
+      <CollectionSearch value={searchTerm} onChange={setSearchTerm} />
+
+      {filteredFolders.length > 0 ? (
         <div className="h-full overflow-x-hidden overflow-y-auto">
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <SortableContext items={allSortableIds} strategy={verticalListSortingStrategy}>
-              {folders.map((folder) => (
-                <CollectionGroup
-                  key={folder.id}
-                  folder={folder}
-                  folderCount={folders.length}
-                  isEditing={editingFolderId === folder.id}
-                  editingName={editingName}
-                  onStartEdit={handleStartEdit}
-                  onSaveEdit={handleSaveEdit}
-                  onCancelEdit={handleCancelEdit}
-                  onEditingNameChange={setEditingName}
-                />
-              ))}
-            </SortableContext>
-          </DndContext>
+          {isSearching ? (
+            filteredFolders.map((folder) => (
+              <CollectionGroup
+                key={folder.id}
+                folder={folder}
+                folderCount={filteredFolders.length}
+                isEditing={editingFolderId === folder.id}
+                editingName={editingName}
+                onStartEdit={handleStartEdit}
+                onSaveEdit={handleSaveEdit}
+                onCancelEdit={handleCancelEdit}
+                onEditingNameChange={setEditingName}
+                searchTerm={searchTerm}
+              />
+            ))
+          ) : (
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext items={allSortableIds} strategy={verticalListSortingStrategy}>
+                {folders.map((folder) => (
+                  <CollectionGroup
+                    key={folder.id}
+                    folder={folder}
+                    folderCount={folders.length}
+                    isEditing={editingFolderId === folder.id}
+                    editingName={editingName}
+                    onStartEdit={handleStartEdit}
+                    onSaveEdit={handleSaveEdit}
+                    onCancelEdit={handleCancelEdit}
+                    onEditingNameChange={setEditingName}
+                  />
+                ))}
+              </SortableContext>
+            </DndContext>
+          )}
         </div>
       ) : (
-        <div className="flex items-center justify-center h-full w-full p-5 text-xs text-text-secondary">
-          No saved requests
+        <div className="flex items-center justify-center h-full w-full p-5 text-xs text-text-secondary dark:text-dark-text-secondary">
+          {isSearching ? 'No matching requests' : 'No saved requests'}
         </div>
       )}
     </>

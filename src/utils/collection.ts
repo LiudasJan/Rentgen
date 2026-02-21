@@ -439,6 +439,46 @@ export function detectImportConflicts(existing: PostmanCollection, imported: Pos
 /**
  * Counts the number of unique items that would be added during merge
  */
+export function filterCollectionsBySearch(
+  folders: CollectionFolderData[],
+  collection: PostmanCollection,
+  searchTerm: string,
+): CollectionFolderData[] {
+  const term = searchTerm.toLowerCase().trim();
+  if (!term) return folders;
+
+  return folders
+    .map((folder) => {
+      // If folder name matches, include entire folder
+      if (folder.name.toLowerCase().includes(term)) {
+        return folder;
+      }
+
+      // Filter items within the folder
+      const matchingItems = folder.items.filter((item) => {
+        // Check basic fields from sidebar data
+        if (item.name.toLowerCase().includes(term)) return true;
+        if (item.url.toLowerCase().includes(term)) return true;
+        if (item.method.toLowerCase().includes(term)) return true;
+
+        // Deep search: check headers and body from full collection data
+        const fullItem = findRequestById(collection, item.id);
+        if (!fullItem) return false;
+
+        const { request } = fullItem;
+        if (request.header.some((h) => h.key.toLowerCase().includes(term) || h.value.toLowerCase().includes(term))) {
+          return true;
+        }
+
+        return !!request.body?.raw?.toLowerCase().includes(term);
+      });
+
+      if (matchingItems.length === 0) return null;
+      return { ...folder, items: matchingItems };
+    })
+    .filter((folder): folder is CollectionFolderData => folder !== null);
+}
+
 export function countMergeAdditions(
   existing: PostmanCollection,
   imported: PostmanCollection,
