@@ -30,17 +30,6 @@ export default function CollectionSearch({ value, onChange }: Props) {
     return () => clearTimeout(debounceRef.current);
   }, []);
 
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        inputRef.current?.focus();
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, []);
-
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Escape') {
       handleChange('');
@@ -57,7 +46,7 @@ export default function CollectionSearch({ value, onChange }: Props) {
         value={localValue}
         onChange={(e) => handleChange(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="Search collections... (⌘K)"
+        placeholder="Search collections..."
         className="w-full pl-5.5 pr-6 py-1 text-xs bg-transparent border border-border dark:border-dark-input dark:text-dark-text rounded outline-none placeholder:text-text-secondary dark:placeholder:text-dark-text-secondary focus:border-button-primary dark:focus:border-button-primary transition-colors"
       />
       {localValue && (
