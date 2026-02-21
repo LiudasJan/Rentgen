@@ -26,7 +26,7 @@ export default function TestResultsComparisonPanel({ items, title, response, ...
     removed: 0,
     unchanged: 0,
   });
-  const isDark = useMemo(() => theme === 'dark', [theme]);
+  const isDark = theme === 'dark';
 
   const noisePaths = useMemo(() => {
     if (items.length < 2) return null;
