@@ -14,16 +14,30 @@ export function extractCurl(curl: string): ParsedCurlResult {
     if (extractedValue) extractedDataLines.push(extractedValue);
   }
 
+  // Skip form-data parsing if the body is valid JSON
+  const isJsonBody =
+    extractedDataLines.length === 1 &&
+    (() => {
+      try {
+        JSON.parse(extractedDataLines[0]);
+        return true;
+      } catch {
+        return false;
+      }
+    })();
+
   // Parse key=value pairs from all extracted data lines
   const parsedFormPairs: string[] = [];
-  for (const dataLine of extractedDataLines) {
-    const keyValuePairRegex = /([\w.\-[\]]+)=["']?([^"']+)["']?/g;
-    let pairMatch: RegExpExecArray | null;
+  if (!isJsonBody) {
+    for (const dataLine of extractedDataLines) {
+      const keyValuePairRegex = /([\w.\-[\]]+)=["']?([^"']+)["']?/g;
+      let pairMatch: RegExpExecArray | null;
 
-    while ((pairMatch = keyValuePairRegex.exec(dataLine)) !== null) {
-      const key = pairMatch[1].trim();
-      const value = pairMatch[2].trim();
-      parsedFormPairs.push(`${key}=${value}`);
+      while ((pairMatch = keyValuePairRegex.exec(dataLine)) !== null) {
+        const key = pairMatch[1].trim();
+        const value = pairMatch[2].trim();
+        parsedFormPairs.push(`${key}=${value}`);
+      }
     }
   }
 
