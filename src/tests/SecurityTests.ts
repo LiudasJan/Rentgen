@@ -595,22 +595,22 @@ function validateClickjackingProtection(
   xFrameOptions: string | undefined,
   contentSecurityPolicy: string | undefined,
 ): { actual: string; status: TestStatus } {
-  if (xFrameOptions) {
-    const headerValue = xFrameOptions.toUpperCase();
+  const testStatus = { status: TestStatus.Warning, actual: MISSING_ACTUAL };
 
-    return {
-      actual: `X-Frame-Options: ${headerValue}`,
-      status: headerValue === 'DENY' || headerValue === 'SAMEORIGIN' ? TestStatus.Pass : TestStatus.Warning,
-    };
+  if (xFrameOptions) {
+    testStatus.actual = `X-Frame-Options: ${xFrameOptions}`;
+    testStatus.status =
+      xFrameOptions.toUpperCase() === 'DENY' || xFrameOptions.toUpperCase() === 'SAMEORIGIN'
+        ? TestStatus.Pass
+        : TestStatus.Warning;
   }
 
-  if (contentSecurityPolicy?.includes('frame-ancestors'))
-    return {
-      actual: `CSP: ${contentSecurityPolicy}`,
-      status: /frame-ancestors\s+('none'|'self')/i.test(contentSecurityPolicy) ? TestStatus.Pass : TestStatus.Warning,
-    };
+  if (contentSecurityPolicy?.includes('frame-ancestors')) {
+    testStatus.actual = `CSP: ${contentSecurityPolicy}`;
+    testStatus.status = TestStatus.Pass;
+  }
 
-  return { status: TestStatus.Warning, actual: MISSING_ACTUAL };
+  return testStatus;
 }
 
 function validateMimeSniffing(xContentTypeOptions: string | undefined): { actual: string; status: TestStatus } {
