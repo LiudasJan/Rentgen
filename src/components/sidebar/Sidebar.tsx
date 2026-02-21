@@ -7,11 +7,13 @@ import { environmentActions } from '../../store/slices/environmentSlice';
 import { uiActions } from '../../store/slices/uiSlice';
 import CollectionsPanel from './colletion/CollectionsPanel';
 import EnvironmentPanel from './environment/EnvironmentPanel';
+import HistoryPanel from './history/HistoryPanel';
 import SidebarButton from './SidebarButton';
 
 import BugIcon from '../../assets/icons/bug-icon.svg';
 import CollectionIcon from '../../assets/icons/collection-icon.svg';
 import EnvironmentIcon from '../../assets/icons/environment-icon.svg';
+import HistoryIcon from '../../assets/icons/history-icon.svg';
 import UpgradeStarIcon from '../../assets/icons/upgrade-star-icon.svg';
 
 export default function Sidebar() {
@@ -33,6 +35,11 @@ export default function Sidebar() {
 
   const handleEnvironmentClick = () => {
     dispatch(uiActions.toggleSidebarTab('environments'));
+  };
+
+  const handleHistoryClick = () => {
+    dispatch(uiActions.toggleSidebarTab('history'));
+    dispatch(environmentActions.stopEditing());
   };
 
   return (
@@ -58,6 +65,13 @@ export default function Sidebar() {
           >
             <EnvironmentIcon className="w-5 h-5" />
           </SidebarButton>
+          <SidebarButton
+            label="History"
+            className={activeTab === 'history' ? 'bg-button-secondary dark:bg-dark-input' : ''}
+            onClick={handleHistoryClick}
+          >
+            <HistoryIcon className="w-5 h-5" />
+          </SidebarButton>
         </div>
         <div>
           <SidebarButton
@@ -80,6 +94,7 @@ export default function Sidebar() {
         <div className="max-h-screen h-full w-78 flex flex-col overflow-hidden">
           {activeTab === 'collections' && <CollectionsPanel />}
           {activeTab === 'environments' && <EnvironmentPanel />}
+          {activeTab === 'history' && <HistoryPanel />}
         </div>
       </div>
     </div>

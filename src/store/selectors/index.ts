@@ -134,6 +134,9 @@ export const selectSidebarActiveTab = (state: RootState) => state.ui.sidebarActi
 export const selectTheme = (state: RootState) => state.ui.theme;
 export const selectCertificateError = (state: RootState) => state.ui.certificateError;
 
+// History selectors
+export const selectHistoryEntries = (state: RootState) => state.history.entries;
+
 // Collection Run selectors
 export const selectRunningFolderId = (state: RootState) => state.collectionRun.runningFolderId;
 export const selectRunningRequestId = (state: RootState) => state.collectionRun.runningRequestId;

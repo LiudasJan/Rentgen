@@ -1,6 +1,7 @@
 import { configureStore } from '@reduxjs/toolkit';
 import collectionReducer from './slices/collectionSlice';
 import collectionRunReducer from './slices/collectionRunSlice';
+import historyReducer from './slices/historySlice';
 import requestReducer from './slices/requestSlice';
 import responseReducer from './slices/responseSlice';
 import environmentReducer from './slices/environmentSlice';
@@ -13,6 +14,7 @@ export const store = configureStore({
   reducer: {
     collection: collectionReducer,
     collectionRun: collectionRunReducer,
+    history: historyReducer,
     request: requestReducer,
     response: responseReducer,
     environment: environmentReducer,

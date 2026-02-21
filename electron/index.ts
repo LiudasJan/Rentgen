@@ -7,6 +7,7 @@ import {
   registerCertificateHandlers,
   registerCollectionHandlers,
   registerEnvironmentHandlers,
+  registerHistoryHandlers,
   registerHttpHandlers,
   registerImportExportHandlers,
   registerThemeHandlers,
@@ -133,6 +134,7 @@ registerWssHandlers();
 registerThemeHandlers();
 registerCollectionHandlers();
 registerEnvironmentHandlers();
+registerHistoryHandlers();
 registerImportExportHandlers();
 registerCertificateHandlers();
 

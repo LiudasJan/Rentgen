@@ -2,7 +2,7 @@ import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { PostmanCollection } from '../../types';
 
 type ReportFormat = 'json' | 'md' | 'csv';
-type SidebarTab = 'collections' | 'environments' | null;
+type SidebarTab = 'collections' | 'environments' | 'history' | null;
 
 export interface ImportConflict {
   type: 'collection' | 'folder' | 'request';
@@ -219,7 +219,7 @@ export const uiSlice = createSlice({
     setSidebarActiveTab: (state, action: PayloadAction<SidebarTab>) => {
       state.sidebarActiveTab = action.payload;
     },
-    toggleSidebarTab: (state, action: PayloadAction<'collections' | 'environments'>) => {
+    toggleSidebarTab: (state, action: PayloadAction<'collections' | 'environments' | 'history'>) => {
       state.sidebarActiveTab = state.sidebarActiveTab === action.payload ? null : action.payload;
     },
 
