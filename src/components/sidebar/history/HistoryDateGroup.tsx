@@ -8,10 +8,13 @@ import ChevronIcon from '../../../assets/icons/chevron-icon.svg';
 interface Props {
   label: string;
   entries: HistoryEntry[];
+  searchTerm?: string;
+  isSearching?: boolean;
 }
 
-export default function HistoryDateGroup({ label, entries }: Props) {
+export default function HistoryDateGroup({ label, entries, searchTerm, isSearching }: Props) {
   const [isExpanded, setIsExpanded] = useState(true);
+  const effectiveExpanded = isSearching || isExpanded;
 
   return (
     <>
@@ -21,14 +24,15 @@ export default function HistoryDateGroup({ label, entries }: Props) {
       >
         <ChevronIcon
           className={cn('h-4 w-4 text-text-secondary transition-transform', {
-            'rotate-90': isExpanded,
+            'rotate-90': effectiveExpanded,
           })}
         />
         <span className="text-xs font-bold truncate">{label}</span>
         <span className="text-xs text-text-secondary dark:text-dark-text-secondary">{entries.length}</span>
       </div>
 
-      {isExpanded && entries.map((entry) => <HistoryItem key={entry.id} entry={entry} />)}
+      {effectiveExpanded &&
+        entries.map((entry) => <HistoryItem key={entry.id} entry={entry} searchTerm={searchTerm} />)}
     </>
   );
 }

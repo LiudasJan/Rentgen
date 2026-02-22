@@ -9,13 +9,15 @@ import { responseActions } from '../../../store/slices/responseSlice';
 import { testActions } from '../../../store/slices/testSlice';
 import { websocketActions } from '../../../store/slices/websocketSlice';
 import { HistoryEntry } from '../../../types/history';
+import SearchHighlight from '../colletion/SearchHighlight';
 import MethodBadge from '../../MethodBadge';
 
 interface Props {
   entry: HistoryEntry;
+  searchTerm?: string;
 }
 
-export default function HistoryItem({ entry }: Props) {
+export default function HistoryItem({ entry, searchTerm }: Props) {
   const dispatch = useAppDispatch();
 
   const time = new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -47,7 +49,7 @@ export default function HistoryItem({ entry }: Props) {
     >
       <MethodBadge method={entry.method} />
       <span className="flex-1 text-xs truncate" title={entry.url}>
-        {displayUrl}
+        {searchTerm ? <SearchHighlight text={displayUrl} term={searchTerm} /> : displayUrl}
       </span>
       <span className="text-xs text-text-secondary dark:text-dark-text-secondary shrink-0">{time}</span>
       <div className="absolute top-0 bottom-0 right-0 pl-2 pr-3 flex items-center bg-button-secondary dark:bg-dark-input opacity-0 group-hover:opacity-100">

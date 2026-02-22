@@ -1,8 +1,9 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
 import { selectHistoryEntries } from '../../../store/selectors';
 import { historyActions } from '../../../store/slices/historySlice';
 import { HistoryEntry } from '../../../types/history';
+import CollectionSearch from '../colletion/CollectionSearch';
 import HistoryDateGroup from './HistoryDateGroup';
 
 import ClearCrossIcon from '../../../assets/icons/clear-cross-icon.svg';
@@ -53,11 +54,37 @@ function groupHistoryByDate(entries: HistoryEntry[]): DateGroup[] {
   }));
 }
 
+function filterGroupsBySearch(groups: DateGroup[], searchTerm: string): DateGroup[] {
+  const term = searchTerm.toLowerCase().trim();
+  if (!term) return groups;
+
+  return groups.reduce<DateGroup[]>((acc, group) => {
+    if (group.label.toLowerCase().includes(term)) {
+      acc.push(group);
+    } else {
+      const filtered = group.entries.filter(
+        (entry) =>
+          entry.url.toLowerCase().includes(term) ||
+          entry.method.toLowerCase().includes(term) ||
+          entry.headers.toLowerCase().includes(term) ||
+          entry.body.toLowerCase().includes(term),
+      );
+      if (filtered.length > 0) {
+        acc.push({ ...group, entries: filtered });
+      }
+    }
+    return acc;
+  }, []);
+}
+
 export default function HistoryPanel() {
   const dispatch = useAppDispatch();
   const entries = useAppSelector(selectHistoryEntries);
+  const [searchTerm, setSearchTerm] = useState('');
 
-  const groups = useMemo(() => groupHistoryByDate(entries), [entries]);
+  const allGroups = useMemo(() => groupHistoryByDate(entries), [entries]);
+  const groups = useMemo(() => filterGroupsBySearch(allGroups, searchTerm), [allGroups, searchTerm]);
+  const isSearching = searchTerm.trim().length > 0;
 
   return (
     <>
@@ -72,15 +99,25 @@ export default function HistoryPanel() {
         )}
       </div>
 
+      {entries.length > 0 && (
+        <CollectionSearch value={searchTerm} onChange={setSearchTerm} placeholder="Search history..." />
+      )}
+
       {groups.length > 0 ? (
         <div className="h-full overflow-x-hidden overflow-y-auto">
           {groups.map((group) => (
-            <HistoryDateGroup key={group.date} label={group.label} entries={group.entries} />
+            <HistoryDateGroup
+              key={group.date}
+              label={group.label}
+              entries={group.entries}
+              searchTerm={searchTerm}
+              isSearching={isSearching}
+            />
           ))}
         </div>
       ) : (
         <div className="flex items-center justify-center h-full w-full p-5 text-xs text-text-secondary dark:text-dark-text-secondary">
-          No history yet
+          {isSearching ? 'No matching history' : 'No history yet'}
         </div>
       )}
     </>
