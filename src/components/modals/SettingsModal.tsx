@@ -21,7 +21,7 @@ export default function SettingsModal() {
 
   return (
     <Modal
-      className="[&>div]:h-[84vh] [&>div]:max-h-210 [&>div]:w-full! [&>div]:max-w-211.5! [&>div]:p-0!"
+      className="[&>div]:h-[84vh] [&>div]:max-h-210 [&>div]:w-full! [&>div]:max-w-211.5! [&>div]:p-0! [&>div]:overflow-hidden"
       isOpen={isOpen}
       onClose={onClose}
     >
@@ -44,13 +44,13 @@ export default function SettingsModal() {
             Themes
           </Tab>
         </TabList>
-        <TabPanel className="flex-auto hidden p-4">
+        <TabPanel className="flex-auto hidden p-4 overflow-y-auto">
           <div className="flex flex-col gap-4">
             <h4 className="m-0">General</h4>
             <SecurityTestsSettings />
           </div>
         </TabPanel>
-        <TabPanel className="flex-auto hidden p-4">
+        <TabPanel className="flex-auto hidden p-4 overflow-y-auto">
           <div className="flex flex-col gap-4">
             <h4 className="m-0">Themes</h4>
             <p className="m-0 text-xs text-text-secondary">
