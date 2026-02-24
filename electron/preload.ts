@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { TestResults, ExportResult, ImportResult, PostmanCollection } from '../src/types';
+import type { SettingsState } from '../src/store/slices/settingsSlice';
+import type { ExportResult, ImportResult, PostmanCollection, TestResults } from '../src/types';
 
 interface ElectronApi {
   connectWss: (payload: any) => void;
@@ -12,6 +13,7 @@ interface ElectronApi {
   loadEnvironments: () => Promise<any>;
   loadDynamicVariables: () => Promise<any>;
   loadHistory: () => Promise<any>;
+  loadSettings: () => Promise<SettingsState>;
   onWssEvent: (callback: (data: any) => void) => () => void;
   openExternal: (url: string) => void;
   pingHost: (host: string) => Promise<any>;
@@ -24,13 +26,9 @@ interface ElectronApi {
     content: string;
     filters?: Electron.FileFilter[];
   }) => Promise<{ canceled: boolean; filePath?: string; error?: string }>;
+  saveSettings: (settings: SettingsState) => void;
   sendHttp: (payload: any) => Promise<any>;
   sendWss: (message: string) => void;
-}
-
-interface ThemeAPI {
-  setTheme: (theme: 'light' | 'dark') => void;
-  getTheme: () => Promise<'light' | 'dark'>;
 }
 
 contextBridge.exposeInMainWorld('electronAPI', {
@@ -46,6 +44,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   loadEnvironments: (): Promise<any> => ipcRenderer.invoke('load-environments'),
   loadDynamicVariables: (): Promise<any> => ipcRenderer.invoke('load-dynamic-variables'),
   loadHistory: (): Promise<any> => ipcRenderer.invoke('load-history'),
+  loadSettings: (): Promise<SettingsState> => ipcRenderer.invoke('load-settings'),
   onWssEvent: (callback): (() => void) => {
     const handler = (_: Electron.IpcRendererEvent, data: any) => callback(data);
     ipcRenderer.on('wss-event', handler);
@@ -65,18 +64,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('save-history', entries),
   saveReport: (payload: { defaultPath?: string; content: string; filters?: Electron.FileFilter[] }) =>
     ipcRenderer.invoke('save-report', payload),
+  saveSettings: (settings: SettingsState): void => ipcRenderer.send('save-settings', settings),
   sendHttp: (payload: any): Promise<any> => ipcRenderer.invoke('http-request', payload),
   sendWss: (message: string): void => ipcRenderer.send('wss-send', message),
 } as ElectronApi);
 
-contextBridge.exposeInMainWorld('themeAPI', {
-  getTheme: () => ipcRenderer.invoke('get-theme'),
-  setTheme: (theme) => ipcRenderer.send('set-theme', theme),
-} as ThemeAPI);
-
 declare global {
   interface Window {
     electronAPI: ElectronApi;
-    themeAPI: ThemeAPI;
   }
 }

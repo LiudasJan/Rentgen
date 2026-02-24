@@ -71,9 +71,6 @@ interface UIState {
 
   // Sidebar
   sidebarActiveTab: SidebarTab;
-
-  // Theme
-  theme: 'light' | 'dark';
 }
 
 const initialState: UIState = {
@@ -108,12 +105,7 @@ const initialState: UIState = {
   curlError: '',
   exportFormat: 'json',
   sidebarActiveTab: null,
-  theme: 'light',
 };
-
-export const loadTheme = createAsyncThunk('ui/theme/load', async () => {
-  return await window.themeAPI.getTheme();
-});
 
 export const uiSlice = createSlice({
   name: 'ui',
@@ -230,34 +222,8 @@ export const uiSlice = createSlice({
     toggleSidebarTab: (state, action: PayloadAction<'collections' | 'environments' | 'history'>) => {
       state.sidebarActiveTab = state.sidebarActiveTab === action.payload ? null : action.payload;
     },
-
-    // Theme
-    toggleTheme: (state) => {
-      state.theme = state.theme === 'light' ? 'dark' : 'light';
-      applyTheme(state.theme);
-    },
-    setTheme: (state, action: PayloadAction<'light' | 'dark'>) => {
-      state.theme = action.payload;
-      applyTheme(action.payload);
-    },
-  },
-  extraReducers: (builder) => {
-    builder.addCase(loadTheme.fulfilled, (state, action: PayloadAction<'light' | 'dark'>) => {
-      state.theme = action.payload;
-      if (action.payload === 'dark') document.documentElement.classList.add('dark');
-    });
   },
 });
-
-function applyTheme(theme: 'light' | 'dark') {
-  if (theme === 'light') {
-    document.documentElement.classList.remove('dark');
-    window.themeAPI.setTheme('light');
-  } else {
-    document.documentElement.classList.add('dark');
-    window.themeAPI.setTheme('dark');
-  }
-}
 
 export const uiActions = uiSlice.actions;
 export default uiSlice.reducer;

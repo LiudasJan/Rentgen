@@ -6,6 +6,9 @@ import { environmentActions } from '../slices/environmentSlice';
 // History actions that should NOT trigger auto-save (read-only or loading actions)
 const historyReadOnlyActions = ['history/load/pending', 'history/load/fulfilled', 'history/load/rejected'];
 
+// Settings actions that should NOT trigger auto-save (read-only or loading actions)
+const settingsReadOnlyActions = ['settings/load/pending', 'settings/load/fulfilled', 'settings/load/rejected'];
+
 // Actions that should NOT trigger auto-save (read-only or loading actions)
 const collectionReadOnlyActions = [
   'collection/load/pending',
@@ -70,6 +73,12 @@ export const electronMiddleware: Middleware = (store) => (next) => (action: Acti
   if (actionType && actionType.startsWith('history/') && !historyReadOnlyActions.includes(actionType)) {
     const state = store.getState();
     window.electronAPI.saveHistory(state.history.entries);
+  }
+
+  // Auto-save settings after mutation actions
+  if (actionType && actionType.startsWith('settings/') && !settingsReadOnlyActions.includes(actionType)) {
+    const state = store.getState();
+    window.electronAPI.saveSettings(state.settings);
   }
 
   // Auto-update dynamic variables when a response is received

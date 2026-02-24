@@ -10,7 +10,7 @@ import {
   registerHistoryHandlers,
   registerHttpHandlers,
   registerImportExportHandlers,
-  registerThemeHandlers,
+  registerSettingsHandlers,
   registerWssHandlers,
 } from './handlers';
 
@@ -131,7 +131,7 @@ app.on('activate', () => {
 // Register handlers
 registerHttpHandlers();
 registerWssHandlers();
-registerThemeHandlers();
+registerSettingsHandlers();
 registerCollectionHandlers();
 registerEnvironmentHandlers();
 registerHistoryHandlers();

@@ -8,18 +8,20 @@ import environmentReducer from './slices/environmentSlice';
 import websocketReducer from './slices/websocketSlice';
 import testReducer from './slices/testSlice';
 import uiReducer from './slices/uiSlice';
+import settingsReducer from './slices/settingsSlice';
 import { electronMiddleware } from './middleware/electronMiddleware';
 
 export const store = configureStore({
   reducer: {
     collection: collectionReducer,
     collectionRun: collectionRunReducer,
+    environment: environmentReducer,
     history: historyReducer,
     request: requestReducer,
     response: responseReducer,
-    environment: environmentReducer,
-    websocket: websocketReducer,
+    settings: settingsReducer,
     tests: testReducer,
+    websocket: websocketReducer,
     ui: uiReducer,
   },
   middleware: (getDefaultMiddleware) =>

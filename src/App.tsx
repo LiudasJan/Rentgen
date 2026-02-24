@@ -109,8 +109,9 @@ import { environmentActions, loadDynamicVariables, loadEnvironments } from './st
 import { historyActions, loadHistory } from './store/slices/historySlice';
 import { requestActions } from './store/slices/requestSlice';
 import { responseActions } from './store/slices/responseSlice';
+import { loadSettings, settingsActions } from './store/slices/settingsSlice';
 import { testActions } from './store/slices/testSlice';
-import { loadTheme, uiActions } from './store/slices/uiSlice';
+import { uiActions } from './store/slices/uiSlice';
 import { websocketActions } from './store/slices/websocketSlice';
 
 import ClearCrossIcon from './assets/icons/clear-cross-icon.svg';
@@ -279,7 +280,7 @@ export default function App() {
   }, [dispatch]);
 
   useEffect(() => {
-    dispatch(loadTheme());
+    dispatch(loadSettings());
   }, [dispatch]);
 
   useEffect(() => {
@@ -763,7 +764,7 @@ export default function App() {
                   selectedEnvironmentId={selectedEnvironmentId}
                   onSelect={(id) => dispatch(environmentActions.selectEnvironment(id))}
                 />
-                <IconButton onClick={() => dispatch(uiActions.toggleTheme())}>
+                <IconButton onClick={() => dispatch(settingsActions.toggleTheme())}>
                   <DarkModeIcon className="h-5 w-5 dark:hidden" />
                   <LightModeIcon className="hidden dark:block h-6 w-6" />
                 </IconButton>

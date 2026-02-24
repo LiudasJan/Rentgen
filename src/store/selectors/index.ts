@@ -132,7 +132,6 @@ export const selectCurl = (state: RootState) => state.ui.curl;
 export const selectCurlError = (state: RootState) => state.ui.curlError;
 export const selectExportFormat = (state: RootState) => state.ui.exportFormat;
 export const selectSidebarActiveTab = (state: RootState) => state.ui.sidebarActiveTab;
-export const selectTheme = (state: RootState) => state.ui.theme;
 export const selectCertificateError = (state: RootState) => state.ui.certificateError;
 
 // History selectors
@@ -144,3 +143,7 @@ export const selectRunningRequestId = (state: RootState) => state.collectionRun.
 export const selectCollectionRunResults = (state: RootState) => state.collectionRun.results;
 export const selectImportConflictModal = (state: RootState) => state.ui.importConflictModal;
 export const selectSetAsDynamicVariableModal = (state: RootState) => state.ui.setAsDynamicVariableModal;
+
+// Settings selectors
+export const selectSecurityTestsSettings = (state: RootState) => state.settings.general.securityTests;
+export const selectTheme = (state: RootState) => state.settings.theme;

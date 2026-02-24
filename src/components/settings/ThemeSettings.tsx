@@ -1,7 +1,7 @@
 import cn from 'classnames';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { selectTheme } from '../../store/selectors';
-import { uiActions } from '../../store/slices/uiSlice';
+import { settingsActions } from '../../store/slices/settingsSlice';
 
 import DarkImage from '../../assets/images/dark-theme.svg';
 import LightTheme from '../../assets/images/light-theme.svg';
@@ -16,7 +16,7 @@ export function ThemeSettings() {
       <div className="flex-1 flex flex-col gap-2 cursor-pointer">
         <LightTheme
           className={cn('p-0.5 border-2 rounded-lg', { 'border-amber-600': !isDark, 'border-transparent': isDark })}
-          onClick={() => dispatch(uiActions.setTheme('light'))}
+          onClick={() => dispatch(settingsActions.setTheme('light'))}
         />
         <label className="flex items-center gap-2 text-sm cursor-pointer">
           <input
@@ -25,7 +25,7 @@ export function ThemeSettings() {
             name="theme"
             value="light"
             checked={!isDark}
-            onChange={() => dispatch(uiActions.setTheme('light'))}
+            onChange={() => dispatch(settingsActions.setTheme('light'))}
           />
           Light
         </label>
@@ -33,7 +33,7 @@ export function ThemeSettings() {
       <div className="flex-1 flex flex-col gap-2 cursor-pointer">
         <DarkImage
           className={cn('p-0.5 border-2 rounded-lg', { 'border-amber-600': isDark, 'border-transparent': !isDark })}
-          onClick={() => dispatch(uiActions.setTheme('dark'))}
+          onClick={() => dispatch(settingsActions.setTheme('dark'))}
         />
         <label className="flex items-center gap-2 text-sm cursor-pointer">
           <input
@@ -42,7 +42,7 @@ export function ThemeSettings() {
             name="theme"
             value="dark"
             checked={isDark}
-            onChange={() => dispatch(uiActions.setTheme('dark'))}
+            onChange={() => dispatch(settingsActions.setTheme('dark'))}
           />
           Dark
         </label>

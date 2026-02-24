@@ -140,7 +140,7 @@ export default function TestResultsComparisonPanel({ items, title, response, ...
                   <span className="text-red-500">-{statistics.removed}</span>
                   <span>={statistics.unchanged}</span>
                 </div>
-                <label className="flex items-center gap-2">
+                <label className="w-fit flex items-center gap-2 cursor-pointer">
                   <input
                     className="m-0"
                     disabled={!diffReady}
