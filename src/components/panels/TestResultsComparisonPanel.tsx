@@ -8,8 +8,6 @@ import PotentialBugsTable, { PotentialBug } from '../tables/PotentialBugsTable';
 import { JsonDiffViewer } from '../viewers/JsonDiffViewer';
 import Panel, { Props as PanelProps } from './Panel';
 
-import 'react-tabs/style/react-tabs.css';
-
 interface Props extends PanelProps {
   items: TestResults[];
   response: HttpResponse;
@@ -101,20 +99,24 @@ export default function TestResultsComparisonPanel({ items, title, response, ...
         <p className="p-4 m-0">No test results to compare</p>
       ) : (
         <Tabs
-          className="react-tabs h-full flex flex-col overflow-hidden"
+          className="flex flex-col h-full overflow-hidden"
           forceRenderTabPanel={true}
           selectedIndex={tabIndex}
-          selectedTabClassName="react-tabs__tab--selected bg-body! border-border! text-text! dark:bg-dark-body! dark:border-dark-body! dark:text-dark-text! after:content-none!"
-          selectedTabPanelClassName="react-tabs__tab-panel--selected h-full"
+          selectedTabClassName="bg-body border-border! rounded-t-md text-text dark:bg-dark-body dark:border-dark-body! dark:text-dark-text"
+          selectedTabPanelClassName="block! h-full"
           onSelect={(index) => setTabIndex(index)}
         >
-          <TabList className="react-tabs__tab-list m-0! px-2.5! border-border! dark:border-dark-body!">
-            <Tab className="react-tabs__tab text-sm">Potential Bugs</Tab>
-            <Tab className="react-tabs__tab text-sm">Full Behavior Changes</Tab>
+          <TabList className="flex m-0 px-2.5 border-b border-border dark:border-dark-body">
+            <Tab className="relative -bottom-px py-1.5 px-3 text-sm border border-transparent border-b-0 list-none outline-none cursor-pointer">
+              Potential Bugs
+            </Tab>
+            <Tab className="relative -bottom-px py-1.5 px-3 text-sm border border-transparent border-b-0 list-none outline-none cursor-pointer">
+              Full Behavior Changes
+            </Tab>
           </TabList>
 
-          <TabPanel className="react-tabs__tab-panel p-4 bg-body dark:bg-dark-body overflow-hidden">
-            <div className="h-full flex flex-col gap-4">
+          <TabPanel className="hidden p-4 bg-body dark:bg-dark-body overflow-hidden">
+            <div className="flex flex-col gap-4 h-full">
               {!potentialBugs || potentialBugs.length === 0 ? (
                 <p className="m-0 p-2.5 text-sm text-white text-center rounded-md bg-green-600">
                   No potential bugs detected ✅
@@ -127,8 +129,8 @@ export default function TestResultsComparisonPanel({ items, title, response, ...
               </div>
             </div>
           </TabPanel>
-          <TabPanel className="react-tabs__tab-panel bg-body dark:bg-dark-body">
-            <div className="h-full flex flex-col">
+          <TabPanel className="hidden bg-body dark:bg-dark-body">
+            <div className="flex flex-col h-full">
               <div className="shrink-0 flex flex-col p-4 gap-4 text-sm border-b border-border dark:border-dark-body">
                 <div className="flex items-center gap-2">
                   <span>

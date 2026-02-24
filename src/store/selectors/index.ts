@@ -123,6 +123,7 @@ export const selectTestResultsToCompare = (state: RootState) => state.tests.resu
 export const selectOpenCurlModal = (state: RootState) => state.ui.openCurlModal;
 export const selectOpenReloadModal = (state: RootState) => state.ui.openReloadModal;
 export const selectOpenSendHttpSuccessModal = (state: RootState) => state.ui.openSendHttpSuccessModal;
+export const selectOpenSettingsModal = (state: RootState) => state.ui.openSettingsModal;
 export const selectDeleteFolderModal = (state: RootState) => state.ui.deleteFolderModal;
 export const selectSaved = (state: RootState) => state.ui.saved;
 export const selectExported = (state: RootState) => state.ui.exported;

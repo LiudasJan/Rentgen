@@ -21,6 +21,7 @@ import ConfirmationModal from './components/modals/ConfirmationModal';
 import ImportConflictModal from './components/modals/ImportConflictModal';
 import Modal from './components/modals/Modal';
 import SetAsDynamicVariableModal from './components/modals/SetAsDynamicVariableModal';
+import SettingsModal from './components/modals/SettingsModal';
 import Panel from './components/panels/Panel';
 import ParametersPanel from './components/panels/ParametersPanel';
 import TestResultsComparisonPanel from './components/panels/TestResultsComparisonPanel';
@@ -112,7 +113,7 @@ import { testActions } from './store/slices/testSlice';
 import { loadTheme, uiActions } from './store/slices/uiSlice';
 import { websocketActions } from './store/slices/websocketSlice';
 
-import CloseIcon from './assets/icons/clear-cross-icon.svg';
+import ClearCrossIcon from './assets/icons/clear-cross-icon.svg';
 import DarkModeIcon from './assets/icons/dark-mode-icon.svg';
 import LightModeIcon from './assets/icons/light-mode-icon.svg';
 import ReloadIcon from './assets/icons/reload-icon.svg';
@@ -702,7 +703,7 @@ export default function App() {
               className="absolute top-2.5 right-4"
               onClick={() => dispatch(testActions.clearResultsToCompare())}
             >
-              <CloseIcon className="h-5 w-5" />
+              <ClearCrossIcon className="h-5 w-5" />
             </IconButton>
           </div>
         )}
@@ -1287,6 +1288,7 @@ export default function App() {
       />
       <SetAsDynamicVariableModal />
       <ImportConflictModal />
+      <SettingsModal />
     </div>
   );
 }

@@ -46,6 +46,7 @@ interface UIState {
   openCurlModal: boolean;
   openReloadModal: boolean;
   openSendHttpSuccessModal: boolean;
+  openSettingsModal: boolean;
   deleteFolderModal: {
     isOpen: boolean;
     folderId: string | null;
@@ -98,6 +99,7 @@ const initialState: UIState = {
     editingVariableName: null,
     source: 'body',
   },
+  openSettingsModal: false,
   saved: false,
   exported: false,
   certificated: false,
@@ -185,6 +187,12 @@ export const uiSlice = createSlice({
         source: 'body',
       };
     },
+    openSettingsModal: (state) => {
+      state.openSettingsModal = true;
+    },
+    closeSettingsModal: (state) => {
+      state.openSettingsModal = false;
+    },
 
     // cURL
     setCurl: (state, action: PayloadAction<string>) => {
@@ -226,14 +234,11 @@ export const uiSlice = createSlice({
     // Theme
     toggleTheme: (state) => {
       state.theme = state.theme === 'light' ? 'dark' : 'light';
-
-      if (state.theme === 'light') {
-        document.documentElement.classList.remove('dark');
-        window.themeAPI.setTheme('light');
-      } else {
-        document.documentElement.classList.add('dark');
-        window.themeAPI.setTheme('dark');
-      }
+      applyTheme(state.theme);
+    },
+    setTheme: (state, action: PayloadAction<'light' | 'dark'>) => {
+      state.theme = action.payload;
+      applyTheme(action.payload);
     },
   },
   extraReducers: (builder) => {
@@ -243,6 +248,16 @@ export const uiSlice = createSlice({
     });
   },
 });
+
+function applyTheme(theme: 'light' | 'dark') {
+  if (theme === 'light') {
+    document.documentElement.classList.remove('dark');
+    window.themeAPI.setTheme('light');
+  } else {
+    document.documentElement.classList.add('dark');
+    window.themeAPI.setTheme('dark');
+  }
+}
 
 export const uiActions = uiSlice.actions;
 export default uiSlice.reducer;
