@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { memo, useMemo } from 'react';
 import DataTable, { ExpanderComponentProps, TableProps } from 'react-data-table-component';
 import { HttpResponse } from '../../types';
 import { JsonDiffViewer } from '../viewers/JsonDiffViewer';
@@ -13,9 +13,8 @@ export interface PotentialBug {
 }
 
 export default function PotentialBugsTable({ data, ...otherProps }: Omit<TableProps<PotentialBug>, 'columns'>) {
-  const definedData = useMemo(() => data?.filter(Boolean) ?? [], [data]);
-
   const theme = useAppSelector(selectTheme);
+  const definedData = useMemo(() => data?.filter(Boolean) ?? [], [data]);
   const isDark = theme === 'dark';
 
   return (
@@ -84,6 +83,6 @@ export default function PotentialBugsTable({ data, ...otherProps }: Omit<TablePr
   );
 }
 
-export function ExpandedTestComponent({ data }: ExpanderComponentProps<PotentialBug>) {
-  return <JsonDiffViewer className="h-90 py-4" data={[data.originalResponse, data.modifiedResponse]} />;
-}
+export const ExpandedTestComponent = memo(({ data }: ExpanderComponentProps<PotentialBug>) => (
+  <JsonDiffViewer className="h-90 py-4" data={[data.originalResponse, data.modifiedResponse]} />
+));

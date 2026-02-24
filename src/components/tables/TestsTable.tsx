@@ -1,5 +1,5 @@
 import cn from 'classnames';
-import { useMemo } from 'react';
+import { memo, useMemo } from 'react';
 import DataTable, { ExpanderComponentProps, TableColumn, TableProps } from 'react-data-table-component';
 import { TestResult, TestStatus } from '../../types';
 import {
@@ -63,42 +63,44 @@ export default function TestsTable({ columns, data, className, ...otherProps }: 
   );
 }
 
-export function ExpandedTestComponent({
-  data,
-  headers,
-  messageType,
-  protoFile,
-}: ExpanderComponentProps<TestResult> & {
-  headers: Record<string, string>;
-  messageType: string;
-  protoFile: File | null;
-}) {
-  const { request, response } = data;
-  const decoded =
-    headers && isUrlEncodedContentType(headers) && protoFile && messageType
-      ? decodeProtobufResponse(messageType, response)
-      : null;
-  const modifiedResponse = response ? { ...response } : null;
+export const ExpandedTestComponent = memo(
+  ({
+    data,
+    headers,
+    messageType,
+    protoFile,
+  }: ExpanderComponentProps<TestResult> & {
+    headers: Record<string, string>;
+    messageType: string;
+    protoFile: File | null;
+  }) => {
+    const { request, response } = data;
+    const decoded =
+      headers && isUrlEncodedContentType(headers) && protoFile && messageType
+        ? decodeProtobufResponse(messageType, response)
+        : null;
+    const modifiedResponse = response ? { ...response } : null;
 
-  if (modifiedResponse && modifiedResponse.body)
-    modifiedResponse.body = extractBodyFromResponse(modifiedResponse) as any;
+    if (modifiedResponse && modifiedResponse.body)
+      modifiedResponse.body = extractBodyFromResponse(modifiedResponse) as any;
 
-  return (
-    <div className="p-4 bg-body dark:bg-dark-body">
-      {request && (
-        <CopyButton className="mb-4" textToCopy={generateCurl(request)}>
-          Copy cURL
-        </CopyButton>
-      )}
-      <div className="grid grid-cols-2 gap-4 items-stretch">
-        <HttpPanel title="Request" source={request} />
-        <HttpPanel title="Response" source={modifiedResponse}>
-          {decoded && <HttpPanel title="Decoded Protobuf" source={decoded} />}
-        </HttpPanel>
+    return (
+      <div className="p-4 bg-body dark:bg-dark-body">
+        {request && (
+          <CopyButton className="mb-4" textToCopy={generateCurl(request)}>
+            Copy cURL
+          </CopyButton>
+        )}
+        <div className="grid grid-cols-2 gap-4 items-stretch">
+          <HttpPanel title="Request" source={request} />
+          <HttpPanel title="Response" source={modifiedResponse}>
+            {decoded && <HttpPanel title="Decoded Protobuf" source={decoded} />}
+          </HttpPanel>
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  },
+);
 
 type TestsTableColumn = 'Parameter' | 'Value' | 'Check' | 'Method' | 'Expected' | 'Actual' | 'Result';
 
