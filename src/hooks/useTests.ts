@@ -6,6 +6,7 @@ import {
   selectCrudTests,
   selectCurrentTest,
   selectDataDrivenTests,
+  selectDisabledSecurityTests,
   selectIsDataDrivenRunning,
   selectIsLargePayloadTestRunning,
   selectIsLoadTestRunning,
@@ -13,7 +14,6 @@ import {
   selectIsSecurityRunning,
   selectPerformanceTests,
   selectSecurityTests,
-  selectSecurityTestsSettings,
   selectSelectedRequestId,
   selectTestOptions,
   selectTestsCount,
@@ -62,7 +62,7 @@ const useTests = () => {
   const isPerformanceRunning = useAppSelector(selectIsPerformanceRunning);
   const isSecurityRunning = useAppSelector(selectIsSecurityRunning);
 
-  const disabledSecurityTests = useAppSelector(selectSecurityTestsSettings);
+  const disabledSecurityTests = useAppSelector(selectDisabledSecurityTests);
 
   const incrementCurrentTest = useCallback(() => {
     dispatch(testActions.incrementCurrentTest());

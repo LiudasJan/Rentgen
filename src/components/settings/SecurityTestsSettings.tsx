@@ -1,5 +1,5 @@
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import { selectSecurityTestsSettings } from '../../store/selectors';
+import { selectDisabledSecurityTests } from '../../store/selectors';
 import { settingsActions } from '../../store/slices/settingsSlice';
 import {
   AUTHORIZATION_TEST_NAME,
@@ -35,7 +35,7 @@ const securityTests: string[] = [
 
 export function SecurityTestsSettings() {
   const dispatch = useAppDispatch();
-  const settings = useAppSelector(selectSecurityTestsSettings);
+  const disabledSecurityTests = useAppSelector(selectDisabledSecurityTests);
 
   return (
     <div className="flex flex-col gap-4">
@@ -57,7 +57,7 @@ export function SecurityTestsSettings() {
                 className="m-0"
                 type="checkbox"
                 value={test}
-                checked={!settings.includes(test)}
+                checked={!disabledSecurityTests.includes(test)}
                 onChange={() => dispatch(settingsActions.toggleSecurityTest(test))}
               />
             </span>
