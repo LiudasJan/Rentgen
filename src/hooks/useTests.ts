@@ -13,6 +13,7 @@ import {
   selectIsSecurityRunning,
   selectPerformanceTests,
   selectSecurityTests,
+  selectSecurityTestsSettings,
   selectSelectedRequestId,
   selectTestOptions,
   selectTestsCount,
@@ -25,6 +26,7 @@ import {
   generateDynamicTestData,
   LARGE_PAYLOAD_TEST_NAME,
   LOAD_TEST_NAME,
+  OPTIONS_METHOD_HANDLING_TEST_NAME,
   PerformanceInsights,
   runDataDrivenTests,
   runLargePayloadTest,
@@ -60,6 +62,8 @@ const useTests = () => {
   const isPerformanceRunning = useAppSelector(selectIsPerformanceRunning);
   const isSecurityRunning = useAppSelector(selectIsSecurityRunning);
 
+  const disabledSecurityTests = useAppSelector(selectSecurityTestsSettings);
+
   const incrementCurrentTest = useCallback(() => {
     dispatch(testActions.incrementCurrentTest());
   }, [dispatch]);
@@ -91,7 +95,7 @@ const useTests = () => {
       dispatch(testActions.setSecurityTests([]));
       dispatch(testActions.setCrudTests([]));
 
-      securityTestsInstance = new SecurityTests(options, incrementCurrentTest);
+      securityTestsInstance = new SecurityTests(options, disabledSecurityTests, incrementCurrentTest);
       const { crudTests, securityTests } = await securityTestsInstance.run();
 
       dispatch(testActions.setCrudTests(crudTests));
@@ -100,7 +104,7 @@ const useTests = () => {
 
       return { crudTests, securityTests };
     },
-    [dispatch, incrementCurrentTest],
+    [disabledSecurityTests, dispatch, incrementCurrentTest],
   );
 
   const executeDataDrivenTests = useCallback(
@@ -149,7 +153,9 @@ const useTests = () => {
       (await calculateDataDrivenTestsCount(testOptions)) +
       getTestCount(DataDrivenTests) +
       getTestCount(SecurityTests) +
-      getTestCount(PerformanceInsights);
+      getTestCount(PerformanceInsights) -
+      disabledSecurityTests.length +
+      (disabledSecurityTests.includes(OPTIONS_METHOD_HANDLING_TEST_NAME) ? -1 : 0);
     const domain = new URL(testOptions.url).hostname;
     const timestamp = new Date().getTime();
 
@@ -177,6 +183,7 @@ const useTests = () => {
         }),
       );
   }, [
+    disabledSecurityTests,
     selectedRequestId,
     testOptions,
     dispatch,

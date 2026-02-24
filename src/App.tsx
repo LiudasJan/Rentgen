@@ -1229,7 +1229,16 @@ export default function App() {
                     expandOnRowClicked
                     data={crudTests}
                     progressComponent={<TestRunningLoader text="Preparing CRUD…" />}
-                    progressPending={crudTests.length === 0}
+                    progressPending={isSecurityRunning}
+                    noDataComponent={
+                      <p className="p-4 m-0 text-sm">
+                        CRUD are generated based on the OPTIONS method handling test response in Security Tests.
+                        <br />
+                        <br />
+                        <strong>Note:</strong> If the OPTIONS method handling test is disabled, CRUD will not be
+                        generated.
+                      </p>
+                    }
                   />
                 </Panel>
               </>

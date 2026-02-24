@@ -48,6 +48,16 @@ const UPPERCASE_PATH_TEST_EXPECTED = `${RESPONSE_STATUS.OK} ${getResponseStatusT
 const UNSUPPORTED_METHOD_TEST_EXPECTED = `${RESPONSE_STATUS.METHOD_NOT_ALLOWED} ${getResponseStatusTitle(RESPONSE_STATUS.METHOD_NOT_ALLOWED)} or ${RESPONSE_STATUS.NOT_IMPLEMENTED} ${getResponseStatusTitle(RESPONSE_STATUS.NOT_IMPLEMENTED)}`;
 
 export class SecurityTests extends BaseTests {
+  constructor(
+    protected options: TestOptions,
+    private disabledTests: string[],
+    protected onTestStart?: () => void,
+  ) {
+    super(options, onTestStart);
+
+    this.disabledTests = disabledTests;
+  }
+
   public async run(): Promise<{ crudTests: TestResult[]; securityTests: TestResult[] }> {
     const securityTests: TestResult[] = [];
     const crudTests: TestResult[] = [];
@@ -57,34 +67,44 @@ export class SecurityTests extends BaseTests {
     try {
       const response = await window.electronAPI.sendHttp(request);
 
-      // Run all header-based security tests
-      securityTests.push(
-        this.testServerHeaderSecurity(request, response),
-        this.testClickjackingProtection(request, response),
-        this.testHSTS(request, response),
-        this.testMimeSniffing(request, response),
-        this.testCacheControl(request, response),
-      );
+      // Run all header-based security tests that depend on initial response
+      const headerBasedTests: { name: string; run: () => TestResult }[] = [
+        { name: NO_SENSITIVE_SERVER_HEADERS_TEST_NAME, run: () => this.testServerHeaderSecurity(request, response) },
+        { name: CLICKJACKING_PROTECTION_TEST_NAME, run: () => this.testClickjackingProtection(request, response) },
+        { name: HSTS_STRICT_TRANSPORT_SECURITY_TEST_NAME, run: () => this.testHSTS(request, response) },
+        { name: MIME_SNIFFING_PROTECTION_TEST_NAME, run: () => this.testMimeSniffing(request, response) },
+        { name: CACHE_CONTROL_PRIVATE_API_TEST_NAME, run: () => this.testCacheControl(request, response) },
+      ];
+
+      headerBasedTests
+        .filter((test) => !this.disabledTests.includes(test.name))
+        .forEach((test) => securityTests.push(test.run()));
 
       // Test OPTIONS method and get CRUD results
-      const { testResult, allowHeader } = await this.testOptionsMethod();
-      securityTests.push(testResult);
-      crudTests.push(...this.getCrudTestResults(allowHeader, testResult.status, headers, url, response));
+      if (!this.disabledTests.includes(OPTIONS_METHOD_HANDLING_TEST_NAME)) {
+        const { testResult, allowHeader } = await this.testOptionsMethod();
+        securityTests.push(testResult);
+        crudTests.push(...this.getCrudTestResults(allowHeader, testResult.status, headers, url, response));
+      }
     } catch (error) {
       securityTests.push(createErrorTestResult('Security Test Error', 'Responds', String(error), request));
     }
 
     // Run tests that don't depend on initial response
-    securityTests.push(
-      await this.testUnsupportedMethod(),
-      await this.testMissingAuthorization(),
-      await this.testCors(),
-      await this.testNotFound(),
-      await this.testReflectedPayloadSafety(),
-      await this.testUppercaseDomain(),
-      await this.testUppercasePath(),
-      ...getManualTests(),
-    );
+    const responseIndependentTests: { name: string; run: () => Promise<TestResult> }[] = [
+      { name: UNSUPPORTED_METHOD_TEST_NAME, run: () => this.testUnsupportedMethod() },
+      { name: AUTHORIZATION_TEST_NAME, run: () => this.testMissingAuthorization() },
+      { name: CORS_TEST_NAME, run: () => this.testCors() },
+      { name: NOT_FOUND_TEST_NAME, run: () => this.testNotFound() },
+      { name: REFLECTED_PAYLOAD_SAFETY_TEST_NAME, run: () => this.testReflectedPayloadSafety() },
+      { name: UPPERCASE_DOMAIN_TEST_NAME, run: () => this.testUppercaseDomain() },
+      { name: UPPERCASE_PATH_TEST_NAME, run: () => this.testUppercasePath() },
+    ];
+
+    for (const test of responseIndependentTests.filter((test) => !this.disabledTests.includes(test.name)))
+      securityTests.push(await test.run());
+
+    securityTests.push(...getManualTests());
 
     return { securityTests, crudTests };
   }
