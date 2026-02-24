@@ -243,7 +243,6 @@ export default function App() {
     performanceTests,
     securityTests,
     testsCount,
-    testsDomain,
     testsTimestamp,
     executeAllTests,
     executeLoadTest,
@@ -256,18 +255,18 @@ export default function App() {
   const parametersRef = useRef<HTMLDivElement | null>(null);
   const disabled = useMemo(() => !url || isRunningTests, [url, isRunningTests]);
   const testResults = useMemo(() => {
-    if (!testsCount) return null;
+    if (!testsCount || !testOptions) return null;
 
     return {
       count: testsCount,
-      domain: testsDomain,
       timestamp: testsTimestamp,
       crudTests,
       dataDrivenTests,
       performanceTests,
       securityTests,
+      testOptions,
     };
-  }, [testsCount, testsDomain, testsTimestamp, crudTests, dataDrivenTests, performanceTests, securityTests]);
+  }, [testsCount, testsTimestamp, crudTests, dataDrivenTests, performanceTests, securityTests, testOptions]);
 
   // Load initial data
   useEffect(() => {
@@ -305,11 +304,6 @@ export default function App() {
 
     return window.electronAPI.onWssEvent(messagesListener);
   }, [dispatch]);
-
-  // Execute tests when testOptions changes
-  useEffect(() => {
-    if (testOptions) executeAllTests();
-  }, [testOptions]);
 
   // Populate request/response state when runResult changes
   useEffect(() => {
@@ -603,7 +597,9 @@ export default function App() {
 
   // Export report
   const exportReport = useCallback(async () => {
-    if (!testOptions) return;
+    if (!testResults) return;
+
+    const { dataDrivenTests, crudTests, performanceTests, securityTests, testOptions } = testResults;
 
     try {
       const report = formatReport(buildReport(), exportFormat);
@@ -620,8 +616,6 @@ export default function App() {
     }
 
     function buildReport(): ExportReport {
-      if (!testOptions) throw new Error('No test results to export');
-
       const suites = [
         buildSuite('Security Tests', securityTests),
         buildSuite('Performance Insights', performanceTests),
@@ -655,7 +649,7 @@ export default function App() {
         return rawBody;
       }
     }
-  }, [testOptions, exportFormat, securityTests, performanceTests, dataDrivenTests, crudTests, httpResponse, dispatch]);
+  }, [testResults, exportFormat, httpResponse, dispatch]);
 
   // Generate certificate
   const generateCertificate = useCallback(async () => {
@@ -1032,28 +1026,26 @@ export default function App() {
                     <Button
                       className="@xl:shrink-0 @xl:whitespace-nowrap"
                       disabled={disabledRunTests}
-                      onClick={() => {
-                        dispatch(
-                          testActions.setOptions({
-                            ...substituteRequestVariables(
-                              url,
-                              headers,
-                              body,
-                              messageType,
-                              selectedEnvironment,
-                              dynamicVariables,
-                            ),
-                            bodyParameters,
-                            method,
-                            protoFile,
-                            queryParameters,
-                          }),
-                        );
-                      }}
+                      onClick={() =>
+                        executeAllTests({
+                          ...substituteRequestVariables(
+                            url,
+                            headers,
+                            body,
+                            messageType,
+                            selectedEnvironment,
+                            dynamicVariables,
+                          ),
+                          bodyParameters,
+                          method,
+                          protoFile,
+                          queryParameters,
+                        })
+                      }
                     >
                       {isRunningTests ? `Running tests... (${currentTest}/${testsCount})` : 'Generate & Run Tests'}
                     </Button>
-                    {(testOptions || testResults) && (
+                    {testResults && (
                       <Button
                         className="@xl:truncate"
                         buttonType={ButtonType.SECONDARY}
@@ -1068,7 +1060,7 @@ export default function App() {
                     )}
                   </div>
 
-                  {(testOptions || testResults) && (
+                  {testResults && (
                     <div className="flex flex-col @xl:flex-row @xl:justify-end @xl:items-center gap-4 @xl:gap-2 @xl:min-w-0">
                       <div className="flex flex-col @xl:flex-row @xl:items-center gap-2">
                         <Select
@@ -1101,7 +1093,7 @@ export default function App() {
               </>
             )}
 
-            {(testOptions || testResults) && (
+            {testResults && (
               <>
                 <Panel title="Security Tests">
                   <TestsTable
@@ -1127,7 +1119,10 @@ export default function App() {
                               <LargePayloadTestControls
                                 isRunning={isLargePayloadTestRunning}
                                 executeTest={(size: number) =>
-                                  executeLargePayloadTest({ ...testOptions, bodyParameters, queryParameters }, size)
+                                  executeLargePayloadTest(
+                                    { ...testResults.testOptions, bodyParameters, queryParameters },
+                                    size,
+                                  )
                                 }
                               />
                             ) : (
@@ -1177,7 +1172,7 @@ export default function App() {
                                 isRunning={isLoadTestRunning}
                                 executeTest={(threadCount: number, requestCount: number) =>
                                   executeLoadTest(
-                                    { ...testOptions, bodyParameters, queryParameters },
+                                    { ...testResults.testOptions, bodyParameters, queryParameters },
                                     threadCount,
                                     requestCount,
                                   )

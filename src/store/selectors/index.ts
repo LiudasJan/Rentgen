@@ -90,7 +90,6 @@ export const selectPerformanceTests = (state: RootState) => state.tests.performa
 export const selectSecurityTests = (state: RootState) => state.tests.securityTests;
 export const selectCurrentTest = (state: RootState) => state.tests.currentTest;
 export const selectTestsCount = (state: RootState) => state.tests.count;
-export const selectTestsDomain = (state: RootState) => state.tests.domain;
 export const selectTestsTimestamp = (state: RootState) => state.tests.timestamp;
 
 export const selectIsSecurityRunning = (state: RootState) => state.tests.isSecurityRunning;

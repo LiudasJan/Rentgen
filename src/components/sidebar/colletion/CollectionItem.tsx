@@ -82,12 +82,12 @@ export default function CollectionItem({ item, searchTerm }: Props) {
 
       if (requestTestResults) {
         dispatch(testActions.setCount(requestTestResults.count));
-        dispatch(testActions.setDomain(requestTestResults.domain));
         dispatch(testActions.setTimestamp(requestTestResults.timestamp));
         dispatch(testActions.setCrudTests(requestTestResults.crudTests));
         dispatch(testActions.setDataDrivenTests(requestTestResults.dataDrivenTests));
         dispatch(testActions.setPerformanceTests(requestTestResults.performanceTests));
         dispatch(testActions.setSecurityTests(requestTestResults.securityTests));
+        dispatch(testActions.setOptions(requestTestResults.testOptions));
       }
 
       const { request } = item;
