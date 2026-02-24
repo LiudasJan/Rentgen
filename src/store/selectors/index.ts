@@ -145,5 +145,5 @@ export const selectImportConflictModal = (state: RootState) => state.ui.importCo
 export const selectSetAsDynamicVariableModal = (state: RootState) => state.ui.setAsDynamicVariableModal;
 
 // Settings selectors
-export const selectDisabledSecurityTests = (state: RootState) => state.settings.general.securityTests;
+export const selectDisabledSecurityTests = (state: RootState) => state.settings.general.securityTests.disabled;
 export const selectTheme = (state: RootState) => state.settings.theme;

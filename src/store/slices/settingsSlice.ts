@@ -2,14 +2,18 @@ import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 export interface SettingsState {
   general: {
-    securityTests: string[];
+    securityTests: {
+      disabled: string[];
+    };
   };
   theme: 'light' | 'dark';
 }
 
 export const initialState: SettingsState = {
   general: {
-    securityTests: [],
+    securityTests: {
+      disabled: [],
+    },
   },
   theme: 'light',
 };
@@ -23,9 +27,11 @@ export const settingsSlice = createSlice({
   initialState,
   reducers: {
     toggleSecurityTest: (state, action: PayloadAction<string>) => {
-      if (state.general.securityTests.includes(action.payload))
-        state.general.securityTests = state.general.securityTests.filter((test) => test !== action.payload);
-      else state.general.securityTests.push(action.payload);
+      if (state.general.securityTests.disabled.includes(action.payload))
+        state.general.securityTests.disabled = state.general.securityTests.disabled.filter(
+          (test) => test !== action.payload,
+        );
+      else state.general.securityTests.disabled.push(action.payload);
     },
     toggleTheme: (state) => {
       state.theme = state.theme === 'light' ? 'dark' : 'light';
