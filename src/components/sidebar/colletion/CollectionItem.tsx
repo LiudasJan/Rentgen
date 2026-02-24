@@ -96,7 +96,7 @@ export default function CollectionItem({ item, searchTerm }: Props) {
       dispatch(requestActions.setMethod(request.method as Method));
       dispatch(requestActions.setUrl(request.url));
       dispatch(requestActions.setHeaders(headersRecordToString(postmanHeadersToRecord(request.header))));
-      dispatch(requestActions.setBody(request.body?.raw || '{}'));
+      dispatch(requestActions.setBody(request.body?.raw || ''));
     },
     [collection, isDragging, isSelected, runResult, requestTestResults, dispatch, reset],
   );

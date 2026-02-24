@@ -1,14 +1,14 @@
-import { DiffEditor, DiffOnMount } from '@monaco-editor/react';
-import { editor } from 'monaco-editor/esm/vs/editor/editor.api';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useAppSelector } from '../../store/hooks';
-import { selectTheme } from '../../store/selectors';
+import { useMemo, useState } from 'react';
+import { Tab, TabList, TabPanel, Tabs } from 'react-tabs';
 import { ORIGINAL_REQUEST_TEST_PARAMETER_NAME } from '../../tests';
 import { HttpResponse, TestResult, TestResults } from '../../types';
-import { extractBodyFromResponse } from '../../utils';
-import TestRunningLoader from '../loaders/TestRunningLoader';
-import { rentgenDarkTheme, rentgenLightTheme } from '../monaco/themes';
+import { detectObjectType, extractBodyFromResponse, truncateValue } from '../../utils';
+import Button from '../buttons/Button';
+import PotentialBugsTable, { PotentialBug } from '../tables/PotentialBugsTable';
+import { JsonDiffViewer } from '../viewers/JsonDiffViewer';
 import Panel, { Props as PanelProps } from './Panel';
+
+import 'react-tabs/style/react-tabs.css';
 
 interface Props extends PanelProps {
   items: TestResults[];
@@ -16,8 +16,6 @@ interface Props extends PanelProps {
 }
 
 export default function TestResultsComparisonPanel({ items, title, response, ...otherProps }: Props) {
-  const theme = useAppSelector(selectTheme);
-  const diffEditorRef = useRef<editor.IStandaloneDiffEditor | null>(null);
   const [diffReady, setDiffReady] = useState<boolean>(false);
   const [showNoise, setShowNoise] = useState<boolean>(false);
   const [statistics, setStatistics] = useState({
@@ -26,7 +24,7 @@ export default function TestResultsComparisonPanel({ items, title, response, ...
     removed: 0,
     unchanged: 0,
   });
-  const isDark = theme === 'dark';
+  const [tabIndex, setTabIndex] = useState<number>(0);
 
   const noisePaths = useMemo(() => {
     if (items.length < 2) return null;
@@ -64,132 +62,102 @@ export default function TestResultsComparisonPanel({ items, title, response, ...
     }));
   }, [items, noisePaths, showNoise]);
 
-  const calculateStatistics = () => {
-    const editor = diffEditorRef.current;
-    if (!editor) return;
+  const potentialBugs = useMemo(() => {
+    if (items.length < 2) return null;
 
-    const changes = editor.getLineChanges() || [];
-    const originalLines = editor.getOriginalEditor().getModel().getLineCount();
-    const modifiedLines = editor.getModifiedEditor().getModel().getLineCount();
+    const collectPotentialBugs = (
+      originalTests: TestResult[],
+      modifiedTests: TestResult[],
+      showValue?: boolean,
+    ): PotentialBug[] =>
+      originalTests.flatMap((originalTest, index) => {
+        const modifiedTest = modifiedTests[index];
+        const originalResponse = normalizeResponse(originalTest?.response);
+        const modifiedResponse = normalizeResponse(modifiedTest?.response);
+        const issues = compareHttpResponses(originalResponse, modifiedResponse);
 
-    let added = 0;
-    let removed = 0;
+        if (issues.length === 0) return [];
 
-    changes.forEach((change) => {
-      if (change.originalEndLineNumber === 0)
-        added += change.modifiedEndLineNumber - change.modifiedStartLineNumber + 1;
-      else if (change.modifiedEndLineNumber === 0)
-        removed += change.originalEndLineNumber - change.originalStartLineNumber + 1;
-      else {
-        added += change.modifiedEndLineNumber - change.modifiedStartLineNumber + 1;
-        removed += change.originalEndLineNumber - change.originalStartLineNumber + 1;
-      }
-    });
+        return [
+          {
+            name: `⚠️ ${originalTest.name}` + (showValue ? ` (value: ${truncateValue(originalTest.value)})` : ''),
+            issue: issues.join('. '),
+            originalResponse,
+            modifiedResponse,
+          },
+        ];
+      });
 
-    const unchanged = Math.max(originalLines, modifiedLines) - Math.max(added, removed);
-    const percent = Number((((added + removed) / (originalLines + modifiedLines)) * 100).toFixed(2));
-
-    setStatistics({ percent, added, removed, unchanged });
-  };
-
-  const onMount: DiffOnMount = (editor, monaco) => {
-    diffEditorRef.current = editor;
-
-    monaco.editor.defineTheme('rentgen-light', rentgenLightTheme);
-    monaco.editor.defineTheme('rentgen-dark', rentgenDarkTheme);
-    monaco.editor.setTheme(isDark ? 'rentgen-dark' : 'rentgen-light');
-
-    editor.onDidUpdateDiff(() => {
-      calculateStatistics();
-      setDiffReady(true);
-    });
-  };
-
-  useEffect(() => {
-    return () => {
-      if (diffEditorRef.current) {
-        diffEditorRef.current.dispose();
-        diffEditorRef.current = null;
-      }
-    };
-  }, []);
+    return [
+      ...collectPotentialBugs(items[0].securityTests, items[1].securityTests),
+      ...collectPotentialBugs(items[0].performanceTests, items[1].performanceTests),
+      ...collectPotentialBugs(items[0].dataDrivenTests, items[1].dataDrivenTests, true),
+    ];
+  }, [items]);
 
   return (
     <Panel className="flex flex-col h-[calc(100vh-2.5rem)] box-border" title={title} {...otherProps}>
-      {filteredItems.length < 2 ? (
+      {items.length < 2 ? (
         <p className="p-4 m-0">No test results to compare</p>
       ) : (
-        <>
-          <div className="shrink-0 flex flex-col p-4 gap-4 text-sm bg-body dark:bg-dark-body border-y border-border dark:border-dark-body">
-            <div className="flex items-center gap-2">
-              <span>
-                Behavior Change: <b>{statistics.percent}%</b>
-              </span>
-              <span className="text-green-500">+{statistics.added}</span>
-              <span className="text-red-500">-{statistics.removed}</span>
-              <span>={statistics.unchanged}</span>
-            </div>
-            <label className="flex items-center gap-2">
-              <input
-                className="m-0"
-                disabled={!diffReady}
-                type="checkbox"
-                onChange={(e) => {
-                  setShowNoise(e.target.checked);
-                  setDiffReady(false);
-                }}
-              />
-              Show noise
-            </label>
-          </div>
-          <div className="relative flex-1 p-4">
-            <DiffEditor
-              height="100%"
-              language="json"
-              modified={JSON.stringify(filteredItems[1], null, 2)}
-              original={JSON.stringify(filteredItems[0], null, 2)}
-              options={{
-                readOnly: true,
-                minimap: { enabled: false },
-                scrollBeyondLastLine: false,
-                folding: true,
-                foldingHighlight: false,
-                stickyScroll: { enabled: false },
-                renderLineHighlight: 'none',
-                overviewRulerLanes: 0,
-                hideCursorInOverviewRuler: true,
-                overviewRulerBorder: false,
-                scrollbar: {
-                  vertical: 'auto',
-                  horizontal: 'auto',
-                  verticalScrollbarSize: 8,
-                  horizontalScrollbarSize: 8,
-                },
-                fontSize: 13,
-                fontFamily: 'monospace',
-                automaticLayout: true,
-                contextmenu: false,
-                selectionHighlight: false,
-                occurrencesHighlight: 'off',
-                renderWhitespace: 'none',
-                guides: {
-                  indentation: true,
-                  bracketPairs: false,
-                },
-              }}
-              theme={isDark ? 'rentgen-dark' : 'rentgen-light'}
-              onMount={onMount}
-            />
-            {!diffReady && (
-              <div className="absolute inset-0 flex z-90">
-                <TestRunningLoader
-                  className="justify-center bg-white dark:bg-dark-input"
-                  text="Computing differences…"
-                />
+        <Tabs
+          className="react-tabs h-full flex flex-col overflow-hidden"
+          forceRenderTabPanel={true}
+          selectedIndex={tabIndex}
+          selectedTabClassName="react-tabs__tab--selected bg-body! border-border! text-text! dark:bg-dark-body! dark:border-dark-body! dark:text-dark-text! after:content-none!"
+          selectedTabPanelClassName="react-tabs__tab-panel--selected h-full"
+          onSelect={(index) => setTabIndex(index)}
+        >
+          <TabList className="react-tabs__tab-list m-0! px-2.5! border-border! dark:border-dark-body!">
+            <Tab className="react-tabs__tab text-sm">Potential Bugs</Tab>
+            <Tab className="react-tabs__tab text-sm">Full Behavior Changes</Tab>
+          </TabList>
+
+          <TabPanel className="react-tabs__tab-panel p-4 bg-body dark:bg-dark-body overflow-hidden">
+            <div className="h-full flex flex-col gap-4">
+              {!potentialBugs || potentialBugs.length === 0 ? (
+                <p className="m-0 text-sm">No potential bugs detected ✅</p>
+              ) : (
+                <PotentialBugsTable data={potentialBugs} />
+              )}
+              <div>
+                <Button onClick={() => setTabIndex(1)}>Show Full Behavior Changes</Button>
               </div>
-            )}
-          </div>
-        </>
+            </div>
+          </TabPanel>
+          <TabPanel className="react-tabs__tab-panel bg-body dark:bg-dark-body">
+            <div className="h-full flex flex-col">
+              <div className="shrink-0 flex flex-col p-4 gap-4 text-sm border-b border-border dark:border-dark-body">
+                <div className="flex items-center gap-2">
+                  <span>
+                    Behavior Change: <b>{statistics.percent}%</b>
+                  </span>
+                  <span className="text-green-500">+{statistics.added}</span>
+                  <span className="text-red-500">-{statistics.removed}</span>
+                  <span>={statistics.unchanged}</span>
+                </div>
+                <label className="flex items-center gap-2">
+                  <input
+                    className="m-0"
+                    disabled={!diffReady}
+                    type="checkbox"
+                    onChange={(e) => {
+                      setShowNoise(e.target.checked);
+                      setDiffReady(false);
+                    }}
+                  />
+                  Show noise
+                </label>
+              </div>
+              <JsonDiffViewer
+                className="flex-1 py-4"
+                data={filteredItems}
+                calculateStatistics={setStatistics}
+                isDiffReady={setDiffReady}
+              />
+            </div>
+          </TabPanel>
+        </Tabs>
       )}
     </Panel>
   );
@@ -250,4 +218,103 @@ function removeNoiseFields<T extends object>(object: T, noisePaths: string[]): T
   }
 
   return clone;
+}
+
+export function compareHttpResponses(
+  originalResponse: HttpResponse | null,
+  modifiedResponse: HttpResponse | null,
+): string[] {
+  const issues: string[] = [];
+
+  if (originalResponse == null && modifiedResponse == null) return issues;
+  if (originalResponse != null && modifiedResponse == null) return ['Entire response disappeared'];
+  if (originalResponse == null && modifiedResponse != null) return ['Entire response appeared'];
+
+  if (originalResponse.status !== modifiedResponse.status)
+    issues.push(`Status changed: '${originalResponse.status}' → '${modifiedResponse.status}'`);
+
+  issues.push(...compareHttpResponseBodies(originalResponse.body, modifiedResponse.body));
+
+  return issues;
+}
+
+export function compareHttpResponseBodies(originalValue: any, modifiedValue: any, path: string = 'body'): string[] {
+  const issues: string[] = [];
+
+  const hasOwnKey = (record: Record<string, unknown>, key: string): boolean =>
+    Object.prototype.hasOwnProperty.call(record, key);
+
+  const compare = (
+    previous: unknown,
+    current: unknown,
+    currentPath: string,
+    previousExists: boolean,
+    currentExists: boolean,
+  ): void => {
+    if (previousExists && !currentExists) {
+      issues.push(`'${currentPath}' disappeared`);
+      return;
+    }
+
+    if (!previousExists && currentExists) {
+      issues.push(`'${currentPath}' appeared`);
+      return;
+    }
+
+    if (!previousExists && !currentExists) return;
+
+    const previousType = detectObjectType(previous);
+    const currentType = detectObjectType(current);
+
+    if (previousType !== currentType) {
+      issues.push(`Type changed at '${currentPath}': '${previousType}' → '${currentType}'`);
+      return;
+    }
+
+    if (previousType === 'object') {
+      const previousObject =
+        previous !== null && typeof previous === 'object' && !Array.isArray(previous)
+          ? (previous as Record<string, unknown>)
+          : {};
+      const currentObject =
+        current !== null && typeof current === 'object' && !Array.isArray(current)
+          ? (current as Record<string, unknown>)
+          : {};
+      const allKeys = new Set([...Object.keys(previousObject), ...Object.keys(currentObject)]);
+
+      for (const key of allKeys) {
+        compare(
+          previousObject[key],
+          currentObject[key],
+          `${currentPath}.${key}`,
+          hasOwnKey(previousObject, key),
+          hasOwnKey(currentObject, key),
+        );
+      }
+
+      return;
+    }
+
+    if (previousType === 'array') {
+      const previousArray = Array.isArray(previous) ? previous : [];
+      const currentArray = Array.isArray(current) ? current : [];
+      const maxLength = Math.max(previousArray.length, currentArray.length);
+
+      for (let index = 0; index < maxLength; index++) {
+        compare(
+          previousArray[index],
+          currentArray[index],
+          `${currentPath}[${index}]`,
+          index < previousArray.length,
+          index < currentArray.length,
+        );
+      }
+
+      return;
+    }
+  };
+
+  compare(originalValue, modifiedValue, path, originalValue !== undefined, modifiedValue !== undefined);
+
+  return issues;
 }

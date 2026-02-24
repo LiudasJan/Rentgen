@@ -15,7 +15,6 @@ import HighlightedInput from './components/inputs/HighlightedInput';
 import HighlightedTextarea from './components/inputs/HighlightedTextarea';
 import Select, { SelectOption } from './components/inputs/Select';
 import Textarea from './components/inputs/Textarea';
-import { JsonViewer } from './components/JsonViewer';
 import Loader from './components/loaders/Loader';
 import TestRunningLoader from './components/loaders/TestRunningLoader';
 import ConfirmationModal from './components/modals/ConfirmationModal';
@@ -27,6 +26,7 @@ import ParametersPanel from './components/panels/ParametersPanel';
 import TestResultsComparisonPanel from './components/panels/TestResultsComparisonPanel';
 import Sidebar from './components/sidebar/Sidebar';
 import TestsTable, { ExpandedTestComponent, getTestsTableColumns } from './components/tables/TestsTable';
+import { JsonViewer } from './components/viewers/JsonViewer';
 import { appConfig } from './constants/appConfig';
 import { useCtrlS } from './hooks/useCtrlS';
 import { useReset } from './hooks/useReset';
@@ -38,7 +38,6 @@ import {
   RESPONSE_SIZE_CHECK_TEST_NAME,
 } from './tests';
 import { Environment, ExportReport, ExtractionFailure, HttpResponse, ReportFormat, TestStatus } from './types';
-import { extractDynamicVariableFromResponseWithDetails } from './utils/dynamicVariable';
 import {
   buildSuite,
   createHttpRequest,
@@ -57,6 +56,7 @@ import {
   substituteRequestVariables,
 } from './utils';
 import { findRequestById, findRequestWithFolder } from './utils/collection';
+import { extractDynamicVariableFromResponseWithDetails } from './utils/dynamicVariable';
 
 import { store } from './store';
 import { useAppDispatch, useAppSelector } from './store/hooks';
@@ -342,12 +342,8 @@ export default function App() {
         ),
       );
 
-      if (decodedLines.length > 0) {
-        dispatch(requestActions.setBody(decodedLines.join('\n')));
-      } else {
-        const trimmedBody = curlBody ? String(curlBody).trim() : '';
-        dispatch(requestActions.setBody(trimmedBody !== '' ? trimmedBody : '{}'));
-      }
+      if (decodedLines.length > 0) dispatch(requestActions.setBody(decodedLines.join('\n')));
+      else dispatch(requestActions.setBody(curlBody ? String(curlBody).trim() : ''));
 
       dispatch(uiActions.closeCurlModal());
     } catch (error) {

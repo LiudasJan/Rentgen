@@ -2,16 +2,16 @@ import MonacoEditor, { OnMount, loader } from '@monaco-editor/react';
 import cn from 'classnames';
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useAppSelector } from '../store/hooks';
-import { selectTheme } from '../store/selectors';
-import { extractValue, stringifyExtractedValue } from '../utils';
-import { ResponsePanelContext, useContextMenu } from './context-menu';
+import { useAppSelector } from '../../store/hooks';
+import { selectTheme } from '../../store/selectors';
+import { extractValue, stringifyExtractedValue } from '../../utils';
+import { ResponsePanelContext, useContextMenu } from '../context-menu';
 import {
   rentgenDarkPlaintextTheme,
   rentgenDarkTheme,
   rentgenLightPlaintextTheme,
   rentgenLightTheme,
-} from './monaco/themes';
+} from '../monaco/themes';
 
 // Configure Monaco to use local ESM bundle instead of CDN (required for Electron)
 loader.config({ monaco });
