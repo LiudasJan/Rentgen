@@ -31,7 +31,7 @@ export default function PotentialBugsTable({ data, ...otherProps }: Omit<TablePr
           style: {
             'div:first-child': {
               padding: '0.25rem 0',
-              whiteSpace: 'normal !important',
+              whiteSpace: 'pre !important',
             },
           },
         },

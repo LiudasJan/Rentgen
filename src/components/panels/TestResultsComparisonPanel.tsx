@@ -81,7 +81,7 @@ export default function TestResultsComparisonPanel({ items, title, response, ...
         return [
           {
             name: `⚠️ ${originalTest.name}` + (showValue ? ` (value: ${truncateValue(originalTest.value)})` : ''),
-            issue: issues.join('. '),
+            issue: transformIssues(issues),
             originalResponse,
             modifiedResponse,
           },
@@ -317,4 +317,27 @@ export function compareHttpResponseBodies(originalValue: any, modifiedValue: any
   compare(originalValue, modifiedValue, path, originalValue !== undefined, modifiedValue !== undefined);
 
   return issues;
+}
+
+function transformIssues(issues: string[]): string {
+  const appeared: string[] = [];
+  const disappeared: string[] = [];
+  const otherLines: string[] = [];
+
+  for (const issue of issues) {
+    const match = issue.trim().match(/^'([^']+)'\s+(appeared|disappeared)$/);
+
+    if (match) {
+      const [, field, status] = match;
+
+      if (status === 'appeared') appeared.push(`'${field}'`);
+      else disappeared.push(`'${field}'`);
+    } else otherLines.push(issue);
+  }
+
+  const summary: string[] = [];
+  if (appeared.length) summary.push(`Appeared: ${appeared.join(', ')}.`);
+  if (disappeared.length) summary.push(`Disappeared: ${disappeared.join(', ')}.`);
+
+  return [...otherLines, ...summary].join('\n');
 }
