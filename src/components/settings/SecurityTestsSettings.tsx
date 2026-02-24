@@ -49,7 +49,7 @@ export function SecurityTestsSettings() {
           <span>Name</span>
           <span>Enabled</span>
         </div>
-        {securityTests.map((test) => (
+        {securityTests.sort().map((test) => (
           <label key={test} className="flex items-center justify-between gap-2 text-xs cursor-pointer">
             {test}
             <span className="w-11.25 text-center">
