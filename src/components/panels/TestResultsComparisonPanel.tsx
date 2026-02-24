@@ -116,7 +116,9 @@ export default function TestResultsComparisonPanel({ items, title, response, ...
           <TabPanel className="react-tabs__tab-panel p-4 bg-body dark:bg-dark-body overflow-hidden">
             <div className="h-full flex flex-col gap-4">
               {!potentialBugs || potentialBugs.length === 0 ? (
-                <p className="m-0 text-sm">No potential bugs detected ✅</p>
+                <p className="m-0 p-2.5 text-sm text-white text-center rounded-md bg-green-500">
+                  No potential bugs detected ✅
+                </p>
               ) : (
                 <PotentialBugsTable data={potentialBugs} />
               )}
