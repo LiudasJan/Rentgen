@@ -44,7 +44,7 @@ const settingsTabs = [
     name: 'CLI',
     icon: <CliIcon className="w-4 h-4" />,
     component: (
-      <p className="text-sm">
+      <p className="m-0 text-sm">
         <strong>Rentgen CLI is currently in active development.</strong>
         <br />
         <br />
