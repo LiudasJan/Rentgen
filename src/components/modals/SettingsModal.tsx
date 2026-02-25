@@ -49,7 +49,7 @@ const settingsTabs = [
         <br />
         <br />
         The Rentgen CLI will provide automation-ready execution for teams integrating structural testing into CI/CD
-        workflows
+        workflows.
       </p>
     ),
   },
