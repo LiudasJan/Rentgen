@@ -6,6 +6,7 @@ export default function Toggle({
   className,
   disabled,
   label,
+  title,
   type = 'checkbox',
   ...otherProps
 }: InputHTMLAttributes<HTMLInputElement> & { label?: ReactNode }) {
@@ -26,6 +27,7 @@ export default function Toggle({
             after:rounded-full
             after:transition-all after:duration-300
             peer-checked:after:translate-x-5"
+          title={title}
         ></span>
       </span>
     </label>
