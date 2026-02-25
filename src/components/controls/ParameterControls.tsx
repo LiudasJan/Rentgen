@@ -7,6 +7,7 @@ import { clamp, getInitialParameterValue, normalizeDecimal } from '../../utils';
 import Input from '../inputs/Input';
 import { SelectOption } from '../inputs/Select';
 import SimpleSelect from '../inputs/SimpleSelect';
+import Toggle from '../inputs/Toggle';
 
 import ClearCrossIcon from '../../assets/icons/clear-cross-icon.svg';
 
@@ -102,15 +103,14 @@ export function ParameterControls({ dynamicValue, onChange }: Props) {
             )}
             onClick={() => onChange({ type: 'do-not-test', value: '', mandatory: false })}
           />
-          <input
+          <Toggle
             checked={mandatory}
             disabled={isParameterTestSkipped(type)}
             title={
               !isParameterTestSkipped(type)
-                ? 'Checked = Mandatory → Rentgen generates tests based on this setting'
+                ? 'Enabled = Mandatory → Rentgen generates tests based on this setting'
                 : undefined
             }
-            type="checkbox"
             onChange={(e) => onChange({ ...dynamicValue, mandatory: e.target.checked })}
           />
         </div>
