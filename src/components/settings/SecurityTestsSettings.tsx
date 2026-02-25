@@ -50,11 +50,11 @@ export function SecurityTestsSettings() {
       <p className="m-0 text-xs text-text-secondary">
         Toggle individual security tests on or off to customize your testing experience.
       </p>
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col border border-border dark:border-dark-border rounded-md divide-y divide-border dark:divide-dark-border overflow-hidden">
         {securityTests.sort().map((test) => (
           <Toggle
             key={test}
-            className="text-xs justify-between"
+            className="p-3 text-xs justify-between hover:bg-button-secondary dark:hover:bg-dark-input"
             label={<span className={cn({ 'opacity-50': disabledSecurityTests.includes(test) })}>{test}</span>}
             checked={!disabledSecurityTests.includes(test)}
             onChange={() => dispatch(settingsActions.toggleSecurityTest(test))}
