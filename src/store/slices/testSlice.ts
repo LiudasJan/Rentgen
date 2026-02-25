@@ -114,17 +114,22 @@ export const testSlice = createSlice({
     },
 
     // Reset
-    resetTests: (state) => ({
-      ...initialState,
-      results: state.results,
-      ...(state.resultsToCompare.length >= 2
-        ? { compareResponse: null, isComparing: false, resultsToCompare: [] }
-        : {
-            compareResponse: state.compareResponse,
-            isComparing: state.isComparing,
-            resultsToCompare: state.resultsToCompare,
-          }),
-    }),
+    resetTests: (state) => {
+      state.timestamp = null;
+      state.crudTests = [];
+      state.dataDrivenTests = [];
+      state.performanceTests = [];
+      state.securityTests = [];
+      state.isDataDrivenRunning = false;
+      state.isLargePayloadTestRunning = false;
+      state.isLoadTestRunning = false;
+      state.isPerformanceRunning = false;
+      state.isSecurityRunning = false;
+      state.currentTest = 0;
+      state.count = 0;
+      state.loadProgress = 0;
+      state.testOptions = null;
+    },
 
     // Start all tests
     startAllTests: (state) => {
