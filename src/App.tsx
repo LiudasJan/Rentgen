@@ -681,11 +681,16 @@ export default function App() {
       <Sidebar />
       <div className="@container flex-1 min-w-0 flex flex-col gap-4 py-5 px-7 overflow-y-auto">
         {isEditingEnvironment && (
-          <EnvironmentEditor
-            environment={environments.find((e) => e.id === editingEnvironmentId) || null}
-            isNew={editingEnvironmentId === null}
-            onSave={handleSaveEnvironment}
-          />
+          <div className="relative">
+            <EnvironmentEditor
+              environment={environments.find((e) => e.id === editingEnvironmentId) || null}
+              isNew={editingEnvironmentId === null}
+              onSave={handleSaveEnvironment}
+            />
+            <IconButton className="absolute top-2.5 right-4" onClick={() => dispatch(environmentActions.stopEditing())}>
+              <ClearCrossIcon className="h-5 w-5" />
+            </IconButton>
+          </div>
         )}
         {!isEditingEnvironment && isComparingTestResults && (
           <div className="relative">
