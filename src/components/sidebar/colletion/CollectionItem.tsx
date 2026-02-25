@@ -66,7 +66,7 @@ export default function CollectionItem({ item, searchTerm }: Props) {
   const onClick = useCallback(
     (id: string) => {
       if (isDragging) return;
-      if (isComparingTestResults) dispatch(testActions.clearResultsToCompare());
+      if (isSelected && isComparingTestResults) dispatch(testActions.clearResultsToCompare());
       if (isSelected) return;
 
       const item = findRequestById(collection, id);
@@ -101,6 +101,8 @@ export default function CollectionItem({ item, searchTerm }: Props) {
       dispatch(requestActions.setUrl(request.url));
       dispatch(requestActions.setHeaders(headersRecordToString(postmanHeadersToRecord(request.header))));
       dispatch(requestActions.setBody(request.body?.raw || ''));
+
+      if (isComparingTestResults) dispatch(testActions.clearResultsToCompare());
     },
     [collection, isComparingTestResults, isDragging, isSelected, runResult, requestTestResults, dispatch, reset],
   );

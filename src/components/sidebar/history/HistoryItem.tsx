@@ -34,14 +34,14 @@ export default function HistoryItem({ entry, searchTerm }: Props) {
   })();
 
   const handleClick = useCallback(() => {
-    if (isComparingTestResults) dispatch(testActions.clearResultsToCompare());
-
     reset();
 
     dispatch(requestActions.setMethod(entry.method as Method));
     dispatch(requestActions.setUrl(entry.url));
     dispatch(requestActions.setHeaders(entry.headers));
     dispatch(requestActions.setBody(entry.body));
+
+    if (isComparingTestResults) dispatch(testActions.clearResultsToCompare());
   }, [entry, isComparingTestResults, dispatch, reset]);
 
   return (
