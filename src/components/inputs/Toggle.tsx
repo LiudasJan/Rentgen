@@ -1,5 +1,5 @@
 import cn from 'classnames';
-import { InputHTMLAttributes } from 'react';
+import { InputHTMLAttributes, ReactNode } from 'react';
 import { twMerge } from 'tailwind-merge';
 
 export default function Toggle({
@@ -8,7 +8,7 @@ export default function Toggle({
   label,
   type = 'checkbox',
   ...otherProps
-}: InputHTMLAttributes<HTMLInputElement> & { label?: string }) {
+}: InputHTMLAttributes<HTMLInputElement> & { label?: ReactNode }) {
   return (
     <label
       className={twMerge(
@@ -19,7 +19,7 @@ export default function Toggle({
       <span className="relative inline-flex items-center">
         <input disabled={disabled} type="checkbox" className="sr-only peer" {...otherProps} />
         <span
-          className="w-10 h-5 bg-button-secondary dark:bg-dark-button-secondary rounded-full
+          className="w-10 h-5 bg-button-secondary-hover dark:bg-dark-button-secondary rounded-full
           peer-checked:bg-button-primary
             after:content-[''] after:absolute after:top-0.5 after:left-0.5
             after:bg-white after:h-4 after:w-4
