@@ -39,7 +39,7 @@ export function SecurityTestsSettings() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h5 className="m-0 pb-1 border-b border-b-border dark:border-b-dark-border">Security Tests</h5>
+      <h5 className="m-0 pb-1.5 border-b border-b-border dark:border-b-dark-border">Security Tests</h5>
       <p className="m-0 text-xs text-text-secondary">
         Enable or disable specific security tests to customize your testing experience. To disable a test, simply
         uncheck the corresponding option.

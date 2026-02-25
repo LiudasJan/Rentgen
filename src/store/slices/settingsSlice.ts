@@ -1,7 +1,11 @@
 import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 export interface SettingsState {
+  cli: unknown;
   general: {
+    historySize: number;
+  };
+  testEngine: {
     securityTests: {
       disabled: string[];
     };
@@ -10,7 +14,11 @@ export interface SettingsState {
 }
 
 export const initialState: SettingsState = {
+  cli: {},
   general: {
+    historySize: 1000,
+  },
+  testEngine: {
     securityTests: {
       disabled: [],
     },
@@ -27,11 +35,11 @@ export const settingsSlice = createSlice({
   initialState,
   reducers: {
     toggleSecurityTest: (state, action: PayloadAction<string>) => {
-      if (state.general.securityTests.disabled.includes(action.payload))
-        state.general.securityTests.disabled = state.general.securityTests.disabled.filter(
+      if (state.testEngine.securityTests.disabled.includes(action.payload))
+        state.testEngine.securityTests.disabled = state.testEngine.securityTests.disabled.filter(
           (test) => test !== action.payload,
         );
-      else state.general.securityTests.disabled.push(action.payload);
+      else state.testEngine.securityTests.disabled.push(action.payload);
     },
     toggleTheme: (state) => {
       state.theme = state.theme === 'light' ? 'dark' : 'light';
@@ -44,7 +52,9 @@ export const settingsSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder.addCase(loadSettings.fulfilled, (state, action: PayloadAction<SettingsState>) => {
+      state.cli = action.payload.cli;
       state.general = action.payload.general;
+      state.testEngine = action.payload.testEngine;
       state.theme = action.payload.theme;
 
       if (action.payload.theme === 'dark') document.documentElement.classList.add('dark');
