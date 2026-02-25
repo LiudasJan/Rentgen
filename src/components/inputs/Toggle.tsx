@@ -10,14 +10,18 @@ export default function Toggle({
   ...otherProps
 }: InputHTMLAttributes<HTMLInputElement> & { label?: string }) {
   return (
-    <label className={twMerge(cn('flex gap-4 items-center cursor-pointer', className))}>
+    <label
+      className={twMerge(
+        cn('flex gap-4 items-center cursor-pointer', { 'opacity-50 cursor-not-allowed': disabled }, className),
+      )}
+    >
       {label}
       <span className="relative inline-flex items-center">
         <input disabled={disabled} type="checkbox" className="sr-only peer" {...otherProps} />
         <span
-          className="w-11 h-6 bg-border rounded-full
+          className="w-10 h-5 bg-button-secondary dark:bg-dark-button-secondary rounded-full
           peer-checked:bg-button-primary
-            after:content-[''] after:absolute after:top-1 after:left-1
+            after:content-[''] after:absolute after:top-0.5 after:left-0.5
             after:bg-white after:h-4 after:w-4
             after:rounded-full
             after:transition-all after:duration-300

@@ -142,6 +142,7 @@ export default function TestResultsComparisonPanel({ items, title, response, ...
                   <span>={statistics.unchanged}</span>
                 </div>
                 <Toggle
+                  className="w-fit"
                   label="Show noise"
                   disabled={!diffReady}
                   onChange={(e) => {
