@@ -4,6 +4,7 @@ import { ORIGINAL_REQUEST_TEST_PARAMETER_NAME } from '../../tests';
 import { HttpResponse, TestResult, TestResults } from '../../types';
 import { detectObjectType, extractBodyFromResponse, truncateValue } from '../../utils';
 import Button from '../buttons/Button';
+import Toggle from '../inputs/Toggle';
 import PotentialBugsTable, { PotentialBug } from '../tables/PotentialBugsTable';
 import { JsonDiffViewer } from '../viewers/JsonDiffViewer';
 import Panel, { Props as PanelProps } from './Panel';
@@ -140,18 +141,14 @@ export default function TestResultsComparisonPanel({ items, title, response, ...
                   <span className="text-red-500">-{statistics.removed}</span>
                   <span>={statistics.unchanged}</span>
                 </div>
-                <label className="w-fit flex items-center gap-2 cursor-pointer">
-                  <input
-                    className="m-0"
-                    disabled={!diffReady}
-                    type="checkbox"
-                    onChange={(e) => {
-                      setShowNoise(e.target.checked);
-                      setDiffReady(false);
-                    }}
-                  />
-                  Show noise
-                </label>
+                <Toggle
+                  label="Show noise"
+                  disabled={!diffReady}
+                  onChange={(e) => {
+                    setShowNoise(e.target.checked);
+                    setDiffReady(false);
+                  }}
+                />
               </div>
               <JsonDiffViewer
                 className="flex-1 py-4"

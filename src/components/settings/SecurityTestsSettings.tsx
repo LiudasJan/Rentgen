@@ -16,6 +16,7 @@ import {
   UPPERCASE_DOMAIN_TEST_NAME,
   UPPERCASE_PATH_TEST_NAME,
 } from '../../tests/SecurityTests';
+import Toggle from '../inputs/Toggle';
 
 const securityTests: string[] = [
   AUTHORIZATION_TEST_NAME,
@@ -41,27 +42,21 @@ export function SecurityTestsSettings() {
     <div className="flex flex-col gap-4">
       <h5 className="m-0 pb-1.5 border-b border-b-border dark:border-b-dark-border">Security Tests</h5>
       <p className="m-0 text-xs text-text-secondary">
-        Enable or disable specific security tests to customize your testing experience. To disable a test, simply
-        uncheck the corresponding option.
+        Enable or disable specific security tests to customize your testing experience.
       </p>
       <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between gap-2 font-bold text-xs">
+        <div className="flex items-center justify-between gap-2 font-bold text-sm">
           <span>Name</span>
           <span>Enabled</span>
         </div>
         {securityTests.sort().map((test) => (
-          <label key={test} className="flex items-center justify-between gap-2 text-xs cursor-pointer">
-            {test}
-            <span className="w-11.25 text-center">
-              <input
-                className="m-0"
-                type="checkbox"
-                value={test}
-                checked={!disabledSecurityTests.includes(test)}
-                onChange={() => dispatch(settingsActions.toggleSecurityTest(test))}
-              />
-            </span>
-          </label>
+          <Toggle
+            key={test}
+            className="text-sm justify-between"
+            label={test}
+            checked={!disabledSecurityTests.includes(test)}
+            onChange={() => dispatch(settingsActions.toggleSecurityTest(test))}
+          />
         ))}
       </div>
     </div>
