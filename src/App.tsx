@@ -824,34 +824,40 @@ export default function App() {
               )}
             </div>
 
-            <HighlightedTextarea
-              highlightColor={selectedEnvironment?.color}
-              maxRows={10}
-              placeholder="Header-Key: value"
-              value={headers}
-              variables={variables}
-              onBlur={autoSaveRequest}
-              onChange={(event) => dispatch(requestActions.setHeaders(event.target.value))}
-            />
-
-            <div className="relative">
+            <div>
+              <label className="block mb-1 font-bold text-sm">Headers</label>
               <HighlightedTextarea
                 highlightColor={selectedEnvironment?.color}
-                maxRows={15}
-                placeholder={mode === 'HTTP' ? 'Enter request body (JSON or Form Data)' : 'Message body'}
-                value={body}
+                maxRows={10}
+                placeholder="Header-Key: value"
+                value={headers}
                 variables={variables}
                 onBlur={autoSaveRequest}
-                onChange={(event) => dispatch(requestActions.setBody(event.target.value))}
+                onChange={(event) => dispatch(requestActions.setHeaders(event.target.value))}
               />
-              <Button
-                className="absolute top-3 right-4 z-10"
-                buttonSize={ButtonSize.SMALL}
-                buttonType={ButtonType.SECONDARY}
-                onClick={() => dispatch(requestActions.setBody(formatBody(body, parseHeaders(headers))))}
-              >
-                Beautify
-              </Button>
+            </div>
+
+            <div>
+              <label className="block mb-1 font-bold text-sm">Body</label>
+              <div className="relative">
+                <HighlightedTextarea
+                  highlightColor={selectedEnvironment?.color}
+                  maxRows={15}
+                  placeholder={mode === 'HTTP' ? 'Enter request body (JSON or Form Data)' : 'Message body'}
+                  value={body}
+                  variables={variables}
+                  onBlur={autoSaveRequest}
+                  onChange={(event) => dispatch(requestActions.setBody(event.target.value))}
+                />
+                <Button
+                  className="absolute top-3 right-4 z-10"
+                  buttonSize={ButtonSize.SMALL}
+                  buttonType={ButtonType.SECONDARY}
+                  onClick={() => dispatch(requestActions.setBody(formatBody(body, parseHeaders(headers))))}
+                >
+                  Beautify
+                </Button>
+              </div>
             </div>
 
             {mode === 'HTTP' && (
