@@ -2,9 +2,11 @@ import { Method } from 'axios';
 import { MouseEvent, useCallback } from 'react';
 import ClearCrossIcon from '../../../assets/icons/clear-cross-icon.svg';
 import { useReset } from '../../../hooks/useReset';
-import { useAppDispatch } from '../../../store/hooks';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import { selectIsComparingTestResults } from '../../../store/selectors';
 import { historyActions } from '../../../store/slices/historySlice';
 import { requestActions } from '../../../store/slices/requestSlice';
+import { testActions } from '../../../store/slices/testSlice';
 import { HistoryEntry } from '../../../types/history';
 import MethodBadge from '../../MethodBadge';
 import SearchHighlight from '../colletion/SearchHighlight';
@@ -18,6 +20,8 @@ export default function HistoryItem({ entry, searchTerm }: Props) {
   const dispatch = useAppDispatch();
   const reset = useReset();
 
+  const isComparingTestResults = useAppSelector(selectIsComparingTestResults);
+
   const time = new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
   const displayUrl = (() => {
@@ -30,13 +34,15 @@ export default function HistoryItem({ entry, searchTerm }: Props) {
   })();
 
   const handleClick = useCallback(() => {
+    if (isComparingTestResults) dispatch(testActions.clearResultsToCompare());
+
     reset();
 
     dispatch(requestActions.setMethod(entry.method as Method));
     dispatch(requestActions.setUrl(entry.url));
     dispatch(requestActions.setHeaders(entry.headers));
     dispatch(requestActions.setBody(entry.body));
-  }, [entry, dispatch, reset]);
+  }, [entry, isComparingTestResults, dispatch, reset]);
 
   return (
     <div
