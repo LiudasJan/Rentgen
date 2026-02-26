@@ -67,10 +67,14 @@ export default function TestResultsComparisonPanel({ items, title, response, ...
     const collectPotentialBugs = (
       originalTests: TestResult[],
       modifiedTests: TestResult[],
-      showValue?: boolean,
+      matchByValue?: boolean,
     ): PotentialBug[] =>
       originalTests.flatMap((originalTest, index) => {
-        const modifiedTest = modifiedTests[index];
+        const modifiedTest =
+          modifiedTests.find(
+            (test) => test.name === originalTest.name && (!matchByValue || test.value === originalTest.value),
+          ) ||
+          (matchByValue && modifiedTests[index]);
         const originalResponse = normalizeResponse(originalTest?.response);
         const modifiedResponse = normalizeResponse(modifiedTest?.response);
         const issues = compareHttpResponses(originalResponse, modifiedResponse);
@@ -79,7 +83,7 @@ export default function TestResultsComparisonPanel({ items, title, response, ...
 
         return [
           {
-            name: `⚠️ ${originalTest.name}` + (showValue ? ` (value: ${truncateValue(originalTest.value)})` : ''),
+            name: `⚠️ ${originalTest.name}` + (matchByValue ? ` (value: ${truncateValue(originalTest.value)})` : ''),
             issue: transformIssues(issues),
             originalResponse,
             modifiedResponse,
