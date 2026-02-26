@@ -13,6 +13,7 @@ import SidebarButton from './SidebarButton';
 import BugIcon from '../../assets/icons/bug-icon.svg';
 import CollectionIcon from '../../assets/icons/collection-icon.svg';
 import EnvironmentIcon from '../../assets/icons/environment-icon.svg';
+import GearIcon from '../../assets/icons/gear-icon.svg';
 import HistoryIcon from '../../assets/icons/history-icon.svg';
 import UpgradeStarIcon from '../../assets/icons/upgrade-star-icon.svg';
 
@@ -74,6 +75,9 @@ export default function Sidebar() {
           </SidebarButton>
         </div>
         <div>
+          <SidebarButton label="Settings" onClick={() => dispatch(uiActions.openSettingsModal())}>
+            <GearIcon className="w-5 h-5" />
+          </SidebarButton>
           <SidebarButton
             label="Check for updates"
             onClick={() =>

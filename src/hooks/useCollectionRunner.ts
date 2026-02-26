@@ -67,7 +67,7 @@ export function useCollectionRunner() {
       await executeRequest(item);
       dispatch(collectionRunActions.finishRequestRun());
     },
-    [collection],
+    [collection, selectedEnvironment],
   );
 
   const executeRequest = useCallback(

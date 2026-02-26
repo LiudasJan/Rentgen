@@ -88,12 +88,12 @@ export interface TestResult {
 
 export interface TestResults {
   timestamp: number | null;
-  domain: string;
   count: number;
   crudTests: TestResult[];
   dataDrivenTests: TestResult[];
   performanceTests: TestResult[];
   securityTests: TestResult[];
+  testOptions: TestOptions | null;
 }
 
 export enum TestStatus {

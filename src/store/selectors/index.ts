@@ -90,7 +90,6 @@ export const selectPerformanceTests = (state: RootState) => state.tests.performa
 export const selectSecurityTests = (state: RootState) => state.tests.securityTests;
 export const selectCurrentTest = (state: RootState) => state.tests.currentTest;
 export const selectTestsCount = (state: RootState) => state.tests.count;
-export const selectTestsDomain = (state: RootState) => state.tests.domain;
 export const selectTestsTimestamp = (state: RootState) => state.tests.timestamp;
 
 export const selectIsSecurityRunning = (state: RootState) => state.tests.isSecurityRunning;
@@ -123,6 +122,7 @@ export const selectTestResultsToCompare = (state: RootState) => state.tests.resu
 export const selectOpenCurlModal = (state: RootState) => state.ui.openCurlModal;
 export const selectOpenReloadModal = (state: RootState) => state.ui.openReloadModal;
 export const selectOpenSendHttpSuccessModal = (state: RootState) => state.ui.openSendHttpSuccessModal;
+export const selectOpenSettingsModal = (state: RootState) => state.ui.openSettingsModal;
 export const selectDeleteFolderModal = (state: RootState) => state.ui.deleteFolderModal;
 export const selectSaved = (state: RootState) => state.ui.saved;
 export const selectExported = (state: RootState) => state.ui.exported;
@@ -131,7 +131,6 @@ export const selectCurl = (state: RootState) => state.ui.curl;
 export const selectCurlError = (state: RootState) => state.ui.curlError;
 export const selectExportFormat = (state: RootState) => state.ui.exportFormat;
 export const selectSidebarActiveTab = (state: RootState) => state.ui.sidebarActiveTab;
-export const selectTheme = (state: RootState) => state.ui.theme;
 export const selectCertificateError = (state: RootState) => state.ui.certificateError;
 
 // History selectors
@@ -143,3 +142,7 @@ export const selectRunningRequestId = (state: RootState) => state.collectionRun.
 export const selectCollectionRunResults = (state: RootState) => state.collectionRun.results;
 export const selectImportConflictModal = (state: RootState) => state.ui.importConflictModal;
 export const selectSetAsDynamicVariableModal = (state: RootState) => state.ui.setAsDynamicVariableModal;
+
+// Settings selectors
+export const selectDisabledSecurityTests = (state: RootState) => state.settings.testEngine.securityTests.disabled;
+export const selectTheme = (state: RootState) => state.settings.theme;

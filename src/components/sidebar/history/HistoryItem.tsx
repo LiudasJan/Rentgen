@@ -1,16 +1,15 @@
 import { Method } from 'axios';
-import { MouseEvent } from 'react';
+import { MouseEvent, useCallback } from 'react';
 import ClearCrossIcon from '../../../assets/icons/clear-cross-icon.svg';
-import { useAppDispatch } from '../../../store/hooks';
-import { collectionActions } from '../../../store/slices/collectionSlice';
+import { useReset } from '../../../hooks/useReset';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import { selectIsComparingTestResults } from '../../../store/selectors';
 import { historyActions } from '../../../store/slices/historySlice';
 import { requestActions } from '../../../store/slices/requestSlice';
-import { responseActions } from '../../../store/slices/responseSlice';
 import { testActions } from '../../../store/slices/testSlice';
-import { websocketActions } from '../../../store/slices/websocketSlice';
 import { HistoryEntry } from '../../../types/history';
-import SearchHighlight from '../colletion/SearchHighlight';
 import MethodBadge from '../../MethodBadge';
+import SearchHighlight from '../colletion/SearchHighlight';
 
 interface Props {
   entry: HistoryEntry;
@@ -19,6 +18,9 @@ interface Props {
 
 export default function HistoryItem({ entry, searchTerm }: Props) {
   const dispatch = useAppDispatch();
+  const reset = useReset();
+
+  const isComparingTestResults = useAppSelector(selectIsComparingTestResults);
 
   const time = new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
@@ -31,16 +33,16 @@ export default function HistoryItem({ entry, searchTerm }: Props) {
     }
   })();
 
-  const handleClick = () => {
-    dispatch(collectionActions.selectRequest(null));
+  const handleClick = useCallback(() => {
+    reset();
+
     dispatch(requestActions.setMethod(entry.method as Method));
     dispatch(requestActions.setUrl(entry.url));
     dispatch(requestActions.setHeaders(entry.headers));
     dispatch(requestActions.setBody(entry.body));
-    dispatch(responseActions.clearResponse());
-    dispatch(testActions.setOptions(null));
-    dispatch(websocketActions.clearMessages());
-  };
+
+    if (isComparingTestResults) dispatch(testActions.clearResultsToCompare());
+  }, [entry, isComparingTestResults, dispatch, reset]);
 
   return (
     <div

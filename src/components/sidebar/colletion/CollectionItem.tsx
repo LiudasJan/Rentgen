@@ -9,6 +9,7 @@ import { useAppDispatch, useAppSelector } from '../../../store/hooks';
 import {
   selectCollectionData,
   selectCollectionRunResults,
+  selectIsComparingTestResults,
   selectRequestTestResults,
   selectRunningRequestId,
   selectSelectedRequestId,
@@ -48,6 +49,7 @@ export default function CollectionItem({ item, searchTerm }: Props) {
   const runResults = useAppSelector(selectCollectionRunResults);
   const requestTestResults = useAppSelector(selectRequestTestResults(item.id));
   const selectedRequestId = useAppSelector(selectSelectedRequestId);
+  const isComparingTestResults = useAppSelector(selectIsComparingTestResults);
 
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [editingName, setEditingName] = useState<string>(item.name);
@@ -63,7 +65,9 @@ export default function CollectionItem({ item, searchTerm }: Props) {
 
   const onClick = useCallback(
     (id: string) => {
-      if (isSelected || isDragging) return;
+      if (isDragging) return;
+      if (isSelected && isComparingTestResults) dispatch(testActions.clearResultsToCompare());
+      if (isSelected) return;
 
       const item = findRequestById(collection, id);
       if (!item) return;
@@ -82,12 +86,12 @@ export default function CollectionItem({ item, searchTerm }: Props) {
 
       if (requestTestResults) {
         dispatch(testActions.setCount(requestTestResults.count));
-        dispatch(testActions.setDomain(requestTestResults.domain));
         dispatch(testActions.setTimestamp(requestTestResults.timestamp));
         dispatch(testActions.setCrudTests(requestTestResults.crudTests));
         dispatch(testActions.setDataDrivenTests(requestTestResults.dataDrivenTests));
         dispatch(testActions.setPerformanceTests(requestTestResults.performanceTests));
         dispatch(testActions.setSecurityTests(requestTestResults.securityTests));
+        dispatch(testActions.setOptions(requestTestResults.testOptions));
       }
 
       const { request } = item;
@@ -96,9 +100,11 @@ export default function CollectionItem({ item, searchTerm }: Props) {
       dispatch(requestActions.setMethod(request.method as Method));
       dispatch(requestActions.setUrl(request.url));
       dispatch(requestActions.setHeaders(headersRecordToString(postmanHeadersToRecord(request.header))));
-      dispatch(requestActions.setBody(request.body?.raw || '{}'));
+      dispatch(requestActions.setBody(request.body?.raw || ''));
+
+      if (isComparingTestResults) dispatch(testActions.clearResultsToCompare());
     },
-    [collection, isDragging, isSelected, runResult, requestTestResults, dispatch, reset],
+    [collection, isComparingTestResults, isDragging, isSelected, runResult, requestTestResults, dispatch, reset],
   );
 
   const onSaveEdit = useCallback(() => {

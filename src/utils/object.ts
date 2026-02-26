@@ -1,3 +1,4 @@
+import { HttpResponse } from '../types';
 import { isPhoneNumber } from './validation';
 
 export function containsArray(value: string): boolean {
@@ -17,6 +18,13 @@ export function containsArray(value: string): boolean {
   }
 
   return check(parsed);
+}
+
+export function detectObjectType(value: unknown): string {
+  if (value === null) return 'null';
+  if (Array.isArray(value)) return 'array';
+
+  return typeof value;
 }
 
 export function isObject(value: unknown): value is Record<string, unknown> {

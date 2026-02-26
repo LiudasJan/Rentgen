@@ -15,18 +15,19 @@ import HighlightedInput from './components/inputs/HighlightedInput';
 import HighlightedTextarea from './components/inputs/HighlightedTextarea';
 import Select, { SelectOption } from './components/inputs/Select';
 import Textarea from './components/inputs/Textarea';
-import { JsonViewer } from './components/JsonViewer';
 import Loader from './components/loaders/Loader';
 import TestRunningLoader from './components/loaders/TestRunningLoader';
 import ConfirmationModal from './components/modals/ConfirmationModal';
 import ImportConflictModal from './components/modals/ImportConflictModal';
 import Modal from './components/modals/Modal';
 import SetAsDynamicVariableModal from './components/modals/SetAsDynamicVariableModal';
+import SettingsModal from './components/modals/SettingsModal';
 import Panel from './components/panels/Panel';
 import ParametersPanel from './components/panels/ParametersPanel';
 import TestResultsComparisonPanel from './components/panels/TestResultsComparisonPanel';
 import Sidebar from './components/sidebar/Sidebar';
 import TestsTable, { ExpandedTestComponent, getTestsTableColumns } from './components/tables/TestsTable';
+import { JsonViewer } from './components/viewers/JsonViewer';
 import { appConfig } from './constants/appConfig';
 import { useCtrlS } from './hooks/useCtrlS';
 import { useReset } from './hooks/useReset';
@@ -38,7 +39,6 @@ import {
   RESPONSE_SIZE_CHECK_TEST_NAME,
 } from './tests';
 import { Environment, ExportReport, ExtractionFailure, HttpResponse, ReportFormat, TestStatus } from './types';
-import { extractDynamicVariableFromResponseWithDetails } from './utils/dynamicVariable';
 import {
   buildSuite,
   createHttpRequest,
@@ -57,6 +57,7 @@ import {
   substituteRequestVariables,
 } from './utils';
 import { findRequestById, findRequestWithFolder } from './utils/collection';
+import { extractDynamicVariableFromResponseWithDetails } from './utils/dynamicVariable';
 
 import { store } from './store';
 import { useAppDispatch, useAppSelector } from './store/hooks';
@@ -108,11 +109,12 @@ import { environmentActions, loadDynamicVariables, loadEnvironments } from './st
 import { historyActions, loadHistory } from './store/slices/historySlice';
 import { requestActions } from './store/slices/requestSlice';
 import { responseActions } from './store/slices/responseSlice';
+import { loadSettings, settingsActions } from './store/slices/settingsSlice';
 import { testActions } from './store/slices/testSlice';
-import { loadTheme, uiActions } from './store/slices/uiSlice';
+import { uiActions } from './store/slices/uiSlice';
 import { websocketActions } from './store/slices/websocketSlice';
 
-import CloseIcon from './assets/icons/clear-cross-icon.svg';
+import ClearCrossIcon from './assets/icons/clear-cross-icon.svg';
 import DarkModeIcon from './assets/icons/dark-mode-icon.svg';
 import LightModeIcon from './assets/icons/light-mode-icon.svg';
 import ReloadIcon from './assets/icons/reload-icon.svg';
@@ -241,7 +243,6 @@ export default function App() {
     performanceTests,
     securityTests,
     testsCount,
-    testsDomain,
     testsTimestamp,
     executeAllTests,
     executeLoadTest,
@@ -254,18 +255,18 @@ export default function App() {
   const parametersRef = useRef<HTMLDivElement | null>(null);
   const disabled = useMemo(() => !url || isRunningTests, [url, isRunningTests]);
   const testResults = useMemo(() => {
-    if (!testsCount) return null;
+    if (!testsCount || !testOptions) return null;
 
     return {
       count: testsCount,
-      domain: testsDomain,
       timestamp: testsTimestamp,
       crudTests,
       dataDrivenTests,
       performanceTests,
       securityTests,
+      testOptions,
     };
-  }, [testsCount, testsDomain, testsTimestamp, crudTests, dataDrivenTests, performanceTests, securityTests]);
+  }, [testsCount, testsTimestamp, crudTests, dataDrivenTests, performanceTests, securityTests, testOptions]);
 
   // Load initial data
   useEffect(() => {
@@ -278,7 +279,7 @@ export default function App() {
   }, [dispatch]);
 
   useEffect(() => {
-    dispatch(loadTheme());
+    dispatch(loadSettings());
   }, [dispatch]);
 
   useEffect(() => {
@@ -303,11 +304,6 @@ export default function App() {
 
     return window.electronAPI.onWssEvent(messagesListener);
   }, [dispatch]);
-
-  // Execute tests when testOptions changes
-  useEffect(() => {
-    if (testOptions) executeAllTests();
-  }, [testOptions]);
 
   // Populate request/response state when runResult changes
   useEffect(() => {
@@ -342,12 +338,8 @@ export default function App() {
         ),
       );
 
-      if (decodedLines.length > 0) {
-        dispatch(requestActions.setBody(decodedLines.join('\n')));
-      } else {
-        const trimmedBody = curlBody ? String(curlBody).trim() : '';
-        dispatch(requestActions.setBody(trimmedBody !== '' ? trimmedBody : '{}'));
-      }
+      if (decodedLines.length > 0) dispatch(requestActions.setBody(decodedLines.join('\n')));
+      else dispatch(requestActions.setBody(curlBody ? String(curlBody).trim() : ''));
 
       dispatch(uiActions.closeCurlModal());
     } catch (error) {
@@ -605,7 +597,9 @@ export default function App() {
 
   // Export report
   const exportReport = useCallback(async () => {
-    if (!testOptions) return;
+    if (!testResults) return;
+
+    const { dataDrivenTests, crudTests, performanceTests, securityTests, testOptions } = testResults;
 
     try {
       const report = formatReport(buildReport(), exportFormat);
@@ -622,8 +616,6 @@ export default function App() {
     }
 
     function buildReport(): ExportReport {
-      if (!testOptions) throw new Error('No test results to export');
-
       const suites = [
         buildSuite('Security Tests', securityTests),
         buildSuite('Performance Insights', performanceTests),
@@ -657,7 +649,7 @@ export default function App() {
         return rawBody;
       }
     }
-  }, [testOptions, exportFormat, securityTests, performanceTests, dataDrivenTests, crudTests, httpResponse, dispatch]);
+  }, [testResults, exportFormat, httpResponse, dispatch]);
 
   // Generate certificate
   const generateCertificate = useCallback(async () => {
@@ -689,11 +681,16 @@ export default function App() {
       <Sidebar />
       <div className="@container flex-1 min-w-0 flex flex-col gap-4 py-5 px-7 overflow-y-auto">
         {isEditingEnvironment && (
-          <EnvironmentEditor
-            environment={environments.find((e) => e.id === editingEnvironmentId) || null}
-            isNew={editingEnvironmentId === null}
-            onSave={handleSaveEnvironment}
-          />
+          <div className="relative">
+            <EnvironmentEditor
+              environment={environments.find((e) => e.id === editingEnvironmentId) || null}
+              isNew={editingEnvironmentId === null}
+              onSave={handleSaveEnvironment}
+            />
+            <IconButton className="absolute top-2.5 right-4" onClick={() => dispatch(environmentActions.stopEditing())}>
+              <ClearCrossIcon className="h-5 w-5" />
+            </IconButton>
+          </div>
         )}
         {!isEditingEnvironment && isComparingTestResults && (
           <div className="relative">
@@ -706,7 +703,7 @@ export default function App() {
               className="absolute top-2.5 right-4"
               onClick={() => dispatch(testActions.clearResultsToCompare())}
             >
-              <CloseIcon className="h-5 w-5" />
+              <ClearCrossIcon className="h-5 w-5" />
             </IconButton>
           </div>
         )}
@@ -766,7 +763,7 @@ export default function App() {
                   selectedEnvironmentId={selectedEnvironmentId}
                   onSelect={(id) => dispatch(environmentActions.selectEnvironment(id))}
                 />
-                <IconButton onClick={() => dispatch(uiActions.toggleTheme())}>
+                <IconButton onClick={() => dispatch(settingsActions.toggleTheme())}>
                   <DarkModeIcon className="h-5 w-5 dark:hidden" />
                   <LightModeIcon className="hidden dark:block h-6 w-6" />
                 </IconButton>
@@ -832,34 +829,40 @@ export default function App() {
               )}
             </div>
 
-            <HighlightedTextarea
-              highlightColor={selectedEnvironment?.color}
-              maxRows={10}
-              placeholder="Header-Key: value"
-              value={headers}
-              variables={variables}
-              onBlur={autoSaveRequest}
-              onChange={(event) => dispatch(requestActions.setHeaders(event.target.value))}
-            />
-
-            <div className="relative">
+            <div>
+              <label className="block mb-1 font-bold text-sm">Headers</label>
               <HighlightedTextarea
                 highlightColor={selectedEnvironment?.color}
-                maxRows={15}
-                placeholder={mode === 'HTTP' ? 'Enter request body (JSON or Form Data)' : 'Message body'}
-                value={body}
+                maxRows={10}
+                placeholder="Header-Key: value"
+                value={headers}
                 variables={variables}
                 onBlur={autoSaveRequest}
-                onChange={(event) => dispatch(requestActions.setBody(event.target.value))}
+                onChange={(event) => dispatch(requestActions.setHeaders(event.target.value))}
               />
-              <Button
-                className="absolute top-3 right-4 z-10"
-                buttonSize={ButtonSize.SMALL}
-                buttonType={ButtonType.SECONDARY}
-                onClick={() => dispatch(requestActions.setBody(formatBody(body, parseHeaders(headers))))}
-              >
-                Beautify
-              </Button>
+            </div>
+
+            <div>
+              <label className="block mb-1 font-bold text-sm">Body</label>
+              <div className="relative">
+                <HighlightedTextarea
+                  highlightColor={selectedEnvironment?.color}
+                  maxRows={15}
+                  placeholder={mode === 'HTTP' ? 'Enter request body (JSON or Form Data)' : 'Message body'}
+                  value={body}
+                  variables={variables}
+                  onBlur={autoSaveRequest}
+                  onChange={(event) => dispatch(requestActions.setBody(event.target.value))}
+                />
+                <Button
+                  className="absolute top-3 right-4 z-10"
+                  buttonSize={ButtonSize.SMALL}
+                  buttonType={ButtonType.SECONDARY}
+                  onClick={() => dispatch(requestActions.setBody(formatBody(body, parseHeaders(headers))))}
+                >
+                  Beautify
+                </Button>
+              </div>
             </div>
 
             {mode === 'HTTP' && (
@@ -1034,28 +1037,26 @@ export default function App() {
                     <Button
                       className="@xl:shrink-0 @xl:whitespace-nowrap"
                       disabled={disabledRunTests}
-                      onClick={() => {
-                        dispatch(
-                          testActions.setOptions({
-                            ...substituteRequestVariables(
-                              url,
-                              headers,
-                              body,
-                              messageType,
-                              selectedEnvironment,
-                              dynamicVariables,
-                            ),
-                            bodyParameters,
-                            method,
-                            protoFile,
-                            queryParameters,
-                          }),
-                        );
-                      }}
+                      onClick={() =>
+                        executeAllTests({
+                          ...substituteRequestVariables(
+                            url,
+                            headers,
+                            body,
+                            messageType,
+                            selectedEnvironment,
+                            dynamicVariables,
+                          ),
+                          bodyParameters,
+                          method,
+                          protoFile,
+                          queryParameters,
+                        })
+                      }
                     >
                       {isRunningTests ? `Running tests... (${currentTest}/${testsCount})` : 'Generate & Run Tests'}
                     </Button>
-                    {(testOptions || testResults) && (
+                    {testResults && (
                       <Button
                         className="@xl:truncate"
                         buttonType={ButtonType.SECONDARY}
@@ -1070,7 +1071,7 @@ export default function App() {
                     )}
                   </div>
 
-                  {(testOptions || testResults) && (
+                  {testResults && (
                     <div className="flex flex-col @xl:flex-row @xl:justify-end @xl:items-center gap-4 @xl:gap-2 @xl:min-w-0">
                       <div className="flex flex-col @xl:flex-row @xl:items-center gap-2">
                         <Select
@@ -1103,7 +1104,7 @@ export default function App() {
               </>
             )}
 
-            {(testOptions || testResults) && (
+            {testResults && (
               <>
                 <Panel title="Security Tests">
                   <TestsTable
@@ -1129,7 +1130,10 @@ export default function App() {
                               <LargePayloadTestControls
                                 isRunning={isLargePayloadTestRunning}
                                 executeTest={(size: number) =>
-                                  executeLargePayloadTest({ ...testOptions, bodyParameters, queryParameters }, size)
+                                  executeLargePayloadTest(
+                                    { ...testResults.testOptions, bodyParameters, queryParameters },
+                                    size,
+                                  )
                                 }
                               />
                             ) : (
@@ -1179,7 +1183,7 @@ export default function App() {
                                 isRunning={isLoadTestRunning}
                                 executeTest={(threadCount: number, requestCount: number) =>
                                   executeLoadTest(
-                                    { ...testOptions, bodyParameters, queryParameters },
+                                    { ...testResults.testOptions, bodyParameters, queryParameters },
                                     threadCount,
                                     requestCount,
                                   )
@@ -1231,7 +1235,16 @@ export default function App() {
                     expandOnRowClicked
                     data={crudTests}
                     progressComponent={<TestRunningLoader text="Preparing CRUD…" />}
-                    progressPending={crudTests.length === 0}
+                    progressPending={isSecurityRunning}
+                    noDataComponent={
+                      <p className="p-4 m-0 text-sm">
+                        CRUD are generated based on the OPTIONS method handling test response in Security Tests.
+                        <br />
+                        <br />
+                        <strong>Note:</strong> If the OPTIONS method handling test is disabled, CRUD will not be
+                        generated.
+                      </p>
+                    }
                   />
                 </Panel>
               </>
@@ -1291,6 +1304,7 @@ export default function App() {
       />
       <SetAsDynamicVariableModal />
       <ImportConflictModal />
+      <SettingsModal />
     </div>
   );
 }

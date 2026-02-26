@@ -6,6 +6,7 @@ import {
   selectCrudTests,
   selectCurrentTest,
   selectDataDrivenTests,
+  selectDisabledSecurityTests,
   selectIsDataDrivenRunning,
   selectIsLargePayloadTestRunning,
   selectIsLoadTestRunning,
@@ -14,9 +15,7 @@ import {
   selectPerformanceTests,
   selectSecurityTests,
   selectSelectedRequestId,
-  selectTestOptions,
   selectTestsCount,
-  selectTestsDomain,
   selectTestsTimestamp,
 } from '../store/selectors';
 import { testActions } from '../store/slices/testSlice';
@@ -25,6 +24,7 @@ import {
   generateDynamicTestData,
   LARGE_PAYLOAD_TEST_NAME,
   LOAD_TEST_NAME,
+  OPTIONS_METHOD_HANDLING_TEST_NAME,
   PerformanceInsights,
   runDataDrivenTests,
   runLargePayloadTest,
@@ -43,10 +43,8 @@ const useTests = () => {
 
   const selectedRequestId = useAppSelector(selectSelectedRequestId);
 
-  const testOptions = useAppSelector(selectTestOptions);
   const currentTest = useAppSelector(selectCurrentTest);
   const testsCount = useAppSelector(selectTestsCount);
-  const testsDomain = useAppSelector(selectTestsDomain);
   const testsTimestamp = useAppSelector(selectTestsTimestamp);
 
   const crudTests = useAppSelector(selectCrudTests);
@@ -59,6 +57,8 @@ const useTests = () => {
   const isLoadTestRunning = useAppSelector(selectIsLoadTestRunning);
   const isPerformanceRunning = useAppSelector(selectIsPerformanceRunning);
   const isSecurityRunning = useAppSelector(selectIsSecurityRunning);
+
+  const disabledSecurityTests = useAppSelector(selectDisabledSecurityTests);
 
   const incrementCurrentTest = useCallback(() => {
     dispatch(testActions.incrementCurrentTest());
@@ -91,7 +91,7 @@ const useTests = () => {
       dispatch(testActions.setSecurityTests([]));
       dispatch(testActions.setCrudTests([]));
 
-      securityTestsInstance = new SecurityTests(options, incrementCurrentTest);
+      securityTestsInstance = new SecurityTests(options, disabledSecurityTests, incrementCurrentTest);
       const { crudTests, securityTests } = await securityTestsInstance.run();
 
       dispatch(testActions.setCrudTests(crudTests));
@@ -100,7 +100,7 @@ const useTests = () => {
 
       return { crudTests, securityTests };
     },
-    [dispatch, incrementCurrentTest],
+    [disabledSecurityTests, dispatch, incrementCurrentTest],
   );
 
   const executeDataDrivenTests = useCallback(
@@ -139,52 +139,56 @@ const useTests = () => {
     [dispatch, incrementCurrentTest],
   );
 
-  const executeAllTests = useCallback(async () => {
-    if (!testOptions) return;
+  const executeAllTests = useCallback(
+    async (options: TestOptions) => {
+      abortAllTests = false;
 
-    abortAllTests = false;
-    dispatch(testActions.startAllTests());
+      dispatch(testActions.setOptions(options));
+      dispatch(testActions.startAllTests());
 
-    const count =
-      (await calculateDataDrivenTestsCount(testOptions)) +
-      getTestCount(DataDrivenTests) +
-      getTestCount(SecurityTests) +
-      getTestCount(PerformanceInsights);
-    const domain = new URL(testOptions.url).hostname;
-    const timestamp = new Date().getTime();
+      const count =
+        (await calculateDataDrivenTestsCount(options)) +
+        getTestCount(DataDrivenTests) +
+        getTestCount(SecurityTests) +
+        getTestCount(PerformanceInsights) -
+        disabledSecurityTests.length +
+        (disabledSecurityTests.includes(OPTIONS_METHOD_HANDLING_TEST_NAME) ? -1 : 0);
+      const domain = new URL(options.url).hostname;
+      const timestamp = new Date().getTime();
 
-    dispatch(testActions.setCount(count));
-    dispatch(testActions.setDomain(domain));
-    dispatch(testActions.setTimestamp(timestamp));
+      dispatch(testActions.setCount(count));
+      dispatch(testActions.setTimestamp(timestamp));
 
-    const { crudTests, securityTests } = await executeSecurityTests(testOptions, !abortAllTests);
-    const dataDrivenTests = await executeDataDrivenTests(testOptions, !abortAllTests);
-    const performanceTests = await executePerformanceTests(testOptions, dataDrivenTests, !abortAllTests);
+      const { crudTests, securityTests } = await executeSecurityTests(options, !abortAllTests);
+      const dataDrivenTests = await executeDataDrivenTests(options, !abortAllTests);
+      const performanceTests = await executePerformanceTests(options, dataDrivenTests, !abortAllTests);
 
-    if (!abortAllTests && selectedRequestId)
-      dispatch(
-        testActions.addResults({
-          requestId: selectedRequestId,
-          results: {
-            count,
-            timestamp,
-            domain,
-            crudTests,
-            dataDrivenTests,
-            performanceTests,
-            securityTests,
-          },
-        }),
-      );
-  }, [
-    selectedRequestId,
-    testOptions,
-    dispatch,
-    calculateDataDrivenTestsCount,
-    executeSecurityTests,
-    executeDataDrivenTests,
-    executePerformanceTests,
-  ]);
+      if (!abortAllTests && selectedRequestId)
+        dispatch(
+          testActions.addResults({
+            requestId: selectedRequestId,
+            results: {
+              count,
+              timestamp,
+              crudTests,
+              dataDrivenTests,
+              performanceTests,
+              securityTests,
+              testOptions: options,
+            },
+          }),
+        );
+    },
+    [
+      disabledSecurityTests,
+      selectedRequestId,
+      dispatch,
+      calculateDataDrivenTestsCount,
+      executeSecurityTests,
+      executeDataDrivenTests,
+      executePerformanceTests,
+    ],
+  );
 
   const executeLargePayloadTest = useCallback(
     async (options: TestOptions, size: number) => {
@@ -199,8 +203,17 @@ const useTests = () => {
         }),
       );
       dispatch(testActions.setLargePayloadTestRunning(false));
+
+      if (selectedRequestId)
+        dispatch(
+          testActions.updateSecurityTestResults({
+            requestId: selectedRequestId,
+            testName: LARGE_PAYLOAD_TEST_NAME,
+            result: largePayloadTest,
+          }),
+        );
     },
-    [dispatch],
+    [selectedRequestId, dispatch],
   );
 
   const cancelAllTests = useCallback(() => {
@@ -270,8 +283,17 @@ const useTests = () => {
         }),
       );
       dispatch(testActions.setLoadTestRunning(false));
+
+      if (selectedRequestId)
+        dispatch(
+          testActions.updatePerformanceTestResults({
+            requestId: selectedRequestId,
+            testName: LOAD_TEST_NAME,
+            result: loadTestResult,
+          }),
+        );
     },
-    [dispatch, performanceTests],
+    [performanceTests, selectedRequestId, dispatch],
   );
 
   return {
@@ -286,7 +308,6 @@ const useTests = () => {
     performanceTests,
     securityTests,
     testsCount,
-    testsDomain,
     testsTimestamp,
     cancelAllTests,
     executeAllTests,

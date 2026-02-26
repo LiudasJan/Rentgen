@@ -46,6 +46,7 @@ interface UIState {
   openCurlModal: boolean;
   openReloadModal: boolean;
   openSendHttpSuccessModal: boolean;
+  openSettingsModal: boolean;
   deleteFolderModal: {
     isOpen: boolean;
     folderId: string | null;
@@ -70,9 +71,6 @@ interface UIState {
 
   // Sidebar
   sidebarActiveTab: SidebarTab;
-
-  // Theme
-  theme: 'light' | 'dark';
 }
 
 const initialState: UIState = {
@@ -98,6 +96,7 @@ const initialState: UIState = {
     editingVariableName: null,
     source: 'body',
   },
+  openSettingsModal: false,
   saved: false,
   exported: false,
   certificated: false,
@@ -106,12 +105,7 @@ const initialState: UIState = {
   curlError: '',
   exportFormat: 'json',
   sidebarActiveTab: null,
-  theme: 'light',
 };
-
-export const loadTheme = createAsyncThunk('ui/theme/load', async () => {
-  return await window.themeAPI.getTheme();
-});
 
 export const uiSlice = createSlice({
   name: 'ui',
@@ -185,6 +179,12 @@ export const uiSlice = createSlice({
         source: 'body',
       };
     },
+    openSettingsModal: (state) => {
+      state.openSettingsModal = true;
+    },
+    closeSettingsModal: (state) => {
+      state.openSettingsModal = false;
+    },
 
     // cURL
     setCurl: (state, action: PayloadAction<string>) => {
@@ -222,25 +222,6 @@ export const uiSlice = createSlice({
     toggleSidebarTab: (state, action: PayloadAction<'collections' | 'environments' | 'history'>) => {
       state.sidebarActiveTab = state.sidebarActiveTab === action.payload ? null : action.payload;
     },
-
-    // Theme
-    toggleTheme: (state) => {
-      state.theme = state.theme === 'light' ? 'dark' : 'light';
-
-      if (state.theme === 'light') {
-        document.documentElement.classList.remove('dark');
-        window.themeAPI.setTheme('light');
-      } else {
-        document.documentElement.classList.add('dark');
-        window.themeAPI.setTheme('dark');
-      }
-    },
-  },
-  extraReducers: (builder) => {
-    builder.addCase(loadTheme.fulfilled, (state, action: PayloadAction<'light' | 'dark'>) => {
-      state.theme = action.payload;
-      if (action.payload === 'dark') document.documentElement.classList.add('dark');
-    });
   },
 });
 

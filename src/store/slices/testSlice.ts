@@ -13,9 +13,6 @@ interface TestState extends TestResults {
   currentTest: number;
   loadProgress: number;
 
-  // Test configuration
-  testOptions: TestOptions | null;
-
   // All results by collection/request id
   results: Record<string, TestResults>;
 
@@ -27,7 +24,6 @@ interface TestState extends TestResults {
 
 const initialState: TestState = {
   timestamp: null,
-  domain: '',
   crudTests: [],
   dataDrivenTests: [],
   performanceTests: [],
@@ -57,9 +53,6 @@ export const testSlice = createSlice({
     setCount: (state, action: PayloadAction<number>) => {
       state.count = action.payload;
     },
-    setDomain: (state, action: PayloadAction<string>) => {
-      state.domain = action.payload;
-    },
     setTimestamp: (state, action: PayloadAction<number | null>) => {
       state.timestamp = action.payload;
     },
@@ -79,9 +72,7 @@ export const testSlice = createSlice({
     },
     updateSecurityTest: (state, action: PayloadAction<{ testName: string; result: TestResult }>) => {
       const index = state.securityTests.findIndex((t) => t.name === action.payload.testName);
-      if (index !== -1) {
-        state.securityTests[index] = action.payload.result;
-      }
+      if (index !== -1) state.securityTests[index] = action.payload.result;
     },
 
     // Data-driven tests
@@ -101,9 +92,7 @@ export const testSlice = createSlice({
     },
     updatePerformanceTest: (state, action: PayloadAction<{ testName: string; result: TestResult }>) => {
       const index = state.performanceTests.findIndex((t) => t.name === action.payload.testName);
-      if (index !== -1) {
-        state.performanceTests[index] = action.payload.result;
-      }
+      if (index !== -1) state.performanceTests[index] = action.payload.result;
     },
 
     // Load test specific
@@ -125,22 +114,26 @@ export const testSlice = createSlice({
     },
 
     // Reset
-    resetTests: (state) => ({
-      ...initialState,
-      results: state.results,
-      ...(state.resultsToCompare.length >= 2
-        ? { compareResponse: null, isComparing: false, resultsToCompare: [] }
-        : {
-            compareResponse: state.compareResponse,
-            isComparing: state.isComparing,
-            resultsToCompare: state.resultsToCompare,
-          }),
-    }),
+    resetTests: (state) => {
+      state.timestamp = null;
+      state.crudTests = [];
+      state.dataDrivenTests = [];
+      state.performanceTests = [];
+      state.securityTests = [];
+      state.isDataDrivenRunning = false;
+      state.isLargePayloadTestRunning = false;
+      state.isLoadTestRunning = false;
+      state.isPerformanceRunning = false;
+      state.isSecurityRunning = false;
+      state.currentTest = 0;
+      state.count = 0;
+      state.loadProgress = 0;
+      state.testOptions = null;
+    },
 
     // Start all tests
     startAllTests: (state) => {
       state.timestamp = null;
-      state.domain = '';
       state.isDataDrivenRunning = true;
       state.isPerformanceRunning = true;
       state.isSecurityRunning = true;
@@ -154,6 +147,26 @@ export const testSlice = createSlice({
 
     addResults: (state, action: PayloadAction<{ requestId: string; results: TestResults }>) => {
       state.results[action.payload.requestId] = action.payload.results;
+    },
+    updateSecurityTestResults: (
+      state,
+      action: PayloadAction<{ requestId: string; testName: string; result: TestResult }>,
+    ) => {
+      const testResults = state.results[action.payload.requestId];
+      if (!testResults) return;
+
+      const index = testResults.securityTests.findIndex((t) => t.name === action.payload.testName);
+      if (index !== -1) testResults.securityTests[index] = action.payload.result;
+    },
+    updatePerformanceTestResults: (
+      state,
+      action: PayloadAction<{ requestId: string; testName: string; result: TestResult }>,
+    ) => {
+      const testResults = state.results[action.payload.requestId];
+      if (!testResults) return;
+
+      const index = testResults.performanceTests.findIndex((t) => t.name === action.payload.testName);
+      if (index !== -1) testResults.performanceTests[index] = action.payload.result;
     },
 
     addResultToCompare: (state, action: PayloadAction<TestResults>) => {
