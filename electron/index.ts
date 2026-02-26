@@ -1,9 +1,10 @@
 import { config } from 'dotenv';
-import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, shell } from 'electron';
 import { installExtension, REACT_DEVELOPER_TOOLS, REDUX_DEVTOOLS } from 'electron-devtools-installer';
 import { existsSync, unlinkSync, writeFileSync } from 'fs';
 import path from 'path';
 import {
+  loadSettings,
   registerCertificateHandlers,
   registerCollectionHandlers,
   registerEnvironmentHandlers,
@@ -113,6 +114,9 @@ app.on('ready', async () => {
   cleanupLegacyStore();
   createHelpMenu();
   await createWindow();
+
+  const settings = loadSettings();
+  if (settings) nativeTheme.themeSource = settings.theme;
 });
 
 // Quit when all windows are closed, except on macOS. There, it's common
