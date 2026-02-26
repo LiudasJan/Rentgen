@@ -1,9 +1,13 @@
 import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
 
+export type HistoryRetention = '1w' | '1m' | '3m' | '6m' | '1y' | 'none';
+
 export interface SettingsState {
   cli: unknown;
   general: {
+    historyEnabled: boolean;
     historySize: number;
+    historyRetention: HistoryRetention;
   };
   testEngine: {
     securityTests: {
@@ -16,7 +20,9 @@ export interface SettingsState {
 export const initialState: SettingsState = {
   cli: {},
   general: {
+    historyEnabled: true,
     historySize: 1000,
+    historyRetention: 'none',
   },
   testEngine: {
     securityTests: {
@@ -34,6 +40,15 @@ export const settingsSlice = createSlice({
   name: 'settings',
   initialState,
   reducers: {
+    setHistoryEnabled: (state, action: PayloadAction<boolean>) => {
+      state.general.historyEnabled = action.payload;
+    },
+    setHistorySize: (state, action: PayloadAction<number>) => {
+      state.general.historySize = Math.max(1, Math.min(10000, action.payload));
+    },
+    setHistoryRetention: (state, action: PayloadAction<HistoryRetention>) => {
+      state.general.historyRetention = action.payload;
+    },
     toggleSecurityTest: (state, action: PayloadAction<string>) => {
       if (state.testEngine.securityTests.disabled.includes(action.payload))
         state.testEngine.securityTests.disabled = state.testEngine.securityTests.disabled.filter(

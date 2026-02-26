@@ -1,7 +1,18 @@
 import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { HistoryEntry } from '../../types/history';
 
-const MAX_ENTRIES = 500;
+function getRetentionCutoff(retention: string): number | null {
+  const now = Date.now();
+  const durations: Record<string, number> = {
+    '1w': 7 * 24 * 60 * 60 * 1000,
+    '1m': 30 * 24 * 60 * 60 * 1000,
+    '3m': 90 * 24 * 60 * 60 * 1000,
+    '6m': 180 * 24 * 60 * 60 * 1000,
+    '1y': 365 * 24 * 60 * 60 * 1000,
+  };
+  if (retention === 'none' || !durations[retention]) return null;
+  return now - durations[retention];
+}
 
 interface HistoryState {
   entries: HistoryEntry[];
@@ -25,15 +36,22 @@ export const historySlice = createSlice({
   reducers: {
     addEntry: (state, action: PayloadAction<HistoryEntry>) => {
       state.entries.unshift(action.payload);
-      if (state.entries.length > MAX_ENTRIES) {
-        state.entries = state.entries.slice(0, MAX_ENTRIES);
-      }
     },
     removeEntry: (state, action: PayloadAction<string>) => {
       state.entries = state.entries.filter((entry) => entry.id !== action.payload);
     },
     clearHistory: (state) => {
       state.entries = [];
+    },
+    enforceRetention: (state, action: PayloadAction<{ maxSize: number; retention: string }>) => {
+      const { maxSize, retention } = action.payload;
+      const cutoff = getRetentionCutoff(retention);
+      if (cutoff !== null) {
+        state.entries = state.entries.filter((entry) => entry.timestamp >= cutoff);
+      }
+      if (state.entries.length > maxSize) {
+        state.entries = state.entries.slice(0, maxSize);
+      }
     },
   },
   extraReducers: (builder) => {
