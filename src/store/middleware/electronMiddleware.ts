@@ -53,7 +53,7 @@ export const electronMiddleware: Middleware = (store) => (next) => (action: Acti
   // Gate history collection: skip adding entries when history is disabled
   if (actionType === 'history/addEntry') {
     const state = store.getState();
-    if (!state.settings.general.historyEnabled) {
+    if (!state.settings.general.history.enabled) {
       return;
     }
   }
@@ -87,8 +87,8 @@ export const electronMiddleware: Middleware = (store) => (next) => (action: Acti
   if (actionType && actionType.startsWith('history/') && !historyReadOnlyActions.includes(actionType)) {
     // Enforce retention limits after history mutations
     const stateAfterHistory = store.getState();
-    const { historySize, historyRetention } = stateAfterHistory.settings.general;
-    store.dispatch(historyActions.enforceRetention({ maxSize: historySize, retention: historyRetention }));
+    const { size, retention } = stateAfterHistory.settings.general.history;
+    store.dispatch(historyActions.enforceRetention({ maxSize: size, retention }));
 
     const stateToSave = store.getState();
     window.electronAPI.saveHistory(stateToSave.history.entries);
@@ -101,8 +101,8 @@ export const electronMiddleware: Middleware = (store) => (next) => (action: Acti
 
     // Enforce retention when history size or retention settings change
     if (actionType === 'settings/setHistorySize' || actionType === 'settings/setHistoryRetention') {
-      const { historySize, historyRetention } = state.settings.general;
-      store.dispatch(historyActions.enforceRetention({ maxSize: historySize, retention: historyRetention }));
+      const { size, retention } = state.settings.general.history;
+      store.dispatch(historyActions.enforceRetention({ maxSize: size, retention }));
       const updatedState = store.getState();
       window.electronAPI.saveHistory(updatedState.history.entries);
     }

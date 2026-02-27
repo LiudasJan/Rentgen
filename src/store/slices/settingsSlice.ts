@@ -5,9 +5,11 @@ export type HistoryRetention = '1w' | '1m' | '3m' | '6m' | '1y' | 'none';
 export interface SettingsState {
   cli: unknown;
   general: {
-    historyEnabled: boolean;
-    historySize: number;
-    historyRetention: HistoryRetention;
+    history: {
+      enabled: boolean;
+      size: number;
+      retention: HistoryRetention;
+    };
   };
   testEngine: {
     securityTests: {
@@ -20,9 +22,11 @@ export interface SettingsState {
 export const initialState: SettingsState = {
   cli: {},
   general: {
-    historyEnabled: true,
-    historySize: 1000,
-    historyRetention: 'none',
+    history: {
+      enabled: true,
+      size: 1000,
+      retention: 'none',
+    },
   },
   testEngine: {
     securityTests: {
@@ -41,13 +45,13 @@ export const settingsSlice = createSlice({
   initialState,
   reducers: {
     setHistoryEnabled: (state, action: PayloadAction<boolean>) => {
-      state.general.historyEnabled = action.payload;
+      state.general.history.enabled = action.payload;
     },
     setHistorySize: (state, action: PayloadAction<number>) => {
-      state.general.historySize = Math.max(1, Math.min(10000, action.payload));
+      state.general.history.size = Math.max(1, Math.min(10000, action.payload));
     },
     setHistoryRetention: (state, action: PayloadAction<HistoryRetention>) => {
-      state.general.historyRetention = action.payload;
+      state.general.history.retention = action.payload;
     },
     toggleSecurityTest: (state, action: PayloadAction<string>) => {
       if (state.testEngine.securityTests.disabled.includes(action.payload))
@@ -68,7 +72,6 @@ export const settingsSlice = createSlice({
   extraReducers: (builder) => {
     builder.addCase(loadSettings.fulfilled, (state, action: PayloadAction<SettingsState>) => {
       state.cli = action.payload.cli;
-      state.general = action.payload.general;
       state.testEngine = action.payload.testEngine;
       state.theme = action.payload.theme;
 
