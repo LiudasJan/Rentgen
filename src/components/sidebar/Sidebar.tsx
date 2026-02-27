@@ -2,7 +2,7 @@ import cn from 'classnames';
 import { useEffect, useState } from 'react';
 import { appConfig } from '../../constants/appConfig';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import { selectSidebarActiveTab } from '../../store/selectors';
+import { selectHistoryEnabled, selectSidebarActiveTab } from '../../store/selectors';
 import { environmentActions } from '../../store/slices/environmentSlice';
 import { uiActions } from '../../store/slices/uiSlice';
 import CollectionsPanel from './colletion/CollectionsPanel';
@@ -20,9 +20,16 @@ import UpgradeStarIcon from '../../assets/icons/upgrade-star-icon.svg';
 export default function Sidebar() {
   const dispatch = useAppDispatch();
   const activeTab = useAppSelector(selectSidebarActiveTab);
+  const historyEnabled = useAppSelector(selectHistoryEnabled);
   const [appVersion, setAppVersion] = useState<string>('');
 
   const isExpanded = activeTab !== null;
+
+  useEffect(() => {
+    if (!historyEnabled && activeTab === 'history') {
+      dispatch(uiActions.toggleSidebarTab('history'));
+    }
+  }, [historyEnabled, activeTab, dispatch]);
 
   useEffect(() => {
     const fetchAppVersion = async () => setAppVersion(await window.electronAPI.getAppVersion());
@@ -66,13 +73,15 @@ export default function Sidebar() {
           >
             <EnvironmentIcon className="w-5 h-5" />
           </SidebarButton>
-          <SidebarButton
-            label="History"
-            className={activeTab === 'history' ? 'bg-button-secondary dark:bg-dark-input' : ''}
-            onClick={handleHistoryClick}
-          >
-            <HistoryIcon className="w-5 h-5" />
-          </SidebarButton>
+          {historyEnabled && (
+            <SidebarButton
+              label="History"
+              className={activeTab === 'history' ? 'bg-button-secondary dark:bg-dark-input' : ''}
+              onClick={handleHistoryClick}
+            >
+              <HistoryIcon className="w-5 h-5" />
+            </SidebarButton>
+          )}
         </div>
         <div>
           <SidebarButton label="Settings" onClick={() => dispatch(uiActions.openSettingsModal())}>
@@ -98,7 +107,7 @@ export default function Sidebar() {
         <div className="max-h-screen h-full w-78 flex flex-col overflow-hidden">
           {activeTab === 'collections' && <CollectionsPanel />}
           {activeTab === 'environments' && <EnvironmentPanel />}
-          {activeTab === 'history' && <HistoryPanel />}
+          {activeTab === 'history' && historyEnabled && <HistoryPanel />}
         </div>
       </div>
     </div>

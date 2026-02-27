@@ -4,6 +4,7 @@ import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { selectOpenSettingsModal } from '../../store/selectors';
 import { uiActions } from '../../store/slices/uiSlice';
 import { IconButton } from '../buttons/IconButton';
+import { GeneralSettings } from '../settings/GeneralSettings';
 import { SecurityTestsSettings } from '../settings/SecurityTestsSettings';
 import { ThemeSettings } from '../settings/ThemeSettings';
 import Modal from './Modal';
@@ -19,14 +20,7 @@ const settingsTabs = [
   {
     name: 'General',
     icon: <GearIcon className="w-4 h-4" />,
-    component: (
-      <div className="flex flex-col gap-4">
-        <h5 className="m-0 pb-1.5 border-b border-b-border dark:border-b-dark-border">History Size</h5>
-        <div className="flex items-center gap-2 text-sm">
-          <GearIcon className="w-4 h-4" /> In Progress...
-        </div>
-      </div>
-    ),
+    component: <GeneralSettings />,
   },
   {
     name: 'Themes',
@@ -90,7 +84,7 @@ export default function SettingsModal() {
             </Tab>
           ))}
         </TabList>
-        {settingsTabs.map(({ name, component }, index) => (
+        {settingsTabs.map(({ name, component }) => (
           <TabPanel key={name} className="flex-auto hidden p-4 overflow-y-auto">
             <div className="flex flex-col gap-4">
               <h4 className="m-0">{name}</h4>
