@@ -1,73 +1,38 @@
-# v1.8.0 — RENTGEN
+## v1.9.0 Potential Bugs Identification+ History + Security Test Controls
 
-## 🏅 Rentgen Certificate — Proof of API Coverage
+### Potential Identification (Regression Compare)
 
-Rentgen can now generate a **public certificate** after a test run — a concrete signal of API testing depth.
+Regression compare now has a dedicated **Potential Bugs** identification to surface the changes that most likely indicate real breakage.
 
-### Eligibility Rules
+- Compare screen now has two tabs:
+  - **Potential Bugs** (default)
+  - **Full behaviour changes**
+- If no potential bugs are detected, Rentgen shows:
+  **"No potential bugs detected ✅"** with an option to open the full diff.
 
-A certificate is generated **only if**:
+### Security Tests: Configure what to run
 
-- Generated tests ≥ **70**
+You can now choose which **Security Tests** are enabled.
 
-If the condition is not met, Rentgen clearly shows:
+- Settings are available via a **gear icon** (next to "Check for updates")
+- By default all security tests are enabled
+- Disabled tests are skipped and won't appear in the Security Tests list
+- Settings persist via local storage across app restarts
 
-> Not eligible (need at least 70 tests)
+### Request History (with retention controls)
 
----
+Rentgen now keeps a **Request History** so you can return to previously used requests and save them into a Collection when needed.
+History size / retention is configurable in settings to keep performance predictable.
 
-## ➕ One-Click Dynamic Variable from Response
+### Environment Variables: Random value dropdown
 
-Saving response values as dynamic variables is now faster and more visible.
+When adding an environment variable, you can now select a generated value from a dropdown (no scripts):
 
-### New UI Action
+- Random Email
+- Random Integer
+- Random String (32)
 
-- A **➕ button** appears next to response values
-- Click once → value is saved as a dynamic variable
+### Bug Fixes & Performance Improvements
 
-### Behavior
-
-- Variable updates automatically on each run
-- Reused across requests and tests
-- No scripts, no hooks, no manual mapping
-
-### Built-in Safety
-
-- If the selected response value is **missing**:
-  - The test is marked **yellow**
-  - Treated as an **automatic assertion warning**
-
-This makes broken flows visible without failing the entire run.
-
----
-
-## 🔁 Regression Testing — Noise-Free Comparison
-
-Regression testing now ignores **non-deterministic noise** by default.
-
-### Problem
-
-Previously, regression comparison could report differences caused by:
-
-- timestamps
-- request IDs
-- dynamic tokens
-- security / data-driven test variance
-
-### Solution
-
-Rentgen now automatically detects and excludes noise.
-
----
-
-## 🐞 Bug Fixes & UX Improvements
-
-- Improved response comparison stability
-- Cleaner regression result summaries
-- More predictable test reruns
-- Minor UI clarity improvements across test execution and results
-
----
-
-Rentgen continues to focus on **early, behavior-level API signals** —  
-before scripts, before CI, before production surprises.
+- Multiple stability improvements across compare and execution workflows
+- General performance and UX refinements
