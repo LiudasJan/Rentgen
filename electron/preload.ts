@@ -1,10 +1,12 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type { SettingsState } from '../src/store/slices/settingsSlice';
+import type { RentgenBundle } from '../shared/types/bundle';
 import type { ExportResult, ImportResult, PostmanCollection, TestResults } from '../src/types';
 
 interface ElectronApi {
   connectWss: (payload: any) => void;
   disconnectWss: () => void;
+  exportCIBundle: (bundle: RentgenBundle) => Promise<ExportResult>;
   exportPostmanCollection: (collection: PostmanCollection) => Promise<ExportResult>;
   generateCertificate: (results: TestResults) => Promise<ExportResult>;
   getAppVersion: () => Promise<string>;
@@ -34,6 +36,7 @@ interface ElectronApi {
 contextBridge.exposeInMainWorld('electronAPI', {
   connectWss: (payload: any): void => ipcRenderer.send('wss-connect', payload),
   disconnectWss: (): void => ipcRenderer.send('wss-disconnect'),
+  exportCIBundle: (bundle: RentgenBundle): Promise<ExportResult> => ipcRenderer.invoke('export-ci-bundle', bundle),
   exportPostmanCollection: (collection: PostmanCollection): Promise<ExportResult> =>
     ipcRenderer.invoke('export-postman-collection', collection),
   generateCertificate: (results: TestResults): Promise<ExportResult> =>

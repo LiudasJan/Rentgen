@@ -1,0 +1,128 @@
+{
+  "version": "1.0.0",
+  "exportedAt": "2026-03-07T11:42:12.846Z",
+  "exportedBy": "Rentgen Desktop v1.8.0",
+  "source": {
+    "folderName": "All Requests",
+    "folderId": "default",
+    "totalRequests": 10
+  },
+  "requests": [
+    {
+      "id": "req_1769785621600_4bw7y83",
+      "name": "https://postman-echo.com/post",
+      "method": "POST",
+      "url": "https://postman-echo.com/post",
+      "headers": [],
+      "body": "{}",
+      "order": 0
+    },
+    {
+      "id": "req_1769356225251_awtstso",
+      "name": "https://pokeapi.co/api/v2/pokemon/alakazam",
+      "method": "GET",
+      "url": "https://pokeapi.co/api/v2/pokemon/alakazam",
+      "headers": [],
+      "order": 1
+    },
+    {
+      "id": "req_1769356135342_jdz9xek",
+      "name": "https://pokeapi.co/api/v2/pokemon/gengar",
+      "method": "GET",
+      "url": "https://pokeapi.co/api/v2/pokemon/gengar",
+      "headers": [],
+      "order": 2
+    },
+    {
+      "id": "req_1769356132336_hn8x87a",
+      "name": "https://pokeapi.co/api/v2/pokemon/mewtwo",
+      "method": "GET",
+      "url": "https://pokeapi.co/api/v2/pokemon/mewtwo",
+      "headers": [],
+      "order": 3
+    },
+    {
+      "id": "req_1769355745878_k9pi436",
+      "name": "https://pokeapi.co/api/v2/pokemon/snorlax",
+      "method": "GET",
+      "url": "https://pokeapi.co/api/v2/pokemon/snorlax",
+      "headers": [],
+      "order": 4
+    },
+    {
+      "id": "req_1769355742830_2xuxt5r",
+      "name": "https://pokeapi.co/api/v2/pokemon/eevee",
+      "method": "GET",
+      "url": "https://pokeapi.co/api/v2/pokemon/eevee",
+      "headers": [],
+      "order": 5
+    },
+    {
+      "id": "req_1769355611906_8abxnuu",
+      "name": "https://pokeapi.co/api/v2/pokemon/snorlax",
+      "method": "GET",
+      "url": "https://pokeapi.co/api/v2/pokemon/snorlax",
+      "headers": [],
+      "order": 6
+    },
+    {
+      "id": "req_1769355601901_horeufn",
+      "name": "https://pokeapi.co/api/v2/pokemon/eevee",
+      "method": "GET",
+      "url": "https://pokeapi.co/api/v2/pokemon/eevee",
+      "headers": [],
+      "order": 7
+    },
+    {
+      "id": "req_1767529635822_28aelrq",
+      "name": "Echo requerst",
+      "method": "GET",
+      "url": "https://httpbin.org/get?qa={{testauskas}}&bzzzz=tes",
+      "headers": [],
+      "order": 8
+    },
+    {
+      "id": "req_1767529618354_x71hzaw",
+      "name": "https://httpbin.org/get?q=1&b=2",
+      "method": "GET",
+      "url": "https://htwwwtpbin.org/get?q=1&b=4",
+      "headers": [],
+      "order": 9
+    }
+  ],
+  "variables": {},
+  "dynamicVariables": [
+    {
+      "id": "dvar_1767529755836_q95fglv",
+      "key": "level",
+      "selector": "args.b",
+      "source": "body",
+      "requestId": "req_1767529635822_28aelrq",
+      "initialValue": "tes"
+    },
+    {
+      "id": "dvar_1767529849295_rnmi0st",
+      "key": "test2",
+      "selector": "content-type",
+      "source": "header",
+      "requestId": "req_1767529635822_28aelrq",
+      "initialValue": "application/json"
+    },
+    {
+      "id": "dvar_1767857414853_dc7es0z",
+      "key": "url",
+      "selector": "url",
+      "source": "body",
+      "requestId": "req_1767529635822_28aelrq",
+      "initialValue": "https://httpbin.org/get?qa=&bzzzz=tes"
+    },
+    {
+      "id": "dvar_1769454218415_quwcf5d",
+      "key": "argsba faillas",
+      "selector": "args.ba",
+      "source": "body",
+      "requestId": "req_1767529635822_28aelrq",
+      "initialValue": "tes"
+    }
+  ]
+}
