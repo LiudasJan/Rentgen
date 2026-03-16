@@ -1,5 +1,5 @@
 import { Method } from 'axios';
-import { initialNumberBounds, MAX_STRING_LENGTH } from '../constants/datasets';
+import { store } from '../store';
 import {
   DataType,
   DynamicValue,
@@ -218,14 +218,15 @@ export function getBodyParameterValue(body: unknown, parameterName: string, head
 
 export function getInitialParameterValue(type: DataType, value = '', mandatory = true): DynamicValue {
   const dynamicValue: DynamicValue = { mandatory, type, value };
+  const settings = store.getState().settings.testEngine.configuration;
 
   switch (type) {
     case 'enum':
-      return { ...dynamicValue, value };
+      return { ...dynamicValue, value: settings.enum };
     case 'number':
-      return { ...dynamicValue, value: initialNumberBounds };
+      return { ...dynamicValue, value: settings.number };
     case 'string':
-      return { ...dynamicValue, value: MAX_STRING_LENGTH };
+      return { ...dynamicValue, value: settings.string.maxLength };
     default:
       return dynamicValue;
   }

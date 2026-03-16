@@ -23,7 +23,7 @@ const COLOR_OPTIONS = ['#EF4444', '#F97316', '#EAB308', '#22C55E', '#3B82F6', '#
 const valueOptions: SelectOption<DataType>[] = [
   { value: 'randomEmail', label: 'Random email' },
   { value: 'randomInt', label: 'Random integer' },
-  { value: 'random32', label: 'Random string 32' },
+  { value: 'randomString', label: 'Random string' },
 ];
 
 interface Props {

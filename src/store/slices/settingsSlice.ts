@@ -1,4 +1,6 @@
 import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { appConfig } from '../../constants/appConfig';
+import { Interval } from '../../types';
 
 export type HistoryRetention = '1w' | '1m' | '3m' | '6m' | '1y' | 'none';
 
@@ -12,6 +14,21 @@ export interface SettingsState {
     };
   };
   testEngine: {
+    configuration: {
+      randomEmail: {
+        domain: string;
+        length: number;
+      };
+      randomInt: Interval;
+      randomString: {
+        length: number;
+      };
+      enum: string;
+      number: Interval;
+      string: {
+        maxLength: number;
+      };
+    };
     securityTests: {
       disabled: string[];
     };
@@ -29,6 +46,27 @@ export const initialState: SettingsState = {
     },
   },
   testEngine: {
+    configuration: {
+      randomEmail: {
+        domain: appConfig.domain,
+        length: 8,
+      },
+      randomInt: {
+        min: 0,
+        max: 2147483647,
+      },
+      randomString: {
+        length: 32,
+      },
+      enum: '',
+      number: {
+        min: -10000,
+        max: 10000,
+      },
+      string: {
+        maxLength: 128,
+      },
+    },
     securityTests: {
       disabled: [],
     },
@@ -53,6 +91,33 @@ export const settingsSlice = createSlice({
     setHistoryRetention: (state, action: PayloadAction<HistoryRetention>) => {
       state.general.history.retention = action.payload;
     },
+    setRandomEmailDomain: (state, action: PayloadAction<string>) => {
+      state.testEngine.configuration.randomEmail.domain = action.payload;
+    },
+    setRandomEmailLength: (state, action: PayloadAction<number>) => {
+      state.testEngine.configuration.randomEmail.length = action.payload;
+    },
+    setRandomIntMin: (state, action: PayloadAction<number>) => {
+      state.testEngine.configuration.randomInt.min = action.payload;
+    },
+    setRandomIntMax: (state, action: PayloadAction<number>) => {
+      state.testEngine.configuration.randomInt.max = action.payload;
+    },
+    setRandomStringLength: (state, action: PayloadAction<number>) => {
+      state.testEngine.configuration.randomString.length = action.payload;
+    },
+    setEnum: (state, action: PayloadAction<string>) => {
+      state.testEngine.configuration.enum = action.payload;
+    },
+    setNumberMin: (state, action: PayloadAction<number>) => {
+      state.testEngine.configuration.number.min = action.payload;
+    },
+    setNumberMax: (state, action: PayloadAction<number>) => {
+      state.testEngine.configuration.number.max = action.payload;
+    },
+    setStringMaxLength: (state, action: PayloadAction<number>) => {
+      state.testEngine.configuration.string.maxLength = action.payload;
+    },
     toggleSecurityTest: (state, action: PayloadAction<string>) => {
       if (state.testEngine.securityTests.disabled.includes(action.payload))
         state.testEngine.securityTests.disabled = state.testEngine.securityTests.disabled.filter(
@@ -72,7 +137,7 @@ export const settingsSlice = createSlice({
   extraReducers: (builder) => {
     builder.addCase(loadSettings.fulfilled, (state, action: PayloadAction<SettingsState>) => {
       state.cli = action.payload.cli;
-      state.testEngine = action.payload.testEngine;
+      state.testEngine = { ...state.testEngine, ...action.payload.testEngine };
       state.theme = action.payload.theme;
 
       if (action.payload.theme === 'dark') document.documentElement.classList.add('dark');

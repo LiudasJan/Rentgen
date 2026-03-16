@@ -12,7 +12,7 @@ export type DataType =
   | 'date_yyyy_mm_dd'
   | 'string'
   | 'do-not-test'
-  | 'random32'
+  | 'randomString'
   | 'randomInt'
   | 'randomEmail';
 

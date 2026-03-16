@@ -342,7 +342,7 @@ export function generateNumberBoundaryTestData({ min, max }: Interval): TestData
 
 export function isParameterTestSkipped(dataType: DataType): boolean {
   return (
-    dataType === 'do-not-test' || dataType === 'random32' || dataType === 'randomInt' || dataType === 'randomEmail'
+    dataType === 'do-not-test' || dataType === 'randomString' || dataType === 'randomInt' || dataType === 'randomEmail'
   );
 }
 

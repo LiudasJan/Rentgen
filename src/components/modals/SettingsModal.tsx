@@ -5,6 +5,7 @@ import { selectOpenSettingsModal } from '../../store/selectors';
 import { uiActions } from '../../store/slices/uiSlice';
 import { IconButton } from '../buttons/IconButton';
 import { GeneralSettings } from '../settings/GeneralSettings';
+import { MappingSettings } from '../settings/MappingSettings';
 import { SecurityTestsSettings } from '../settings/SecurityTestsSettings';
 import { ThemeSettings } from '../settings/ThemeSettings';
 import Modal from './Modal';
@@ -16,7 +17,16 @@ import GearIcon from '../../assets/icons/gear-icon.svg';
 import ThemeIcon from '../../assets/icons/theme-icon.svg';
 
 const settingsTabs = [
-  { name: 'Test Engine', icon: <EngineIcon className="w-4 h-4" />, component: <SecurityTestsSettings /> },
+  {
+    name: 'Test Engine',
+    icon: <EngineIcon className="w-4 h-4" />,
+    component: (
+      <div className="flex flex-col gap-8">
+        <MappingSettings />
+        <SecurityTestsSettings />
+      </div>
+    ),
+  },
   {
     name: 'General',
     icon: <GearIcon className="w-4 h-4" />,
@@ -59,7 +69,6 @@ export default function SettingsModal() {
     <Modal
       className="[&>div]:h-[84vh] [&>div]:max-h-210 [&>div]:w-full! [&>div]:max-w-211.5! [&>div]:p-0! [&>div]:overflow-hidden"
       isOpen={isOpen}
-      onClose={onClose}
     >
       <IconButton className="absolute top-3 right-3" onClick={onClose}>
         <ClearCrossIcon className="h-5 w-5" />

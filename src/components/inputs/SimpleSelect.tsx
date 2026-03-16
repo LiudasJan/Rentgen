@@ -15,7 +15,7 @@ export default function SimpleSelect({ className, options, placeholder, ...other
     <select
       className={twMerge(
         cn(
-          'm-0 py-2 px-3 font-segoe-ui text-xs text-text border border-border rounded-md',
+          'm-0 py-1.75 px-3 font-segoe-ui text-xs text-text border border-border rounded-md outline-none',
           'dark:text-dark-text dark:bg-dark-input dark:border-dark-border',
           optionClassName,
           className,
