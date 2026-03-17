@@ -4,16 +4,7 @@ export function buildSuite(name: string, tests: TestResult[]): ReportSuite {
   return {
     name,
     summary: summarizeSuite(tests),
-    tests: tests.map((test) => ({
-      name: test.name,
-      status: test.status,
-      expected: test.expected,
-      actual: test.actual,
-      responseTime: test.responseTime,
-      request: test.request,
-      response: test.response,
-      value: test.value,
-    })),
+    tests,
   };
 }
 
@@ -100,7 +91,7 @@ function toCsv(report: ExportReport) {
         test.status,
         test.expected ?? '',
         test.actual ?? '',
-        test.responseTime !== undefined ? String(test.responseTime) : '',
+        test.response?.time !== undefined ? String(test.response.time) : '',
       ]);
     });
   });

@@ -115,22 +115,6 @@ export function createTestHttpRequest(options: TestOptions): HttpRequest {
   return createHttpRequest(parsedBody, parseHeaders(headers), method, modifiedUrl.toString());
 }
 
-export async function executeTimedRequest(
-  request: HttpRequest,
-  onSuccess: (response: HttpResponse, responseTime: number) => TestResult,
-  onError: (error: unknown) => TestResult,
-): Promise<TestResult> {
-  try {
-    const requestStartTime = performance.now();
-    const response = await window.electronAPI.sendHttp(request);
-    const responseTime = performance.now() - requestStartTime;
-
-    return onSuccess(response, responseTime);
-  } catch (error) {
-    return onError(error);
-  }
-}
-
 export function extractBodyParameters(body: unknown, headers: Record<string, string>): RequestParameters {
   const parameters: RequestParameters = {};
 

@@ -34,9 +34,10 @@ export interface HttpRequest {
 }
 
 export interface HttpResponse {
-  body?: string;
+  body: string;
   headers: Record<string, string>;
   status: string;
+  time: number;
 }
 
 export interface Interval {
@@ -81,7 +82,6 @@ export interface TestResult {
   name?: string;
   request?: HttpRequest | null;
   response?: HttpResponse | null;
-  responseTime?: number;
   status: TestStatus;
   value?: any;
 }
@@ -106,21 +106,10 @@ export enum TestStatus {
   Warning = '🟠 Warning',
 }
 
-export interface ReportSuiteTest {
-  name?: string;
-  status: TestResult['status'];
-  expected: string;
-  actual: string;
-  responseTime?: number;
-  request?: TestResult['request'];
-  response?: TestResult['response'];
-  value?: any;
-}
-
 export interface ReportSuite {
   name: string;
   summary: { total: number; byStatus: Record<string, number> };
-  tests: ReportSuiteTest[];
+  tests: TestResult[];
 }
 
 export interface ExportReport {

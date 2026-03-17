@@ -59,7 +59,10 @@ export class PerformanceInsights extends BaseTests {
 
   public async run(): Promise<TestResult[]> {
     const results: TestResult[] = [];
-    const medianTestResult = this.testMedianResponseTime();
+    const medianResponseTime = calculateMedian(
+      this.testResults.map((result: TestResult) => result.response?.time).filter(Boolean),
+    );
+    const medianTestResult = this.testMedianResponseTime(medianResponseTime);
     const pingTestResult = await this.testNetworkPingLatency();
     const pingTimes = pingTestResult.value as number[];
     const bestPingTime = pingTimes?.length > 0 ? Math.min(...pingTimes) : null;
@@ -67,7 +70,7 @@ export class PerformanceInsights extends BaseTests {
     results.push(
       medianTestResult,
       pingTestResult,
-      this.testNetworkSharing(medianTestResult.responseTime, bestPingTime),
+      this.testNetworkSharing(medianResponseTime, bestPingTime),
       this.testResponseSize(),
       this.testArrayListWithoutPagination(),
       ...getManualTests(),
@@ -78,11 +81,8 @@ export class PerformanceInsights extends BaseTests {
 
   @Abortable
   @Test('Calculates the median response time from load test results')
-  private testMedianResponseTime(): TestResult {
+  private testMedianResponseTime(medianResponseTime: number): TestResult {
     this.onTestStart?.();
-
-    const responseTimes = this.testResults.map((result: TestResult) => result.responseTime).filter(Boolean);
-    const medianResponseTime = calculateMedian(responseTimes);
 
     let status = TestStatus.Fail;
     if (medianResponseTime <= EXCELLENT_RESPONSE_TIME_MS) status = TestStatus.Pass;
@@ -95,7 +95,6 @@ export class PerformanceInsights extends BaseTests {
       status,
       null,
       null,
-      medianResponseTime,
     );
   }
 
@@ -123,7 +122,6 @@ export class PerformanceInsights extends BaseTests {
         highLatencyCount >= MAX_ACCEPTABLE_BAD_PINGS ? TestStatus.Fail : TestStatus.Pass,
         null,
         null,
-        0,
         pingResults,
       );
     } catch (error) {
@@ -156,7 +154,6 @@ export class PerformanceInsights extends BaseTests {
       status,
       null,
       null,
-      0,
       { hostname, medianResponseTime, pingTime, ratioPercent },
     );
   }
@@ -183,7 +180,6 @@ export class PerformanceInsights extends BaseTests {
       result ? TestStatus.Fail : TestStatus.Pass,
       result?.request,
       result?.response,
-      result?.responseTime ?? 0,
       size,
     );
   }
@@ -213,7 +209,6 @@ export class PerformanceInsights extends BaseTests {
       containsQueryParameters ? TestStatus.Pass : TestStatus.Warning,
       originalRequestTest.request,
       originalRequestTest.response,
-      originalRequestTest.responseTime,
     );
   }
 }
@@ -251,10 +246,8 @@ export async function runLoadTest(
     if (isAborted) return;
 
     request = createTestHttpRequest(options);
-    const requestStartTime = performance.now();
     response = await window.electronAPI.sendHttp(request);
-    const responseTime = performance.now() - requestStartTime;
-    responseTimes.push(responseTime);
+    responseTimes.push(response.time);
 
     const statusCode = extractStatusCode(response);
     if (statusCode >= RESPONSE_STATUS.SERVER_ERROR) server5xxFailures++;
@@ -306,7 +299,6 @@ export async function runLoadTest(
     testStatus,
     request,
     response,
-    averageResponseTime,
     { threads, requests },
   );
 }

@@ -1,9 +1,12 @@
 import axios from 'axios';
 import { exec } from 'child_process';
 import { ipcMain } from 'electron';
+import { HttpResponse } from '../../src/types';
 
 export function registerHttpHandlers(): void {
-  ipcMain.handle('http-request', async (_event, { url, method, headers, body }) => {
+  ipcMain.handle('http-request', async (_event, { url, method, headers, body }): Promise<HttpResponse> => {
+    const requestStartTime = performance.now();
+
     try {
       const response = await axios({
         url,
@@ -15,7 +18,7 @@ export function registerHttpHandlers(): void {
         responseType: 'arraybuffer',
         validateStatus: () => true,
       });
-
+      const responseTime = performance.now() - requestStartTime;
       const contentType =
         (response.headers && (response.headers['content-type'] || response.headers['Content-Type'])) || '';
       const data = response.data;
@@ -51,18 +54,22 @@ export function registerHttpHandlers(): void {
 
       return {
         status: `${response.status} ${response.statusText}`,
-        headers: response.headers,
+        time: responseTime,
+        headers: response.headers as Record<string, string>,
         body: responseBody,
       };
     } catch (error) {
-      if (error.code === 'EPIPE') {
+      const responseTime = performance.now() - requestStartTime;
+
+      if (error.code === 'EPIPE')
         return {
           status: '413 Payload Too Large (EPIPE)',
+          time: responseTime,
           headers: {},
           body: '',
         };
-      }
-      return { status: 'Error', headers: {}, body: String(error) };
+
+      return { status: 'Error', time: responseTime, headers: {}, body: String(error) };
     }
   });
 

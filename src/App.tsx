@@ -352,7 +352,7 @@ export default function App() {
 
   // Send HTTP request
   const sendHttp = useCallback(async () => {
-    dispatch(responseActions.setSendingState());
+    dispatch(responseActions.setResponse({ status: 'Sending...', body: '', headers: {}, time: 0 }));
     dispatch(requestActions.setBodyParameters({}));
     dispatch(requestActions.setQueryParameters({}));
 
@@ -444,13 +444,7 @@ export default function App() {
 
       dispatch(historyActions.addEntry(historyEntry));
     } catch (error) {
-      dispatch(
-        responseActions.setResponse({
-          status: NETWORK_ERROR,
-          body: String(error),
-          headers: {},
-        }),
-      );
+      dispatch(responseActions.setResponse({ status: NETWORK_ERROR, body: String(error), headers: {}, time: 0 }));
       dispatch(historyActions.addEntry(historyEntry));
     }
   }, [
@@ -912,18 +906,27 @@ export default function App() {
               <Panel title="Response">
                 <div
                   className={cn(
-                    'flex items-center gap-2 p-4 font-bold bg-body dark:bg-dark-body border-t border-border dark:border-dark-body',
+                    'flex items-center justify-between gap-4 p-4 font-bold bg-body dark:bg-dark-body border-t border-border dark:border-dark-body',
                     {
                       'text-green-500': httpResponse.status.startsWith('2') && !runResult?.warning,
                       'text-yellow-500': httpResponse.status.startsWith('2') && runResult?.warning,
                       'text-blue-500': httpResponse.status.startsWith('3'),
                       'text-orange-500': httpResponse.status.startsWith('4'),
-                      'text-red-500': httpResponse.status.startsWith('5') || httpResponse.status === NETWORK_ERROR,
+                      'text-red-500':
+                        httpResponse.status.startsWith('5') ||
+                        httpResponse.status === NETWORK_ERROR ||
+                        httpResponse.status === 'Error',
                     },
                   )}
                 >
-                  {httpResponse.status === SENDING && <Loader className="h-5 w-5" />}
-                  {httpResponse.status}
+                  {httpResponse.status === SENDING ? (
+                    <Loader className="h-5 w-5" />
+                  ) : (
+                    <>
+                      {httpResponse.status}{' '}
+                      <span className="text-xs text-text dark:text-dark-text">{httpResponse.time.toFixed(2)} ms</span>
+                    </>
+                  )}
                 </div>
                 {runResult?.warning && (
                   <div className="px-4 py-2 text-xs bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 border-t border-yellow-200 dark:border-yellow-800">
