@@ -21,12 +21,13 @@ import {
 } from './BaseTests';
 
 export const AUTHORIZATION_TEST_NAME = 'Missing Authorization Cookie/Token';
-export const LARGE_PAYLOAD_TEST_NAME = 'Large Payload Test';
 export const CACHE_CONTROL_PRIVATE_API_TEST_NAME = 'Cache-Control for Private API';
 export const CLICKJACKING_PROTECTION_TEST_NAME = 'Clickjacking Protection';
 export const CORS_TEST_NAME = 'CORS Policy Check';
 export const CRUD_TEST_NAME = 'CRUD';
 export const HSTS_STRICT_TRANSPORT_SECURITY_TEST_NAME = 'HSTS (Strict-Transport-Security)';
+export const INVALID_AUTHORIZATION_TEST_NAME = 'Invalid Authorization Cookie/Token';
+export const LARGE_PAYLOAD_TEST_NAME = 'Large Payload Test';
 export const MIME_SNIFFING_PROTECTION_TEST_NAME = 'MIME Sniffing Protection';
 export const NO_SENSITIVE_SERVER_HEADERS_TEST_NAME = 'No Sensitive Server Headers';
 export const NOT_FOUND_TEST_NAME = `${RESPONSE_STATUS.NOT_FOUND} ${getResponseStatusTitle(RESPONSE_STATUS.NOT_FOUND)}`;
@@ -94,6 +95,7 @@ export class SecurityTests extends BaseTests {
     const responseIndependentTests: { name: string; run: () => Promise<TestResult> }[] = [
       { name: UNSUPPORTED_METHOD_TEST_NAME, run: () => this.testUnsupportedMethod() },
       { name: AUTHORIZATION_TEST_NAME, run: () => this.testMissingAuthorization() },
+      { name: INVALID_AUTHORIZATION_TEST_NAME, run: () => this.testInvalidAuthorization() },
       { name: CORS_TEST_NAME, run: () => this.testCors() },
       { name: NOT_FOUND_TEST_NAME, run: () => this.testNotFound() },
       { name: REFLECTED_PAYLOAD_SAFETY_TEST_NAME, run: () => this.testReflectedPayloadSafety() },
@@ -314,6 +316,64 @@ export class SecurityTests extends BaseTests {
     } catch (error) {
       return createErrorTestResult(
         AUTHORIZATION_TEST_NAME,
+        AUTHORIZATION_TEST_EXPECTED,
+        String(error),
+        modifiedRequest,
+      );
+    }
+  }
+
+  @Abortable
+  @Test('Checks if API properly rejects invalid authorization tokens/credentials')
+  private async testInvalidAuthorization(): Promise<TestResult> {
+    this.onTestStart?.();
+
+    const request = createTestHttpRequest(this.options);
+    const headers = Object.entries(request.headers);
+    const authHeader = headers.find(([key]) =>
+      ['authorization', 'x-api-key', 'x-auth-token', 'api-key', 'apikey'].includes(String(key).toLowerCase()),
+    );
+
+    let modifiedHeaders = null;
+    if (authHeader) modifiedHeaders = { ...request.headers, [authHeader[0]]: authHeader[1] + 'X' };
+    else {
+      const bearerHeader = headers.find(([, value]) => {
+        if (!value) return false;
+        return /^\s*Bearer\s+.+$/i.test(String(value));
+      });
+      if (bearerHeader) modifiedHeaders = { ...request.headers, [bearerHeader[0]]: bearerHeader[1] + 'X' };
+    }
+
+    if (!modifiedHeaders)
+      return createTestResult(
+        INVALID_AUTHORIZATION_TEST_NAME,
+        AUTHORIZATION_TEST_EXPECTED,
+        MISSING_ACTUAL,
+        TestStatus.Manual,
+      );
+
+    const modifiedRequest: HttpRequest = { ...request, headers: modifiedHeaders };
+
+    try {
+      const response = await window.electronAPI.sendHttp(modifiedRequest);
+      const { actual, status } = determineTestStatus(response, (response, statusCode) => {
+        const testStatus = { actual: response.status, status: TestStatus.Fail };
+        if (statusCode === RESPONSE_STATUS.UNAUTHORIZED) testStatus.status = TestStatus.Pass;
+
+        return testStatus;
+      });
+
+      return createTestResult(
+        INVALID_AUTHORIZATION_TEST_NAME,
+        AUTHORIZATION_TEST_EXPECTED,
+        actual,
+        status,
+        modifiedRequest,
+        response,
+      );
+    } catch (error) {
+      return createErrorTestResult(
+        INVALID_AUTHORIZATION_TEST_NAME,
         AUTHORIZATION_TEST_EXPECTED,
         String(error),
         modifiedRequest,
@@ -662,12 +722,6 @@ function validateCacheControl(
 function getManualTests(): TestResult[] {
   return [
     createTestResult(LARGE_PAYLOAD_TEST_NAME, LARGE_PAYLOAD_TEST_EXPECTED, '', TestStatus.Manual),
-    createTestResult(
-      'Invalid Authorization Cookie/Token',
-      AUTHORIZATION_TEST_EXPECTED,
-      NOT_AVAILABLE_TEST,
-      TestStatus.Manual,
-    ),
     createTestResult(
       "Access Other User's Data",
       `${RESPONSE_STATUS.FORBIDDEN} ${getResponseStatusTitle(RESPONSE_STATUS.FORBIDDEN)} or ${RESPONSE_STATUS.NOT_FOUND} ${getResponseStatusTitle(RESPONSE_STATUS.NOT_FOUND)}`,
