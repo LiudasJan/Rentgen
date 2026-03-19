@@ -1,3 +1,4 @@
+import cn from 'classnames';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { selectHistoryEnabled, selectHistoryRetention, selectHistorySize } from '../../store/selectors';
 import { HistoryRetention, settingsActions } from '../../store/slices/settingsSlice';
@@ -30,17 +31,17 @@ export function GeneralSettings() {
 
       <div className="flex flex-col border border-border dark:border-dark-border rounded-md divide-y divide-border dark:divide-dark-border overflow-hidden">
         <Toggle
-          className="p-3 text-sm justify-between hover:bg-button-secondary dark:hover:bg-dark-input"
-          label="Enable History"
+          className="p-3 text-xs justify-between hover:bg-button-secondary dark:hover:bg-dark-input"
+          label={<span className={cn({ 'opacity-50': !historyEnabled })}>Enable History</span>}
           checked={historyEnabled}
           onChange={(e) => dispatch(settingsActions.setHistoryEnabled(e.target.checked))}
         />
 
-        <div className="flex items-center justify-between p-3 hover:bg-button-secondary dark:hover:bg-dark-input">
-          <span className="text-sm">Maximum Size</span>
+        <div className="flex items-center justify-between py-1.75 px-3">
+          <span className={cn({ 'opacity-50': !historyEnabled }, 'text-xs')}>Maximum Size</span>
           <Input
             type="number"
-            className="w-28 text-right"
+            className="w-32 py-1.5"
             min={1}
             max={10000}
             value={historySize}
@@ -52,10 +53,10 @@ export function GeneralSettings() {
           />
         </div>
 
-        <div className="flex items-center justify-between p-3 hover:bg-button-secondary dark:hover:bg-dark-input">
-          <span className="text-sm">Retention Period</span>
+        <div className="flex items-center justify-between py-1.75 px-3">
+          <span className={cn({ 'opacity-50': !historyEnabled }, 'text-xs')}>Retention Period</span>
           <SimpleSelect
-            className="w-36"
+            className="w-32 py-1.25"
             options={retentionOptions}
             value={historyRetention}
             disabled={!historyEnabled}

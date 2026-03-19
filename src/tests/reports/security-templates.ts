@@ -3,6 +3,7 @@ import {
   CACHE_CONTROL_PRIVATE_API_TEST_NAME,
   CLICKJACKING_PROTECTION_TEST_NAME,
   HSTS_STRICT_TRANSPORT_SECURITY_TEST_NAME,
+  INVALID_AUTHORIZATION_TEST_NAME,
   LARGE_PAYLOAD_TEST_NAME,
   MIME_SNIFFING_PROTECTION_TEST_NAME,
   NO_SENSITIVE_SERVER_HEADERS_TEST_NAME,
@@ -227,6 +228,33 @@ Instead, it returns another status (200, 400, 403), which misrepresents the real
 
 Why it's a bug:
 When no token/cookie is provided, the server must return 401.
+This ensures:
+- Clients detect missing/expired auth
+- Tools distinguish auth failures from real bugs
+- No information leaks to unauthenticated callers
+
+Request:
+{{CURL}}
+
+Headers:
+{{RESPONSE_HEADERS_BLOCK}}
+
+Expected:
+401 Unauthorized
+WWW-Authenticate: Bearer
+
+Severity:
+Low (Security Hardening)
+
+Fix:
+Update authentication middleware to always return 401 for missing tokens.`,
+  [INVALID_AUTHORIZATION_TEST_NAME]: `BUG REPORT – Invalid Authorization Cookie/Token
+
+The API does not return 401 Unauthorized when an invalid authentication token is provided.
+Instead, it returns another status (200, 400, 403), which misrepresents the real issue.
+
+Why it's a bug:
+When an invalid token/cookie is provided, the server must return 401.
 This ensures:
 - Clients detect missing/expired auth
 - Tools distinguish auth failures from real bugs

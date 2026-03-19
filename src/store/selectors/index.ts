@@ -149,3 +149,4 @@ export const selectTheme = (state: RootState) => state.settings.theme;
 export const selectHistoryEnabled = (state: RootState) => state.settings.general.history.enabled;
 export const selectHistorySize = (state: RootState) => state.settings.general.history.size;
 export const selectHistoryRetention = (state: RootState) => state.settings.general.history.retention;
+export const selectTestEngineConfiguration = (state: RootState) => state.settings.testEngine.configuration;

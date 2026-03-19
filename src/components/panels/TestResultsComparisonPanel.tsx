@@ -40,7 +40,6 @@ export default function TestResultsComparisonPanel({ items, title, response, ...
     const filterTestArray = (tests: TestResult[]) =>
       tests.map((test) => {
         const updatedTest = { ...test };
-        delete updatedTest.responseTime;
         delete updatedTest.request;
 
         const normalizedResponse = normalizeResponse(updatedTest.response);

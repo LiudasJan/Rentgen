@@ -19,13 +19,6 @@ export const responseSlice = createSlice({
     setResponse: (state, action: PayloadAction<HttpResponse>) => {
       state.httpResponse = action.payload;
     },
-    setSendingState: (state) => {
-      state.httpResponse = {
-        status: 'Sending...',
-        body: '',
-        headers: {},
-      };
-    },
   },
 });
 

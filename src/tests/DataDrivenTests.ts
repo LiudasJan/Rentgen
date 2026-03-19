@@ -15,7 +15,6 @@ import {
 import {
   createHttpRequest,
   createTestHttpRequest,
-  executeTimedRequest,
   extractBodyParameters,
   generateRandomNumber,
   generateRandomString,
@@ -89,37 +88,34 @@ export class DataDrivenTests extends BaseTests {
   private async testOriginalRequest(request: HttpRequest): Promise<TestResult> {
     this.onTestStart?.();
 
-    return executeTimedRequest(
-      request,
-      (response, responseTime) => {
-        const { actual, status } = determineTestStatus(response, (response, statusCode) => {
-          const testStatus = { actual: response.status, status: TestStatus.Fail };
-          if (statusCode >= RESPONSE_STATUS.OK && statusCode < RESPONSE_STATUS.REDIRECT)
-            testStatus.status = TestStatus.Pass;
+    try {
+      const response = await window.electronAPI.sendHttp(request);
+      const { actual, status } = determineTestStatus(response, (response, statusCode) => {
+        const testStatus = { actual: response.status, status: TestStatus.Fail };
+        if (statusCode >= RESPONSE_STATUS.OK && statusCode < RESPONSE_STATUS.REDIRECT)
+          testStatus.status = TestStatus.Pass;
 
-          return testStatus;
-        });
+        return testStatus;
+      });
 
-        return createTestResult(
-          ORIGINAL_REQUEST_TEST_PARAMETER_NAME,
-          SUCCESS_RESPONSE_EXPECTED,
-          actual,
-          status,
-          request,
-          response,
-          responseTime,
-          request.body,
-        );
-      },
-      (error) =>
-        createErrorTestResult(
-          ORIGINAL_REQUEST_TEST_PARAMETER_NAME,
-          SUCCESS_RESPONSE_EXPECTED,
-          String(error),
-          request,
-          request.body,
-        ),
-    );
+      return createTestResult(
+        ORIGINAL_REQUEST_TEST_PARAMETER_NAME,
+        SUCCESS_RESPONSE_EXPECTED,
+        actual,
+        status,
+        request,
+        response,
+        request.body,
+      );
+    } catch (error) {
+      return createErrorTestResult(
+        ORIGINAL_REQUEST_TEST_PARAMETER_NAME,
+        SUCCESS_RESPONSE_EXPECTED,
+        String(error),
+        request,
+        request.body,
+      );
+    }
   }
 
   @Abortable
@@ -197,27 +193,24 @@ async function testRequestParameter(
   const { parameterName, parameterType, testData } = options;
   const request = createTestHttpRequest(options);
 
-  return executeTimedRequest(
-    request,
-    (response, responseTime) => {
-      const { actual, status } = determineTestStatus(response, (response, statusCode) =>
-        determine(response, statusCode, testData),
-      );
+  try {
+    const response = await window.electronAPI.sendHttp(request);
+    const { actual, status } = determineTestStatus(response, (response, statusCode) =>
+      determine(response, statusCode, testData),
+    );
 
-      return createTestResult(
-        `${parameterType}.${parameterName}`,
-        expected,
-        actual,
-        status,
-        request,
-        response,
-        responseTime,
-        testData.value,
-      );
-    },
-    (error) =>
-      createErrorTestResult(`${parameterType}.${parameterName}`, expected, String(error), request, testData.value),
-  );
+    return createTestResult(
+      `${parameterType}.${parameterName}`,
+      expected,
+      actual,
+      status,
+      request,
+      response,
+      testData.value,
+    );
+  } catch (error) {
+    return createErrorTestResult(`${parameterType}.${parameterName}`, expected, String(error), request, testData.value);
+  }
 }
 
 function determineValueNormalizationTestStatus(
@@ -342,7 +335,7 @@ export function generateNumberBoundaryTestData({ min, max }: Interval): TestData
 
 export function isParameterTestSkipped(dataType: DataType): boolean {
   return (
-    dataType === 'do-not-test' || dataType === 'random32' || dataType === 'randomInt' || dataType === 'randomEmail'
+    dataType === 'do-not-test' || dataType === 'randomString' || dataType === 'randomInt' || dataType === 'randomEmail'
   );
 }
 

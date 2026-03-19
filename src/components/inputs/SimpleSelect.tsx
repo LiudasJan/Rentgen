@@ -8,19 +8,21 @@ interface Props extends SelectHTMLAttributes<HTMLSelectElement> {
   placeholder?: string;
 }
 
-export default function SimpleSelect({ className, options, placeholder, ...otherProps }: Props) {
+export default function SimpleSelect({ className, disabled, options, placeholder, ...otherProps }: Props) {
   const optionClassName = options.find((option) => option.value === otherProps.value)?.className || '';
 
   return (
     <select
       className={twMerge(
         cn(
-          'm-0 py-2 px-3 font-segoe-ui text-xs text-text border border-border rounded-md',
+          { 'opacity-50': disabled },
+          'm-0 py-1.75 px-3 font-segoe-ui text-xs text-text border border-border rounded-md outline-none',
           'dark:text-dark-text dark:bg-dark-input dark:border-dark-border',
           optionClassName,
           className,
         ),
       )}
+      disabled={disabled}
       {...otherProps}
     >
       {placeholder && <option value="">{placeholder}</option>}

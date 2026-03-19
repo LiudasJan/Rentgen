@@ -6,6 +6,7 @@ import {
   CACHE_CONTROL_PRIVATE_API_TEST_NAME,
   CLICKJACKING_PROTECTION_TEST_NAME,
   HSTS_STRICT_TRANSPORT_SECURITY_TEST_NAME,
+  INVALID_AUTHORIZATION_TEST_NAME,
   LARGE_PAYLOAD_TEST_NAME,
   LOAD_TEST_NAME,
   MEDIAN_RESPONSE_TIME_TEST_NAME,
@@ -46,6 +47,13 @@ const TEST_PENALTIES: TestPenalty[] = [
   },
   {
     name: AUTHORIZATION_TEST_NAME,
+    penalties: [
+      { status: TestStatus.Fail, points: 12 },
+      { status: TestStatus.Bug, points: 0, count5xx: true },
+    ],
+  },
+  {
+    name: INVALID_AUTHORIZATION_TEST_NAME,
     penalties: [
       { status: TestStatus.Fail, points: 12 },
       { status: TestStatus.Bug, points: 0, count5xx: true },

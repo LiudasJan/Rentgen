@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type { SettingsState } from '../src/store/slices/settingsSlice';
-import type { ExportResult, ImportResult, PostmanCollection, TestResults } from '../src/types';
+import type { ExportResult, HttpResponse, ImportResult, PostmanCollection, TestResults } from '../src/types';
 
 interface ElectronApi {
   connectWss: (payload: any) => void;
@@ -27,7 +27,7 @@ interface ElectronApi {
     filters?: Electron.FileFilter[];
   }) => Promise<{ canceled: boolean; filePath?: string; error?: string }>;
   saveSettings: (settings: SettingsState) => void;
-  sendHttp: (payload: any) => Promise<any>;
+  sendHttp: (payload: any) => Promise<HttpResponse>;
   sendWss: (message: string) => void;
 }
 
@@ -65,7 +65,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveReport: (payload: { defaultPath?: string; content: string; filters?: Electron.FileFilter[] }) =>
     ipcRenderer.invoke('save-report', payload),
   saveSettings: (settings: SettingsState): void => ipcRenderer.send('save-settings', settings),
-  sendHttp: (payload: any): Promise<any> => ipcRenderer.invoke('http-request', payload),
+  sendHttp: (payload: any): Promise<HttpResponse> => ipcRenderer.invoke('http-request', payload),
   sendWss: (message: string): void => ipcRenderer.send('wss-send', message),
 } as ElectronApi);
 
