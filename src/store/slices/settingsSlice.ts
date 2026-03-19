@@ -15,8 +15,10 @@ export interface SettingsState {
   };
   testEngine: {
     configuration: {
-      randomEmail: {
+      email: {
         domain: string;
+      };
+      randomEmail: {
         length: number;
       };
       randomInt: Interval;
@@ -47,8 +49,10 @@ export const initialState: SettingsState = {
   },
   testEngine: {
     configuration: {
-      randomEmail: {
+      email: {
         domain: appConfig.domain,
+      },
+      randomEmail: {
         length: 8,
       },
       randomInt: {
@@ -91,8 +95,8 @@ export const settingsSlice = createSlice({
     setHistoryRetention: (state, action: PayloadAction<HistoryRetention>) => {
       state.general.history.retention = action.payload;
     },
-    setRandomEmailDomain: (state, action: PayloadAction<string>) => {
-      state.testEngine.configuration.randomEmail.domain = action.payload;
+    setEmailDomain: (state, action: PayloadAction<string>) => {
+      state.testEngine.configuration.email.domain = action.payload;
     },
     setRandomEmailLength: (state, action: PayloadAction<number>) => {
       state.testEngine.configuration.randomEmail.length = action.payload;

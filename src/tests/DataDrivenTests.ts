@@ -1,6 +1,7 @@
-import { datasets } from '../constants/datasets';
+import { getDatasets } from '../constants/datasets';
 import { getResponseStatusTitle, RESPONSE_STATUS } from '../constants/responseStatus';
 import { Abortable, Test } from '../decorators';
+import { store } from '../store';
 import {
   DataType,
   DynamicValue,
@@ -125,6 +126,7 @@ export class DataDrivenTests extends BaseTests {
   ): Promise<TestResult[]> {
     const { type, value } = parameterValue;
     const results: TestResult[] = [];
+    const datasets = getDatasets(store.getState().settings.testEngine.configuration.email.domain);
     const dataset = [
       ...generateDynamicTestData(parameterValue),
       ...(datasets[type] || []).map((dataset) => {
