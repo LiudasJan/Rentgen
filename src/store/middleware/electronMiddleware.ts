@@ -45,6 +45,7 @@ const dynamicVariableActions = [
   'environment/updateDynamicVariable',
   'environment/removeDynamicVariable',
   'environment/updateDynamicVariableValue',
+  'environment/replaceDynamicVariables',
 ];
 
 export const electronMiddleware: Middleware = (store) => (next) => (action: Action) => {

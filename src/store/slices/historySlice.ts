@@ -43,6 +43,9 @@ export const historySlice = createSlice({
     clearHistory: (state) => {
       state.entries = [];
     },
+    setEntries: (state, action: PayloadAction<HistoryEntry[]>) => {
+      state.entries = action.payload;
+    },
     enforceRetention: (state, action: PayloadAction<{ maxSize: number; retention: string }>) => {
       const { maxSize, retention } = action.payload;
       const cutoff = getRetentionCutoff(retention);

@@ -1,5 +1,5 @@
-import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { PostmanCollection } from '../../types';
+import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { IntegrityStatus, PostmanCollection, ProjectData, ProjectMeta } from '../../types';
 
 type ReportFormat = 'json' | 'md' | 'csv';
 type SidebarTab = 'collections' | 'environments' | 'history' | null;
@@ -41,6 +41,14 @@ interface SetAsDynamicVariableModalState {
   source: 'body' | 'header';
 }
 
+interface ProjectImportConfirmModalState {
+  isOpen: boolean;
+  data: ProjectData | null;
+  meta: ProjectMeta | null;
+  integrityStatus: IntegrityStatus | null;
+  fileName: string;
+}
+
 interface UIState {
   // Modal states
   openCurlModal: boolean;
@@ -53,6 +61,7 @@ interface UIState {
   };
   importConflictModal: ImportConflictModalState;
   setAsDynamicVariableModal: SetAsDynamicVariableModalState;
+  projectImportConfirmModal: ProjectImportConfirmModalState;
 
   // Feedback states
   saved: boolean;
@@ -95,6 +104,13 @@ const initialState: UIState = {
     editingVariableId: null,
     editingVariableName: null,
     source: 'body',
+  },
+  projectImportConfirmModal: {
+    isOpen: false,
+    data: null,
+    meta: null,
+    integrityStatus: null,
+    fileName: '',
   },
   openSettingsModal: false,
   saved: false,
@@ -177,6 +193,26 @@ export const uiSlice = createSlice({
         editingVariableId: null,
         editingVariableName: null,
         source: 'body',
+      };
+    },
+    openProjectImportConfirmModal: (
+      state,
+      action: PayloadAction<{
+        data: ProjectData;
+        meta: ProjectMeta;
+        integrityStatus: IntegrityStatus;
+        fileName: string;
+      }>,
+    ) => {
+      state.projectImportConfirmModal = { isOpen: true, ...action.payload };
+    },
+    closeProjectImportConfirmModal: (state) => {
+      state.projectImportConfirmModal = {
+        isOpen: false,
+        data: null,
+        meta: null,
+        integrityStatus: null,
+        fileName: '',
       };
     },
     openSettingsModal: (state) => {

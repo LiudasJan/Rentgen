@@ -2,6 +2,7 @@ import cn from 'classnames';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { selectHistoryEnabled, selectHistoryRetention, selectHistorySize } from '../../store/selectors';
 import { HistoryRetention, settingsActions } from '../../store/slices/settingsSlice';
+import { uiActions } from '../../store/slices/uiSlice';
 import Input from '../inputs/Input';
 import SimpleSelect from '../inputs/SimpleSelect';
 import Toggle from '../inputs/Toggle';
@@ -20,6 +21,30 @@ export function GeneralSettings() {
   const historyEnabled = useAppSelector(selectHistoryEnabled);
   const historySize = useAppSelector(selectHistorySize);
   const historyRetention = useAppSelector(selectHistoryRetention);
+
+  const handleExportProject = async () => {
+    const result = await window.electronAPI.exportProject();
+    if (result.success) {
+      dispatch(uiActions.setExported(true));
+      setTimeout(() => dispatch(uiActions.setExported(false)), 2000);
+    }
+  };
+
+  const handleImportProject = async () => {
+    const result = await window.electronAPI.importProject();
+    if (result.error) return;
+    if (result.success && result.data && result.meta && result.integrityStatus) {
+      dispatch(uiActions.closeSettingsModal());
+      dispatch(
+        uiActions.openProjectImportConfirmModal({
+          data: result.data,
+          meta: result.meta,
+          integrityStatus: result.integrityStatus,
+          fileName: result.fileName ?? 'unknown',
+        }),
+      );
+    }
+  };
 
   return (
     <div className="flex flex-col gap-4">
@@ -63,6 +88,28 @@ export function GeneralSettings() {
             onChange={(e) => dispatch(settingsActions.setHistoryRetention(e.target.value as HistoryRetention))}
           />
         </div>
+      </div>
+
+      <h5 className="flex items-center justify-between gap-4 m-0 pb-1.5 border-b border-b-border dark:border-b-dark-border mt-4">
+        <span>Project</span>
+      </h5>
+      <p className="m-0 text-xs text-text-secondary">
+        Export or import your entire project including collections, environments, variables, history, and settings.
+      </p>
+
+      <div className="flex gap-3">
+        <button
+          className="flex-1 py-2 px-4 text-xs font-medium rounded-md border border-border dark:border-dark-border hover:bg-button-secondary dark:hover:bg-dark-input transition-colors cursor-pointer"
+          onClick={handleExportProject}
+        >
+          Export Project
+        </button>
+        <button
+          className="flex-1 py-2 px-4 text-xs font-medium rounded-md border border-border dark:border-dark-border hover:bg-button-secondary dark:hover:bg-dark-input transition-colors cursor-pointer"
+          onClick={handleImportProject}
+        >
+          Import Project
+        </button>
       </div>
     </div>
   );

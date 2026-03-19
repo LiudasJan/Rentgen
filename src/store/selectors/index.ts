@@ -142,6 +142,7 @@ export const selectRunningRequestId = (state: RootState) => state.collectionRun.
 export const selectCollectionRunResults = (state: RootState) => state.collectionRun.results;
 export const selectImportConflictModal = (state: RootState) => state.ui.importConflictModal;
 export const selectSetAsDynamicVariableModal = (state: RootState) => state.ui.setAsDynamicVariableModal;
+export const selectProjectImportConfirmModal = (state: RootState) => state.ui.projectImportConfirmModal;
 
 // Settings selectors
 export const selectDisabledSecurityTests = (state: RootState) => state.settings.testEngine.securityTests.disabled;
