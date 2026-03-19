@@ -13,6 +13,7 @@ export function MappingSettings() {
   const randomEmailConfiguration = testEngineConfiguration.randomEmail;
   const randomIntConfiguration = testEngineConfiguration.randomInt;
   const randomStringConfiguration = testEngineConfiguration.randomString;
+  const emailConfiguration = testEngineConfiguration.email;
   const enumConfiguration = testEngineConfiguration.enum;
   const numberConfiguration = testEngineConfiguration.number;
   const stringConfiguration = testEngineConfiguration.string;
@@ -25,21 +26,21 @@ export function MappingSettings() {
       </p>
       <div className="flex flex-col border border-border dark:border-dark-border rounded-md divide-y divide-border dark:divide-dark-border overflow-hidden">
         <div className="flex flex-col gap-2 py-1.75 px-3 text-xs">
-          <label className="m-0 font-bold">Random Email</label>
+          <label className="m-0 font-bold">Email</label>
           <div className="flex items-center justify-between">
             <span>Domain</span>
             <Input
               className="w-32 py-1.5"
-              value={randomEmailConfiguration.domain}
+              value={emailConfiguration.domain}
               onBlur={() => {
-                if (/^(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$/.test(randomEmailConfiguration.domain)) return;
-                dispatch(settingsActions.setRandomEmailDomain(appConfig.domain));
+                if (/^(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$/.test(emailConfiguration.domain)) return;
+                dispatch(settingsActions.setEmailDomain(appConfig.domain));
               }}
-              onChange={(event) => dispatch(settingsActions.setRandomEmailDomain(event.target.value))}
+              onChange={(event) => dispatch(settingsActions.setEmailDomain(event.target.value))}
             />
           </div>
           <div className="flex items-center justify-between">
-            <span>Length</span>
+            <span>Random Email Length</span>
             <Input
               className="w-32 py-1.5"
               type="number"
@@ -51,68 +52,6 @@ export function MappingSettings() {
               onChange={(event) => {
                 const value = clamp(parseInt(event.target.value), 1, 256);
                 dispatch(settingsActions.setRandomEmailLength(isNaN(value) ? null : value));
-              }}
-            />
-          </div>
-        </div>
-        <div className="flex flex-col gap-2 py-1.75 px-3 text-xs">
-          <label className="m-0 font-bold">Random Integer</label>
-          <div className="flex items-center justify-between">
-            <span>Minimum Value</span>
-            <Input
-              type="number"
-              className="w-32 py-1.5"
-              value={randomIntConfiguration.min ?? ''}
-              onBlur={() =>
-                dispatch(
-                  settingsActions.setRandomIntMin(
-                    randomIntConfiguration.min ? Math.min(randomIntConfiguration.min, randomIntConfiguration.max) : 0,
-                  ),
-                )
-              }
-              onChange={(event) => {
-                const value = clamp(parseInt(event.target.value), 0, MAX_INT32);
-                dispatch(settingsActions.setRandomIntMin(isNaN(value) ? null : value));
-              }}
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <span>Maximum Value</span>
-            <Input
-              type="number"
-              className="w-32 py-1.5"
-              value={randomIntConfiguration.max ?? ''}
-              onBlur={() =>
-                dispatch(
-                  settingsActions.setRandomIntMax(
-                    randomIntConfiguration.max
-                      ? Math.max(randomIntConfiguration.max, randomIntConfiguration.min)
-                      : MAX_INT32,
-                  ),
-                )
-              }
-              onChange={(event) => {
-                const value = clamp(parseInt(event.target.value), 0, MAX_INT32);
-                dispatch(settingsActions.setRandomIntMax(isNaN(value) ? null : value));
-              }}
-            />
-          </div>
-        </div>
-        <div className="flex flex-col gap-2 py-1.75 px-3 text-xs">
-          <label className="m-0 font-bold">Random String</label>
-          <div className="flex items-center justify-between">
-            <span>Length</span>
-            <Input
-              type="number"
-              className="w-32 py-1.5"
-              value={randomStringConfiguration.length ?? ''}
-              onBlur={() => {
-                if (randomStringConfiguration.length) return;
-                dispatch(settingsActions.setRandomStringLength(1));
-              }}
-              onChange={(event) => {
-                const value = clamp(parseInt(event.target.value), 1, 4096);
-                dispatch(settingsActions.setRandomStringLength(isNaN(value) ? null : value));
               }}
             />
           </div>
@@ -180,6 +119,68 @@ export function MappingSettings() {
               onChange={(event) => {
                 const value = clamp(parseInt(event.target.value), 1, 1000000);
                 dispatch(settingsActions.setStringMaxLength(isNaN(value) ? null : value));
+              }}
+            />
+          </div>
+        </div>
+        <div className="flex flex-col gap-2 py-1.75 px-3 text-xs">
+          <label className="m-0 font-bold">Random Integer</label>
+          <div className="flex items-center justify-between">
+            <span>Minimum Value</span>
+            <Input
+              type="number"
+              className="w-32 py-1.5"
+              value={randomIntConfiguration.min ?? ''}
+              onBlur={() =>
+                dispatch(
+                  settingsActions.setRandomIntMin(
+                    randomIntConfiguration.min ? Math.min(randomIntConfiguration.min, randomIntConfiguration.max) : 0,
+                  ),
+                )
+              }
+              onChange={(event) => {
+                const value = clamp(parseInt(event.target.value), 0, MAX_INT32);
+                dispatch(settingsActions.setRandomIntMin(isNaN(value) ? null : value));
+              }}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <span>Maximum Value</span>
+            <Input
+              type="number"
+              className="w-32 py-1.5"
+              value={randomIntConfiguration.max ?? ''}
+              onBlur={() =>
+                dispatch(
+                  settingsActions.setRandomIntMax(
+                    randomIntConfiguration.max
+                      ? Math.max(randomIntConfiguration.max, randomIntConfiguration.min)
+                      : MAX_INT32,
+                  ),
+                )
+              }
+              onChange={(event) => {
+                const value = clamp(parseInt(event.target.value), 0, MAX_INT32);
+                dispatch(settingsActions.setRandomIntMax(isNaN(value) ? null : value));
+              }}
+            />
+          </div>
+        </div>
+        <div className="flex flex-col gap-2 py-1.75 px-3 text-xs">
+          <label className="m-0 font-bold">Random String</label>
+          <div className="flex items-center justify-between">
+            <span>Length</span>
+            <Input
+              type="number"
+              className="w-32 py-1.5"
+              value={randomStringConfiguration.length ?? ''}
+              onBlur={() => {
+                if (randomStringConfiguration.length) return;
+                dispatch(settingsActions.setRandomStringLength(1));
+              }}
+              onChange={(event) => {
+                const value = clamp(parseInt(event.target.value), 1, 4096);
+                dispatch(settingsActions.setRandomStringLength(isNaN(value) ? null : value));
               }}
             />
           </div>

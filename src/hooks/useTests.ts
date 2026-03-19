@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { datasets } from '../constants/datasets';
+import { getDatasets } from '../constants/datasets';
 import { getTestCount } from '../decorators';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import {
@@ -15,6 +15,7 @@ import {
   selectPerformanceTests,
   selectSecurityTests,
   selectSelectedRequestId,
+  selectTestEngineConfiguration,
   selectTestsCount,
   selectTestsTimestamp,
 } from '../store/selectors';
@@ -58,7 +59,9 @@ const useTests = () => {
   const isPerformanceRunning = useAppSelector(selectIsPerformanceRunning);
   const isSecurityRunning = useAppSelector(selectIsSecurityRunning);
 
+  const testEngineConfiguration = useAppSelector(selectTestEngineConfiguration);
   const disabledSecurityTests = useAppSelector(selectDisabledSecurityTests);
+  const emailConfiguration = testEngineConfiguration.email;
 
   const incrementCurrentTest = useCallback(() => {
     dispatch(testActions.incrementCurrentTest());
@@ -66,6 +69,7 @@ const useTests = () => {
 
   const calculateDataDrivenTestsCount = useCallback(async (options: TestOptions): Promise<number> => {
     let dataDrivenTestsCount = 0;
+    const datasets = getDatasets(emailConfiguration.domain);
 
     await runDataDrivenTests(
       options,
