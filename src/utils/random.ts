@@ -28,7 +28,7 @@ export function generateRandomValue(dataType: DataType): string | number | null 
 
   if (dataType === 'randomString') return generateRandomString(settings.randomString.length);
   if (dataType === 'randomInt') return generateRandomNumber(settings.randomInt.min, settings.randomInt.max);
-  if (dataType === 'randomEmail') return generateRandomEmail(settings.randomEmail.domain, settings.randomEmail.length);
+  if (dataType === 'randomEmail') return generateRandomEmail(settings.email.domain, settings.randomEmail.length);
 
   return null;
 }
