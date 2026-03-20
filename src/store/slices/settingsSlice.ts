@@ -137,6 +137,10 @@ export const settingsSlice = createSlice({
       state.theme = action.payload;
       applyTheme(state);
     },
+    replaceSettings: (state, action: PayloadAction<SettingsState>) => {
+      Object.assign(state, action.payload);
+      applyTheme(state);
+    },
   },
   extraReducers: (builder) => {
     builder.addCase(loadSettings.fulfilled, (state, action: PayloadAction<SettingsState>) => {

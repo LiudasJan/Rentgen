@@ -26,7 +26,7 @@ import {
   postmanHeadersToRecord,
 } from '../../../utils/collection';
 import { useContextMenu } from '../../context-menu';
-import MethodBadge from '../../MethodBadge';
+import MethodBadge from '../../badges/MethodBadge';
 
 import ClearCrossIcon from '../../../assets/icons/clear-cross-icon.svg';
 import EditIcon from '../../../assets/icons/edit-icon.svg';

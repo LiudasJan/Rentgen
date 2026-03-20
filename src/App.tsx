@@ -19,6 +19,7 @@ import Loader from './components/loaders/Loader';
 import TestRunningLoader from './components/loaders/TestRunningLoader';
 import ConfirmationModal from './components/modals/ConfirmationModal';
 import ImportConflictModal from './components/modals/ImportConflictModal';
+import ProjectImportConfirmModal from './components/modals/ProjectImportConfirmModal';
 import Modal from './components/modals/Modal';
 import SetAsDynamicVariableModal from './components/modals/SetAsDynamicVariableModal';
 import SettingsModal from './components/modals/SettingsModal';
@@ -1307,6 +1308,7 @@ export default function App() {
       />
       <SetAsDynamicVariableModal />
       <ImportConflictModal />
+      <ProjectImportConfirmModal />
       <SettingsModal />
     </div>
   );

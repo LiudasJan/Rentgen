@@ -166,6 +166,9 @@ export const environmentSlice = createSlice({
     setDynamicVariables: (state, action: PayloadAction<DynamicVariable[]>) => {
       state.dynamicVariables = action.payload;
     },
+    replaceDynamicVariables: (state, action: PayloadAction<DynamicVariable[]>) => {
+      state.dynamicVariables = action.payload;
+    },
   },
   extraReducers: (builder) => {
     builder

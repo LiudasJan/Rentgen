@@ -11,6 +11,7 @@ import {
   registerHistoryHandlers,
   registerHttpHandlers,
   registerImportExportHandlers,
+  registerProjectHandlers,
   registerSettingsHandlers,
   registerWssHandlers,
 } from './handlers';
@@ -140,6 +141,7 @@ registerCollectionHandlers();
 registerEnvironmentHandlers();
 registerHistoryHandlers();
 registerImportExportHandlers();
+registerProjectHandlers();
 registerCertificateHandlers();
 
 ipcMain.handle('get-app-version', () => app.getVersion());

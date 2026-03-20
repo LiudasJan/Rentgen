@@ -4,5 +4,6 @@ export * from './environmentHandlers';
 export * from './historyHandlers';
 export * from './httpHandlers';
 export * from './importExportHandlers';
+export * from './projectHandlers';
 export * from './settingsHandlers';
 export * from './wssHandlers';
