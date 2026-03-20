@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { selectProjectImportConfirmModal } from '../../store/selectors';
 import { collectionActions } from '../../store/slices/collectionSlice';
@@ -7,7 +8,7 @@ import { settingsActions } from '../../store/slices/settingsSlice';
 import { uiActions } from '../../store/slices/uiSlice';
 import IntegrityBadge from '../badges/IntegrityBadge';
 import Modal from './Modal';
-import Button, { ButtonType } from '../buttons/Button';
+import Button, { ButtonSize, ButtonType } from '../buttons/Button';
 
 function formatDate(isoString: string): string {
   try {
@@ -20,6 +21,7 @@ function formatDate(isoString: string): string {
 export default function ProjectImportConfirmModal() {
   const dispatch = useAppDispatch();
   const { isOpen, data, meta, integrityStatus, fileName } = useAppSelector(selectProjectImportConfirmModal);
+  const [exported, setExported] = useState(false);
 
   if (!isOpen || !data || !meta || !integrityStatus) return null;
 
@@ -31,6 +33,13 @@ export default function ProjectImportConfirmModal() {
 
   const handleClose = () => {
     dispatch(uiActions.closeProjectImportConfirmModal());
+  };
+
+  const handleExportFirst = async () => {
+    const result = await window.electronAPI.exportProject();
+    if (result) {
+      setExported(true);
+    }
   };
 
   const handleConfirmImport = () => {
@@ -92,6 +101,19 @@ export default function ProjectImportConfirmModal() {
             <li>Settings (theme, test engine, history config)</li>
           </ul>
           <p className="m-0 mt-2 text-xs text-red-700 dark:text-red-400 font-medium">This action cannot be undone.</p>
+        </div>
+
+        <div className="flex items-center gap-2 pb-6">
+          <span className="text-xs text-text-secondary dark:text-dark-text-secondary">
+            Back up your current project before importing:
+          </span>
+          {exported ? (
+            <span className="text-xs text-green-600 dark:text-green-400 font-medium">Exported ✓</span>
+          ) : (
+            <Button buttonType={ButtonType.SECONDARY} buttonSize={ButtonSize.SMALL} onClick={handleExportFirst}>
+              Export Current Project
+            </Button>
+          )}
         </div>
 
         <div className="flex items-center justify-end gap-4">
