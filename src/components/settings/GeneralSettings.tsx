@@ -6,6 +6,7 @@ import { uiActions } from '../../store/slices/uiSlice';
 import Input from '../inputs/Input';
 import SimpleSelect from '../inputs/SimpleSelect';
 import Toggle from '../inputs/Toggle';
+import Button, { ButtonType } from '../buttons/Button';
 
 const retentionOptions = [
   { value: '1w', label: '1 Week' },
@@ -98,18 +99,12 @@ export function GeneralSettings() {
       </p>
 
       <div className="flex gap-3">
-        <button
-          className="flex-1 py-2 px-4 text-xs font-medium rounded-md border border-border dark:border-dark-border hover:bg-button-secondary dark:hover:bg-dark-input transition-colors cursor-pointer"
-          onClick={handleExportProject}
-        >
+        <Button buttonType={ButtonType.SECONDARY} className="flex-1" onClick={handleExportProject}>
           Export Project
-        </button>
-        <button
-          className="flex-1 py-2 px-4 text-xs font-medium rounded-md border border-border dark:border-dark-border hover:bg-button-secondary dark:hover:bg-dark-input transition-colors cursor-pointer"
-          onClick={handleImportProject}
-        >
+        </Button>
+        <Button buttonType={ButtonType.SECONDARY} className="flex-1" onClick={handleImportProject}>
           Import Project
-        </button>
+        </Button>
       </div>
     </div>
   );

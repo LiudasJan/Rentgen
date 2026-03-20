@@ -8,7 +8,7 @@ import { historyActions } from '../../../store/slices/historySlice';
 import { requestActions } from '../../../store/slices/requestSlice';
 import { testActions } from '../../../store/slices/testSlice';
 import { HistoryEntry } from '../../../types/history';
-import MethodBadge from '../../MethodBadge';
+import MethodBadge from '../../badges/MethodBadge';
 import SearchHighlight from '../colletion/SearchHighlight';
 
 interface Props {

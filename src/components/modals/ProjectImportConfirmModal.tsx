@@ -5,20 +5,9 @@ import { environmentActions } from '../../store/slices/environmentSlice';
 import { historyActions } from '../../store/slices/historySlice';
 import { settingsActions } from '../../store/slices/settingsSlice';
 import { uiActions } from '../../store/slices/uiSlice';
-import { IntegrityStatus } from '../../types';
+import IntegrityBadge from '../badges/IntegrityBadge';
 import Modal from './Modal';
 import Button, { ButtonType } from '../buttons/Button';
-
-function IntegrityBadge({ status }: { status: IntegrityStatus }) {
-  switch (status) {
-    case 'verified':
-      return <span className="text-green-600 dark:text-green-400 text-xs font-medium">Verified</span>;
-    case 'modified':
-      return <span className="text-yellow-600 dark:text-yellow-400 text-xs font-medium">Modified</span>;
-    case 'missing':
-      return <span className="text-text-secondary text-xs font-medium">No checksum</span>;
-  }
-}
 
 function formatDate(isoString: string): string {
   try {
