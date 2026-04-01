@@ -290,10 +290,12 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
               columns={[
                 {
                   name: 'Variable Name',
+                  width: '40%',
                   cell: (row) => (
                     <Input
                       className="w-full border-0 bg-transparent"
                       placeholder="Add variable"
+                      title={row.key}
                       value={row.key}
                       onChange={(e) =>
                         row.type === 'static'
@@ -305,6 +307,7 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
                 },
                 {
                   name: 'Value',
+                  width: '50%',
                   cell: (row) => {
                     if (row.type === 'static')
                       return (
@@ -331,7 +334,10 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
                       );
 
                     return (
-                      <span className="px-2 text-xs font-monospace text-text-secondary dark:text-dark-text-secondary truncate block">
+                      <span
+                        className="px-2 text-xs font-monospace text-text-secondary dark:text-dark-text-secondary truncate block"
+                        title={(row as DynamicVariable).currentValue || ''}
+                      >
                         {(row as DynamicVariable).currentValue || '—'}
                       </span>
                     );
@@ -379,6 +385,7 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
                 cells: {
                   style: {
                     padding: '4px',
+                    overflow: 'hidden',
                     '&:not(:last-of-type)': {
                       borderRight: isDark ? '1px solid #23272f' : '1px solid #cccccc',
                     },
