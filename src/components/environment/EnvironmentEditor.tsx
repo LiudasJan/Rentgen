@@ -290,7 +290,7 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
               columns={[
                 {
                   name: 'Variable Name',
-                  width: '40%',
+                  grow: 2,
                   cell: (row) => (
                     <Input
                       className="w-full border-0 bg-transparent"
@@ -307,15 +307,17 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
                 },
                 {
                   name: 'Value',
-                  width: '50%',
+                  grow: 3,
                   cell: (row) => {
                     if (row.type === 'static')
                       return (
                         <Select
                           classNames={{
-                            container: () => 'w-full text-xs',
+                            container: () => 'w-full text-xs overflow-hidden',
                             control: () =>
-                              'min-h-auto! border-none! bg-white! dark:bg-dark-input! shadow-none! transition-none!',
+                              'min-h-auto! border-none! bg-white! dark:bg-dark-input! shadow-none! transition-none! overflow-hidden!',
+                            singleValue: () =>
+                              'm-0! text-text! dark:text-dark-text! overflow-hidden! text-ellipsis! whitespace-nowrap!',
                           }}
                           isCreatable={true}
                           menuPosition="fixed"
@@ -335,7 +337,7 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
 
                     return (
                       <span
-                        className="px-2 text-xs font-monospace text-text-secondary dark:text-dark-text-secondary truncate block"
+                        className="px-2 text-xs font-monospace text-text-secondary dark:text-dark-text-secondary truncate block w-full min-w-0"
                         title={(row as DynamicVariable).currentValue || ''}
                       >
                         {(row as DynamicVariable).currentValue || '—'}
@@ -365,7 +367,8 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
                       </button>
                     );
                   },
-                  width: '10%',
+                  grow: 0,
+                  width: '50px',
                   style: { justifyContent: 'center' },
                 },
               ]}
@@ -389,6 +392,16 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
                     '&:not(:last-of-type)': {
                       borderRight: isDark ? '1px solid #23272f' : '1px solid #cccccc',
                     },
+                  },
+                },
+                responsiveWrapper: {
+                  style: {
+                    overflow: 'hidden',
+                  },
+                },
+                tableWrapper: {
+                  style: {
+                    display: 'block',
                   },
                 },
                 rows: {
