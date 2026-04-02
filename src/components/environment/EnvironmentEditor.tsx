@@ -57,6 +57,17 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
     ];
   }, [dynamicVariables, variables]);
 
+  const nameColumnWidth = useMemo(() => {
+    const CHAR_WIDTH = 7.2;
+    const PADDING = 32;
+    const MIN_CHARS = 13;
+    const MAX_CHARS = 30;
+
+    const longestName = Math.max(MIN_CHARS, ...allVariables.map((v) => v.key.length));
+    const cappedLength = Math.min(longestName, MAX_CHARS);
+    return `${Math.ceil(cappedLength * CHAR_WIDTH + PADDING)}px`;
+  }, [allVariables]);
+
   const isDark = theme === 'dark';
 
   // Check if current state differs from environment prop
@@ -290,7 +301,8 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
               columns={[
                 {
                   name: 'Variable Name',
-                  grow: 2,
+                  grow: 0,
+                  width: nameColumnWidth,
                   cell: (row) => (
                     <Input
                       className="w-full border-0 bg-transparent"
@@ -396,7 +408,7 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
                 },
                 responsiveWrapper: {
                   style: {
-                    overflow: 'hidden',
+                    overflowX: 'hidden',
                   },
                 },
                 tableWrapper: {
