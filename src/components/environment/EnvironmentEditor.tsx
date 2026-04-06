@@ -301,8 +301,7 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
               columns={[
                 {
                   name: 'Variable Name',
-                  grow: 0,
-                  width: nameColumnWidth,
+                  grow: 2,
                   cell: (row) => (
                     <Input
                       className="w-full border-0 bg-transparent"
@@ -408,7 +407,7 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
                 },
                 responsiveWrapper: {
                   style: {
-                    overflowX: 'hidden',
+                    overflow: 'hidden',
                   },
                 },
                 tableWrapper: {
