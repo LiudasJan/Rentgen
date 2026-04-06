@@ -1,8 +1,8 @@
 {
   "name": "rentgen",
   "productName": "Rentgen",
-  "version": "1.9.0",
-  "description": "Lightweight API testing tool with cURL import and auto generated tests",
+  "version": "1.20.0",
+  "description": "Automation before automation. Finding API bugs when you have no tests.",
   "main": ".webpack/main",
   "scripts": {
     "start": "electron-forge start",

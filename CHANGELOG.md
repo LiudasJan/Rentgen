@@ -1,38 +1,74 @@
-## v1.9.0 Potential Bugs Identification+ History + Security Test Controls
+## 🚀 Release v1.20.0
 
-### Potential Identification (Regression Compare)
+### 🔥 Project Export / Import (Main Feature)
 
-Regression compare now has a dedicated **Potential Bugs** identification to surface the changes that most likely indicate real breakage.
+You can now fully export and import your Rentgen projects and share it with a team.
 
-- Compare screen now has two tabs:
-  - **Potential Bugs** (default)
-  - **Full behaviour changes**
-- If no potential bugs are detected, Rentgen shows:
-  **"No potential bugs detected ✅"** with an option to open the full diff.
+- Export everything:
+  - requests
+  - collections
+  - environment variables (static + dynamic)
+  - history
 
-### Security Tests: Configure what to run
+- Import back anytime
 
-You can now choose which **Security Tests** are enabled.
+No accounts. No cloud. No vendor lock-in. Use whatever you want:
 
-- Settings are available via a **gear icon** (next to "Check for updates")
-- By default all security tests are enabled
-- Disabled tests are skipped and won't appear in the Security Tests list
-- Settings persist via local storage across app restarts
+- Dropbox
+- GitHub
+- local storage, etc
 
-### Request History (with retention controls)
+---
 
-Rentgen now keeps a **Request History** so you can return to previously used requests and save them into a Collection when needed.
-History size / retention is configurable in settings to keep performance predictable.
+### 🔐 New Test: Invalid Authorization Cookie / Token
 
-### Environment Variables: Random value dropdown
+Automatically triggered if request contains headers:
 
-When adding an environment variable, you can now select a generated value from a dropdown (no scripts):
+- Authorization
+- X-API-Key
+- X-Auth-Token
+- Api-Key
+- ApiKey
 
-- Random Email
-- Random Integer
-- Random String (32)
+Or uses Bearer token.
 
-### Bug Fixes & Performance Improvements
+What it does:
 
-- Multiple stability improvements across compare and execution workflows
-- General performance and UX refinements
+- Takes existing token
+- Modifies it (invalidates)
+- Sends request
+
+Expected result: `401 Unauthorized`
+
+---
+
+### ⏱ Response Time Everywhere
+
+Response time is now visible across the entire workflow.
+
+- Each test now shows response time
+- Manual requests show response time next to status code
+
+---
+
+### ⚙️ Test Engine Settings (Mapping Control)
+
+New: `Settings → Test Engine`
+
+You can now control how test data is generated.
+
+- Random Email `[length]`
+- Random Integer `[min] [max]`
+- Random String `[length]`
+- Email (custom domain) [domain]` → default: rentgen.io
+- Enum `value1,value2,value3`
+- Number `[min] [max]`
+- String `[max length]`
+
+---
+
+### 🛠 Bug Fixes & Improvements
+
+- Stability improvements across test execution
+- Performance optimizations
+- General UX improvements
