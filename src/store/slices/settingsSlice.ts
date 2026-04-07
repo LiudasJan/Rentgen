@@ -37,7 +37,7 @@ export interface SettingsState {
     };
   };
   theme: 'light' | 'dark';
-  language: 'en' | 'lt' | 'pl' | 'uk';
+  language: 'en' | 'lt' | 'pl' | 'uk' | 'es';
 }
 
 export const initialState: SettingsState = {
@@ -140,7 +140,7 @@ export const settingsSlice = createSlice({
       state.theme = action.payload;
       applyTheme(state);
     },
-    setLanguage: (state, action: PayloadAction<'en' | 'lt' | 'pl' | 'uk'>) => {
+    setLanguage: (state, action: PayloadAction<'en' | 'lt' | 'pl' | 'uk' | 'es'>) => {
       state.language = action.payload;
       i18n.changeLanguage(action.payload);
     },
