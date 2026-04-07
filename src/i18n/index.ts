@@ -4,6 +4,7 @@ import en from './locales/en';
 import lt from './locales/lt';
 import pl from './locales/pl';
 import uk from './locales/uk';
+import es from './locales/es';
 
 i18n.use(initReactI18next).init({
   resources: {
@@ -11,6 +12,7 @@ i18n.use(initReactI18next).init({
     lt: { translation: lt },
     pl: { translation: pl },
     uk: { translation: uk },
+    es: { translation: es },
   },
   lng: 'en',
   fallbackLng: 'en',

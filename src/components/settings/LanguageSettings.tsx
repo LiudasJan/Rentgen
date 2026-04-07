@@ -9,6 +9,7 @@ const languages = [
   { label: 'Lietuvių', value: 'lt' as const },
   { label: 'Polski', value: 'pl' as const },
   { label: 'Українська', value: 'uk' as const },
+  { label: 'Español', value: 'es' as const },
 ];
 
 export function LanguageSettings() {
@@ -16,7 +17,7 @@ export function LanguageSettings() {
   const dispatch = useAppDispatch();
   const language = useAppSelector(selectLanguage);
 
-  const onLanguageChange = (value: 'en' | 'lt' | 'pl' | 'uk') => {
+  const onLanguageChange = (value: 'en' | 'lt' | 'pl' | 'uk' | 'es') => {
     if (value === language) return;
     dispatch(settingsActions.setLanguage(value));
   };
