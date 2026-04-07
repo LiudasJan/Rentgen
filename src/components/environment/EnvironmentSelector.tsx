@@ -1,4 +1,5 @@
 import cn from 'classnames';
+import { useTranslation } from 'react-i18next';
 import { Environment } from '../../types';
 import Select, { SelectOption } from '../inputs/Select';
 
@@ -19,12 +20,13 @@ interface Props {
 }
 
 export default function EnvironmentSelector({ className, environments, selectedEnvironmentId, onSelect }: Props) {
+  const { t } = useTranslation();
   const selectedEnvironment = environments.find((env) => env.id === selectedEnvironmentId);
   const hasColor = selectedEnvironment?.color;
   const needsLightText = hasColor && isColorDark(selectedEnvironment.color);
 
   const options: SelectOption<string | null>[] = [
-    { value: null, label: 'No Environment' },
+    { value: null, label: t('environment.noEnvironment') },
     ...environments.map((env) => ({
       value: env.id,
       label: env.title,
@@ -36,7 +38,7 @@ export default function EnvironmentSelector({ className, environments, selectedE
       className={cn('min-w-37.5', className)}
       isSearchable={false}
       options={options}
-      placeholder="Select Environment"
+      placeholder={t('environment.selectEnvironment')}
       value={options.find((opt) => opt.value === selectedEnvironmentId) || options[0]}
       onChange={(option: unknown) => onSelect((option as SelectOption<string | null>).value)}
       styles={

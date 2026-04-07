@@ -1,6 +1,7 @@
 import { Method } from 'axios';
 import cn from 'classnames';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import ActionsButton from './components/buttons/ActionsButton';
 import Button, { ButtonSize, ButtonType } from './components/buttons/Button';
 import { CopyButton } from './components/buttons/CopyButton';
@@ -134,12 +135,6 @@ const modeOptions: SelectOption<Mode>[] = [
   { value: 'WSS', label: 'WSS' },
 ];
 
-const exportFormatOptions: SelectOption<ReportFormat>[] = [
-  { value: 'json', label: 'JSON (.json)' },
-  { value: 'md', label: 'Markdown (.md)' },
-  { value: 'csv', label: 'CSV (.csv)' },
-];
-
 const methodOptions: SelectOption<Method>[] = [
   { value: 'GET', label: 'GET', className: 'text-method-get! dark:text-dark-method-get!' },
   { value: 'POST', label: 'POST', className: 'text-method-post! dark:text-dark-method-post!' },
@@ -152,6 +147,13 @@ const methodOptions: SelectOption<Method>[] = [
 
 export default function App() {
   const dispatch = useAppDispatch();
+  const { t } = useTranslation();
+
+  const exportFormatOptions: SelectOption<ReportFormat>[] = [
+    { value: 'json', label: t('exportFormats.json') },
+    { value: 'md', label: t('exportFormats.markdown') },
+    { value: 'csv', label: t('exportFormats.csv') },
+  ];
 
   // Collection state
   const collection = useAppSelector(selectCollectionData);
@@ -345,9 +347,7 @@ export default function App() {
       dispatch(uiActions.closeCurlModal());
     } catch (error) {
       console.error('cURL import failed', error);
-      dispatch(
-        uiActions.setCurlError('The cURL command you provided appears to be invalid. Please check it and try again'),
-      );
+      dispatch(uiActions.setCurlError(t('curl.invalidCurl')));
     }
   }, [curl, dispatch]);
 
@@ -535,7 +535,7 @@ export default function App() {
   // WebSocket functions
   const connectWss = useCallback(() => {
     if (!url.startsWith('ws')) {
-      dispatch(websocketActions.addMessage({ direction: 'system', data: '🔴 Please use ws:// or wss:// URL' }));
+      dispatch(websocketActions.addMessage({ direction: 'system', data: t('request.wssUrlRequired') }));
       return;
     }
     window.electronAPI.connectWss({ url, headers: parseHeaders(headers) });
@@ -650,7 +650,7 @@ export default function App() {
   const generateCertificate = useCallback(async () => {
     try {
       if (!testResults || testResults.count < 70) {
-        dispatch(uiActions.setCertificateError('Not eligible (need at least 70 tests)'));
+        dispatch(uiActions.setCertificateError(t('tests.notEligible')));
         clearTimeout(certificateTimeout);
         certificateTimeout = setTimeout(() => dispatch(uiActions.setCertificateError('')), 5000);
         return;
@@ -692,7 +692,7 @@ export default function App() {
             <TestResultsComparisonPanel
               items={testResultsToCompare}
               response={compareResponse}
-              title="Test Results Comparison"
+              title={t('comparison.title')}
             />
             <IconButton
               className="absolute top-2.5 right-4"
@@ -720,30 +720,30 @@ export default function App() {
                 {mode === 'HTTP' && (
                   <>
                     <ActionsButton
-                      actions={[{ label: 'Create', onClick: reset }]}
+                      actions={[{ label: t('common.create'), onClick: reset }]}
                       className="[&>*:first-child]:w-full @lg:[&>*:first-child]:w-auto"
                       onClick={() => dispatch(uiActions.openCurlModal())}
                     >
-                      Import cURL
+                      {t('curl.importCurl')}
                     </ActionsButton>
                     <Modal isOpen={openCurlModal} onClose={() => dispatch(uiActions.closeCurlModal())}>
                       <div className="flex flex-col gap-4">
-                        <h4 className="m-0">Import cURL</h4>
+                        <h4 className="m-0">{t('curl.importCurl')}</h4>
                         <Textarea
                           autoFocus={true}
                           className="min-h-40"
-                          placeholder="Enter cURL or paste text"
+                          placeholder={t('curl.importCurlPlaceholder')}
                           value={curl}
                           onChange={(event) => dispatch(uiActions.setCurl(event.target.value))}
                         />
                         {curlError && <p className="m-0 text-xs text-red-600">{curlError}</p>}
                         <div className="flex items-center justify-end gap-4">
-                          <Button onClick={importCurl}>Import</Button>
+                          <Button onClick={importCurl}>{t('common.import')}</Button>
                           <Button
                             buttonType={ButtonType.SECONDARY}
                             onClick={() => dispatch(uiActions.closeCurlModal())}
                           >
-                            Cancel
+                            {t('common.cancel')}
                           </Button>
                         </div>
                       </div>
@@ -791,7 +791,7 @@ export default function App() {
                 <HighlightedInput
                   className={cn('flex-auto', { 'border-l-0 rounded-l-none': mode === 'HTTP' })}
                   highlightColor={selectedEnvironment?.color}
-                  placeholder="Enter URL or paste text"
+                  placeholder={t('request.enterUrl')}
                   value={url}
                   variables={variables}
                   onBlur={autoSaveRequest}
@@ -801,10 +801,10 @@ export default function App() {
               {mode === 'HTTP' && (
                 <>
                   <Button disabled={disabled} onClick={sendHttp}>
-                    Send
+                    {t('common.send')}
                   </Button>
                   <Button buttonType={ButtonType.SECONDARY} disabled={disabled} onClick={saveRequest}>
-                    {saved ? 'Saved ✅' : 'Save'}
+                    {saved ? t('common.saved') : t('common.save')}
                   </Button>
                 </>
               )}
@@ -815,21 +815,21 @@ export default function App() {
                     disabled={!wssConnected && !url}
                     onClick={wssConnected ? window.electronAPI.disconnectWss : connectWss}
                   >
-                    {wssConnected ? 'Disconnect' : 'Connect'}
+                    {wssConnected ? t('common.disconnect') : t('common.connect')}
                   </Button>
                   <Button disabled={!wssConnected} onClick={sendWss}>
-                    Send
+                    {t('common.send')}
                   </Button>
                 </>
               )}
             </div>
 
             <div>
-              <label className="block mb-1 font-bold text-sm">Headers</label>
+              <label className="block mb-1 font-bold text-sm">{t('request.headers')}</label>
               <HighlightedTextarea
                 highlightColor={selectedEnvironment?.color}
                 maxRows={10}
-                placeholder="Header-Key: value"
+                placeholder={t('request.headersPlaceholder')}
                 value={headers}
                 variables={variables}
                 onBlur={autoSaveRequest}
@@ -838,12 +838,12 @@ export default function App() {
             </div>
 
             <div>
-              <label className="block mb-1 font-bold text-sm">Body</label>
+              <label className="block mb-1 font-bold text-sm">{t('request.body')}</label>
               <div className="relative">
                 <HighlightedTextarea
                   highlightColor={selectedEnvironment?.color}
                   maxRows={15}
-                  placeholder={mode === 'HTTP' ? 'Enter request body (JSON or Form Data)' : 'Message body'}
+                  placeholder={mode === 'HTTP' ? t('request.bodyPlaceholderHttp') : t('request.bodyPlaceholderWss')}
                   value={body}
                   variables={variables}
                   onBlur={autoSaveRequest}
@@ -855,17 +855,15 @@ export default function App() {
                   buttonType={ButtonType.SECONDARY}
                   onClick={() => dispatch(requestActions.setBody(formatBody(body, parseHeaders(headers))))}
                 >
-                  Beautify
+                  {t('common.beautify')}
                 </Button>
               </div>
             </div>
 
             {mode === 'HTTP' && (
               <div>
-                <label className="block mb-1 font-bold text-sm">Protobuf Schema & Message Type</label>
-                <div className="mb-3 text-xs text-text-secondary">
-                  Experimental and optional section. If used, both fields must be completed
-                </div>
+                <label className="block mb-1 font-bold text-sm">{t('request.protobufSchema')}</label>
+                <div className="mb-3 text-xs text-text-secondary">{t('request.protobufDescription')}</div>
                 <div className="flex flex-col @lg:flex-row @lg:items-center gap-2">
                   <FileInput
                     accept=".proto"
@@ -879,12 +877,14 @@ export default function App() {
                       try {
                         await loadProtoSchema(file);
                         dispatch(requestActions.setProtoFile(file));
-                        dispatch(websocketActions.addMessage({ direction: 'system', data: '🟢 Proto schema loaded' }));
+                        dispatch(
+                          websocketActions.addMessage({ direction: 'system', data: t('request.protoSchemaLoaded') }),
+                        );
                       } catch (error) {
                         dispatch(
                           websocketActions.addMessage({
                             direction: 'system',
-                            data: '🔴 Failed to parse proto: ' + error,
+                            data: t('request.protoSchemaParseFailed') + error,
                           }),
                         );
                       }
@@ -894,7 +894,7 @@ export default function App() {
                   <HighlightedInput
                     className="flex-auto"
                     highlightColor={selectedEnvironment?.color}
-                    placeholder="Message type (e.g. mypackage.MyMessage)"
+                    placeholder={t('request.messageTypePlaceholder')}
                     value={messageType}
                     variables={variables}
                     onChange={(event) => dispatch(requestActions.setMessageType(event.target.value))}
@@ -904,7 +904,7 @@ export default function App() {
             )}
 
             {mode === 'HTTP' && httpResponse && (
-              <Panel title="Response">
+              <Panel title={t('response.title')}>
                 <div
                   className={cn(
                     'flex items-center justify-between gap-4 p-4 font-bold bg-body dark:bg-dark-body border-t border-border dark:border-dark-body',
@@ -937,13 +937,13 @@ export default function App() {
                 {httpResponse.status !== SENDING && (
                   <div className="grid grid-cols-2 items-stretch max-h-100 py-4 border-t border-border dark:border-dark-body overflow-hidden">
                     <div className="relative flex-1 px-4">
-                      <h4 className="m-0 mb-4">Headers</h4>
+                      <h4 className="m-0 mb-4">{t('request.headers')}</h4>
                       {httpResponse.headers && (
                         <CopyButton
                           className="absolute top-0 right-4"
                           textToCopy={JSON.stringify(httpResponse.headers, null, 2)}
                         >
-                          Copy
+                          {t('common.copy')}
                         </CopyButton>
                       )}
                       <JsonViewer
@@ -954,7 +954,7 @@ export default function App() {
                       />
                     </div>
                     <div className="relative flex-1 px-4 border-l border-border dark:border-dark-body">
-                      <h4 className="m-0 mb-4">Body</h4>
+                      <h4 className="m-0 mb-4">{t('request.body')}</h4>
                       {httpResponse.body && (
                         <CopyButton
                           className="absolute top-0 right-4"
@@ -964,7 +964,7 @@ export default function App() {
                               : JSON.stringify(httpResponse.body, null, 2)
                           }
                         >
-                          Copy
+                          {t('common.copy')}
                         </CopyButton>
                       )}
                       <JsonViewer
@@ -980,7 +980,7 @@ export default function App() {
             )}
 
             {messages.length > 0 && (
-              <Panel title="Messages">
+              <Panel title={t('messages.title')}>
                 <div className="max-h-100 p-4 text-xs border-t border-border dark:border-dark-body overflow-y-auto">
                   {messages.map(({ data, decoded, direction }, index) => (
                     <div
@@ -1002,7 +1002,7 @@ export default function App() {
                           <pre className="my-0 whitespace-pre-wrap break-all">{data}</pre>
                           {decoded && (
                             <>
-                              <div className="mt-2 font-monospace font-bold">Decoded Protobuf:</div>
+                              <div className="mt-2 font-monospace font-bold">{t('protobuf.decodedProtobuf')}</div>
                               <pre className="my-0 whitespace-pre-wrap break-all">dfd</pre>
                             </>
                           )}
@@ -1018,7 +1018,7 @@ export default function App() {
               <div ref={parametersRef} className="grid lg:grid-cols-2 gap-4 items-stretch">
                 {Object.keys(bodyParameters).length > 0 && (
                   <ParametersPanel
-                    title="Body Parameters"
+                    title={t('tests.bodyParameters')}
                     parameters={bodyParameters}
                     onChange={(parameters) => dispatch(requestActions.mergeBodyParameters(parameters))}
                   />
@@ -1026,7 +1026,7 @@ export default function App() {
 
                 {Object.keys(queryParameters).length > 0 && (
                   <ParametersPanel
-                    title="Query Parameters"
+                    title={t('tests.queryParameters')}
                     parameters={queryParameters}
                     onChange={(parameters) => dispatch(requestActions.mergeQueryParameters(parameters))}
                   />
@@ -1058,7 +1058,9 @@ export default function App() {
                         })
                       }
                     >
-                      {isRunningTests ? `Running tests... (${currentTest}/${testsCount})` : 'Generate & Run Tests'}
+                      {isRunningTests
+                        ? t('tests.runningTests', { current: currentTest, total: testsCount })
+                        : t('tests.generateAndRun')}
                     </Button>
                     {testResults && (
                       <Button
@@ -1070,7 +1072,7 @@ export default function App() {
                           if (testResultsToCompare.length < 1) dispatch(testActions.setCompareResponse(httpResponse));
                         }}
                       >
-                        {testResultsToCompare.length < 1 ? 'Select for Compare' : 'Compare with Selected'}
+                        {testResultsToCompare.length < 1 ? t('tests.selectForCompare') : t('tests.compareWithSelected')}
                       </Button>
                     )}
                   </div>
@@ -1093,11 +1095,11 @@ export default function App() {
                           disabled={isRunningTests}
                           onClick={exportReport}
                         >
-                          {exported ? 'Exported ✅' : 'Export'}
+                          {exported ? t('tests.exported') : t('common.export')}
                         </Button>
                       </div>
                       <Button className="@xl:truncate" disabled={isRunningTests} onClick={generateCertificate}>
-                        {certificated ? 'Certificated ✅' : 'Generate Certificate'}
+                        {certificated ? t('tests.certificated') : t('tests.generateCertificate')}
                       </Button>
                     </div>
                   )}
@@ -1110,10 +1112,10 @@ export default function App() {
 
             {testResults && (
               <>
-                <Panel title="Security Tests">
+                <Panel title={t('tests.securityTests')}>
                   <TestsTable
                     columns={[
-                      ...getTestsTableColumns(['Check', 'Expected', 'Actual']),
+                      ...getTestsTableColumns(['Check', 'Expected', 'Actual'], t),
                       {
                         name: 'Result',
                         selector: (row) => row.status,
@@ -1154,15 +1156,15 @@ export default function App() {
                     expandableRowsComponentProps={{ headers: parseHeaders(headers), protoFile, messageType }}
                     expandOnRowClicked
                     data={securityTests}
-                    progressComponent={<TestRunningLoader text="Running Security Tests..." />}
+                    progressComponent={<TestRunningLoader text={t('tests.runningSecurityTests')} />}
                     progressPending={isSecurityRunning}
                   />
                 </Panel>
 
-                <Panel title="Performance Insights">
+                <Panel title={t('tests.performanceInsights')}>
                   <TestsTable
                     columns={[
-                      ...getTestsTableColumns(['Check', 'Expected']),
+                      ...getTestsTableColumns(['Check', 'Expected'], t),
                       {
                         name: 'Actual',
                         selector: (row) => row.actual,
@@ -1210,14 +1212,14 @@ export default function App() {
                     }
                     expandOnRowClicked
                     data={performanceTests}
-                    progressComponent={<TestRunningLoader text="Running Performance Insights..." />}
+                    progressComponent={<TestRunningLoader text={t('tests.runningPerformanceInsights')} />}
                     progressPending={isPerformanceRunning}
                   />
                 </Panel>
 
-                <Panel title="Data-Driven Tests">
+                <Panel title={t('tests.dataDrivenTests')}>
                   <TestsTable
-                    columns={getTestsTableColumns(['Parameter', 'Value', 'Expected', 'Actual', 'Result'])}
+                    columns={getTestsTableColumns(['Parameter', 'Value', 'Expected', 'Actual', 'Result'], t)}
                     expandableRows
                     expandableRowsComponent={ExpandedTestComponent}
                     expandableRowsComponentProps={{ headers: parseHeaders(headers), protoFile, messageType }}
@@ -1225,28 +1227,27 @@ export default function App() {
                     data={dataDrivenTests}
                     fixedHeader={true}
                     fixedHeaderScrollHeight="720px"
-                    progressComponent={<TestRunningLoader text="Running Data-Driven Tests..." />}
+                    progressComponent={<TestRunningLoader text={t('tests.runningDataDrivenTests')} />}
                     progressPending={isDataDrivenRunning}
                   />
                 </Panel>
 
-                <Panel title="CRUD">
+                <Panel title={t('tests.crud')}>
                   <TestsTable
-                    columns={getTestsTableColumns(['Method', 'Expected', 'Actual', 'Result'])}
+                    columns={getTestsTableColumns(['Method', 'Expected', 'Actual', 'Result'], t)}
                     expandableRows
                     expandableRowsComponent={ExpandedTestComponent}
                     expandableRowsComponentProps={{ headers: parseHeaders(headers), protoFile, messageType }}
                     expandOnRowClicked
                     data={crudTests}
-                    progressComponent={<TestRunningLoader text="Preparing CRUD…" />}
+                    progressComponent={<TestRunningLoader text={t('tests.preparingCrud')} />}
                     progressPending={isSecurityRunning}
                     noDataComponent={
                       <p className="p-4 m-0 text-sm">
-                        CRUD are generated based on the OPTIONS method handling test response in Security Tests.
+                        {t('tests.crudDescription')}
                         <br />
                         <br />
-                        <strong>Note:</strong> If the OPTIONS method handling test is disabled, CRUD will not be
-                        generated.
+                        <strong>{t('tests.crudNote')}</strong> {t('tests.crudNoteText')}
                       </p>
                     }
                   />
@@ -1257,19 +1258,19 @@ export default function App() {
         )}
       </div>
       <ConfirmationModal
-        confirmText="Reload"
-        description="Only current tests results will be lost"
-        title="Reload"
+        confirmText={t('modals.reload.confirmText')}
+        description={t('modals.reload.description')}
+        title={t('modals.reload.title')}
         isOpen={openReloadModal}
         onClose={() => dispatch(uiActions.closeReloadModal())}
         onConfirm={() => window.location.reload()}
       />
       <ConfirmationModal
-        cancelText="Close"
-        confirmText="Review & Generate Tests"
+        cancelText={t('common.close')}
+        confirmText={t('modals.sendHttpSuccess.confirmText')}
         confirmType={ButtonType.PRIMARY}
-        description="Rentgen now has a valid request to work with. Before generating tests, quickly review the mapped fields to make sure everything looks right"
-        title="Request Looks Good!"
+        description={t('modals.sendHttpSuccess.description')}
+        title={t('modals.sendHttpSuccess.title')}
         isOpen={openSendHttpSuccessModal}
         onClose={() => dispatch(uiActions.closeSendHttpSuccessModal())}
         onConfirm={() => {
@@ -1283,13 +1284,13 @@ export default function App() {
             type="checkbox"
             onChange={(e) => localStorage.setItem('sendHttpSuccessModalDoNotShowAgain', e.target.checked.toString())}
           />
-          Do not show again
+          {t('modals.sendHttpSuccess.doNotShowAgain')}
         </label>
       </ConfirmationModal>
       <ConfirmationModal
-        confirmText="Delete"
-        description="Are you sure you want to delete this environment?"
-        title="Delete Environment"
+        confirmText={t('common.delete')}
+        description={t('environment.deleteEnvironmentConfirm')}
+        title={t('environment.deleteEnvironment')}
         isOpen={!!environmentToDelete}
         onClose={() => dispatch(environmentActions.setEnvironmentToDelete(null))}
         onConfirm={() => {
@@ -1299,9 +1300,9 @@ export default function App() {
         }}
       />
       <ConfirmationModal
-        confirmText="Delete"
-        description="This folder contains requests. Are you sure you want to delete it?"
-        title="Delete Folder"
+        confirmText={t('common.delete')}
+        description={t('modals.deleteFolder.description')}
+        title={t('modals.deleteFolder.title')}
         isOpen={deleteFolderModal.isOpen}
         onClose={() => dispatch(uiActions.closeDeleteFolderModal())}
         onConfirm={confirmDeleteFolder}

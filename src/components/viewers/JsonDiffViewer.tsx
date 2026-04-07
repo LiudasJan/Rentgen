@@ -2,6 +2,7 @@ import { DiffEditor, DiffOnMount } from '@monaco-editor/react';
 import cn from 'classnames';
 import { editor } from 'monaco-editor/esm/vs/editor/editor.api';
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { twMerge } from 'tailwind-merge';
 import { useAppSelector } from '../../store/hooks';
 import { selectTheme } from '../../store/selectors';
@@ -16,6 +17,7 @@ interface Props {
 }
 
 export function JsonDiffViewer({ className, data, calculateStatistics, isDiffReady }: Props) {
+  const { t } = useTranslation();
   const theme = useAppSelector(selectTheme);
   const diffEditorRef = useRef<editor.IStandaloneDiffEditor | null>(null);
   const [diffReady, setDiffReady] = useState<boolean>(false);
@@ -133,7 +135,10 @@ export function JsonDiffViewer({ className, data, calculateStatistics, isDiffRea
       />
       {!diffReady && (
         <div className="absolute inset-0 flex z-90">
-          <TestRunningLoader className="justify-center bg-white dark:bg-dark-input" text="Computing differences…" />
+          <TestRunningLoader
+            className="justify-center bg-white dark:bg-dark-input"
+            text={t('tests.computingDifferences')}
+          />
         </div>
       )}
     </div>

@@ -9,6 +9,7 @@ import {
 } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
 import { collectionActions } from '../../../store/slices/collectionSlice';
 import { uiActions } from '../../../store/slices/uiSlice';
@@ -23,6 +24,7 @@ import ImportIcon from '../../../assets/icons/import-icon.svg';
 
 export default function CollectionsPanel() {
   const dispatch = useAppDispatch();
+  const { t } = useTranslation();
   const folders = useAppSelector(selectSidebarFolders);
   const collection = useAppSelector(selectCollectionData);
   const [searchTerm, setSearchTerm] = useState('');
@@ -42,7 +44,7 @@ export default function CollectionsPanel() {
     if (result.canceled) return;
 
     if (result.error) {
-      setImportStatus(`Import failed: ${result.error}`);
+      setImportStatus(t('collections.importFailed', { error: result.error }));
       setTimeout(() => setImportStatus(null), 3000);
       return;
     }
@@ -65,7 +67,10 @@ export default function CollectionsPanel() {
         dispatch(collectionActions.importCollection({ collection: result.collection, mode: 'merge' }));
 
         const warningCount = result.warnings?.length || 0;
-        const successMsg = warningCount > 0 ? `Imported with ${warningCount} warning(s)` : 'Collection imported';
+        const successMsg =
+          warningCount > 0
+            ? t('collections.importedWithWarnings', { count: warningCount })
+            : t('collections.collectionImported');
         setImportStatus(successMsg);
         setTimeout(() => setImportStatus(null), 3000);
       }
@@ -78,12 +83,12 @@ export default function CollectionsPanel() {
     if (result.canceled) return;
 
     if (result.error) {
-      setImportStatus(`Export failed: ${result.error}`);
+      setImportStatus(t('collections.exportFailed', { error: result.error }));
       setTimeout(() => setImportStatus(null), 3000);
       return;
     }
 
-    setImportStatus('Collection exported');
+    setImportStatus(t('collections.collectionExported'));
     setTimeout(() => setImportStatus(null), 3000);
   };
 
@@ -177,21 +182,23 @@ export default function CollectionsPanel() {
         <div
           className="flex items-center gap-2 hover:bg-button-secondary dark:hover:bg-dark-input cursor-pointer rounded px-1 py-0.5 h-6.5 w-full"
           onClick={() => dispatch(collectionActions.addFolder('New Folder'))}
-          title="New Folder"
+          title={t('collections.newFolder')}
         >
           <AddIcon className="w-4 h-4 text-text-secondary dark:text-dark-text-secondary" />
-          <span className="text-xs text-text-secondary dark:text-dark-text-secondary">New Folder</span>
+          <span className="text-xs text-text-secondary dark:text-dark-text-secondary">
+            {t('collections.newFolder')}
+          </span>
         </div>
         <div className="flex items-center gap-1">
           <ImportIcon
             className="w-4 h-4 text-text-secondary dark:text-dark-text-secondary hover:text-button-primary cursor-pointer transition-colors"
             onClick={handleImport}
-            title="Import Collection"
+            title={t('collections.importCollection')}
           />
           <ExportIcon
             className="w-4 h-4 text-text-secondary dark:text-dark-text-secondary hover:text-button-primary cursor-pointer transition-colors"
             onClick={handleExport}
-            title="Export Collection"
+            title={t('collections.exportCollection')}
           />
         </div>
       </div>
@@ -243,7 +250,7 @@ export default function CollectionsPanel() {
         </div>
       ) : (
         <div className="flex items-center justify-center h-full w-full p-5 text-xs text-text-secondary dark:text-dark-text-secondary">
-          {isSearching ? 'No matching requests' : 'No saved requests'}
+          {isSearching ? t('collections.noMatchingRequests') : t('collections.noSavedRequests')}
         </div>
       )}
     </>

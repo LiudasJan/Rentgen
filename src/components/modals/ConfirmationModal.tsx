@@ -1,4 +1,5 @@
 import { PropsWithChildren } from 'react';
+import { useTranslation } from 'react-i18next';
 import Button, { ButtonType } from '../buttons/Button';
 import Modal, { Props as ModalProps } from './Modal';
 
@@ -22,6 +23,7 @@ export default function ConfirmationModal({
   onClose,
   onConfirm,
 }: Props) {
+  const { t } = useTranslation();
   return (
     <Modal className="[&>div]:w-100!" isOpen={isOpen} onClose={onClose}>
       <div className="flex flex-col gap-4">
@@ -30,10 +32,10 @@ export default function ConfirmationModal({
         {children}
         <div className="flex items-center justify-end gap-4">
           <Button buttonType={confirmType} onClick={onConfirm}>
-            {confirmText || 'OK'}
+            {confirmText || t('common.ok')}
           </Button>
           <Button buttonType={ButtonType.SECONDARY} onClick={onClose}>
-            {cancelText || 'Cancel'}
+            {cancelText || t('common.cancel')}
           </Button>
         </div>
       </div>

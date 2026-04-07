@@ -1,5 +1,6 @@
 import cn from 'classnames';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { appConfig } from '../../constants/appConfig';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { selectHistoryEnabled, selectSidebarActiveTab } from '../../store/selectors';
@@ -18,6 +19,7 @@ import HistoryIcon from '../../assets/icons/history-icon.svg';
 import UpgradeStarIcon from '../../assets/icons/upgrade-star-icon.svg';
 
 export default function Sidebar() {
+  const { t } = useTranslation();
   const dispatch = useAppDispatch();
   const activeTab = useAppSelector(selectSidebarActiveTab);
   const historyEnabled = useAppSelector(selectHistoryEnabled);
@@ -60,14 +62,14 @@ export default function Sidebar() {
       <div className="w-22 shrink-0 flex flex-col justify-between">
         <div>
           <SidebarButton
-            label="Collections"
+            label={t('sidebar.collections')}
             className={activeTab === 'collections' ? 'bg-button-secondary dark:bg-dark-input' : ''}
             onClick={handleCollectionClick}
           >
             <CollectionIcon className="w-5 h-5" />
           </SidebarButton>
           <SidebarButton
-            label="Environments"
+            label={t('sidebar.environments')}
             className={activeTab === 'environments' ? 'bg-button-secondary dark:bg-dark-input' : ''}
             onClick={handleEnvironmentClick}
           >
@@ -75,7 +77,7 @@ export default function Sidebar() {
           </SidebarButton>
           {historyEnabled && (
             <SidebarButton
-              label="History"
+              label={t('sidebar.history')}
               className={activeTab === 'history' ? 'bg-button-secondary dark:bg-dark-input' : ''}
               onClick={handleHistoryClick}
             >
@@ -84,11 +86,11 @@ export default function Sidebar() {
           )}
         </div>
         <div>
-          <SidebarButton label="Settings" onClick={() => dispatch(uiActions.openSettingsModal())}>
+          <SidebarButton label={t('sidebar.settings')} onClick={() => dispatch(uiActions.openSettingsModal())}>
             <GearIcon className="w-5 h-5" />
           </SidebarButton>
           <SidebarButton
-            label="Check for updates"
+            label={t('sidebar.checkForUpdates')}
             onClick={() =>
               window.electronAPI.openExternal(`${appConfig.origin}/check-for-update.html?current_version=${appVersion}`)
             }
@@ -96,7 +98,7 @@ export default function Sidebar() {
             <UpgradeStarIcon className="w-5 h-5" />
           </SidebarButton>
           <SidebarButton
-            label="Report feedback"
+            label={t('sidebar.reportFeedback')}
             onClick={() => window.electronAPI.openExternal('https://github.com/LiudasJan/Rentgen/issues/new')}
           >
             <BugIcon className="w-5 h-5" />

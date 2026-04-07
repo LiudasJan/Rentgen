@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import ClearCrossIcon from '../../../assets/icons/clear-cross-icon.svg';
 import SearchIcon from '../../../assets/icons/search-icon.svg';
@@ -9,7 +10,8 @@ interface Props {
   placeholder?: string;
 }
 
-export default function CollectionSearch({ value, onChange, placeholder = 'Search collections...' }: Props) {
+export default function CollectionSearch({ value, onChange, placeholder }: Props) {
+  const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
   const [localValue, setLocalValue] = useState(value);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -47,7 +49,7 @@ export default function CollectionSearch({ value, onChange, placeholder = 'Searc
         value={localValue}
         onChange={(e) => handleChange(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder={placeholder}
+        placeholder={placeholder || t('collections.searchCollections')}
         className="w-full pl-5.5 pr-6 py-1 text-xs bg-transparent border border-border dark:border-dark-input dark:text-dark-text rounded outline-none placeholder:text-text-secondary dark:placeholder:text-dark-text-secondary focus:border-button-primary dark:focus:border-button-primary transition-colors"
       />
       {localValue && (
