@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { clamp } from '../../utils/number';
+import { useTranslation } from 'react-i18next';
+import { clamp } from '../../utils';
 import Input from '../inputs/Input';
 import { Controls } from './Controls';
 
@@ -9,16 +10,17 @@ interface Props {
 }
 
 export function LoadTestControls({ isRunning, executeTest }: Props) {
+  const { t } = useTranslation();
   const [threadCount, setThreadCount] = useState(10);
   const [requestCount, setRequestCount] = useState(100);
 
   return (
     <Controls isRunning={isRunning} executeTest={() => executeTest(threadCount, requestCount)}>
       <div>
-        <label className="block mb-0.5 font-bold text-[10px]">Threads</label>
+        <label className="block mb-0.5 font-bold text-[10px]">{t('controls.threads')}</label>
         <Input
           className="w-12 p-0.5 text-center"
-          title="Threads (max 100)"
+          title={t('controls.threadsMax')}
           type="number"
           value={threadCount}
           onChange={(event) => setThreadCount(clamp(Number(event.target.value), 1, 100))}
@@ -26,11 +28,11 @@ export function LoadTestControls({ isRunning, executeTest }: Props) {
       </div>
 
       <div>
-        <label className="block mb-0.5 font-bold text-[10px]">Requests</label>
+        <label className="block mb-0.5 font-bold text-[10px]">{t('controls.requests')}</label>
         <Input
           className="w-16 p-0.5 text-center"
           type="number"
-          title="Total requests (max 10 000)"
+          title={t('controls.requestsMax')}
           value={requestCount}
           onChange={(event) => setRequestCount(clamp(Number(event.target.value), 1, 10000))}
         />

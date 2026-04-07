@@ -1,4 +1,5 @@
 import cn from 'classnames';
+import { useTranslation } from 'react-i18next';
 import { Tab, TabList, TabPanel, Tabs } from 'react-tabs';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { selectOpenSettingsModal } from '../../store/selectors';
@@ -6,6 +7,7 @@ import { uiActions } from '../../store/slices/uiSlice';
 import { IconButton } from '../buttons/IconButton';
 import { CliSettings } from '../settings/CliSettings';
 import { GeneralSettings } from '../settings/GeneralSettings';
+import { LanguageSettings } from '../settings/LanguageSettings';
 import { MappingSettings } from '../settings/MappingSettings';
 import { SecurityTestsSettings } from '../settings/SecurityTestsSettings';
 import { ThemeSettings } from '../settings/ThemeSettings';
@@ -15,46 +17,51 @@ import ClearCrossIcon from '../../assets/icons/clear-cross-icon.svg';
 import CliIcon from '../../assets/icons/cli-icon.svg';
 import EngineIcon from '../../assets/icons/engine-icon.svg';
 import GearIcon from '../../assets/icons/gear-icon.svg';
+import LanguageIcon from '../../assets/icons/environment-icon.svg';
 import ThemeIcon from '../../assets/icons/theme-icon.svg';
 
-const settingsTabs = [
-  {
-    name: 'Test Engine',
-    icon: <EngineIcon className="w-4 h-4" />,
-    component: (
-      <div className="flex flex-col gap-8">
-        <MappingSettings />
-        <SecurityTestsSettings />
-      </div>
-    ),
-  },
-  {
-    name: 'General',
-    icon: <GearIcon className="w-4 h-4" />,
-    component: <GeneralSettings />,
-  },
-  {
-    name: 'Themes',
-    icon: <ThemeIcon className="w-4 h-4" />,
-    component: (
-      <>
-        <p className="m-0 text-xs text-text-secondary">
-          Personalize your experience with themes that match your style.
-        </p>
-        <ThemeSettings />
-      </>
-    ),
-  },
-  {
-    name: 'CLI',
-    icon: <CliIcon className="w-4 h-4" />,
-    component: <CliSettings />,
-  },
-];
-
 export default function SettingsModal() {
+  const { t } = useTranslation();
   const dispatch = useAppDispatch();
   const isOpen = useAppSelector(selectOpenSettingsModal);
+
+  const settingsTabs = [
+    {
+      name: t('settings.testEngine'),
+      icon: <EngineIcon className="w-4 h-4" />,
+      component: (
+        <div className="flex flex-col gap-8">
+          <MappingSettings />
+          <SecurityTestsSettings />
+        </div>
+      ),
+    },
+    {
+      name: t('settings.general'),
+      icon: <GearIcon className="w-4 h-4" />,
+      component: <GeneralSettings />,
+    },
+    {
+      name: t('settings.themes'),
+      icon: <ThemeIcon className="w-4 h-4" />,
+      component: (
+        <>
+          <p className="m-0 text-xs text-text-secondary">{t('settings.themesDescription')}</p>
+          <ThemeSettings />
+        </>
+      ),
+    },
+    {
+      name: t('settings.language'),
+      icon: <LanguageIcon className="w-4 h-4" />,
+      component: <LanguageSettings />,
+    },
+    {
+      name: t('settings.cli'),
+      icon: <CliIcon className="w-4 h-4" />,
+      component: <CliSettings />,
+    },
+  ];
 
   const onClose = () => dispatch(uiActions.closeSettingsModal());
 
