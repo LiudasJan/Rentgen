@@ -4,6 +4,7 @@ import App from './App';
 import { GlobalContextMenuProvider } from './components/context-menu';
 import { store } from './store';
 
+import './i18n';
 import './styles/index.css';
 
 const root = createRoot(document.body);

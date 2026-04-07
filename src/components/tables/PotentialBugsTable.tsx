@@ -1,5 +1,6 @@
 import { memo, useMemo } from 'react';
 import DataTable, { ExpanderComponentProps, TableProps } from 'react-data-table-component';
+import { useTranslation } from 'react-i18next';
 import { HttpResponse } from '../../types';
 import { JsonDiffViewer } from '../viewers/JsonDiffViewer';
 import { useAppSelector } from '../../store/hooks';
@@ -13,6 +14,7 @@ export interface PotentialBug {
 }
 
 export default function PotentialBugsTable({ data, ...otherProps }: Omit<TableProps<PotentialBug>, 'columns'>) {
+  const { t } = useTranslation();
   const theme = useAppSelector(selectTheme);
   const definedData = useMemo(() => data?.filter(Boolean) ?? [], [data]);
   const isDark = theme === 'dark';
@@ -21,11 +23,11 @@ export default function PotentialBugsTable({ data, ...otherProps }: Omit<TablePr
     <DataTable
       columns={[
         {
-          name: 'Name',
+          name: t('tables.name'),
           selector: (row) => row.name,
         },
         {
-          name: 'Description',
+          name: t('tables.description'),
           selector: (row) => row.issue,
           style: {
             'div:first-child': {

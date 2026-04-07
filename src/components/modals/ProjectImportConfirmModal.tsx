@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { selectProjectImportConfirmModal } from '../../store/selectors';
 import { collectionActions } from '../../store/slices/collectionSlice';
@@ -22,6 +23,7 @@ export default function ProjectImportConfirmModal() {
   const dispatch = useAppDispatch();
   const { isOpen, data, meta, integrityStatus, fileName } = useAppSelector(selectProjectImportConfirmModal);
   const [exported, setExported] = useState(false);
+  const { t } = useTranslation();
 
   if (!isOpen || !data || !meta || !integrityStatus) return null;
 
@@ -58,23 +60,23 @@ export default function ProjectImportConfirmModal() {
   return (
     <Modal isOpen={isOpen} onClose={handleClose}>
       <div className="flex flex-col gap-4">
-        <h4 className="m-0">Import Project</h4>
+        <h4 className="m-0">{t('modals.projectImport.title')}</h4>
 
         <div className="flex flex-col gap-2 text-xs text-text-secondary dark:text-dark-text-secondary">
           <div className="flex justify-between">
-            <span>File</span>
+            <span>{t('modals.projectImport.file')}</span>
             <span className="text-text dark:text-dark-text font-medium">{fileName}</span>
           </div>
           <div className="flex justify-between">
-            <span>Exported</span>
+            <span>{t('modals.projectImport.exported')}</span>
             <span className="text-text dark:text-dark-text">{formatDate(meta.exportedAt)}</span>
           </div>
           <div className="flex justify-between">
-            <span>App Version</span>
+            <span>{t('modals.projectImport.appVersion')}</span>
             <span className="text-text dark:text-dark-text">{meta.appVersion}</span>
           </div>
           <div className="flex justify-between">
-            <span>Integrity</span>
+            <span>{t('modals.projectImport.integrity')}</span>
             <IntegrityBadge status={integrityStatus} />
           </div>
         </div>
@@ -82,46 +84,48 @@ export default function ProjectImportConfirmModal() {
         {integrityStatus === 'modified' && (
           <div className="p-3 rounded-md bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800">
             <p className="m-0 text-xs text-yellow-700 dark:text-yellow-400">
-              File integrity check failed. This file may have been modified outside of Rentgen. Proceed with caution.
+              {t('modals.projectImport.integrityWarning')}
             </p>
           </div>
         )}
 
         <div className="p-3 rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
           <p className="m-0 text-xs text-red-700 dark:text-red-400 font-medium mb-2">
-            This will overwrite ALL your current data:
+            {t('modals.projectImport.overwriteWarning')}
           </p>
           <ul className="m-0 pl-4 text-xs text-red-600 dark:text-red-400 flex flex-col gap-1">
-            <li>
-              Collections ({folderCount} folders, {requestCount} requests)
-            </li>
-            <li>Environments ({environmentCount} environments)</li>
-            <li>Dynamic Variables ({dynamicVariableCount} variables)</li>
-            <li>History ({historyCount} entries)</li>
-            <li>Settings (theme, test engine, history config)</li>
+            <li>{t('modals.projectImport.collectionsCount', { folders: folderCount, requests: requestCount })}</li>
+            <li>{t('modals.projectImport.environmentsCount', { count: environmentCount })}</li>
+            <li>{t('modals.projectImport.dynamicVariablesCount', { count: dynamicVariableCount })}</li>
+            <li>{t('modals.projectImport.historyCount', { count: historyCount })}</li>
+            <li>{t('modals.projectImport.settingsInfo')}</li>
           </ul>
-          <p className="m-0 mt-2 text-xs text-red-700 dark:text-red-400 font-medium">This action cannot be undone.</p>
+          <p className="m-0 mt-2 text-xs text-red-700 dark:text-red-400 font-medium">
+            {t('modals.projectImport.cannotBeUndone')}
+          </p>
         </div>
 
         <div className="flex items-center gap-2 pb-6">
           <span className="text-xs text-text-secondary dark:text-dark-text-secondary">
-            Back up your current project before importing:
+            {t('modals.projectImport.backupBefore')}
           </span>
           {exported ? (
-            <span className="text-xs text-green-600 dark:text-green-400 font-medium">Exported ✓</span>
+            <span className="text-xs text-green-600 dark:text-green-400 font-medium">
+              {t('modals.projectImport.exportedCheck')}
+            </span>
           ) : (
             <Button buttonType={ButtonType.SECONDARY} buttonSize={ButtonSize.SMALL} onClick={handleExportFirst}>
-              Export Current Project
+              {t('modals.projectImport.exportCurrentProject')}
             </Button>
           )}
         </div>
 
         <div className="flex items-center justify-end gap-4">
           <Button buttonType={ButtonType.DANGER} onClick={handleConfirmImport}>
-            Import Project
+            {t('modals.projectImport.importProject')}
           </Button>
           <Button buttonType={ButtonType.SECONDARY} onClick={handleClose}>
-            Cancel
+            {t('common.cancel')}
           </Button>
         </div>
       </div>

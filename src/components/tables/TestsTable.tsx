@@ -1,6 +1,8 @@
 import cn from 'classnames';
 import { memo, useMemo } from 'react';
 import DataTable, { ExpanderComponentProps, TableColumn, TableProps } from 'react-data-table-component';
+import { TFunction } from 'i18next';
+import { useTranslation } from 'react-i18next';
 import { TestResult, TestStatus } from '../../types';
 import {
   decodeProtobufResponse,
@@ -74,6 +76,7 @@ export const ExpandedTestComponent = memo(
     messageType: string;
     protoFile: File | null;
   }) => {
+    const { t } = useTranslation();
     const { request, response } = data;
     const decoded =
       headers && isUrlEncodedContentType(headers) && protoFile && messageType
@@ -88,13 +91,13 @@ export const ExpandedTestComponent = memo(
       <div className="p-4 bg-body dark:bg-dark-body">
         {request && (
           <CopyButton className="mb-4" textToCopy={generateCurl(request)}>
-            Copy cURL
+            {t('curl.copyCurl')}
           </CopyButton>
         )}
         <div className="grid grid-cols-2 gap-4 items-stretch">
-          <HttpPanel title="Request" source={request} />
-          <HttpPanel title="Response" source={modifiedResponse}>
-            {decoded && <HttpPanel title="Decoded Protobuf" source={decoded} />}
+          <HttpPanel title={t('tables.request')} source={request} />
+          <HttpPanel title={t('response.title')} source={modifiedResponse}>
+            {decoded && <HttpPanel title={t('protobuf.decodedProtobuf')} source={decoded} />}
           </HttpPanel>
         </div>
       </div>
@@ -104,15 +107,32 @@ export const ExpandedTestComponent = memo(
 
 type TestsTableColumn = 'Parameter' | 'Value' | 'Check' | 'Method' | 'Expected' | 'Actual' | 'Result';
 
-export function getTestsTableColumns(visibleColumns: TestsTableColumn[] = []): TableColumn<TestResult>[] {
-  const columns: TableColumn<TestResult>[] = [
+const columnTranslationKeys: Record<TestsTableColumn, string> = {
+  Parameter: 'tables.parameter',
+  Value: 'tables.value',
+  Check: 'tables.check',
+  Method: 'tables.method',
+  Expected: 'tables.expected',
+  Actual: 'tables.actual',
+  Result: 'tables.result',
+};
+
+export function getTestsTableColumns(
+  visibleColumns: TestsTableColumn[] = [],
+  t?: TFunction,
+): TableColumn<TestResult>[] {
+  const label = (key: TestsTableColumn) => (t ? t(columnTranslationKeys[key]) : key);
+
+  const columns: (TableColumn<TestResult> & { key: TestsTableColumn })[] = [
     {
-      name: 'Parameter',
+      key: 'Parameter',
+      name: label('Parameter'),
       selector: (row) => row.name,
       omit: true,
     },
     {
-      name: 'Value',
+      key: 'Value',
+      name: label('Value'),
       selector: (row) => truncateValue(row.value),
       omit: true,
       style: {
@@ -122,17 +142,20 @@ export function getTestsTableColumns(visibleColumns: TestsTableColumn[] = []): T
       },
     },
     {
-      name: 'Check',
+      key: 'Check',
+      name: label('Check'),
       selector: (row) => row.name,
       omit: true,
     },
     {
-      name: 'Method',
+      key: 'Method',
+      name: label('Method'),
       selector: (row) => row.name,
       omit: true,
     },
     {
-      name: 'Expected',
+      key: 'Expected',
+      name: label('Expected'),
       selector: (row) => row.expected,
       omit: true,
       style: {
@@ -143,7 +166,8 @@ export function getTestsTableColumns(visibleColumns: TestsTableColumn[] = []): T
       },
     },
     {
-      name: 'Actual',
+      key: 'Actual',
+      name: label('Actual'),
       selector: (row) => row.actual,
       omit: true,
       style: {
@@ -154,12 +178,13 @@ export function getTestsTableColumns(visibleColumns: TestsTableColumn[] = []): T
       },
     },
     {
-      name: 'Result',
+      key: 'Result',
+      name: label('Result'),
       selector: (row) => row.status,
       width: '150px',
       omit: true,
     },
   ];
 
-  return columns.map((column) => ({ ...column, omit: !visibleColumns.includes(column.name as TestsTableColumn) }));
+  return columns.map((column) => ({ ...column, omit: !visibleColumns.includes(column.key) }));
 }

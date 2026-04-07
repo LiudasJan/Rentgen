@@ -1,5 +1,6 @@
 import cn from 'classnames';
 import { ReactNode, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { twMerge } from 'tailwind-merge';
 import Button, { Props as ButtonProps, ButtonSize, ButtonType } from './Button';
 
@@ -17,6 +18,7 @@ export function CopyButton({
   textToCopy,
   ...otherProps
 }: Props) {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState<boolean>(false);
   const copiedTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -28,7 +30,7 @@ export function CopyButton({
       {...otherProps}
       onClick={copyToClipboard}
     >
-      {copied ? (copiedFallback ?? 'Copied ✅') : children}
+      {copied ? (copiedFallback ?? t('common.copied')) : children}
     </Button>
   );
 

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Tab, TabList, TabPanel, Tabs } from 'react-tabs';
 import { ORIGINAL_REQUEST_TEST_PARAMETER_NAME } from '../../tests';
 import { HttpResponse, TestResult, TestResults } from '../../types';
@@ -15,6 +16,7 @@ interface Props extends PanelProps {
 }
 
 export default function TestResultsComparisonPanel({ items, title, response, ...otherProps }: Props) {
+  const { t } = useTranslation();
   const [diffReady, setDiffReady] = useState<boolean>(false);
   const [showNoise, setShowNoise] = useState<boolean>(false);
   const [statistics, setStatistics] = useState({
@@ -100,7 +102,7 @@ export default function TestResultsComparisonPanel({ items, title, response, ...
   return (
     <Panel className="flex flex-col h-[calc(100vh-2.5rem)] box-border" title={title} {...otherProps}>
       {items.length < 2 ? (
-        <p className="p-4 m-0">No test results to compare</p>
+        <p className="p-4 m-0">{t('comparison.noTestResults')}</p>
       ) : (
         <Tabs
           className="flex flex-col h-full overflow-hidden"
@@ -112,10 +114,10 @@ export default function TestResultsComparisonPanel({ items, title, response, ...
         >
           <TabList className="flex m-0 px-2.5 border-b border-border dark:border-dark-body">
             <Tab className="relative -bottom-px py-1.5 px-3 text-sm border border-transparent border-b-0 list-none outline-none cursor-pointer">
-              Potential Bugs
+              {t('comparison.potentialBugs')}
             </Tab>
             <Tab className="relative -bottom-px py-1.5 px-3 text-sm border border-transparent border-b-0 list-none outline-none cursor-pointer">
-              Full Behavior Changes
+              {t('comparison.fullBehaviorChanges')}
             </Tab>
           </TabList>
 
@@ -123,13 +125,13 @@ export default function TestResultsComparisonPanel({ items, title, response, ...
             <div className="flex flex-col gap-4 h-full">
               {!potentialBugs || potentialBugs.length === 0 ? (
                 <p className="m-0 p-2.5 text-sm text-white text-center rounded-md bg-green-600">
-                  No potential bugs detected ✅
+                  {t('comparison.noPotentialBugs')}
                 </p>
               ) : (
                 <PotentialBugsTable data={potentialBugs} />
               )}
               <div>
-                <Button onClick={() => setTabIndex(1)}>Show Full Behavior Changes</Button>
+                <Button onClick={() => setTabIndex(1)}>{t('comparison.showFullBehaviorChanges')}</Button>
               </div>
             </div>
           </TabPanel>
@@ -138,7 +140,7 @@ export default function TestResultsComparisonPanel({ items, title, response, ...
               <div className="shrink-0 flex flex-col p-4 gap-4 text-sm border-b border-border dark:border-dark-body">
                 <div className="flex items-center gap-2">
                   <span>
-                    Behavior Change: <b>{statistics.percent}%</b>
+                    {t('comparison.behaviorChange')} <b>{statistics.percent}%</b>
                   </span>
                   <span className="text-green-500">+{statistics.added}</span>
                   <span className="text-red-500">-{statistics.removed}</span>
@@ -146,7 +148,7 @@ export default function TestResultsComparisonPanel({ items, title, response, ...
                 </div>
                 <Toggle
                   className="w-fit"
-                  label="Show noise"
+                  label={t('comparison.showNoise')}
                   disabled={!diffReady}
                   onChange={(e) => {
                     setShowNoise(e.target.checked);

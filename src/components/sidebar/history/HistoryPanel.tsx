@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
 import { selectHistoryEntries } from '../../../store/selectors';
 import { historyActions } from '../../../store/slices/historySlice';
@@ -30,10 +31,10 @@ function groupHistoryByDate(entries: HistoryEntry[]): DateGroup[] {
 
     if (entryDay === today) {
       key = 'today';
-      label = 'Today';
+      label = 'today';
     } else if (entryDay === yesterday) {
       key = 'yesterday';
-      label = 'Yesterday';
+      label = 'yesterday';
     } else {
       key = String(entryDay);
       label = entryDate.toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
@@ -81,6 +82,7 @@ export default function HistoryPanel() {
   const dispatch = useAppDispatch();
   const entries = useAppSelector(selectHistoryEntries);
   const [searchTerm, setSearchTerm] = useState('');
+  const { t } = useTranslation();
 
   const allGroups = useMemo(() => groupHistoryByDate(entries), [entries]);
   const groups = useMemo(() => filterGroupsBySearch(allGroups, searchTerm), [allGroups, searchTerm]);
@@ -89,18 +91,18 @@ export default function HistoryPanel() {
   return (
     <>
       <div className="flex items-center justify-between px-3 py-2 border-b border-border dark:border-dark-border gap-2">
-        <span className="text-xs text-text-secondary dark:text-dark-text-secondary">History</span>
+        <span className="text-xs text-text-secondary dark:text-dark-text-secondary">{t('history.title')}</span>
         {entries.length > 0 && (
           <ClearCrossIcon
             className="w-4 h-4 text-text-secondary dark:text-dark-text-secondary hover:text-button-danger cursor-pointer transition-colors"
             onClick={() => dispatch(historyActions.clearHistory())}
-            title="Clear All"
+            title={t('history.clearAll')}
           />
         )}
       </div>
 
       {entries.length > 0 && (
-        <CollectionSearch value={searchTerm} onChange={setSearchTerm} placeholder="Search history..." />
+        <CollectionSearch value={searchTerm} onChange={setSearchTerm} placeholder={t('history.searchHistory')} />
       )}
 
       {groups.length > 0 ? (
@@ -117,7 +119,7 @@ export default function HistoryPanel() {
         </div>
       ) : (
         <div className="flex items-center justify-center h-full w-full p-5 text-xs text-text-secondary dark:text-dark-text-secondary">
-          {isSearching ? 'No matching history' : 'No history yet'}
+          {isSearching ? t('history.noMatchingHistory') : t('history.noHistoryYet')}
         </div>
       )}
     </>

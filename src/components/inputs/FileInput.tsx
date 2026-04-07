@@ -1,5 +1,6 @@
 import cn from 'classnames';
 import { InputHTMLAttributes, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import Button, { ButtonType } from '../buttons/Button';
 
 interface FileInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> {
@@ -15,6 +16,7 @@ export default function FileInput({
   onChange,
   ...otherProps
 }: FileInputProps) {
+  const { t } = useTranslation();
   const [fileName, setFileName] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -37,7 +39,7 @@ export default function FileInput({
         )}
         onClick={handleClick}
       >
-        Choose file
+        {t('fileInput.chooseFile')}
       </Button>
       <span
         className={cn(
@@ -48,7 +50,7 @@ export default function FileInput({
           fileNameClassName,
         )}
       >
-        {fileName || 'No file chosen'}
+        {fileName || t('fileInput.noFileChosen')}
       </span>
     </div>
   );

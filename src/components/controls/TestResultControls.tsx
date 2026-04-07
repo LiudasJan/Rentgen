@@ -1,5 +1,6 @@
 import cn from 'classnames';
 import { HTMLAttributes } from 'react';
+import { useTranslation } from 'react-i18next';
 import { twMerge } from 'tailwind-merge';
 import { appConfig } from '../../constants/appConfig';
 import {
@@ -23,15 +24,20 @@ interface Props extends HTMLAttributes<HTMLDivElement> {
 }
 
 export function TestResultControls({ children, className, testResult, testType, ...otherProps }: Props) {
+  const { t } = useTranslation();
   return (
     <div className={twMerge(cn('w-full flex items-center justify-between flex-wrap gap-1', className))} {...otherProps}>
       {children}
-      {renderControl(testResult, testType)}
+      {renderControl(testResult, testType, t)}
     </div>
   );
 }
 
-function renderControl({ actual, name, request, response, status, value }: TestResult, testType: TestType) {
+function renderControl(
+  { actual, name, request, response, status, value }: TestResult,
+  testType: TestType,
+  t: (key: string) => string,
+) {
   switch (status) {
     case TestStatus.Bug:
     case TestStatus.Fail:
@@ -103,7 +109,7 @@ function renderControl({ actual, name, request, response, status, value }: TestR
           className="text-[13px] leading-normal font-normal text-button-primary! hover:text-button-primary/80! bg-transparent! border-0"
           textToCopy={filledTemplate}
         >
-          Copy Bug Report
+          {t('tests.copyBugReport')}
         </CopyButton>
       );
     }

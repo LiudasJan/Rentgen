@@ -1,4 +1,5 @@
 import cn from 'classnames';
+import { useTranslation } from 'react-i18next';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { selectTheme } from '../../store/selectors';
 import { settingsActions } from '../../store/slices/settingsSlice';
@@ -6,14 +7,15 @@ import { settingsActions } from '../../store/slices/settingsSlice';
 import DarkImage from '../../assets/images/dark-theme.svg';
 import LightTheme from '../../assets/images/light-theme.svg';
 
-const themes = [
-  { label: 'Light', value: 'light' as const, Image: LightTheme },
-  { label: 'Dark', value: 'dark' as const, Image: DarkImage },
-];
-
 export function ThemeSettings() {
   const dispatch = useAppDispatch();
   const theme = useAppSelector(selectTheme);
+  const { t } = useTranslation();
+
+  const themes = [
+    { label: t('settings.themeLight'), value: 'light' as const, Image: LightTheme },
+    { label: t('settings.themeDark'), value: 'dark' as const, Image: DarkImage },
+  ];
 
   const onThemeChange = (value: 'light' | 'dark') => {
     if (value === theme) return;

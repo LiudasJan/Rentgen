@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { selectCollectionData, selectImportConflictModal } from '../../store/selectors';
 import { uiActions } from '../../store/slices/uiSlice';
@@ -11,6 +12,7 @@ export default function ImportConflictModal() {
   const dispatch = useAppDispatch();
   const { isOpen, importedCollection, conflictSummary, warnings } = useAppSelector(selectImportConflictModal);
   const existingCollection = useAppSelector(selectCollectionData);
+  const { t } = useTranslation();
 
   const mergeStats = useMemo(() => {
     if (!importedCollection) return { folders: 0, requests: 0 };
@@ -36,28 +38,33 @@ export default function ImportConflictModal() {
   return (
     <Modal isOpen={isOpen} onClose={handleClose}>
       <div className="flex flex-col gap-4">
-        <h2 className="text-lg font-bold text-text dark:text-dark-text m-0">Import Conflicts Detected</h2>
+        <h2 className="text-lg font-bold text-text dark:text-dark-text m-0">{t('modals.importConflict.title')}</h2>
 
         <div className="text-sm text-text-secondary dark:text-dark-text-secondary">
           <p className="m-0 mb-2">
-            The imported collection &quot;{importedCollection.info.name}&quot; has conflicts with your existing
-            collection:
+            {t('modals.importConflict.conflictDescription', { name: importedCollection.info.name })}
           </p>
 
-          {conflictSummary.collectionNameMatch && <p className="m-0 mb-1 text-xs">- Collection names match</p>}
+          {conflictSummary.collectionNameMatch && (
+            <p className="m-0 mb-1 text-xs">- {t('modals.importConflict.collectionNamesMatch')}</p>
+          )}
 
           {conflictSummary.folderConflicts.length > 0 && (
-            <p className="m-0 mb-1 text-xs">- {conflictSummary.folderConflicts.length} folder(s) with matching names</p>
+            <p className="m-0 mb-1 text-xs">
+              - {t('modals.importConflict.folderConflicts', { count: conflictSummary.folderConflicts.length })}
+            </p>
           )}
 
           {conflictSummary.requestConflicts.length > 0 && (
             <p className="m-0 mb-1 text-xs">
-              - {conflictSummary.requestConflicts.length} request(s) with matching URL+Method or name
+              - {t('modals.importConflict.requestConflicts', { count: conflictSummary.requestConflicts.length })}
             </p>
           )}
 
           {warnings.length > 0 && (
-            <p className="m-0 mt-2 text-xs text-button-danger">Import warnings: {warnings.length}</p>
+            <p className="m-0 mt-2 text-xs text-button-danger">
+              {t('modals.importConflict.importWarnings', { count: warnings.length })}
+            </p>
           )}
         </div>
 
@@ -66,13 +73,16 @@ export default function ImportConflictModal() {
           <div className="p-3 border border-border dark:border-dark-border rounded-md">
             <div className="flex items-center justify-between">
               <div>
-                <h4 className="m-0 text-sm font-bold text-text dark:text-dark-text">Replace</h4>
+                <h4 className="m-0 text-sm font-bold text-text dark:text-dark-text">{t('common.replace')}</h4>
                 <p className="m-0 text-xs text-text-secondary dark:text-dark-text-secondary">
-                  Replace entire existing collection ({totalImportedFolders} folders, {totalImportedRequests} requests)
+                  {t('modals.importConflict.replaceDescription', {
+                    folders: totalImportedFolders,
+                    requests: totalImportedRequests,
+                  })}
                 </p>
               </div>
               <Button buttonType={ButtonType.DANGER} onClick={() => handleImport('replace')}>
-                Replace
+                {t('common.replace')}
               </Button>
             </div>
           </div>
@@ -81,12 +91,16 @@ export default function ImportConflictModal() {
           <div className="p-3 border border-border dark:border-dark-border rounded-md">
             <div className="flex items-center justify-between">
               <div>
-                <h4 className="m-0 text-sm font-bold text-text dark:text-dark-text">Merge</h4>
+                <h4 className="m-0 text-sm font-bold text-text dark:text-dark-text">{t('common.merge')}</h4>
                 <p className="m-0 text-xs text-text-secondary dark:text-dark-text-secondary">
-                  Add unique items only (skips duplicates by URL+Method or name)
-                  {mergeStats.folders > 0 && ` - ${mergeStats.folders} new folder(s)`}
-                  {mergeStats.requests > 0 && ` - ${mergeStats.requests} new request(s)`}
-                  {mergeStats.folders === 0 && mergeStats.requests === 0 && ' - No new items to add'}
+                  {t('modals.importConflict.mergeDescription')}
+                  {mergeStats.folders > 0 &&
+                    ` - ${t('modals.importConflict.newFolders', { count: mergeStats.folders })}`}
+                  {mergeStats.requests > 0 &&
+                    ` - ${t('modals.importConflict.newRequests', { count: mergeStats.requests })}`}
+                  {mergeStats.folders === 0 &&
+                    mergeStats.requests === 0 &&
+                    ' - ' + t('modals.importConflict.noNewItems')}
                 </p>
               </div>
               <Button
@@ -94,7 +108,7 @@ export default function ImportConflictModal() {
                 disabled={mergeStats.folders === 0 && mergeStats.requests === 0}
                 onClick={() => handleImport('merge')}
               >
-                Merge
+                {t('common.merge')}
               </Button>
             </div>
           </div>
@@ -103,14 +117,18 @@ export default function ImportConflictModal() {
           <div className="p-3 border border-border dark:border-dark-border rounded-md">
             <div className="flex items-center justify-between">
               <div>
-                <h4 className="m-0 text-sm font-bold text-text dark:text-dark-text">Import as Copy</h4>
+                <h4 className="m-0 text-sm font-bold text-text dark:text-dark-text">
+                  {t('modals.importConflict.importAsCopy')}
+                </h4>
                 <p className="m-0 text-xs text-text-secondary dark:text-dark-text-secondary">
-                  Add all folders with &quot;(copy)&quot; suffix ({totalImportedFolders} folders,{' '}
-                  {totalImportedRequests} requests)
+                  {t('modals.importConflict.copyDescription', {
+                    folders: totalImportedFolders,
+                    requests: totalImportedRequests,
+                  })}
                 </p>
               </div>
               <Button buttonType={ButtonType.SECONDARY} onClick={() => handleImport('copy')}>
-                Copy
+                {t('common.copy')}
               </Button>
             </div>
           </div>
@@ -118,7 +136,7 @@ export default function ImportConflictModal() {
 
         <div className="flex justify-end mt-2">
           <Button buttonType={ButtonType.SECONDARY} onClick={handleClose}>
-            Cancel
+            {t('common.cancel')}
           </Button>
         </div>
       </div>
