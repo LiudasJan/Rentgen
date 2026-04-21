@@ -1,20 +1,12 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import cn from 'classnames';
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useCollectionRunner } from '../../../hooks/useCollectionRunner';
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
-import {
-  selectCollectionData,
-  selectCollectionRunResults,
-  selectDynamicVariables,
-  selectRunningFolderId,
-  selectSelectedEnvironment,
-  selectSelectedFolderId,
-} from '../../../store/selectors';
+import { selectCollectionRunResults, selectRunningFolderId, selectSelectedFolderId } from '../../../store/selectors';
 import { collectionActions } from '../../../store/slices/collectionSlice';
 import { uiActions } from '../../../store/slices/uiSlice';
-import { generateBundle } from '../../../utils/ciBundle';
 import { CollectionFolderData } from '../../../utils/collection';
 import { useContextMenu } from '../../context-menu';
 import CollectionItem from './CollectionItem';
@@ -23,7 +15,6 @@ import SearchHighlight from './SearchHighlight';
 import ChevronIcon from '../../../assets/icons/chevron-icon.svg';
 import ClearCrossIcon from '../../../assets/icons/clear-cross-icon.svg';
 import EditIcon from '../../../assets/icons/edit-icon.svg';
-import ExportIcon from '../../../assets/icons/export-icon.svg';
 import FolderIcon from '../../../assets/icons/folder-icon.svg';
 import PlayIcon from '../../../assets/icons/play-icon.svg';
 import StopIcon from '../../../assets/icons/stop-icon.svg';
@@ -55,9 +46,6 @@ export default function CollectionGroup({
   const { isOpen } = useContextMenu();
   const selectedFolderId = useAppSelector(selectSelectedFolderId);
   const runningFolderId = useAppSelector(selectRunningFolderId);
-  const collectionData = useAppSelector(selectCollectionData);
-  const selectedEnvironment = useAppSelector(selectSelectedEnvironment);
-  const dynamicVariables = useAppSelector(selectDynamicVariables);
   const { runFolder, cancelRun } = useCollectionRunner();
   const [isExpanded, setIsExpanded] = useState(folderCount === 1);
   const isSearching = Boolean(searchTerm?.trim());
@@ -113,19 +101,6 @@ export default function CollectionGroup({
       runFolder(folder.id);
     }
   };
-
-  const handleExportBundle = useCallback(
-    async (e: React.MouseEvent) => {
-      e.stopPropagation();
-      const postmanFolder = collectionData.item.find((f) => f.id === folder.id);
-      if (!postmanFolder) return;
-
-      const appVersion = await window.electronAPI.getAppVersion();
-      const bundle = generateBundle(postmanFolder, selectedEnvironment, dynamicVariables, appVersion);
-      await window.electronAPI.exportCIBundle(bundle);
-    },
-    [collectionData, folder.id, selectedEnvironment, dynamicVariables],
-  );
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     e.stopPropagation();
@@ -211,14 +186,6 @@ export default function CollectionGroup({
                 onClick={handlePlayClick}
               />
             ))}
-
-          {folder.items.length > 0 && !isEditing && !isThisFolderRunning && (
-            <ExportIcon
-              className="h-4 w-4 shrink-0 text-button-text-secondary dark:text-text-secondary hover:text-button-primary cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={handleExportBundle}
-              title="Export CI Bundle"
-            />
-          )}
 
           {!isEditing && (
             <EditIcon

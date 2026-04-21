@@ -1,53 +1,44 @@
-import type { BundleDynamicVariable, BundleRequest, BundleHeader } from '../../shared/types/bundle';
+import type { DynamicVariable, Environment, EnvironmentVariable } from '../../shared/types/environment';
+import type { PostmanItem, PostmanRequest, PostmanHeader } from '../../shared/types/postman';
 
 export interface ResolvedRequest {
   id: string;
   name: string;
   method: string;
   url: string;
-  headers: BundleHeader[];
+  headers: PostmanHeader[];
   body?: string;
-  order: number;
 }
 
 export class VariableStore {
   private variables: Map<string, string>;
-  private dynamicVarsByRequestId: Map<string, BundleDynamicVariable[]>;
+  private dynamicVarsByRequestId: Map<string, DynamicVariable[]>;
+  private lastUnresolved: Set<string> = new Set();
 
   constructor(
-    bundleVariables: Record<string, string>,
-    dynamicVariables: BundleDynamicVariable[],
+    environment: Environment | null,
+    dynamicVariables: DynamicVariable[],
     cliOverrides: Record<string, string>,
   ) {
-    this.variables = new Map<string, string>();
-    this.dynamicVarsByRequestId = new Map<string, BundleDynamicVariable[]>();
+    this.variables = new Map();
+    this.dynamicVarsByRequestId = new Map();
 
-    // 1. Start with bundle variables
-    for (const [key, value] of Object.entries(bundleVariables)) {
-      this.variables.set(key, value);
-    }
-
-    // 2. Add dynamic variable initial values (override bundle vars)
-    for (const dv of dynamicVariables) {
-      if (dv.initialValue !== null) {
-        this.variables.set(dv.key, dv.initialValue);
+    if (environment) {
+      for (const v of environment.variables) {
+        this.variables.set(v.key, v.value);
       }
     }
 
-    // 3. Apply CLI overrides (highest priority)
+    for (const dv of dynamicVariables) {
+      if (dv.currentValue !== null) {
+        this.variables.set(dv.key, dv.currentValue);
+      }
+    }
+
     for (const [key, value] of Object.entries(cliOverrides)) {
       this.variables.set(key, value);
     }
 
-    // 4. Resolve $ENV_VAR syntax in all values
-    for (const [key, value] of this.variables) {
-      if (value.startsWith('$')) {
-        const envKey = value.slice(1);
-        this.variables.set(key, process.env[envKey] ?? '');
-      }
-    }
-
-    // 5. Index dynamic vars by requestId
     for (const dv of dynamicVariables) {
       const existing = this.dynamicVarsByRequestId.get(dv.requestId) ?? [];
       existing.push(dv);
@@ -55,61 +46,74 @@ export class VariableStore {
     }
   }
 
-  /** Replace all {{var}} placeholders in a string */
+  /** Replace {{var}} tokens. Missing tokens resolve to empty string (desktop parity)
+   *  and are recorded so the reporter can warn under --verbose. */
   substitute(text: string): string {
-    return text.replace(/\{\{([^}]+)\}\}/g, (_match, key: string) => {
-      return this.variables.get(key.trim()) ?? '';
+    return text.replace(/\{\{([^}]+)\}\}/g, (_match, rawKey: string) => {
+      const key = rawKey.trim();
+      const value = this.variables.get(key);
+      if (value === undefined) {
+        this.lastUnresolved.add(key);
+        return '';
+      }
+      return value;
     });
   }
 
-  /** Substitute all fields of a request */
-  substituteRequest(request: BundleRequest): ResolvedRequest {
+  substituteRequest(item: PostmanItem): ResolvedRequest {
+    this.lastUnresolved.clear();
+    const r: PostmanRequest = item.request;
     return {
-      ...request,
-      url: this.substitute(request.url),
-      headers: request.headers.map((h) => ({
+      id: item.id,
+      name: item.name,
+      method: r.method,
+      url: this.substitute(r.url),
+      headers: r.header.map((h) => ({
         key: h.key,
         value: this.substitute(h.value),
       })),
-      body: request.body ? this.substitute(request.body) : undefined,
+      body: r.body?.raw !== undefined ? this.substitute(r.body.raw) : undefined,
     };
   }
 
-  /** Get dynamic variables linked to a specific request */
-  getDynamicVarsForRequest(requestId: string): BundleDynamicVariable[] {
+  getLastUnresolved(): string[] {
+    return Array.from(this.lastUnresolved);
+  }
+
+  getDynamicVarsForRequest(requestId: string): DynamicVariable[] {
     return this.dynamicVarsByRequestId.get(requestId) ?? [];
   }
 
-  /** Update a dynamic variable value in-memory */
-  updateDynamicValue(key: string, value: string): void {
+  update(key: string, value: string): void {
     this.variables.set(key, value);
-  }
-
-  /** Reset all dynamic variables to their initial values */
-  reset(dynamicVariables: BundleDynamicVariable[]): void {
-    for (const dv of dynamicVariables) {
-      if (dv.initialValue !== null) {
-        this.variables.set(dv.key, dv.initialValue);
-      } else {
-        this.variables.delete(dv.key);
-      }
-    }
   }
 }
 
-/** Parse --var flags into a key-value map */
 export function parseVarOverrides(vars: string[]): Record<string, string> {
   const result: Record<string, string> = {};
   for (const entry of vars) {
     const eqIndex = entry.indexOf('=');
     if (eqIndex === -1) {
-      console.error(`Error: Invalid variable format: "${entry}"`);
-      console.error('  Use --var key=value (e.g., --var apiKey=abc123)');
+      console.error(`Invalid --var format: "${entry}"`);
+      console.error('Use --var key=value (e.g., --var apiKey=abc123)');
       process.exit(2);
     }
-    const key = entry.slice(0, eqIndex);
-    const value = entry.slice(eqIndex + 1);
-    result[key] = value;
+    result[entry.slice(0, eqIndex)] = entry.slice(eqIndex + 1);
   }
   return result;
 }
+
+/** Filter dynamic variables to those that apply when running a given folder:
+ *  the dvar belongs to this folder (collectionId === folder.id) or is global
+ *  (collectionId is null or empty string). */
+export function filterDynamicVarsForFolder(
+  all: DynamicVariable[],
+  folderId: string,
+): DynamicVariable[] {
+  return all.filter((dv) => {
+    const cid = (dv as { collectionId: string | null }).collectionId;
+    return cid === folderId || cid === null || cid === '';
+  });
+}
+
+export type { EnvironmentVariable };

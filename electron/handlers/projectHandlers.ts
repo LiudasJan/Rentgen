@@ -1,44 +1,14 @@
 import { app, dialog, ipcMain } from 'electron';
-import crypto from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
-import type {
-  IntegrityStatus,
-  ProjectData,
-  ProjectExportResult,
-  ProjectFile,
-  ProjectImportResult,
-} from '../../src/types';
+import type { ProjectData, ProjectExportResult, ProjectFile, ProjectImportResult } from '../../shared/types/project';
+import { computeChecksum, verifyChecksum } from '../../shared/checksum';
 
 const userDataPath = () => app.getPath('userData');
 
 function readJsonFile(filePath: string): unknown {
   if (!fs.existsSync(filePath)) return null;
   return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-}
-
-function canonicalize(obj: unknown): string {
-  return JSON.stringify(obj, (_key, value) => {
-    if (value && typeof value === 'object' && !Array.isArray(value)) {
-      return Object.keys(value)
-        .sort()
-        .reduce<Record<string, unknown>>((sorted, k) => {
-          sorted[k] = value[k];
-          return sorted;
-        }, {});
-    }
-    return value;
-  });
-}
-
-function computeChecksum(data: ProjectData): string {
-  const canonical = canonicalize(data);
-  return `sha256:${crypto.createHash('sha256').update(canonical, 'utf-8').digest('hex')}`;
-}
-
-function verifyChecksum(checksum: string | undefined, data: ProjectData): IntegrityStatus {
-  if (!checksum) return 'missing';
-  return computeChecksum(data) === checksum ? 'verified' : 'modified';
 }
 
 function validateProjectFile(parsed: unknown): parsed is ProjectFile {

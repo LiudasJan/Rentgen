@@ -1,39 +1,29 @@
-import type { BundleDynamicVariable } from '../../shared/types/bundle';
+import type { DynamicVariable } from '../../shared/types/environment';
 import type { HttpResponse } from '../http/client';
 
-interface ExtractionResult {
+export interface ExtractionOutcome {
   success: boolean;
   value: string | null;
   error?: string;
 }
 
-/**
- * Extract value from object using dot/bracket notation path.
- * Ported from src/utils/environment.ts extractValue()
- */
-function extractValue(obj: unknown, path: string): unknown {
-  if (!path || obj === null || obj === undefined) return undefined;
+function extractValue(obj: unknown, selector: string): unknown {
+  if (!selector || obj === null || obj === undefined) return undefined;
 
-  const segments = path
+  const segments = selector
     .replace(/\[(\d+)]/g, '.$1')
     .split('.')
     .filter(Boolean);
 
   let current: unknown = obj;
-
   for (const segment of segments) {
     if (current === null || current === undefined) return undefined;
     if (typeof current !== 'object') return undefined;
     current = (current as Record<string, unknown>)[segment];
   }
-
   return current;
 }
 
-/**
- * Convert extracted value to string.
- * Ported from src/utils/environment.ts stringifyExtractedValue()
- */
 function stringifyExtractedValue(value: unknown): string | null {
   if (value === null || value === undefined) return null;
   if (typeof value === 'string') return value;
@@ -41,14 +31,10 @@ function stringifyExtractedValue(value: unknown): string | null {
   return JSON.stringify(value);
 }
 
-/**
- * Extract a dynamic variable value from an HTTP response.
- * Ported from src/utils/dynamicVariable.ts
- */
 export function extractDynamicVariable(
-  dvar: BundleDynamicVariable,
+  dvar: DynamicVariable,
   response: HttpResponse,
-): ExtractionResult {
+): ExtractionOutcome {
   try {
     let extractedValue: unknown;
 
@@ -65,7 +51,6 @@ export function extractDynamicVariable(
       }
 
       extractedValue = extractValue(body, dvar.selector);
-
       if (extractedValue === undefined) {
         return { success: false, value: null, error: `selector '${dvar.selector}' not found in response` };
       }
@@ -73,12 +58,10 @@ export function extractDynamicVariable(
       if (!response.headers) {
         return { success: false, value: null, error: 'response has no headers' };
       }
-
       const headerKey = Object.keys(response.headers).find(
         (k) => k.toLowerCase() === dvar.selector.toLowerCase(),
       );
       extractedValue = headerKey ? response.headers[headerKey] : undefined;
-
       if (extractedValue === undefined) {
         return { success: false, value: null, error: `header '${dvar.selector}' not found in response` };
       }

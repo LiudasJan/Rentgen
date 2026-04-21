@@ -2,7 +2,6 @@ import { dialog, ipcMain } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
 import type { ExportResult, ImportResult, PostmanCollection } from '../../src/types';
-import type { RentgenBundle } from '../../shared/types/bundle';
 import { rentgenToPostman, postmanToRentgen, validatePostmanCollection } from '../../src/utils/postman-converter';
 
 export function registerImportExportHandlers(): void {
@@ -44,26 +43,6 @@ export function registerImportExportHandlers(): void {
       if (error instanceof SyntaxError) {
         return { error: 'Invalid JSON file' };
       }
-      return { error: String(error) };
-    }
-  });
-
-  // Export CI bundle
-  ipcMain.handle('export-ci-bundle', async (_, bundle: RentgenBundle): Promise<ExportResult> => {
-    const result = await dialog.showSaveDialog({
-      title: 'Export CI Bundle',
-      defaultPath: 'rentgen.bundle.json',
-      filters: [{ name: 'Rentgen Bundle', extensions: ['json'] }],
-    });
-
-    if (result.canceled || !result.filePath) {
-      return { canceled: true };
-    }
-
-    try {
-      fs.writeFileSync(result.filePath, JSON.stringify(bundle, null, 2), 'utf-8');
-      return { success: true, filePath: result.filePath };
-    } catch (error) {
       return { error: String(error) };
     }
   });

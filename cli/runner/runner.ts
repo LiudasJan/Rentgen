@@ -1,8 +1,9 @@
-import type { RentgenBundle, BundleRequest, BundleRunResult, BundleRequestResult } from '../../shared/types/bundle';
-import { HttpClient } from '../http/client';
-import type { HttpResponse } from '../http/client';
+import type { Environment } from '../../shared/types/environment';
+import type { PostmanFolder, PostmanItem } from '../../shared/types/postman';
+import { HttpClient, type HttpResponse } from '../http/client';
 import { VariableStore } from '../config/variables';
 import { extractDynamicVariable } from './extractor';
+import type { DynamicVarDetail, RequestResult, RunResult } from './types';
 
 export interface RunnerOptions {
   stopOnFailure: boolean;
@@ -10,16 +11,17 @@ export interface RunnerOptions {
   verbose: boolean;
 }
 
-type ResultCallback = (result: BundleRequestResult, index: number, total: number) => void;
+type ResultCallback = (result: RequestResult, index: number, total: number) => void;
 
 export class SequentialRunner {
   private httpClient: HttpClient;
-  private results: BundleRequestResult[] = [];
+  private results: RequestResult[] = [];
   private resultCallback: ResultCallback | null = null;
   private aborted = false;
 
   constructor(
-    private bundle: RentgenBundle,
+    private folder: PostmanFolder,
+    private environment: Environment | null,
     private options: RunnerOptions,
     private variableStore: VariableStore,
   ) {
@@ -34,46 +36,36 @@ export class SequentialRunner {
     this.aborted = true;
   }
 
-  /** Build a partial summary from results collected so far */
-  getPartialSummary(): BundleRunResult {
+  getPartialSummary(): RunResult {
     return this.buildSummary(0);
   }
 
-  async run(): Promise<BundleRunResult> {
+  async run(): Promise<RunResult> {
     const startTime = performance.now();
-    const total = this.bundle.requests.length;
+    const items = this.folder.item;
+    const total = items.length;
 
-    for (let i = 0; i < this.bundle.requests.length; i++) {
+    for (let i = 0; i < items.length; i++) {
       if (this.aborted) break;
 
-      const request = this.bundle.requests[i];
-      const result = await this.executeRequest(request);
+      const result = await this.executeItem(items[i]);
       this.results.push(result);
 
-      if (this.resultCallback) {
-        this.resultCallback(result, i + 1, total);
-      }
+      this.resultCallback?.(result, i + 1, total);
 
-      if (!result.success && this.options.stopOnFailure) {
-        break;
-      }
+      if (!result.success && this.options.stopOnFailure) break;
     }
 
-    const duration = performance.now() - startTime;
-    return this.buildSummary(duration);
+    return this.buildSummary(performance.now() - startTime);
   }
 
-  private async executeRequest(request: BundleRequest): Promise<BundleRequestResult> {
-    // 1. Substitute variables in request
-    const resolved = this.variableStore.substituteRequest(request);
+  private async executeItem(item: PostmanItem): Promise<RequestResult> {
+    const resolved = this.variableStore.substituteRequest(item);
+    const unresolvedNow = this.variableStore.getLastUnresolved();
 
-    // 2. Convert headers array to Record
     const headers: Record<string, string> = {};
-    for (const h of resolved.headers) {
-      headers[h.key] = h.value;
-    }
+    for (const h of resolved.headers) headers[h.key] = h.value;
 
-    // 3. Send HTTP request
     let response: HttpResponse;
     try {
       response = await this.httpClient.send({
@@ -84,9 +76,9 @@ export class SequentialRunner {
       });
     } catch (error) {
       return {
-        requestId: request.id,
-        requestName: request.name,
-        method: request.method,
+        requestId: item.id,
+        requestName: item.name,
+        method: item.request.method,
         url: resolved.url,
         status: null,
         statusText: 'Network Error',
@@ -95,46 +87,53 @@ export class SequentialRunner {
         error: error instanceof Error ? error.message : String(error),
         dynamicVarsExtracted: [],
         dynamicVarsFailed: [],
+        ...(this.options.verbose && {
+          verbose: {
+            requestHeaders: headers,
+            requestBody: resolved.body,
+            responseHeaders: {},
+            responseBody: '',
+            dynamicVarDetails: [],
+            unresolvedVariables: unresolvedNow,
+          },
+        }),
       };
     }
 
-    // 4. Extract dynamic variables linked to this request
     const dvarsExtracted: { key: string; value: string }[] = [];
     const dvarsFailed: { key: string; error: string }[] = [];
-    const dynamicVarDetails: NonNullable<BundleRequestResult['verbose']>['dynamicVarDetails'] = [];
+    const dynamicVarDetails: DynamicVarDetail[] = [];
 
-    const dvars = this.variableStore.getDynamicVarsForRequest(request.id);
-    for (const dvar of dvars) {
-      const extraction = extractDynamicVariable(dvar, response);
-      if (extraction.success && extraction.value !== null) {
-        this.variableStore.updateDynamicValue(dvar.key, extraction.value);
-        dvarsExtracted.push({ key: dvar.key, value: extraction.value });
+    for (const dvar of this.variableStore.getDynamicVarsForRequest(item.id)) {
+      const outcome = extractDynamicVariable(dvar, response);
+      if (outcome.success && outcome.value !== null) {
+        this.variableStore.update(dvar.key, outcome.value);
+        dvarsExtracted.push({ key: dvar.key, value: outcome.value });
         dynamicVarDetails.push({
           key: dvar.key,
           selector: dvar.selector,
           source: dvar.source,
           extracted: true,
-          value: extraction.value,
+          value: outcome.value,
         });
       } else {
-        dvarsFailed.push({ key: dvar.key, error: extraction.error ?? 'Unknown error' });
+        dvarsFailed.push({ key: dvar.key, error: outcome.error ?? 'Unknown error' });
         dynamicVarDetails.push({
           key: dvar.key,
           selector: dvar.selector,
           source: dvar.source,
           extracted: false,
-          error: extraction.error ?? 'Unknown error',
+          error: outcome.error ?? 'Unknown error',
         });
       }
     }
 
-    // 5. Determine success (2xx = success)
     const success = response.statusCode >= 200 && response.statusCode < 300;
 
-    const result: BundleRequestResult = {
-      requestId: request.id,
-      requestName: request.name,
-      method: request.method,
+    const result: RequestResult = {
+      requestId: item.id,
+      requestName: item.name,
+      method: item.request.method,
       url: resolved.url,
       status: response.statusCode,
       statusText: response.status,
@@ -145,7 +144,6 @@ export class SequentialRunner {
       dynamicVarsFailed: dvarsFailed,
     };
 
-    // 6. Attach verbose data when enabled
     if (this.options.verbose) {
       result.verbose = {
         requestHeaders: headers,
@@ -153,21 +151,23 @@ export class SequentialRunner {
         responseHeaders: response.headers,
         responseBody: response.body,
         dynamicVarDetails,
+        unresolvedVariables: unresolvedNow,
       };
     }
 
     return result;
   }
 
-  private buildSummary(duration: number): BundleRunResult {
+  private buildSummary(duration: number): RunResult {
+    const results = this.results;
     return {
-      success: this.results.length > 0 && this.results.every((r) => r.success),
-      totalRequests: this.results.length,
-      passed: this.results.filter((r) => r.success).length,
-      failed: this.results.filter((r) => !r.success && !r.error).length,
-      errors: this.results.filter((r) => r.error !== null).length,
+      success: results.length > 0 && results.every((r) => r.success),
+      totalRequests: results.length,
+      passed: results.filter((r) => r.success).length,
+      failed: results.filter((r) => !r.success && !r.error).length,
+      errors: results.filter((r) => r.error !== null).length,
       duration: Math.round(duration),
-      results: this.results,
+      results,
     };
   }
 }
