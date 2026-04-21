@@ -4,12 +4,17 @@
   "version": "1.20.0",
   "description": "Automation before automation. Finding API bugs when you have no tests.",
   "main": ".webpack/main",
+  "bin": {
+    "rentgen": "./dist/cli/index.js"
+  },
   "scripts": {
     "start": "electron-forge start",
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
-    "lint": "eslint --ext .ts,.tsx ."
+    "lint": "eslint --ext .ts,.tsx .",
+    "build:cli": "tsup cli/index.ts --format cjs --target node18 --out-dir dist/cli",
+    "dev:cli": "tsx cli/index.ts"
   },
   "keywords": [],
   "author": {
@@ -34,6 +39,8 @@
     "@typescript-eslint/eslint-plugin": "^8.53.1",
     "@typescript-eslint/parser": "^8.53.1",
     "@vercel/webpack-asset-relocator-loader": "^1.7.3",
+    "chalk": "^4.1.2",
+    "commander": "^14.0.3",
     "baseline-browser-mapping": "^2.10.0",
     "css-loader": "^7.1.2",
     "electron": "40.6.0",
@@ -47,6 +54,8 @@
     "postcss-loader": "^8.2.0",
     "style-loader": "^4.0.0",
     "ts-loader": "^9.5.4",
+    "tsup": "^8.5.1",
+    "tsx": "^4.21.0",
     "typescript": "~5.9.3"
   },
   "dependencies": {
