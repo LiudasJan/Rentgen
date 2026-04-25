@@ -1,3 +1,22 @@
+import cn from 'classnames';
+import { useCallback, useEffect, useState } from 'react';
+import Button, { ButtonType } from '../buttons/Button';
+
+interface CliStatus {
+  platform: NodeJS.Platform;
+  bundled: { available: boolean; path: string | null };
+  pathEntry: { found: boolean; resolvedPath: string | null; pointsToBundled: boolean; version: string | null };
+  managedBy: 'package-manager' | 'app' | 'manual' | 'none';
+  recommendedTarget: string | null;
+  notes: string[];
+}
+
+interface CliActionResult {
+  success: boolean;
+  message: string;
+  details?: string;
+}
+
 interface FlagRow {
   flag: string;
   desc: string;
@@ -30,7 +49,7 @@ const exitCodes: ExitCode[] = [
 ];
 
 const CodeBlock = ({ children }: { children: string }) => (
-  <pre className="m-0 px-3 py-2 text-xs font-mono rounded-md bg-button-secondary dark:bg-dark-input overflow-x-auto">
+  <pre className="m-0 px-3 py-2 text-xs font-mono rounded-md bg-button-secondary dark:bg-dark-input overflow-x-auto whitespace-pre-wrap break-all">
     <code>{children}</code>
   </pre>
 );
@@ -41,7 +60,202 @@ const SectionHeader = ({ children }: { children: React.ReactNode }) => (
   </h5>
 );
 
+function platformLabel(p: NodeJS.Platform): string {
+  if (p === 'darwin') return 'macOS';
+  if (p === 'win32') return 'Windows';
+  if (p === 'linux') return 'Linux';
+  return p;
+}
+
+function StatusBadge({ status }: { status: CliStatus }) {
+  if (!status.bundled.available && !status.pathEntry.found) {
+    return (
+      <div className="flex items-start gap-2">
+        <span className="inline-block w-2 h-2 mt-1.5 rounded-full bg-amber-500 shrink-0" />
+        <div className="flex flex-col">
+          <span className="text-sm font-medium">CLI binary unavailable</span>
+          <span className="text-xs text-text-secondary">
+            {status.notes[0] ?? 'Reinstall the latest Rentgen build to enable the CLI.'}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  if (status.pathEntry.found && status.pathEntry.pointsToBundled) {
+    return (
+      <div className="flex items-start gap-2">
+        <span className="inline-block w-2 h-2 mt-1.5 rounded-full bg-green-500 shrink-0" />
+        <div className="flex flex-col">
+          <span className="text-sm font-medium">
+            Installed{status.managedBy === 'package-manager' ? ' (managed by package manager)' : ''}
+          </span>
+          <span className="text-xs text-text-secondary">
+            {status.pathEntry.version ? `${status.pathEntry.version} at ` : 'at '}
+            <code>{status.pathEntry.resolvedPath}</code>
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  if (status.pathEntry.found && !status.pathEntry.pointsToBundled) {
+    return (
+      <div className="flex items-start gap-2">
+        <span className="inline-block w-2 h-2 mt-1.5 rounded-full bg-amber-500 shrink-0" />
+        <div className="flex flex-col">
+          <span className="text-sm font-medium">Conflicting `rentgen` on PATH</span>
+          <span className="text-xs text-text-secondary">
+            <code>{status.pathEntry.resolvedPath}</code> is on PATH but doesn't point at this Rentgen install. Remove it
+            or installing here will shadow it.
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-start gap-2">
+      <span className="inline-block w-2 h-2 mt-1.5 rounded-full bg-text-secondary shrink-0" />
+      <div className="flex flex-col">
+        <span className="text-sm font-medium">Not installed</span>
+        <span className="text-xs text-text-secondary">
+          Click <em>Install</em> below to add <code>rentgen</code> to your shell PATH.
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function ActionRow({
+  status,
+  busy,
+  onInstall,
+  onUninstall,
+}: {
+  status: CliStatus;
+  busy: boolean;
+  onInstall: () => void;
+  onUninstall: () => void;
+}) {
+  if (!status.bundled.available) return null;
+
+  if (status.managedBy === 'package-manager') {
+    return (
+      <p className="m-0 text-xs text-text-secondary">
+        The Linux package manager handles install and removal. Use <code>sudo apt remove rentgen</code> /{' '}
+        <code>sudo dnf remove rentgen</code> to uninstall.
+      </p>
+    );
+  }
+
+  if (status.pathEntry.pointsToBundled) {
+    return (
+      <div className="flex gap-2">
+        <Button buttonType={ButtonType.DANGER} onClick={onUninstall} disabled={busy}>
+          {busy ? 'Working…' : 'Uninstall CLI'}
+        </Button>
+        <Button buttonType={ButtonType.SECONDARY} onClick={onInstall} disabled={busy}>
+          {busy ? 'Working…' : 'Reinstall'}
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <Button buttonType={ButtonType.PRIMARY} className="self-start" onClick={onInstall} disabled={busy}>
+      {busy ? 'Working…' : 'Install rentgen command in PATH'}
+    </Button>
+  );
+}
+
+function PlatformTip({ platform }: { platform: NodeJS.Platform }) {
+  if (platform === 'darwin') {
+    return (
+      <p className="m-0 text-xs text-text-secondary">
+        macOS will prompt for your password to write the symlink to <code>/usr/local/bin/rentgen</code>. After install,
+        open a new Terminal tab to pick up the change.
+      </p>
+    );
+  }
+  if (platform === 'win32') {
+    return (
+      <p className="m-0 text-xs text-text-secondary">
+        Windows install adds the Rentgen resources directory to your <em>user</em> PATH (no admin needed). Open a new
+        PowerShell, Command Prompt, or Windows Terminal tab after install — existing shells won't see the change.
+      </p>
+    );
+  }
+  if (platform === 'linux') {
+    return (
+      <p className="m-0 text-xs text-text-secondary">
+        On Linux, the deb/rpm postinstall script links <code>/usr/bin/rentgen</code> automatically. If you installed via
+        a portable archive instead, this button creates a user symlink at <code>/usr/local/bin/rentgen</code> (or{' '}
+        <code>~/.local/bin/rentgen</code> as a fallback).
+      </p>
+    );
+  }
+  return null;
+}
+
+function ResultBanner({ result }: { result: CliActionResult }) {
+  return (
+    <div
+      className={cn(
+        'flex flex-col gap-1 p-3 rounded-md border text-xs',
+        result.success
+          ? 'bg-green-500/10 border-green-500/30 text-green-700 dark:text-green-300'
+          : 'bg-red-500/10 border-red-500/30 text-red-700 dark:text-red-300',
+      )}
+    >
+      <span>{result.message}</span>
+      {result.details && (
+        <pre className="m-0 mt-1 px-2 py-1 text-[11px] font-mono rounded bg-black/20 whitespace-pre-wrap break-all">
+          <code>{result.details}</code>
+        </pre>
+      )}
+    </div>
+  );
+}
+
 export function CliSettings() {
+  const [status, setStatus] = useState<CliStatus | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [lastResult, setLastResult] = useState<CliActionResult | null>(null);
+
+  const refresh = useCallback(async () => {
+    const next = await window.electronAPI.getCliStatus();
+    setStatus(next);
+  }, []);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  const handleInstall = async () => {
+    setBusy(true);
+    setLastResult(null);
+    try {
+      const result = await window.electronAPI.installCli();
+      setLastResult(result);
+      await refresh();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleUninstall = async () => {
+    setBusy(true);
+    setLastResult(null);
+    try {
+      const result = await window.electronAPI.uninstallCli();
+      setLastResult(result);
+      await refresh();
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-4">
       <p className="m-0 text-xs text-text-secondary">
@@ -50,14 +264,40 @@ export function CliSettings() {
         <em>General → Export Project</em> and never writes back to it.
       </p>
 
+      <SectionHeader>
+        <span>Install in shell PATH ({status ? platformLabel(status.platform) : '…'})</span>
+      </SectionHeader>
+
+      {status === null ? (
+        <p className="m-0 text-xs text-text-secondary">Checking install status…</p>
+      ) : (
+        <>
+          <div className="flex flex-col gap-3 p-3 border border-border dark:border-dark-border rounded-md">
+            <StatusBadge status={status} />
+            <ActionRow status={status} busy={busy} onInstall={handleInstall} onUninstall={handleUninstall} />
+          </div>
+
+          <PlatformTip platform={status.platform} />
+
+          {status.notes.length > 0 && (
+            <ul className="m-0 pl-4 text-xs text-text-secondary">
+              {status.notes.map((note, i) => (
+                <li key={i}>{note}</li>
+              ))}
+            </ul>
+          )}
+
+          {lastResult && <ResultBanner result={lastResult} />}
+        </>
+      )}
+
       <SectionHeader>Run the CLI</SectionHeader>
       <p className="m-0 text-xs text-text-secondary">
         Rentgen exposes a single subcommand, <code>run</code>. Point it at a project file you exported from the app.
       </p>
       <CodeBlock>rentgen run &lt;project-file&gt; [options]</CodeBlock>
       <p className="m-0 text-xs text-text-secondary">
-        During development, invoke directly from the repo with <code>npm run dev:cli -- run …</code>. For a distributed
-        build run <code>npm run build:cli</code> and execute <code>./dist/cli/index.js run …</code>.
+        During development, invoke directly from the repo with <code>npm run dev:cli -- run …</code>.
       </p>
 
       <SectionHeader>Options</SectionHeader>

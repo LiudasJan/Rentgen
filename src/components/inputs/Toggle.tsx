@@ -7,7 +7,6 @@ export default function Toggle({
   disabled,
   label,
   title,
-  type = 'checkbox',
   ...otherProps
 }: InputHTMLAttributes<HTMLInputElement> & { label?: ReactNode }) {
   return (
@@ -18,7 +17,7 @@ export default function Toggle({
     >
       {label}
       <span className="relative inline-flex items-center">
-        <input disabled={disabled} type="checkbox" className="sr-only peer" {...otherProps} />
+        <input disabled={disabled} className="sr-only peer" {...otherProps} type="checkbox" />
         <span
           className="w-10 h-5 bg-button-secondary-hover dark:bg-dark-button-secondary rounded-full
           peer-checked:bg-button-primary

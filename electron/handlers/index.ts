@@ -1,4 +1,5 @@
 export * from './certificateHandlers';
+export * from './cliHandlers';
 export * from './collectionHandlers';
 export * from './environmentHandlers';
 export * from './historyHandlers';

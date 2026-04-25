@@ -1,4 +1,3 @@
-import { HttpResponse } from '../types';
 import { isPhoneNumber } from './validation';
 
 export function containsArray(value: string): boolean {

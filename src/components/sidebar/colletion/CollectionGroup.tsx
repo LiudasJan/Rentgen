@@ -88,9 +88,11 @@ export default function CollectionGroup({
 
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    folder.items.length === 0
-      ? dispatch(collectionActions.removeFolder(folder.id))
-      : dispatch(uiActions.openDeleteFolderModal(folder.id));
+    if (folder.items.length === 0) {
+      dispatch(collectionActions.removeFolder(folder.id));
+    } else {
+      dispatch(uiActions.openDeleteFolderModal(folder.id));
+    }
   };
 
   const handlePlayClick = (e: React.MouseEvent) => {
