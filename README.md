@@ -56,6 +56,25 @@ Rentgen has already found real issues in production APIs, including:
 
 That’s it. If something fails just copy bug report and share with a team.
 
+## Run from the terminal — Rentgen CLI
+
+The desktop installer also ships the `rentgen` CLI, so you can wire your `.rentgen` project exports straight into CI pipelines or local smoke-test scripts.
+
+```sh
+rentgen run ./my-project.rentgen --collection=Smoke --env=staging --stop-on-failure
+```
+
+- **Linux** users get the command automatically after `apt install` / `dnf install`.
+- **macOS** and **Windows** users enable it with one click in **Settings → CLI → Install rentgen command in PATH**.
+
+| Before install | After install |
+|---|---|
+| <img src="./public/cli-settings-not-installed.png" alt="Settings → CLI panel showing 'Not installed' with the Install rentgen command in PATH button" width="420" /> | <img src="./public/cli-settings-installed.png" alt="Settings → CLI panel showing 'Installed' with the resolved symlink path, Uninstall and Reinstall buttons" width="420" /> |
+
+Or skip the desktop install entirely and run from Docker — every release publishes a multi-arch image to `ghcr.io/liudasjan/rentgen-cli` for use in CI/CD pipelines (GitHub Actions, GitLab CI, Bitbucket, Jenkins).
+
+Full install + usage guide: [docs/CLI.md](./docs/CLI.md).
+
 ## 🎬 Demo
 
 ![Rentgen Demo](./public/demo.gif)

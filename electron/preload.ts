@@ -1,7 +1,15 @@
 import { contextBridge, ipcRenderer } from 'electron';
+import type { CliActionResult, CliStatus } from './handlers/cliHandlers';
 import type { SettingsState } from '../src/store/slices/settingsSlice';
-import type { ExportResult, HttpResponse, ImportResult, PostmanCollection, TestResults } from '../src/types';
-import type { ProjectExportResult, ProjectImportResult } from '../src/types';
+import type {
+  ExportResult,
+  HttpResponse,
+  ImportResult,
+  PostmanCollection,
+  ProjectExportResult,
+  ProjectImportResult,
+  TestResults,
+} from '../src/types';
 
 interface ElectronApi {
   connectWss: (payload: any) => void;
@@ -32,6 +40,9 @@ interface ElectronApi {
   sendWss: (message: string) => void;
   exportProject: () => Promise<ProjectExportResult>;
   importProject: () => Promise<ProjectImportResult>;
+  getCliStatus: () => Promise<CliStatus>;
+  installCli: () => Promise<CliActionResult>;
+  uninstallCli: () => Promise<CliActionResult>;
 }
 
 contextBridge.exposeInMainWorld('electronAPI', {
@@ -72,6 +83,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   sendWss: (message: string): void => ipcRenderer.send('wss-send', message),
   exportProject: (): Promise<ProjectExportResult> => ipcRenderer.invoke('export-project'),
   importProject: (): Promise<ProjectImportResult> => ipcRenderer.invoke('import-project'),
+  getCliStatus: (): Promise<CliStatus> => ipcRenderer.invoke('cli-status'),
+  installCli: (): Promise<CliActionResult> => ipcRenderer.invoke('cli-install'),
+  uninstallCli: (): Promise<CliActionResult> => ipcRenderer.invoke('cli-uninstall'),
 } as ElectronApi);
 
 declare global {

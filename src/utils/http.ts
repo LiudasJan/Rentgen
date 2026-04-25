@@ -1,14 +1,6 @@
 import { Method } from 'axios';
 import { store } from '../store';
-import {
-  DataType,
-  DynamicValue,
-  HttpRequest,
-  HttpResponse,
-  RequestParameters,
-  TestOptions,
-  TestResult,
-} from '../types';
+import { DataType, DynamicValue, HttpRequest, HttpResponse, RequestParameters, TestOptions } from '../types';
 import { isObject, setDeepObjectProperty, stringifyValue, tryParseJsonObject } from './object';
 import { encodeMessage } from './proto';
 import { generateRandomValue } from './random';

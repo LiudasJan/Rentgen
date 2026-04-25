@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "ES6",
+    "target": "ES2023",
     "allowJs": true,
     "module": "commonjs",
     "skipLibCheck": true,
@@ -18,5 +18,5 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true
   },
-  "include": ["src/**/*", "electron/**/*"]
+  "include": ["src/**/*", "electron/**/*", "shared/**/*"]
 }

@@ -1,7 +1,7 @@
 import { app, ipcMain } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
-import { DynamicVariable, Environment } from '../../src/types';
+import type { DynamicVariable, Environment } from '../../shared/types/environment';
 
 const getEnvironmentsPath = () => path.join(app.getPath('userData'), 'environments.json');
 const getDynamicVariablesPath = () => path.join(app.getPath('userData'), 'dynamic-variables.json');

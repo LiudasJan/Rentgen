@@ -1,4 +1,4 @@
-import { PostmanCollection } from './postman';
+import { PostmanCollection } from '../../shared/types/postman';
 
 export interface ImportResult {
   canceled?: boolean;
