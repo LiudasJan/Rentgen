@@ -181,9 +181,7 @@ async function installWindows(source: string): Promise<CliActionResult> {
     } else {
       Write-Output 'already-present';
     }
-  `
-    .replace(/\s+/g, ' ')
-    .trim();
+  `.trim();
 
   try {
     const { stdout } = await execFileAsync('powershell.exe', ['-NoProfile', '-Command', ps], { windowsHide: true });
@@ -217,9 +215,7 @@ async function uninstallWindows(source: string): Promise<CliActionResult> {
     } else {
       Write-Output 'not-present';
     }
-  `
-    .replace(/\s+/g, ' ')
-    .trim();
+  `.trim();
 
   try {
     const { stdout } = await execFileAsync('powershell.exe', ['-NoProfile', '-Command', ps], { windowsHide: true });
