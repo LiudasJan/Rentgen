@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "ES6",
+    "target": "ES2023",
     "allowJs": true,
     "module": "commonjs",
     "skipLibCheck": true,
