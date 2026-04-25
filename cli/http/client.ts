@@ -26,7 +26,7 @@ export class HttpClient {
       const response = await axios({
         url: request.url,
         method: request.method.toLowerCase(),
-        headers: request.headers,
+        headers: withJsonContentTypeIfNeeded(request.headers, request.body),
         data: request.body || undefined,
         timeout: this.timeout,
         validateStatus: () => true,
@@ -85,4 +85,25 @@ export class HttpClientError extends Error {
     super(message);
     this.name = 'HttpClientError';
   }
+}
+
+// Mirrors the desktop UI's parseBody → axios flow: when the user did not set a
+// Content-Type and the body parses as a JSON object/array, send it as JSON.
+// Without this, axios falls back to `application/x-www-form-urlencoded` for
+// raw string bodies, which makes JSON APIs return 500.
+function withJsonContentTypeIfNeeded(
+  headers: Record<string, string>,
+  body: string | undefined,
+): Record<string, string> {
+  if (!body) return headers;
+  if (Object.keys(headers).some((k) => k.toLowerCase() === 'content-type')) return headers;
+
+  try {
+    const parsed = JSON.parse(body);
+    if (parsed === null || typeof parsed !== 'object') return headers;
+  } catch {
+    return headers;
+  }
+
+  return { ...headers, 'Content-Type': 'application/json' };
 }
