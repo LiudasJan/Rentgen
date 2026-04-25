@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
 import { runCommand } from './commands/run';
+import { version } from '../package.json';
 
 const program = new Command();
 
 program
   .name('rentgen')
   .description('Rentgen CLI — run a folder of requests from a .rentgen project export')
-  .version('1.0.0');
+  .version(version);
 
 program
   .command('run')

@@ -71,6 +71,8 @@ rentgen run ./my-project.rentgen --collection=Smoke --env=staging --stop-on-fail
 |---|---|
 | <img src="./public/cli-settings-not-installed.png" alt="Settings → CLI panel showing 'Not installed' with the Install rentgen command in PATH button" width="420" /> | <img src="./public/cli-settings-installed.png" alt="Settings → CLI panel showing 'Installed' with the resolved symlink path, Uninstall and Reinstall buttons" width="420" /> |
 
+Or skip the desktop install entirely and run from Docker — every release publishes a multi-arch image to `ghcr.io/liudasjan/rentgen-cli` for use in CI/CD pipelines (GitHub Actions, GitLab CI, Bitbucket, Jenkins).
+
 Full install + usage guide: [docs/CLI.md](./docs/CLI.md).
 
 ## 🎬 Demo

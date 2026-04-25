@@ -13,8 +13,9 @@
     "make": "electron-forge make",
     "publish": "electron-forge publish",
     "lint": "eslint .",
-    "build:cli": "tsup cli/index.ts --format cjs --target node20 --out-dir dist/cli",
+    "build:cli": "tsup cli/index.ts --format cjs --target node22 --out-dir dist/cli",
     "build:cli:bin": "node scripts/build-cli-bin.cjs",
+    "build:cli:bundle": "tsup --config cli/tsup.bundle.config.ts",
     "dev:cli": "tsx cli/index.ts"
   },
   "keywords": [],

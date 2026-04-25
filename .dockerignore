@@ -1,0 +1,7 @@
+# Everything is excluded by default; allow only what the Dockerfile needs.
+*
+
+# Allow the bundle (the only thing the Dockerfile copies)
+!dist
+!dist/cli-bundle
+!dist/cli-bundle/**

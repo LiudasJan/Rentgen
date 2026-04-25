@@ -380,3 +380,77 @@ jobs:
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  docker:
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build CLI bundle
+        run: npm run build:cli:bundle
+
+      - name: Set up QEMU (for arm64 emulation)
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract image metadata (tags + labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/liudasjan/rentgen-cli
+          # Git tag of `v1.20.0` produces Docker tags `1.20.0`, `1.20`, and `latest`.
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Smoke test pushed image (--version)
+        run: |
+          docker run --rm \
+            ghcr.io/liudasjan/rentgen-cli:${{ steps.meta.outputs.version }} \
+            --version
+
+      - name: Smoke test pushed image (run --help)
+        run: |
+          docker run --rm \
+            ghcr.io/liudasjan/rentgen-cli:${{ steps.meta.outputs.version }} \
+            run --help
+
+      - name: Confirm multi-arch manifest
+        run: |
+          docker buildx imagetools inspect \
+            ghcr.io/liudasjan/rentgen-cli:${{ steps.meta.outputs.version }}

@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import { version } from '../../package.json';
 import type { RequestResult, RunResult, VerboseDetails } from '../runner/types';
 
 export interface HeaderContext {
@@ -17,7 +18,7 @@ export class ConsoleReporter {
 
   printHeader(ctx: HeaderContext): void {
     const envLabel = ctx.environmentTitle ?? 'none';
-    process.stdout.write(chalk.bold('Rentgen CLI v1.0.0') + '\n');
+    process.stdout.write(chalk.bold(`Rentgen CLI v${version}`) + '\n');
     process.stdout.write('\n');
     process.stdout.write(
       `${ctx.projectName} › ${ctx.folderName} · env: ${envLabel} (${ctx.totalRequests} requests)\n`,
