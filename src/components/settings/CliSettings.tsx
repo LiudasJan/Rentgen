@@ -30,7 +30,7 @@ const flags: FlagRow[] = [
   { flag: '--skip-integrity-check', desc: 'Skip the checksum confirmation prompt.' },
   { flag: '--var <key=value>', desc: 'Override a variable. Repeatable. Highest priority over env and dynamic values.' },
   { flag: '--timeout <ms>', desc: 'Per-request timeout in milliseconds. Default 30000.' },
-  { flag: '--fail-fast', desc: 'Stop after the first non-2xx response.' },
+  { flag: '--fail-fast', desc: 'Stop after first failure.' },
   {
     flag: '--report <format>',
     desc: 'Machine-readable output. Supported: json (writes JSON to stdout, suppresses human output).',
