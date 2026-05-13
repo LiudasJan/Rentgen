@@ -7,24 +7,31 @@ import {
 } from '../config/variables';
 import { resolveSelection } from '../config/selection';
 import { SequentialRunner } from '../runner/runner';
-import { ConsoleReporter } from '../reporter/console';
+import { ConsoleReporter, type HeaderContext } from '../reporter/console';
+import { JsonReporter } from '../reporter/json';
 import type { IntegrityStatus } from '../../shared/types/project';
 
-export interface RunOptions {
+export interface InspectOptions {
   collection?: string;
   env?: string;
-  unsafe?: boolean;
+  skipIntegrityCheck?: boolean;
   var?: string[];
   timeout: string;
-  stopOnFailure?: boolean;
+  failFast?: boolean;
   color: boolean;
   verbose?: boolean;
+  report?: string;
 }
 
-export async function runCommand(projectFile: string, options: RunOptions): Promise<void> {
+type Reporter = ConsoleReporter | JsonReporter;
+
+export async function inspectCommand(projectFile: string, options: InspectOptions): Promise<void> {
+  const reportFormat = validateReport(options.report);
+  const jsonMode = reportFormat === 'json';
+
   const { file, integrity, filePath } = loadProject(projectFile);
 
-  await enforceIntegrity(integrity, options.unsafe ?? false, options.verbose ?? false);
+  await enforceIntegrity(integrity, options.skipIntegrityCheck ?? false, options.verbose ?? false, jsonMode);
 
   const selection = await resolveSelection(file.data.collection, file.data.environments, {
     collectionArg: options.collection,
@@ -36,33 +43,40 @@ export async function runCommand(projectFile: string, options: RunOptions): Prom
 
   const store = new VariableStore(selection.environment, filteredDvars, cliOverrides);
 
-  const reporter = new ConsoleReporter({
-    verbose: options.verbose ?? false,
-    noColor: !options.color,
-  });
-
-  reporter.printHeader({
+  const header: HeaderContext = {
     projectName: file.data.collection.info.name,
     folderName: selection.folder.name,
     environmentTitle: selection.environment?.title ?? null,
     totalRequests: selection.folder.item.length,
-  });
+  };
+
+  const reporter: Reporter = jsonMode
+    ? new JsonReporter(header)
+    : new ConsoleReporter({ verbose: options.verbose ?? false, noColor: !options.color });
+
+  if (reporter instanceof ConsoleReporter) {
+    reporter.printHeader(header);
+  }
 
   const runner = new SequentialRunner(
     selection.folder,
     selection.environment,
     {
-      stopOnFailure: options.stopOnFailure ?? false,
+      failFast: options.failFast ?? false,
       timeout: parseInt(options.timeout, 10),
       verbose: options.verbose ?? false,
     },
     store,
   );
 
-  runner.onResult((result, index, total) => reporter.printResult(result, index, total));
+  if (reporter instanceof ConsoleReporter) {
+    runner.onResult((result, index, total) => reporter.printResult(result, index, total));
+  }
 
   process.on('SIGINT', () => {
-    process.stdout.write('\n');
+    if (reporter instanceof ConsoleReporter) {
+      process.stdout.write('\n');
+    }
     runner.abort();
     reporter.printSummary(runner.getPartialSummary());
     process.exit(1);
@@ -76,15 +90,23 @@ export async function runCommand(projectFile: string, options: RunOptions): Prom
   process.exit(result.success ? 0 : 1);
 }
 
+function validateReport(value: string | undefined): 'json' | null {
+  if (value === undefined) return null;
+  if (value === 'json') return 'json';
+  console.error(`Unsupported --report value '${value}'. Supported formats: json`);
+  process.exit(2);
+}
+
 async function enforceIntegrity(
   status: IntegrityStatus,
-  unsafe: boolean,
+  skipIntegrityCheck: boolean,
   verbose: boolean,
+  jsonMode: boolean,
 ): Promise<void> {
-  if (unsafe) return;
+  if (skipIntegrityCheck) return;
 
   if (status === 'verified') {
-    if (verbose) process.stdout.write('Checksum verified.\n');
+    if (verbose && !jsonMode) process.stdout.write('Checksum verified.\n');
     return;
   }
 
@@ -92,18 +114,18 @@ async function enforceIntegrity(
     missing: {
       prompt:
         'No checksum in this project file — it may have been created manually or modified outside Rentgen. Continue?',
-      ciError: 'Checksum missing. Pass --unsafe to proceed.',
+      ciError: 'Checksum missing. Pass --skip-integrity-check to proceed.',
     },
     modified: {
       prompt:
         'Checksum mismatch — this project file has been modified since it was exported. Continue?',
-      ciError: 'Checksum mismatch. Pass --unsafe to proceed.',
+      ciError: 'Checksum mismatch. Pass --skip-integrity-check to proceed.',
     },
   };
 
   const copy = messages[status];
 
-  if (!process.stdin.isTTY) {
+  if (!process.stdin.isTTY || jsonMode) {
     console.error(copy.ciError);
     process.exit(2);
   }

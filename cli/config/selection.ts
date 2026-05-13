@@ -54,7 +54,7 @@ async function resolveFolder(
     choices: folders.map((f) => ({
       name: f.name,
       value: f,
-      description: `${f.id} · ${f.item.length} request${f.item.length === 1 ? '' : 's'}`,
+      description: `${f.item.length} request${f.item.length === 1 ? '' : 's'}`,
     })),
   });
 }
@@ -67,14 +67,13 @@ function lookupFolderByArg(folders: PostmanFolder[], arg: string): PostmanFolder
   if (byName.length === 1) return byName[0];
 
   if (byName.length > 1) {
-    console.error(`Multiple folders match '${arg}':`);
-    for (const f of byName) console.error(`  ${f.id}  (${f.item.length} requests)`);
-    console.error('Re-run with the exact --collection <id>.');
+    console.error(`Multiple folders match '${arg}'.`);
+    console.error('Rename one of the duplicate folders inside Rentgen to disambiguate.');
     process.exit(2);
   }
 
   console.error(`No folder matches '${arg}'. Available folders:`);
-  for (const f of folders) console.error(`  ${f.name}  [${f.id}]`);
+  for (const f of folders) console.error(`  ${f.name}`);
   process.exit(2);
 }
 
@@ -106,7 +105,6 @@ async function resolveEnvironment(
       ...environments.map((e) => ({
         name: e.title,
         value: e,
-        description: e.id,
       })),
     ],
   });
@@ -120,14 +118,13 @@ function lookupEnvByArg(environments: Environment[], arg: string): Environment {
   if (byTitle.length === 1) return byTitle[0];
 
   if (byTitle.length > 1) {
-    console.error(`Multiple environments match '${arg}':`);
-    for (const e of byTitle) console.error(`  ${e.id}`);
-    console.error('Re-run with the exact --env <id>.');
+    console.error(`Multiple environments match '${arg}'.`);
+    console.error('Rename one of the duplicate environments inside Rentgen to disambiguate.');
     process.exit(2);
   }
 
   console.error(`No environment matches '${arg}'. Available:`);
   console.error('  none  (run with no environment)');
-  for (const e of environments) console.error(`  ${e.title}  [${e.id}]`);
+  for (const e of environments) console.error(`  ${e.title}`);
   process.exit(2);
 }

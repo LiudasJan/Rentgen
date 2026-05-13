@@ -23,12 +23,16 @@ interface FlagRow {
 }
 
 const flags: FlagRow[] = [
-  { flag: '--collection <name|id>', desc: 'Folder to run from the project file. Omit to pick interactively.' },
-  { flag: '--env <name|id>', desc: 'Environment to use. Pass --env=none to run without any environment.' },
-  { flag: '--unsafe', desc: 'Skip the checksum confirmation prompt.' },
+  { flag: '--collection <name>', desc: 'Folder to run from the project file. Omit to pick interactively.' },
+  { flag: '--env <name>', desc: 'Environment to use. Pass --env=none to run without any environment.' },
+  { flag: '--skip-integrity-check', desc: 'Skip the checksum confirmation prompt.' },
   { flag: '--var <key=value>', desc: 'Override a variable. Repeatable. Highest priority over env and dynamic values.' },
   { flag: '--timeout <ms>', desc: 'Per-request timeout in milliseconds. Default 30000.' },
-  { flag: '--stop-on-failure', desc: 'Stop after the first non-2xx response.' },
+  { flag: '--fail-fast', desc: 'Stop after the first non-2xx response.' },
+  {
+    flag: '--report <format>',
+    desc: 'Machine-readable output. Supported: json (writes JSON to stdout, suppresses human output).',
+  },
   { flag: '--no-color', desc: 'Disable colored output.' },
   { flag: '--verbose', desc: 'Print full request/response details and warn about unresolved variables.' },
 ];
@@ -293,11 +297,11 @@ export function CliSettings() {
 
       <SectionHeader>Run the CLI</SectionHeader>
       <p className="m-0 text-xs text-text-secondary">
-        Rentgen exposes a single subcommand, <code>run</code>. Point it at a project file you exported from the app.
+        Rentgen exposes a single subcommand, <code>inspect</code>. Point it at a project file you exported from the app.
       </p>
-      <CodeBlock>rentgen run &lt;project-file&gt; [options]</CodeBlock>
+      <CodeBlock>rentgen inspect &lt;project-file&gt; [options]</CodeBlock>
       <p className="m-0 text-xs text-text-secondary">
-        During development, invoke directly from the repo with <code>npm run dev:cli -- run …</code>.
+        During development, invoke directly from the repo with <code>npm run dev:cli -- inspect …</code>.
       </p>
 
       <SectionHeader>Options</SectionHeader>
@@ -312,20 +316,30 @@ export function CliSettings() {
 
       <SectionHeader>Examples</SectionHeader>
       <p className="m-0 text-xs text-text-secondary">Pick a folder and environment interactively:</p>
-      <CodeBlock>rentgen run ./my-project.rentgen</CodeBlock>
+      <CodeBlock>rentgen inspect ./rentgen-project.rentgen</CodeBlock>
 
       <p className="m-0 text-xs text-text-secondary">
         Scripted CI run with an explicit folder and environment, failing fast:
       </p>
-      <CodeBlock>{`rentgen run ./my-project.rentgen \\
-  --collection=folder_1767635724788_hvhovvy \\
+      <CodeBlock>{`rentgen inspect ./rentgen-project.rentgen \\
+  --collection="Smoke Tests" \\
   --env=staging \\
-  --stop-on-failure \\
-  --unsafe`}</CodeBlock>
+  --fail-fast \\
+  --skip-integrity-check`}</CodeBlock>
+
+      <p className="m-0 text-xs text-text-secondary">
+        Machine-readable output for CI pipelines (GitHub Actions, Jenkins, Slack notifiers):
+      </p>
+      <CodeBlock>{`rentgen inspect ./rentgen-project.rentgen \\
+  --collection="Smoke Tests" \\
+  --env=staging \\
+  --fail-fast \\
+  --skip-integrity-check \\
+  --report=json`}</CodeBlock>
 
       <p className="m-0 text-xs text-text-secondary">Override variables at the call site (highest priority):</p>
-      <CodeBlock>{`rentgen run ./my-project.rentgen \\
-  --collection=Smoke \\
+      <CodeBlock>{`rentgen inspect ./rentgen-project.rentgen \\
+  --collection="Smoke Tests" \\
   --env=none \\
   --var apiKey=abc123 \\
   --var host=https://staging.example.com`}</CodeBlock>
@@ -334,8 +348,8 @@ export function CliSettings() {
       <p className="m-0 text-xs text-text-secondary">
         Every project export carries a SHA-256 checksum of its data. On load, the CLI recomputes the checksum. If it
         matches, the run proceeds silently. If it&apos;s missing or tampered with, you&apos;ll see a confirmation prompt
-        in a TTY or an error in CI. <code>--unsafe</code> bypasses the gate — use it when you know the file was
-        hand-edited on purpose.
+        in a TTY or an error in CI. <code>--skip-integrity-check</code> bypasses the gate — use it when you know the
+        file was hand-edited on purpose.
       </p>
 
       <SectionHeader>Exit codes</SectionHeader>
