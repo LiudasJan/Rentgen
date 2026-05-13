@@ -11,7 +11,7 @@ import { ConsoleReporter, type HeaderContext } from '../reporter/console';
 import { JsonReporter } from '../reporter/json';
 import type { IntegrityStatus } from '../../shared/types/project';
 
-export interface InspectOptions {
+export interface XrayOptions {
   collection?: string;
   env?: string;
   skipIntegrityCheck?: boolean;
@@ -25,7 +25,7 @@ export interface InspectOptions {
 
 type Reporter = ConsoleReporter | JsonReporter;
 
-export async function inspectCommand(projectFile: string, options: InspectOptions): Promise<void> {
+export async function xrayCommand(projectFile: string, options: XrayOptions): Promise<void> {
   const reportFormat = validateReport(options.report);
   const jsonMode = reportFormat === 'json';
 

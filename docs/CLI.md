@@ -66,7 +66,7 @@ If it works, you're done. Skip to [First run](#first-run).
 Export a project from the desktop app (**General → Export Project**), then point the CLI at the file:
 
 ```sh
-rentgen inspect ./rentgen-project.rentgen
+rentgen xray ./rentgen-project.rentgen
 ```
 
 The CLI will let you pick a folder and environment interactively. Pick one, hit enter, and watch the requests fly.
@@ -74,14 +74,16 @@ The CLI will let you pick a folder and environment interactively. Pick one, hit 
 For CI / scripted runs, pass everything explicitly:
 
 ```sh
-rentgen inspect ./rentgen-project.rentgen \
+rentgen xray ./rentgen-project.rentgen \
   --collection="Smoke Tests" \
   --env=staging \
   --fail-fast \
   --skip-integrity-check
 ```
 
-See `rentgen inspect --help` for the full flag list, or check the **Settings → CLI** panel inside Rentgen for the same reference with examples.
+See `rentgen xray --help` for the full flag list, or check the **Settings → CLI** panel inside Rentgen for the same reference with examples.
+
+> `rentgen run` is accepted as an alias for `rentgen xray` — use whichever reads better in your scripts.
 
 ---
 
@@ -108,7 +110,7 @@ Both `linux/amd64` and `linux/arm64` are published — Docker pulls the right on
 ```sh
 docker run --rm -v "$PWD":/work \
   ghcr.io/rentgen-io/rentgen-cli:1.20.0 \
-  inspect ./project.rentgen --collection="Smoke Tests" --env=staging --skip-integrity-check
+  xray ./project.rentgen --collection="Smoke Tests" --env=staging --skip-integrity-check
 ```
 
 `--skip-integrity-check` is required when running headless: there's no TTY for the checksum confirmation prompt, and without `--skip-integrity-check` the CLI exits with code 2.
@@ -123,7 +125,7 @@ jobs:
       image: ghcr.io/rentgen-io/rentgen-cli:1.20.0
     steps:
       - uses: actions/checkout@v5
-      - run: rentgen inspect ./project.rentgen --collection="Smoke Tests" --env=staging --skip-integrity-check
+      - run: rentgen xray ./project.rentgen --collection="Smoke Tests" --env=staging --skip-integrity-check
 ```
 
 ### GitLab CI
@@ -133,7 +135,7 @@ rentgen-api-check:
   image: ghcr.io/rentgen-io/rentgen-cli:1.20.0
   stage: test
   script:
-    - rentgen inspect ./project.rentgen --collection="Smoke Tests" --env=staging --skip-integrity-check
+    - rentgen xray ./project.rentgen --collection="Smoke Tests" --env=staging --skip-integrity-check
 ```
 
 ### Bitbucket Pipelines
@@ -145,7 +147,7 @@ pipelines:
         name: Rentgen API check
         image: ghcr.io/rentgen-io/rentgen-cli:1.20.0
         script:
-          - rentgen inspect ./project.rentgen --collection="Smoke Tests" --env=staging --skip-integrity-check
+          - rentgen xray ./project.rentgen --collection="Smoke Tests" --env=staging --skip-integrity-check
 ```
 
 ### Jenkins (Declarative pipeline)
@@ -161,7 +163,7 @@ pipeline {
   stages {
     stage('Rentgen API check') {
       steps {
-        sh 'rentgen inspect ./project.rentgen --collection="Smoke Tests" --env=staging --skip-integrity-check'
+        sh 'rentgen xray ./project.rentgen --collection="Smoke Tests" --env=staging --skip-integrity-check'
       }
     }
   }
