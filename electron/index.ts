@@ -91,11 +91,11 @@ const createHelpMenu = (): void => {
     },
     {
       label: 'GitHub Wiki',
-      click: () => shell.openExternal('https://github.com/LiudasJan/Rentgen/wiki'),
+      click: () => shell.openExternal('https://github.com/Rentgen-io/Rentgen/wiki'),
     },
     {
       label: 'Report an Issue',
-      click: () => shell.openExternal('https://github.com/LiudasJan/Rentgen/issues/new'),
+      click: () => shell.openExternal('https://github.com/Rentgen-io/Rentgen/issues/new'),
     },
   ]);
 

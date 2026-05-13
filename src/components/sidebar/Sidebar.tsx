@@ -97,7 +97,7 @@ export default function Sidebar() {
           </SidebarButton>
           <SidebarButton
             label="Report feedback"
-            onClick={() => window.electronAPI.openExternal('https://github.com/LiudasJan/Rentgen/issues/new')}
+            onClick={() => window.electronAPI.openExternal('https://github.com/Rentgen-io/Rentgen/issues/new')}
           >
             <BugIcon className="w-5 h-5" />
           </SidebarButton>

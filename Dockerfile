@@ -2,7 +2,7 @@
 
 FROM node:22-slim
 
-LABEL org.opencontainers.image.source="https://github.com/LiudasJan/Rentgen"
+LABEL org.opencontainers.image.source="https://github.com/Rentgen-io/Rentgen"
 LABEL org.opencontainers.image.description="Rentgen CLI — run .rentgen project exports in CI"
 LABEL org.opencontainers.image.licenses="RSAL-1.0"
 

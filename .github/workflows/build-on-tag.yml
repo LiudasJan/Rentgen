@@ -420,7 +420,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/liudasjan/rentgen-cli
+          images: ghcr.io/rentgen-io/rentgen-cli
           # Git tag of `v1.20.0` produces Docker tags `1.20.0`, `1.20`, and `latest`.
           tags: |
             type=semver,pattern={{version}}
@@ -441,16 +441,16 @@ jobs:
       - name: Smoke test pushed image (--version)
         run: |
           docker run --rm \
-            ghcr.io/liudasjan/rentgen-cli:${{ steps.meta.outputs.version }} \
+            ghcr.io/rentgen-io/rentgen-cli:${{ steps.meta.outputs.version }} \
             --version
 
       - name: Smoke test pushed image (run --help)
         run: |
           docker run --rm \
-            ghcr.io/liudasjan/rentgen-cli:${{ steps.meta.outputs.version }} \
+            ghcr.io/rentgen-io/rentgen-cli:${{ steps.meta.outputs.version }} \
             run --help
 
       - name: Confirm multi-arch manifest
         run: |
           docker buildx imagetools inspect \
-            ghcr.io/liudasjan/rentgen-cli:${{ steps.meta.outputs.version }}
+            ghcr.io/rentgen-io/rentgen-cli:${{ steps.meta.outputs.version }}
