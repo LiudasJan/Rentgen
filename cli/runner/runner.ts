@@ -6,7 +6,7 @@ import { extractDynamicVariable } from './extractor';
 import type { DynamicVarDetail, RequestResult, RunResult } from './types';
 
 export interface RunnerOptions {
-  stopOnFailure: boolean;
+  failFast: boolean;
   timeout: number;
   verbose: boolean;
 }
@@ -53,7 +53,7 @@ export class SequentialRunner {
 
       this.resultCallback?.(result, i + 1, total);
 
-      if (!result.success && this.options.stopOnFailure) break;
+      if (!result.success && this.options.failFast) break;
     }
 
     return this.buildSummary(performance.now() - startTime);

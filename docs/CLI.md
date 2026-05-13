@@ -66,7 +66,7 @@ If it works, you're done. Skip to [First run](#first-run).
 Export a project from the desktop app (**General → Export Project**), then point the CLI at the file:
 
 ```sh
-rentgen run ./my-project.rentgen
+rentgen inspect ./rentgen-project.rentgen
 ```
 
 The CLI will let you pick a folder and environment interactively. Pick one, hit enter, and watch the requests fly.
@@ -74,14 +74,14 @@ The CLI will let you pick a folder and environment interactively. Pick one, hit 
 For CI / scripted runs, pass everything explicitly:
 
 ```sh
-rentgen run ./my-project.rentgen \
-  --collection=Smoke \
+rentgen inspect ./rentgen-project.rentgen \
+  --collection="Smoke Tests" \
   --env=staging \
-  --stop-on-failure \
-  --unsafe
+  --fail-fast \
+  --skip-integrity-check
 ```
 
-See `rentgen run --help` for the full flag list, or check the **Settings → CLI** panel inside Rentgen for the same reference with examples.
+See `rentgen inspect --help` for the full flag list, or check the **Settings → CLI** panel inside Rentgen for the same reference with examples.
 
 ---
 
@@ -108,10 +108,10 @@ Both `linux/amd64` and `linux/arm64` are published — Docker pulls the right on
 ```sh
 docker run --rm -v "$PWD":/work \
   ghcr.io/rentgen-io/rentgen-cli:1.20.0 \
-  run ./project.rentgen --collection=Smoke --env=staging --unsafe
+  inspect ./project.rentgen --collection="Smoke Tests" --env=staging --skip-integrity-check
 ```
 
-`--unsafe` is required when running headless: there's no TTY for the checksum confirmation prompt, and without `--unsafe` the CLI exits with code 2.
+`--skip-integrity-check` is required when running headless: there's no TTY for the checksum confirmation prompt, and without `--skip-integrity-check` the CLI exits with code 2.
 
 ### GitHub Actions
 
@@ -123,7 +123,7 @@ jobs:
       image: ghcr.io/rentgen-io/rentgen-cli:1.20.0
     steps:
       - uses: actions/checkout@v5
-      - run: rentgen run ./project.rentgen --collection=Smoke --env=staging --unsafe
+      - run: rentgen inspect ./project.rentgen --collection="Smoke Tests" --env=staging --skip-integrity-check
 ```
 
 ### GitLab CI
@@ -133,7 +133,7 @@ rentgen-api-check:
   image: ghcr.io/rentgen-io/rentgen-cli:1.20.0
   stage: test
   script:
-    - rentgen run ./project.rentgen --collection=Smoke --env=staging --unsafe
+    - rentgen inspect ./project.rentgen --collection="Smoke Tests" --env=staging --skip-integrity-check
 ```
 
 ### Bitbucket Pipelines
@@ -145,7 +145,7 @@ pipelines:
         name: Rentgen API check
         image: ghcr.io/rentgen-io/rentgen-cli:1.20.0
         script:
-          - rentgen run ./project.rentgen --collection=Smoke --env=staging --unsafe
+          - rentgen inspect ./project.rentgen --collection="Smoke Tests" --env=staging --skip-integrity-check
 ```
 
 ### Jenkins (Declarative pipeline)
@@ -161,7 +161,7 @@ pipeline {
   stages {
     stage('Rentgen API check') {
       steps {
-        sh 'rentgen run ./project.rentgen --collection=Smoke --env=staging --unsafe'
+        sh 'rentgen inspect ./project.rentgen --collection="Smoke Tests" --env=staging --skip-integrity-check'
       }
     }
   }
@@ -239,12 +239,13 @@ You're running an unpackaged dev build (or the binary failed to bundle). Either 
 
 | Flag | Description |
 |---|---|
-| `--collection <name\|id>` | Folder to run from the project file. Omit to pick interactively. |
-| `--env <name\|id>` | Environment to use. Pass `--env=none` to run without any environment. |
-| `--unsafe` | Skip the checksum confirmation prompt. |
+| `--collection <name>` | Folder to run from the project file. Omit to pick interactively. |
+| `--env <name>` | Environment to use. Pass `--env=none` to run without any environment. |
+| `--skip-integrity-check` | Skip the checksum confirmation prompt. |
 | `--var <key=value>` | Override a variable. Repeatable. Highest priority over env and dynamic values. |
 | `--timeout <ms>` | Per-request timeout in milliseconds. Default 30000. |
-| `--stop-on-failure` | Stop after the first non-2xx response. |
+| `--fail-fast` | Stop after the first non-2xx response. |
+| `--report <format>` | Machine-readable output. Supported: `json` (writes JSON to stdout, suppresses human output). |
 | `--no-color` | Disable colored output. |
 | `--verbose` | Print full request/response details and warn about unresolved variables. |
 

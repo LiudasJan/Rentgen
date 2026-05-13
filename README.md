@@ -61,7 +61,7 @@ That’s it. If something fails just copy bug report and share with a team.
 The desktop installer also ships the `rentgen` CLI, so you can wire your `.rentgen` project exports straight into CI pipelines or local smoke-test scripts.
 
 ```sh
-rentgen run ./my-project.rentgen --collection=Smoke --env=staging --stop-on-failure
+rentgen inspect ./rentgen-project.rentgen --collection="Smoke Tests" --env=staging --fail-fast
 ```
 
 - **Linux** users get the command automatically after `apt install` / `dnf install`.
