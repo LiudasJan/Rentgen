@@ -10,7 +10,7 @@ WORKDIR /work
 
 COPY dist/cli-bundle/index.js /app/cli.js
 
-# Wrapper on PATH so `script: rentgen inspect ...` works in CI runners
+# Wrapper on PATH so `script: rentgen xray ...` works in CI runners
 # (GitLab/Jenkins/Bitbucket) that override the container's ENTRYPOINT
 # with a shell.
 RUN printf '#!/bin/sh\nexec node /app/cli.js "$@"\n' > /usr/local/bin/rentgen \

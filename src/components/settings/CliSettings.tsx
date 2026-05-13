@@ -297,11 +297,12 @@ export function CliSettings() {
 
       <SectionHeader>Run the CLI</SectionHeader>
       <p className="m-0 text-xs text-text-secondary">
-        Rentgen exposes a single subcommand, <code>inspect</code>. Point it at a project file you exported from the app.
+        Rentgen exposes a single subcommand, <code>xray</code> (alias: <code>run</code>). Point it at a project file you
+        exported from the app.
       </p>
-      <CodeBlock>rentgen inspect &lt;project-file&gt; [options]</CodeBlock>
+      <CodeBlock>rentgen xray &lt;project-file&gt; [options]</CodeBlock>
       <p className="m-0 text-xs text-text-secondary">
-        During development, invoke directly from the repo with <code>npm run dev:cli -- inspect …</code>.
+        During development, invoke directly from the repo with <code>npm run dev:cli -- xray …</code>.
       </p>
 
       <SectionHeader>Options</SectionHeader>
@@ -316,12 +317,12 @@ export function CliSettings() {
 
       <SectionHeader>Examples</SectionHeader>
       <p className="m-0 text-xs text-text-secondary">Pick a folder and environment interactively:</p>
-      <CodeBlock>rentgen inspect ./rentgen-project.rentgen</CodeBlock>
+      <CodeBlock>rentgen xray ./rentgen-project.rentgen</CodeBlock>
 
       <p className="m-0 text-xs text-text-secondary">
         Scripted CI run with an explicit folder and environment, failing fast:
       </p>
-      <CodeBlock>{`rentgen inspect ./rentgen-project.rentgen \\
+      <CodeBlock>{`rentgen xray ./rentgen-project.rentgen \\
   --collection="Smoke Tests" \\
   --env=staging \\
   --fail-fast \\
@@ -330,7 +331,7 @@ export function CliSettings() {
       <p className="m-0 text-xs text-text-secondary">
         Machine-readable output for CI pipelines (GitHub Actions, Jenkins, Slack notifiers):
       </p>
-      <CodeBlock>{`rentgen inspect ./rentgen-project.rentgen \\
+      <CodeBlock>{`rentgen xray ./rentgen-project.rentgen \\
   --collection="Smoke Tests" \\
   --env=staging \\
   --fail-fast \\
@@ -338,7 +339,7 @@ export function CliSettings() {
   --report=json`}</CodeBlock>
 
       <p className="m-0 text-xs text-text-secondary">Override variables at the call site (highest priority):</p>
-      <CodeBlock>{`rentgen inspect ./rentgen-project.rentgen \\
+      <CodeBlock>{`rentgen xray ./rentgen-project.rentgen \\
   --collection="Smoke Tests" \\
   --env=none \\
   --var apiKey=abc123 \\
