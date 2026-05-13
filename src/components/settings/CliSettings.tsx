@@ -1,5 +1,7 @@
 import cn from 'classnames';
 import { useCallback, useEffect, useState } from 'react';
+import { useAppDispatch } from '../../store/hooks';
+import { uiActions } from '../../store/slices/uiSlice';
 import Button, { ButtonType } from '../buttons/Button';
 
 interface CliStatus {
@@ -223,9 +225,18 @@ function ResultBanner({ result }: { result: CliActionResult }) {
 }
 
 export function CliSettings() {
+  const dispatch = useAppDispatch();
   const [status, setStatus] = useState<CliStatus | null>(null);
   const [busy, setBusy] = useState(false);
   const [lastResult, setLastResult] = useState<CliActionResult | null>(null);
+
+  const handleExportProject = async () => {
+    const result = await window.electronAPI.exportProject();
+    if (result.success) {
+      dispatch(uiActions.setExported(true));
+      setTimeout(() => dispatch(uiActions.setExported(false)), 2000);
+    }
+  };
 
   const refresh = useCallback(async () => {
     const next = await window.electronAPI.getCliStatus();
@@ -301,6 +312,14 @@ export function CliSettings() {
         exported from the app.
       </p>
       <CodeBlock>rentgen xray &lt;project-file&gt; [options]</CodeBlock>
+      <div className="flex items-center gap-3">
+        <Button buttonType={ButtonType.PRIMARY} onClick={handleExportProject}>
+          Export Project
+        </Button>
+        <span className="text-xs text-text-secondary">
+          Don&apos;t have a project file yet? Export one now — same action as <em>General → Export Project</em>.
+        </span>
+      </div>
       <p className="m-0 text-xs text-text-secondary">
         During development, invoke directly from the repo with <code>npm run dev:cli -- xray …</code>.
       </p>
