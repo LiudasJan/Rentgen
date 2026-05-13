@@ -91,7 +91,10 @@ async function buildStatus(): Promise<CliStatus> {
     } catch {
       pointsToBundled = false;
     }
-    version = await getCliVersion(resolved);
+    // Only probe --version on a binary we KNOW is our bundled CLI. On Windows, `where rentgen`
+    // is case-insensitive and may resolve to the GUI Rentgen.exe on PATH — spawning it briefly
+    // opens a second app instance before Electron's built-in --version flag makes it exit.
+    if (pointsToBundled) version = await getCliVersion(resolved);
   }
 
   let managedBy: CliStatus['managedBy'] = 'none';
