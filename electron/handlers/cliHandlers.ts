@@ -173,31 +173,36 @@ async function uninstallMacOs(target: string): Promise<CliActionResult> {
 
 async function installWindows(source: string): Promise<CliActionResult> {
   const cliDir = path.dirname(source);
-  // PowerShell oneliner: append cliDir to user PATH if not already present.
+  // Prepend cliDir to user PATH (moving it to the front if already present elsewhere). Windows
+  // resolves PATH left-to-right and matches names case-insensitively, so a parent directory
+  // containing the GUI `Rentgen.exe` would otherwise shadow our `rentgen.exe` CLI binary.
   const ps = `
     $cliDir = '${cliDir.replace(/'/g, "''")}';
     $current = [Environment]::GetEnvironmentVariable('Path', 'User');
     if ($null -eq $current) { $current = '' }
-    $parts = $current -split ';' | Where-Object { $_ -ne '' }
-    if ($parts -notcontains $cliDir) {
-      $newPath = (($parts + $cliDir) -join ';');
+    $parts = @($current -split ';' | Where-Object { $_ -ne '' -and $_ -ne $cliDir })
+    $newPath = ((@($cliDir) + $parts) -join ';')
+    if ($newPath -ne $current) {
       [Environment]::SetEnvironmentVariable('Path', $newPath, 'User');
-      Write-Output 'added';
+      Write-Output 'updated';
     } else {
-      Write-Output 'already-present';
+      Write-Output 'already-front';
     }
   `.trim();
 
   try {
     const { stdout } = await execFileAsync('powershell.exe', ['-NoProfile', '-Command', ps], { windowsHide: true });
     const result = stdout.trim();
-    if (result === 'added') {
+    if (result === 'updated') {
       return {
         success: true,
-        message: `Added ${cliDir} to your user PATH. Open a new PowerShell or Command Prompt to use \`rentgen\`.`,
+        message: `Added ${cliDir} to the front of your user PATH. Open a new PowerShell or Command Prompt to use \`rentgen\`.`,
       };
     }
-    return { success: true, message: `${cliDir} is already on your user PATH. Open a new shell to use \`rentgen\`.` };
+    return {
+      success: true,
+      message: `${cliDir} is already at the front of your user PATH. Open a new shell to use \`rentgen\`.`,
+    };
   } catch (err) {
     return {
       success: false,
