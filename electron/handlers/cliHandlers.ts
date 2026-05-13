@@ -39,10 +39,36 @@ function getRecommendedTarget(): string | null {
 
 async function which(binName: string): Promise<string | null> {
   try {
-    const { stdout } =
-      process.platform === 'win32'
-        ? await execFileAsync('where.exe', [binName], { windowsHide: true })
-        : await execAsync(`command -v ${binName}`);
+    if (process.platform === 'win32') {
+      // Read PATH live from the Machine + User registry hives. The Electron process's PATH was
+      // inherited from whatever launched it (Explorer, a terminal) and won't reflect the registry
+      // changes our installer just wrote unless that ancestor processed WM_SETTINGCHANGE — which
+      // it often doesn't. Querying the registry directly mirrors what a fresh shell would see.
+      const exe = binName.toLowerCase().endsWith('.exe') ? binName : `${binName}.exe`;
+      const ps = `
+        $exe = '${exe.replace(/'/g, "''")}'
+        $machine = [Environment]::GetEnvironmentVariable('Path', 'Machine')
+        $user = [Environment]::GetEnvironmentVariable('Path', 'User')
+        $paths = (@($machine, $user) -join ';') -split ';' | Where-Object { $_ -ne '' }
+        foreach ($p in $paths) {
+          try {
+            $candidate = Join-Path -Path $p -ChildPath $exe -ErrorAction Stop
+            if (Test-Path -LiteralPath $candidate -PathType Leaf) {
+              Write-Output $candidate
+              break
+            }
+          } catch { }
+        }
+      `.trim();
+      const { stdout } = await execFileAsync('powershell.exe', ['-NoProfile', '-Command', ps], { windowsHide: true });
+      const first = stdout
+        .split(/\r?\n/)
+        .map((s) => s.trim())
+        .filter(Boolean)[0];
+      return first || null;
+    }
+
+    const { stdout } = await execAsync(`command -v ${binName}`);
     const first = stdout
       .split(/\r?\n/)
       .map((s) => s.trim())
@@ -193,6 +219,28 @@ async function installWindows(source: string): Promise<CliActionResult> {
   try {
     const { stdout } = await execFileAsync('powershell.exe', ['-NoProfile', '-Command', ps], { windowsHide: true });
     const result = stdout.trim();
+
+    // Verify the prepend actually wins. If the user has a conflicting entry in Machine PATH
+    // (system-wide, set with admin), Machine wins over User and our User-PATH prepend can't shadow
+    // it without elevation. Surface that explicitly instead of claiming success.
+    const resolved = await which('rentgen');
+    let conflict: string | null = null;
+    if (resolved) {
+      try {
+        if (fs.realpathSync(resolved) !== fs.realpathSync(source)) conflict = resolved;
+      } catch {
+        conflict = resolved;
+      }
+    }
+
+    if (conflict) {
+      return {
+        success: false,
+        message: `Added ${cliDir} to your user PATH, but \`${conflict}\` still resolves first.`,
+        details: `That path is likely in your system-wide PATH (set with admin). Remove it from System Properties → Environment Variables → System variables → Path, or run this in an elevated PowerShell:\n  [Environment]::SetEnvironmentVariable('Path', ([Environment]::GetEnvironmentVariable('Path', 'Machine') -split ';' | Where-Object { $_ -ne '${path.dirname(conflict).replace(/'/g, "''")}' }) -join ';', 'Machine')`,
+      };
+    }
+
     if (result === 'updated') {
       return {
         success: true,
