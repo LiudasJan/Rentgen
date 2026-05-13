@@ -4,9 +4,20 @@ on:
   push:
     tags:
       - '*'
+  workflow_dispatch:
+    inputs:
+      docker_tag:
+        description: 'Image tag to use (e.g. test, dev-mintaras). Not "latest".'
+        required: true
+        default: 'test'
+      push_image:
+        description: 'Push to GHCR? Uncheck to just verify the build.'
+        type: boolean
+        default: false
 
 jobs:
   build:
+    if: github.event_name == 'push'
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -109,6 +120,7 @@ jobs:
           retention-days: 30
 
   release:
+    if: github.event_name == 'push'
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -382,7 +394,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   docker:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -422,35 +434,40 @@ jobs:
         with:
           images: ghcr.io/rentgen-io/rentgen-cli
           # Git tag of `v1.20.0` produces Docker tags `1.20.0`, `1.20`, and `latest`.
+          # Manual dispatch uses inputs.docker_tag and does not touch `latest`.
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest
+            type=semver,pattern={{version}},enable=${{ github.event_name == 'push' }}
+            type=semver,pattern={{major}}.{{minor}},enable=${{ github.event_name == 'push' }}
+            type=raw,value=latest,enable=${{ github.event_name == 'push' }}
+            type=raw,value=${{ inputs.docker_tag }},enable=${{ github.event_name == 'workflow_dispatch' }}
 
       - name: Build and push image
         uses: docker/build-push-action@v6
         with:
           context: .
           platforms: linux/amd64,linux/arm64
-          push: true
+          push: ${{ github.event_name == 'push' || inputs.push_image }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Smoke test pushed image (--version)
+        if: github.event_name == 'push' || inputs.push_image
         run: |
           docker run --rm \
             ghcr.io/rentgen-io/rentgen-cli:${{ steps.meta.outputs.version }} \
             --version
 
       - name: Smoke test pushed image (run --help)
+        if: github.event_name == 'push' || inputs.push_image
         run: |
           docker run --rm \
             ghcr.io/rentgen-io/rentgen-cli:${{ steps.meta.outputs.version }} \
             run --help
 
       - name: Confirm multi-arch manifest
+        if: github.event_name == 'push' || inputs.push_image
         run: |
           docker buildx imagetools inspect \
             ghcr.io/rentgen-io/rentgen-cli:${{ steps.meta.outputs.version }}
