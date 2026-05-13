@@ -38,9 +38,11 @@ function getRecommendedTarget(): string | null {
 }
 
 async function which(binName: string): Promise<string | null> {
-  const cmd = process.platform === 'win32' ? 'where' : 'command -v';
   try {
-    const { stdout } = await execAsync(`${cmd} ${binName}`);
+    const { stdout } =
+      process.platform === 'win32'
+        ? await execFileAsync('where.exe', [binName], { windowsHide: true })
+        : await execAsync(`command -v ${binName}`);
     const first = stdout
       .split(/\r?\n/)
       .map((s) => s.trim())
@@ -53,7 +55,7 @@ async function which(binName: string): Promise<string | null> {
 
 async function getCliVersion(binPath: string): Promise<string | null> {
   try {
-    const { stdout } = await execFileAsync(binPath, ['--version'], { timeout: 5000 });
+    const { stdout } = await execFileAsync(binPath, ['--version'], { timeout: 5000, windowsHide: true });
     return stdout.trim() || null;
   } catch {
     return null;
