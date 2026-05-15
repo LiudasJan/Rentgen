@@ -278,6 +278,16 @@ export function CliSettings() {
         terminal — built for CI pipelines and scripted smoke tests. It reads the same file produced by{' '}
         <em>General → Export Project</em> and never writes back to it.
       </p>
+      <p className="m-0 text-xs text-text-secondary">
+        Full documentation:{' '}
+        <button
+          type="button"
+          onClick={() => window.electronAPI.openExternal('https://rentgen.io/cli')}
+          className="p-0 bg-transparent border-0 underline text-button-primary hover:text-button-primary-hover cursor-pointer"
+        >
+          rentgen.io/cli
+        </button>
+      </p>
 
       <SectionHeader>
         <span>Install in shell PATH ({status ? platformLabel(status.platform) : '…'})</span>
