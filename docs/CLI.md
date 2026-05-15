@@ -99,8 +99,8 @@ Tags published per release:
 
 | Tag | Meaning |
 |---|---|
-| `:1.20.0` | Exact version. **Recommended for CI** — fully reproducible. |
-| `:1.20` | Latest patch in the 1.20 minor line. Picks up bug fixes automatically. |
+| `:1.21.0` | Exact version. **Recommended for CI** — fully reproducible. |
+| `:1.21` | Latest patch in the 1.21 minor line. Picks up bug fixes automatically. |
 | `:latest` | Newest published release. Convenient, but a major release will change behavior without warning. |
 
 Both `linux/amd64` and `linux/arm64` are published — Docker pulls the right one automatically.
@@ -109,7 +109,7 @@ Both `linux/amd64` and `linux/arm64` are published — Docker pulls the right on
 
 ```sh
 docker run --rm -v "$PWD":/work \
-  ghcr.io/rentgen-io/rentgen-cli:1.20.0 \
+  ghcr.io/rentgen-io/rentgen-cli:1.21.0 \
   xray ./project.rentgen --collection="Smoke Tests" --env=staging --skip-integrity-check
 ```
 
@@ -122,7 +122,7 @@ jobs:
   rentgen-api-check:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/rentgen-io/rentgen-cli:1.20.0
+      image: ghcr.io/rentgen-io/rentgen-cli:1.21.0
     steps:
       - uses: actions/checkout@v5
       - run: rentgen xray ./project.rentgen --collection="Smoke Tests" --env=staging --skip-integrity-check
@@ -132,7 +132,7 @@ jobs:
 
 ```yaml
 rentgen-api-check:
-  image: ghcr.io/rentgen-io/rentgen-cli:1.20.0
+  image: ghcr.io/rentgen-io/rentgen-cli:1.21.0
   stage: test
   script:
     - rentgen xray ./project.rentgen --collection="Smoke Tests" --env=staging --skip-integrity-check
@@ -145,7 +145,7 @@ pipelines:
   default:
     - step:
         name: Rentgen API check
-        image: ghcr.io/rentgen-io/rentgen-cli:1.20.0
+        image: ghcr.io/rentgen-io/rentgen-cli:1.21.0
         script:
           - rentgen xray ./project.rentgen --collection="Smoke Tests" --env=staging --skip-integrity-check
 ```
@@ -156,7 +156,7 @@ pipelines:
 pipeline {
   agent {
     docker {
-      image 'ghcr.io/rentgen-io/rentgen-cli:1.20.0'
+      image 'ghcr.io/rentgen-io/rentgen-cli:1.21.0'
       args '-v $WORKSPACE:/work -w /work'
     }
   }
@@ -173,7 +173,7 @@ pipeline {
 ### Notes
 
 - The image is **public** — no `docker login` required.
-- The container runs as `root` by default. To run as a non-root user, build your own image: `FROM ghcr.io/rentgen-io/rentgen-cli:1.20.0` then `USER 1001`.
+- The container runs as `root` by default. To run as a non-root user, build your own image: `FROM ghcr.io/rentgen-io/rentgen-cli:1.21.0` then `USER 1001`.
 - Exit codes are unchanged from the native CLI: `0` (all pass), `1` (failures or interrupted), `2` (invalid input or missing CI flags).
 
 ---
