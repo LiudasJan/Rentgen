@@ -97,7 +97,7 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
       const nonEmptyVariables = variables.filter((v) => v.key.trim() !== '');
       onSave({
         id: environment.id,
-        title: title.trim() || 'Untitled',
+        title: title.trim() || t('environment.untitled'),
         color,
         variables: nonEmptyVariables,
       });
@@ -157,7 +157,7 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
 
     const savedEnvironment: Environment = {
       id: environment?.id || generateEnvironmentId(),
-      title: title.trim() || 'Untitled',
+      title: title.trim() || t('environment.untitled'),
       color,
       variables: nonEmptyVariables,
     };

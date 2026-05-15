@@ -74,6 +74,7 @@ const en = {
     randomString: 'Random string',
     deleteEnvironmentConfirm: 'Are you sure you want to delete this environment?',
     deleteEnvironment: 'Delete Environment',
+    untitled: 'Untitled',
   },
 
   // History
@@ -101,6 +102,8 @@ const en = {
     protoSchemaLoaded: '🟢 Proto schema loaded',
     protoSchemaParseFailed: '🔴 Failed to parse proto: ',
     wssUrlRequired: '🔴 Please use ws:// or wss:// URL',
+    modePlaceholder: 'MODE',
+    methodPlaceholder: 'METHOD',
   },
 
   // Response
@@ -144,6 +147,7 @@ const en = {
     computingDifferences: 'Computing differences…',
     bodyParameters: 'Body Parameters',
     queryParameters: 'Query Parameters',
+    formatPlaceholder: 'Format',
   },
 
   // Comparison Panel
@@ -237,13 +241,86 @@ const en = {
     general: 'General',
     themes: 'Themes',
     language: 'Language',
-    cli: 'CLI',
     themesDescription: 'Personalize your experience with themes that match your style.',
     themeLight: 'Light',
     themeDark: 'Dark',
-    cliDescription: 'Rentgen CLI is currently in active development.',
-    cliBody:
-      'The Rentgen CLI will provide automation-ready execution for teams integrating structural testing into CI/CD workflows.',
+    cli: {
+      name: 'CLI',
+      intro:
+        'The Rentgen CLI runs a folder of requests from a <c>.rentgen</c> project export, straight from the terminal — built for CI pipelines and scripted smoke tests. It reads the same file produced by <e>General → Export Project</e> and never writes back to it.',
+      fullDocumentation: 'Full documentation:',
+      installInPath: 'Install in shell PATH ({{platform}})',
+      checkingStatus: 'Checking install status…',
+      runCli: 'Run the CLI',
+      runCliDescription:
+        'Rentgen exposes a single subcommand, <c>xray</c> (alias: <c>run</c>). Point it at a project file you exported from the app.',
+      exportProject: 'Export Project',
+      noProjectFileYet:
+        "Don't have a project file yet? Export one now — same action as <e>General → Export Project</e>.",
+      developmentNote: 'During development, invoke directly from the repo with <c>npm run dev:cli -- xray …</c>.',
+      options: 'Options',
+      examples: 'Examples',
+      exampleInteractive: 'Pick a folder and environment interactively:',
+      exampleCi: 'Scripted CI run with an explicit folder and environment, failing fast:',
+      exampleCiJson: 'Machine-readable output for CI pipelines (GitHub Actions, Jenkins, Slack notifiers):',
+      exampleOverrideVars: 'Override variables at the call site (highest priority):',
+      integrityCheck: 'Integrity check',
+      integrityCheckDescription:
+        "Every project export carries a SHA-256 checksum of its data. On load, the CLI recomputes the checksum. If it matches, the run proceeds silently. If it's missing or tampered with, you'll see a confirmation prompt in a TTY or an error in CI. <c>--skip-integrity-check</c> bypasses the gate — use it when you know the file was hand-edited on purpose.",
+      exitCodesTitle: 'Exit codes',
+      idempotency: 'Idempotency',
+      idempotencyDescription:
+        'The CLI never writes to the project file. Dynamic variables extracted from responses are kept in memory for the duration of a single run, so two back-to-back invocations against an unmodified project produce byte-identical resolved URLs, headers, and bodies.',
+      platform: {
+        macos: 'macOS',
+        windows: 'Windows',
+        linux: 'Linux',
+      },
+      status: {
+        binaryUnavailable: 'CLI binary unavailable',
+        binaryUnavailableReinstall: 'Reinstall the latest Rentgen build to enable the CLI.',
+        installed: 'Installed',
+        managedByPackageManager: ' (managed by package manager)',
+        conflictingPath: 'Conflicting `rentgen` on PATH',
+        conflictingPathDescription:
+          "<c>{{path}}</c> is on PATH but doesn't point at this Rentgen install. Remove it or installing here will shadow it.",
+        notInstalled: 'Not installed',
+        notInstalledDescription: 'Click <e>Install</e> below to add <c>rentgen</c> to your shell PATH.',
+      },
+      action: {
+        working: 'Working…',
+        uninstall: 'Uninstall CLI',
+        reinstall: 'Reinstall',
+        installRentgenInPath: 'Install rentgen command in PATH',
+        packageManagerNote:
+          'The Linux package manager handles install and removal. Use <c>sudo apt remove rentgen</c> / <c>sudo dnf remove rentgen</c> to uninstall.',
+      },
+      platformTip: {
+        macos:
+          'macOS will prompt for your password to write the symlink to <c>/usr/local/bin/rentgen</c>. After install, open a new Terminal tab to pick up the change.',
+        windows:
+          "Windows install adds the Rentgen resources directory to your <e>user</e> PATH (no admin needed). Open a new PowerShell, Command Prompt, or Windows Terminal tab after install — existing shells won't see the change.",
+        linux:
+          'On Linux, the deb/rpm postinstall script links <c>/usr/bin/rentgen</c> automatically. If you installed via a portable archive instead, this button creates a user symlink at <c>/usr/local/bin/rentgen</c> (or <c>~/.local/bin/rentgen</c> as a fallback).',
+      },
+      flag: {
+        collection: 'Folder to run from the project file. Omit to pick interactively.',
+        env: 'Environment to use. Pass --env=none to run without any environment.',
+        skipIntegrityCheck: 'Skip the checksum confirmation prompt.',
+        var: 'Override a variable. Repeatable. Highest priority over env and dynamic values.',
+        timeout: 'Per-request timeout in milliseconds. Default 30000.',
+        failFast: 'Stop after first failure.',
+        report: 'Machine-readable output. Supported: json (writes JSON to stdout, suppresses human output).',
+        noColor: 'Disable colored output.',
+        verbose: 'Print full request/response details and warn about unresolved variables.',
+      },
+      exit: {
+        code0: 'All requests passed.',
+        code1: 'Run completed with failures, aborted at the checksum prompt, or interrupted with Ctrl+C.',
+        code2:
+          'Invalid input: missing file, bad JSON, wrong shape, ambiguous or unknown --collection / --env, or CI mode without the required flags.',
+      },
+    },
     history: {
       title: 'History',
       description: 'Configure how request history is collected and retained.',
@@ -307,6 +384,8 @@ const en = {
     enumLabel: 'Enter all valid values separated by ","',
     numberLabel: 'Set Min/Max range for boundary test. 0 - integer, 0.00 - decimal',
     stringLabel: 'Value max length',
+    minPlaceholder: 'Min',
+    maxPlaceholder: 'Max',
   },
 
   // Parameter types
@@ -344,6 +423,7 @@ const en = {
   contextMenu: {
     setAsVariable: 'Set as Variable',
     saveRequestFirst: 'Save request to collection first',
+    setAsDynamicVariableTitle: 'Set "{{path}}" as dynamic variable',
   },
 
   // Badges

@@ -57,7 +57,7 @@ export default function SettingsModal() {
       component: <LanguageSettings />,
     },
     {
-      name: t('settings.cli'),
+      name: t('settings.cli.name'),
       icon: <CliIcon className="w-4 h-4" />,
       component: <CliSettings />,
     },

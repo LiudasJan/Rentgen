@@ -58,7 +58,7 @@ export function ParameterControls({ dynamicValue, onChange }: Props) {
           <div className="flex items-center gap-2">
             <Input
               className={inputClassName}
-              placeholder="Min"
+              placeholder={t('controls.minPlaceholder')}
               step={0.01}
               type="number"
               value={normalizeDecimal((value as Interval).min) ?? ''}
@@ -75,7 +75,7 @@ export function ParameterControls({ dynamicValue, onChange }: Props) {
             />
             <Input
               className={inputClassName}
-              placeholder="Max"
+              placeholder={t('controls.maxPlaceholder')}
               step={0.01}
               type="number"
               value={normalizeDecimal((value as Interval).max) ?? ''}

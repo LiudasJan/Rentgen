@@ -2,6 +2,7 @@ import MonacoEditor, { OnMount, loader } from '@monaco-editor/react';
 import cn from 'classnames';
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAppSelector } from '../../store/hooks';
 import { selectTheme } from '../../store/selectors';
 import { extractValue, stringifyExtractedValue } from '../../utils';
@@ -300,6 +301,7 @@ interface Props {
 
 export function JsonViewer({ source, className, responsePanelContext, showVariableButtons, onSetVariable }: Props) {
   const theme = useAppSelector(selectTheme);
+  const { t } = useTranslation();
   const { showContextMenu } = useContextMenu();
   const isDark = theme === 'dark';
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
@@ -342,7 +344,7 @@ export function JsonViewer({ source, className, responsePanelContext, showVariab
       const domNode = document.createElement('button');
       domNode.className = 'json-plus-button';
       domNode.textContent = '+';
-      domNode.title = `Set "${position.path}" as dynamic variable`;
+      domNode.title = t('contextMenu.setAsDynamicVariableTitle', { path: position.path });
       domNode.onclick = (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -364,7 +366,7 @@ export function JsonViewer({ source, className, responsePanelContext, showVariab
         }),
       };
     },
-    [],
+    [t],
   );
 
   // Dispose all widgets

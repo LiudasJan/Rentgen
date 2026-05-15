@@ -74,6 +74,7 @@ const lt = {
     randomString: 'Atsitiktinė eilutė',
     deleteEnvironmentConfirm: 'Ar tikrai norite ištrinti šią aplinką?',
     deleteEnvironment: 'Ištrinti aplinką',
+    untitled: 'Be pavadinimo',
   },
 
   // History
@@ -101,6 +102,8 @@ const lt = {
     protoSchemaLoaded: '🟢 Proto schema įkelta',
     protoSchemaParseFailed: '🔴 Nepavyko apdoroti proto: ',
     wssUrlRequired: '🔴 Prašome naudoti ws:// arba wss:// URL',
+    modePlaceholder: 'REŽIMAS',
+    methodPlaceholder: 'METODAS',
   },
 
   // Response
@@ -144,6 +147,7 @@ const lt = {
     computingDifferences: 'Skaičiuojami skirtumai…',
     bodyParameters: 'Turinio parametrai',
     queryParameters: 'Užklausos parametrai',
+    formatPlaceholder: 'Formatas',
   },
 
   // Comparison Panel
@@ -237,13 +241,87 @@ const lt = {
     general: 'Bendra',
     themes: 'Temos',
     language: 'Kalba',
-    cli: 'CLI',
     themesDescription: 'Pritaikykite savo patirtį temomis, atitinkančiomis jūsų stilių.',
     themeLight: 'Šviesi',
     themeDark: 'Tamsi',
-    cliDescription: 'Rentgen CLI šiuo metu aktyviai kuriamas.',
-    cliBody:
-      'Rentgen CLI suteiks automatizuotą vykdymą komandoms, integruojančioms struktūrinį testavimą į CI/CD darbo eigas.',
+    cli: {
+      name: 'CLI',
+      intro:
+        'Rentgen CLI vykdo užklausų aplanką iš <c>.rentgen</c> projekto eksporto tiesiogiai iš terminalo — sukurta CI darbo eigoms ir scenarijais valdomiems greitiesiems testams. Skaito tą patį failą, kurį sukuria <e>Bendra → Eksportuoti projektą</e>, ir niekada į jį nerašo.',
+      fullDocumentation: 'Pilna dokumentacija:',
+      installInPath: 'Įdiegti į shell PATH ({{platform}})',
+      checkingStatus: 'Tikrinama įdiegimo būsena…',
+      runCli: 'Vykdyti CLI',
+      runCliDescription:
+        'Rentgen turi vieną subkomandą, <c>xray</c> (alias: <c>run</c>). Nurodykite jai projekto failą, eksportuotą iš programos.',
+      exportProject: 'Eksportuoti projektą',
+      noProjectFileYet:
+        'Dar neturite projekto failo? Eksportuokite dabar — tas pats veiksmas kaip <e>Bendra → Eksportuoti projektą</e>.',
+      developmentNote: 'Kūrimo metu kvieskite tiesiogiai iš repo su <c>npm run dev:cli -- xray …</c>.',
+      options: 'Parinktys',
+      examples: 'Pavyzdžiai',
+      exampleInteractive: 'Interaktyviai pasirinkite aplanką ir aplinką:',
+      exampleCi: 'Scenarijais valdomas CI vykdymas su aiškiu aplanku ir aplinka, greitai nutraukiamas:',
+      exampleCiJson: 'Mašininis išvedimas CI darbo eigoms (GitHub Actions, Jenkins, Slack pranešikliams):',
+      exampleOverrideVars: 'Pakeisti kintamuosius iškvietimo metu (aukščiausias prioritetas):',
+      integrityCheck: 'Vientisumo patikra',
+      integrityCheckDescription:
+        'Kiekvienas projekto eksportas turi SHA-256 kontrolinę sumą savo duomenims. Įkeliant CLI perskaičiuoja sumą. Jei sutampa, vykdymas tęsiamas tyliai. Jei jos trūksta arba ji pakeista, TTY matysite patvirtinimo užklausą arba CI klaidą. <c>--skip-integrity-check</c> apeina patikrą — naudokite, kai žinote, kad failas buvo redaguotas rankomis tikslingai.',
+      exitCodesTitle: 'Išėjimo kodai',
+      idempotency: 'Idempotencija',
+      idempotencyDescription:
+        'CLI niekada nerašo į projekto failą. Iš atsakymų išgauti dinaminiai kintamieji saugomi atmintyje vieno vykdymo metu, todėl du iš eilės iškvietimai su nepakeistu projektu duoda identiškus baitams URL, antraštes ir turinį.',
+      platform: {
+        macos: 'macOS',
+        windows: 'Windows',
+        linux: 'Linux',
+      },
+      status: {
+        binaryUnavailable: 'CLI binarinis failas nepasiekiamas',
+        binaryUnavailableReinstall: 'Pakartotinai įdiekite naujausią Rentgen versiją, kad įgalintumėte CLI.',
+        installed: 'Įdiegta',
+        managedByPackageManager: ' (valdoma paketų tvarkyklės)',
+        conflictingPath: 'Konfliktuojantis `rentgen` PATH kelyje',
+        conflictingPathDescription:
+          '<c>{{path}}</c> yra PATH kelyje, bet nenukreipia į šį Rentgen įdiegimą. Pašalinkite jį arba įdiegus čia jis bus uždengtas.',
+        notInstalled: 'Neįdiegta',
+        notInstalledDescription:
+          'Spustelėkite <e>Įdiegti</e> žemiau, kad pridėtumėte <c>rentgen</c> į savo shell PATH.',
+      },
+      action: {
+        working: 'Vykdoma…',
+        uninstall: 'Pašalinti CLI',
+        reinstall: 'Pakartotinai įdiegti',
+        installRentgenInPath: 'Įdiegti rentgen komandą į PATH',
+        packageManagerNote:
+          'Linux paketų tvarkyklė valdo įdiegimą ir pašalinimą. Naudokite <c>sudo apt remove rentgen</c> / <c>sudo dnf remove rentgen</c>, kad pašalintumėte.',
+      },
+      platformTip: {
+        macos:
+          'macOS paprašys jūsų slaptažodžio, kad sukurtų simbolinę nuorodą į <c>/usr/local/bin/rentgen</c>. Po įdiegimo atidarykite naują Terminal skirtuką, kad pakeitimas įsigaliotų.',
+        windows:
+          'Windows įdiegimas prideda Rentgen išteklių katalogą į jūsų <e>vartotojo</e> PATH (administratoriaus teisių nereikia). Po įdiegimo atidarykite naują PowerShell, Command Prompt arba Windows Terminal skirtuką — esami apvalkalai pakeitimo nematys.',
+        linux:
+          'Linux deb/rpm scenarijus po įdiegimo automatiškai sukuria nuorodą <c>/usr/bin/rentgen</c>. Jei įdiegėte iš nešiojamo archyvo, šis mygtukas sukuria vartotojo simbolinę nuorodą į <c>/usr/local/bin/rentgen</c> (arba <c>~/.local/bin/rentgen</c> kaip atsarginį variantą).',
+      },
+      flag: {
+        collection: 'Aplankas, kurį vykdyti iš projekto failo. Praleiskite, kad pasirinktumėte interaktyviai.',
+        env: 'Aplinka, kurią naudoti. Perduokite --env=none, kad vykdytumėte be aplinkos.',
+        skipIntegrityCheck: 'Praleisti kontrolinės sumos patvirtinimo užklausą.',
+        var: 'Pakeisti kintamąjį. Galima kartoti. Aukščiausias prioritetas virš aplinkos ir dinaminių reikšmių.',
+        timeout: 'Užklausos laiko limitas milisekundėmis. Numatytasis 30000.',
+        failFast: 'Sustabdyti po pirmos nesėkmės.',
+        report: 'Mašininis išvedimas. Palaikoma: json (rašo JSON į stdout, slopina žmonėms skirtą išvedimą).',
+        noColor: 'Išjungti spalvotą išvedimą.',
+        verbose: 'Spausdinti pilną užklausos/atsakymo informaciją ir įspėti apie neišspręstus kintamuosius.',
+      },
+      exit: {
+        code0: 'Visos užklausos sėkmingos.',
+        code1: 'Vykdymas baigtas su nesėkmėmis, nutrauktas kontrolinės sumos užklausoje arba pertrauktas Ctrl+C.',
+        code2:
+          'Neteisingas įvedimas: trūksta failo, blogas JSON, neteisinga struktūra, dviprasmiškas arba nežinomas --collection / --env, arba CI režimas be būtinų vėliavų.',
+      },
+    },
     history: {
       title: 'Istorija',
       description: 'Konfigūruokite, kaip renkama ir saugoma užklausų istorija.',
@@ -307,6 +385,8 @@ const lt = {
     enumLabel: 'Įveskite visas galimas reikšmes, atskirtas „,"',
     numberLabel: 'Nustatykite Min/Max intervalą ribiniam testui. 0 - sveikasis, 0.00 - dešimtainis',
     stringLabel: 'Maksimalus reikšmės ilgis',
+    minPlaceholder: 'Min',
+    maxPlaceholder: 'Maks',
   },
 
   // Parameter types
@@ -344,6 +424,7 @@ const lt = {
   contextMenu: {
     setAsVariable: 'Nustatyti kaip kintamąjį',
     saveRequestFirst: 'Pirmiausia išsaugokite užklausą kolekcijoje',
+    setAsDynamicVariableTitle: 'Nustatyti „{{path}}" kaip dinaminį kintamąjį',
   },
 
   // Badges

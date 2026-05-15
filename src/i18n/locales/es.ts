@@ -74,6 +74,7 @@ const es = {
     randomString: 'Cadena aleatoria',
     deleteEnvironmentConfirm: '¿Estás seguro de que deseas eliminar este entorno?',
     deleteEnvironment: 'Eliminar entorno',
+    untitled: 'Sin título',
   },
 
   // History
@@ -101,6 +102,8 @@ const es = {
     protoSchemaLoaded: '🟢 Esquema Proto cargado',
     protoSchemaParseFailed: '🔴 Error al analizar proto: ',
     wssUrlRequired: '🔴 Por favor usa una URL con ws:// o wss://',
+    modePlaceholder: 'MODO',
+    methodPlaceholder: 'MÉTODO',
   },
 
   // Response
@@ -145,6 +148,7 @@ const es = {
     computingDifferences: 'Calculando diferencias…',
     bodyParameters: 'Parámetros del cuerpo',
     queryParameters: 'Parámetros de consulta',
+    formatPlaceholder: 'Formato',
   },
 
   // Comparison Panel
@@ -239,13 +243,87 @@ const es = {
     general: 'General',
     themes: 'Temas',
     language: 'Idioma',
-    cli: 'CLI',
     themesDescription: 'Personaliza tu experiencia con temas que se adapten a tu estilo.',
     themeLight: 'Claro',
     themeDark: 'Oscuro',
-    cliDescription: 'Rentgen CLI está actualmente en desarrollo activo.',
-    cliBody:
-      'Rentgen CLI proporcionará ejecución lista para automatización para equipos que integren pruebas estructurales en flujos de trabajo CI/CD.',
+    cli: {
+      name: 'CLI',
+      intro:
+        'El CLI de Rentgen ejecuta una carpeta de solicitudes desde una exportación de proyecto <c>.rentgen</c>, directamente desde el terminal — construido para pipelines de CI y pruebas de humo en scripts. Lee el mismo archivo producido por <e>General → Exportar proyecto</e> y nunca escribe en él.',
+      fullDocumentation: 'Documentación completa:',
+      installInPath: 'Instalar en shell PATH ({{platform}})',
+      checkingStatus: 'Comprobando estado de instalación…',
+      runCli: 'Ejecutar el CLI',
+      runCliDescription:
+        'Rentgen expone un único subcomando, <c>xray</c> (alias: <c>run</c>). Apúntalo al archivo de proyecto que exportaste desde la aplicación.',
+      exportProject: 'Exportar proyecto',
+      noProjectFileYet:
+        '¿Aún no tienes un archivo de proyecto? Exporta uno ahora — misma acción que <e>General → Exportar proyecto</e>.',
+      developmentNote:
+        'Durante el desarrollo, invócalo directamente desde el repo con <c>npm run dev:cli -- xray …</c>.',
+      options: 'Opciones',
+      examples: 'Ejemplos',
+      exampleInteractive: 'Elige una carpeta y un entorno de forma interactiva:',
+      exampleCi: 'Ejecución scriptada de CI con carpeta y entorno explícitos, fallando rápido:',
+      exampleCiJson: 'Salida legible por máquina para pipelines de CI (GitHub Actions, Jenkins, notificadores Slack):',
+      exampleOverrideVars: 'Sobrescribe variables en el sitio de llamada (máxima prioridad):',
+      integrityCheck: 'Verificación de integridad',
+      integrityCheckDescription:
+        'Cada exportación de proyecto lleva un checksum SHA-256 de sus datos. Al cargar, el CLI recalcula el checksum. Si coincide, la ejecución continúa silenciosamente. Si falta o ha sido manipulado, verás un aviso de confirmación en TTY o un error en CI. <c>--skip-integrity-check</c> omite el control — úsalo cuando sabes que el archivo se editó manualmente a propósito.',
+      exitCodesTitle: 'Códigos de salida',
+      idempotency: 'Idempotencia',
+      idempotencyDescription:
+        'El CLI nunca escribe en el archivo de proyecto. Las variables dinámicas extraídas de las respuestas se mantienen en memoria durante una única ejecución, así que dos invocaciones consecutivas contra un proyecto sin modificar producen URLs, cabeceras y cuerpos resueltos byte por byte idénticos.',
+      platform: {
+        macos: 'macOS',
+        windows: 'Windows',
+        linux: 'Linux',
+      },
+      status: {
+        binaryUnavailable: 'Binario CLI no disponible',
+        binaryUnavailableReinstall: 'Reinstala la última versión de Rentgen para habilitar el CLI.',
+        installed: 'Instalado',
+        managedByPackageManager: ' (gestionado por el administrador de paquetes)',
+        conflictingPath: '`rentgen` en conflicto en PATH',
+        conflictingPathDescription:
+          '<c>{{path}}</c> está en PATH pero no apunta a esta instalación de Rentgen. Elimínalo o instalar aquí lo enmascarará.',
+        notInstalled: 'No instalado',
+        notInstalledDescription: 'Haz clic en <e>Instalar</e> abajo para añadir <c>rentgen</c> a tu shell PATH.',
+      },
+      action: {
+        working: 'Trabajando…',
+        uninstall: 'Desinstalar CLI',
+        reinstall: 'Reinstalar',
+        installRentgenInPath: 'Instalar comando rentgen en PATH',
+        packageManagerNote:
+          'El administrador de paquetes de Linux gestiona la instalación y la eliminación. Usa <c>sudo apt remove rentgen</c> / <c>sudo dnf remove rentgen</c> para desinstalar.',
+      },
+      platformTip: {
+        macos:
+          'macOS te pedirá tu contraseña para escribir el symlink en <c>/usr/local/bin/rentgen</c>. Después de instalar, abre una nueva pestaña de Terminal para aplicar el cambio.',
+        windows:
+          'La instalación en Windows añade el directorio de recursos de Rentgen al PATH de <e>usuario</e> (no requiere admin). Abre una nueva pestaña de PowerShell, Command Prompt o Windows Terminal después de instalar — las shells existentes no verán el cambio.',
+        linux:
+          'En Linux, el script postinstalación de deb/rpm enlaza <c>/usr/bin/rentgen</c> automáticamente. Si instalaste mediante un archivo portátil, este botón crea un symlink de usuario en <c>/usr/local/bin/rentgen</c> (o <c>~/.local/bin/rentgen</c> como alternativa).',
+      },
+      flag: {
+        collection: 'Carpeta a ejecutar desde el archivo de proyecto. Omite para elegir interactivamente.',
+        env: 'Entorno a usar. Pasa --env=none para ejecutar sin entorno.',
+        skipIntegrityCheck: 'Omite el aviso de confirmación del checksum.',
+        var: 'Sobrescribe una variable. Repetible. Máxima prioridad sobre el entorno y valores dinámicos.',
+        timeout: 'Tiempo de espera por solicitud en milisegundos. Por defecto 30000.',
+        failFast: 'Detener tras el primer fallo.',
+        report: 'Salida legible por máquina. Compatibles: json (escribe JSON en stdout, suprime salida humana).',
+        noColor: 'Desactivar salida coloreada.',
+        verbose: 'Imprime detalles completos de solicitud/respuesta y advierte sobre variables sin resolver.',
+      },
+      exit: {
+        code0: 'Todas las solicitudes pasaron.',
+        code1: 'La ejecución terminó con fallos, se abortó en el aviso de checksum o se interrumpió con Ctrl+C.',
+        code2:
+          'Entrada inválida: archivo faltante, JSON erróneo, forma incorrecta, --collection / --env ambiguo o desconocido, o modo CI sin las flags requeridas.',
+      },
+    },
     history: {
       title: 'Historial',
       description: 'Configura cómo se recopila y retiene el historial de solicitudes.',
@@ -309,6 +387,8 @@ const es = {
     enumLabel: 'Introduce todos los valores válidos separados por ","',
     numberLabel: 'Establece el rango Mín/Máx para prueba de límites. 0 - entero, 0.00 - decimal',
     stringLabel: 'Longitud máxima del valor',
+    minPlaceholder: 'Mín',
+    maxPlaceholder: 'Máx',
   },
 
   // Parameter types
@@ -346,6 +426,7 @@ const es = {
   contextMenu: {
     setAsVariable: 'Establecer como variable',
     saveRequestFirst: 'Primero guarda la solicitud en una colección',
+    setAsDynamicVariableTitle: 'Establecer "{{path}}" como variable dinámica',
   },
 
   // Badges

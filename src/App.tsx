@@ -710,7 +710,7 @@ export default function App() {
                   className="font-bold"
                   isSearchable={false}
                   options={modeOptions}
-                  placeholder="MODE"
+                  placeholder={t('request.modePlaceholder')}
                   value={modeOptions.find((option) => option.value == mode)}
                   onChange={(option: SelectOption<Mode>) => {
                     dispatch(requestActions.setMode(option.value));
@@ -783,7 +783,7 @@ export default function App() {
                     }}
                     isCreatable={true}
                     options={methodOptions}
-                    placeholder="METHOD"
+                    placeholder={t('request.methodPlaceholder')}
                     value={methodOptions.find((option) => option.value == method) || { value: method, label: method }}
                     onChange={(option: SelectOption<Method>) => dispatch(requestActions.setMethod(option.value))}
                   />
@@ -924,14 +924,14 @@ export default function App() {
                     <Loader className="h-5 w-5" />
                   ) : (
                     <>
-                      {httpResponse.status}{' '}
+                      {httpResponse.status === NETWORK_ERROR ? t('response.networkError') : httpResponse.status}{' '}
                       <span className="text-xs text-text dark:text-dark-text">{httpResponse.time.toFixed(2)} ms</span>
                     </>
                   )}
                 </div>
                 {runResult?.warning && (
                   <div className="px-4 py-2 text-xs bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 border-t border-yellow-200 dark:border-yellow-800">
-                    <span className="font-semibold">Warning:</span> {runResult.warning}
+                    <span className="font-semibold">{t('common.warning')}</span> {runResult.warning}
                   </div>
                 )}
                 {httpResponse.status !== SENDING && (
@@ -1083,7 +1083,7 @@ export default function App() {
                         <Select
                           isSearchable={false}
                           options={exportFormatOptions}
-                          placeholder="Format"
+                          placeholder={t('tests.formatPlaceholder')}
                           value={exportFormatOptions.find((option) => option.value === exportFormat)}
                           onChange={(option: SelectOption<ReportFormat>) =>
                             dispatch(uiActions.setExportFormat(option.value))
