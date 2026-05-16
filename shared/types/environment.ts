@@ -70,7 +70,7 @@ export interface VariableValidationResult {
 export interface ExtractionResult {
   value: string | null;
   success: boolean;
-  error?: string; // e.g., "selector not found in response", "body is not valid JSON"
+  error?: string;
 }
 
 /**

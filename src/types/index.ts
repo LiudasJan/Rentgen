@@ -127,8 +127,8 @@ export interface ExportReport {
   suites: ReportSuite[];
 }
 
-export * from './environment';
+export * from '../../shared/types/environment';
 export * from './ipc';
-export * from './postman';
+export * from '../../shared/types/postman';
 export * from './postman-full';
-export * from './project';
+export * from '../../shared/types/project';

@@ -1,7 +1,7 @@
 # 🔬 Rentgen
 
 👉 Landing page: [rentgen.io](https://rentgen.io)
-👉 Download: [Latest Release](https://github.com/LiudasJan/Rentgen/releases/latest)
+👉 Download: [Latest Release](https://github.com/Rentgen-io/Rentgen/releases/latest)
 
 **Rentgen** - Automation before automation. Finding API bugs when you have no tests.
 
@@ -49,12 +49,31 @@ Rentgen has already found real issues in production APIs, including:
 
 ## Get started (30 seconds)
 
-1. Download the [latest Release](https://github.com/LiudasJan/Rentgen/releases/latest)
+1. Download the [latest Release](https://github.com/Rentgen-io/Rentgen/releases/latest)
 2. Open Rentgen
 3. Import a cURL
 4. Run tests
 
 That’s it. If something fails just copy bug report and share with a team.
+
+## Run from the terminal — Rentgen CLI
+
+The desktop installer also ships the `rentgen` CLI, so you can wire your `.rentgen` project exports straight into CI pipelines or local smoke-test scripts.
+
+```sh
+rentgen xray ./rentgen-project.rentgen --collection="Smoke Tests" --env=staging --fail-fast
+```
+
+- **Linux** users get the command automatically after `apt install` / `dnf install`.
+- **macOS** and **Windows** users enable it with one click in **Settings → CLI → Install rentgen command in PATH**.
+
+| Before install | After install |
+|---|---|
+| <img src="./public/cli-settings-not-installed.png" alt="Settings → CLI panel showing 'Not installed' with the Install rentgen command in PATH button" width="420" /> | <img src="./public/cli-settings-installed.png" alt="Settings → CLI panel showing 'Installed' with the resolved symlink path, Uninstall and Reinstall buttons" width="420" /> |
+
+Or skip the desktop install entirely and run from Docker — every release publishes a multi-arch image to `ghcr.io/rentgen-io/rentgen-cli` for use in CI/CD pipelines (GitHub Actions, GitLab CI, Bitbucket, Jenkins).
+
+Full install + usage guide: [docs/CLI.md](./docs/CLI.md).
 
 ## 🎬 Demo
 

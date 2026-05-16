@@ -4,8 +4,9 @@ import { selectProjectImportConfirmModal } from '../../store/selectors';
 import { collectionActions } from '../../store/slices/collectionSlice';
 import { environmentActions } from '../../store/slices/environmentSlice';
 import { historyActions } from '../../store/slices/historySlice';
-import { settingsActions } from '../../store/slices/settingsSlice';
+import { settingsActions, SettingsState } from '../../store/slices/settingsSlice';
 import { uiActions } from '../../store/slices/uiSlice';
+import { HistoryEntry } from '../../types/history';
 import IntegrityBadge from '../badges/IntegrityBadge';
 import Modal from './Modal';
 import Button, { ButtonSize, ButtonType } from '../buttons/Button';
@@ -46,8 +47,8 @@ export default function ProjectImportConfirmModal() {
     dispatch(collectionActions.setCollection(data.collection));
     dispatch(environmentActions.setEnvironments(data.environments));
     dispatch(environmentActions.replaceDynamicVariables(data.dynamicVariables));
-    dispatch(historyActions.setEntries(data.history));
-    dispatch(settingsActions.replaceSettings(data.settings));
+    dispatch(historyActions.setEntries(data.history as HistoryEntry[]));
+    dispatch(settingsActions.replaceSettings(data.settings as unknown as SettingsState));
     dispatch(uiActions.closeProjectImportConfirmModal());
 
     dispatch(collectionActions.selectRequest(null));

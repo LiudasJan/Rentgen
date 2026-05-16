@@ -94,3 +94,7 @@ typings/
 
 # Electron-Forge
 out/
+
+# CLI standalone binaries (built per platform during `npm run package`)
+cli-bin/
+dist/

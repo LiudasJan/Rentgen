@@ -157,7 +157,6 @@ const useTests = () => {
         getTestCount(PerformanceInsights) -
         disabledSecurityTests.length +
         (disabledSecurityTests.includes(OPTIONS_METHOD_HANDLING_TEST_NAME) ? -1 : 0);
-      const domain = new URL(options.url).hostname;
       const timestamp = new Date().getTime();
 
       dispatch(testActions.setCount(count));

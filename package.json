@@ -4,12 +4,19 @@
   "version": "1.20.0",
   "description": "Automation before automation. Finding API bugs when you have no tests.",
   "main": ".webpack/main",
+  "bin": {
+    "rentgen": "./dist/cli/index.js"
+  },
   "scripts": {
     "start": "electron-forge start",
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
-    "lint": "eslint --ext .ts,.tsx ."
+    "lint": "eslint .",
+    "build:cli": "tsup cli/index.ts --format cjs --target node22 --out-dir dist/cli",
+    "build:cli:bin": "node scripts/build-cli-bin.cjs",
+    "build:cli:bundle": "tsup --config cli/tsup.bundle.config.ts",
+    "dev:cli": "tsx cli/index.ts"
   },
   "keywords": [],
   "author": {
@@ -17,6 +24,9 @@
     "email": "liudasjan@gmail.com"
   },
   "license": "RSAL-1.0",
+  "engines": {
+    "node": ">=22.12"
+  },
   "devDependencies": {
     "@electron-forge/cli": "^7.11.1",
     "@electron-forge/maker-deb": "^7.11.1",
@@ -27,6 +37,7 @@
     "@electron-forge/plugin-fuses": "^7.11.1",
     "@electron-forge/plugin-webpack": "^7.11.1",
     "@electron/fuses": "^1.8.0",
+    "@eslint/js": "^10.0.1",
     "@svgr/webpack": "^8.1.0",
     "@types/react": "^19.2.9",
     "@types/react-dom": "^19.2.3",
@@ -34,7 +45,10 @@
     "@typescript-eslint/eslint-plugin": "^8.53.1",
     "@typescript-eslint/parser": "^8.53.1",
     "@vercel/webpack-asset-relocator-loader": "^1.7.3",
+    "@yao-pkg/pkg": "^6.10.0",
     "baseline-browser-mapping": "^2.10.0",
+    "chalk": "^4.1.2",
+    "commander": "^14.0.3",
     "css-loader": "^7.1.2",
     "electron": "40.6.0",
     "electron-devtools-installer": "^4.0.0",
@@ -42,17 +56,22 @@
     "eslint-import-resolver-typescript": "^4.4.4",
     "eslint-plugin-import": "^2.32.0",
     "fork-ts-checker-webpack-plugin": "^9.1.0",
+    "globals": "^17.5.0",
     "monaco-editor-webpack-plugin": "^7.1.1",
     "node-loader": "^2.1.0",
     "postcss-loader": "^8.2.0",
     "style-loader": "^4.0.0",
     "ts-loader": "^9.5.4",
-    "typescript": "~5.9.3"
+    "tsup": "^8.5.1",
+    "tsx": "^4.21.0",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.59.0"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
+    "@inquirer/prompts": "^8.4.2",
     "@monaco-editor/react": "^4.7.0",
     "@reduxjs/toolkit": "^2.11.2",
     "@tailwindcss/postcss": "^4.2.0",
@@ -63,7 +82,7 @@
     "monaco-editor": "^0.55.1",
     "parse-curl": "^0.2.6",
     "postcss": "^8.5.6",
-    "protobufjs": "^8.0.0",
+    "protobufjs": "^8.0.1",
     "react": "^19.2.4",
     "react-data-table-component": "^7.7.0",
     "react-dom": "^19.2.4",

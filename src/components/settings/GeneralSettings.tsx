@@ -99,7 +99,7 @@ export function GeneralSettings() {
       </p>
 
       <div className="flex gap-3">
-        <Button buttonType={ButtonType.SECONDARY} className="flex-1" onClick={handleExportProject}>
+        <Button buttonType={ButtonType.PRIMARY} className="flex-1" onClick={handleExportProject}>
           Export Project
         </Button>
         <Button buttonType={ButtonType.SECONDARY} className="flex-1" onClick={handleImportProject}>

@@ -4,6 +4,7 @@ import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { selectOpenSettingsModal } from '../../store/selectors';
 import { uiActions } from '../../store/slices/uiSlice';
 import { IconButton } from '../buttons/IconButton';
+import { CliSettings } from '../settings/CliSettings';
 import { GeneralSettings } from '../settings/GeneralSettings';
 import { MappingSettings } from '../settings/MappingSettings';
 import { SecurityTestsSettings } from '../settings/SecurityTestsSettings';
@@ -47,15 +48,7 @@ const settingsTabs = [
   {
     name: 'CLI',
     icon: <CliIcon className="w-4 h-4" />,
-    component: (
-      <p className="m-0 text-sm">
-        <strong>Rentgen CLI is currently in active development.</strong>
-        <br />
-        <br />
-        The Rentgen CLI will provide automation-ready execution for teams integrating structural testing into CI/CD
-        workflows.
-      </p>
-    ),
+    component: <CliSettings />,
   },
 ];
 

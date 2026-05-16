@@ -25,7 +25,9 @@ export async function loadProtoSchema(file: File): Promise<protobuf.Root> {
     root = protobuf.parse(text).root;
     return root;
   } catch (error) {
-    throw new Error(`Failed to load protobuf schema: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(`Failed to load protobuf schema: ${error instanceof Error ? error.message : 'Unknown error'}`, {
+      cause: error,
+    });
   }
 }
 
@@ -41,7 +43,9 @@ export function encodeMessage(path: string, data: unknown): Uint8Array {
 
     return type.encode(type.fromObject(data)).finish();
   } catch (error) {
-    throw new Error(`Failed to encode message: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(`Failed to encode message: ${error instanceof Error ? error.message : 'Unknown error'}`, {
+      cause: error,
+    });
   }
 }
 
@@ -63,7 +67,9 @@ export function decodeMessage(path: string, buffer: Uint8Array): Record<string, 
       objects: true,
     }) as Record<string, unknown>;
   } catch (error) {
-    throw new Error(`Failed to decode message: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(`Failed to decode message: ${error instanceof Error ? error.message : 'Unknown error'}`, {
+      cause: error,
+    });
   }
 }
 

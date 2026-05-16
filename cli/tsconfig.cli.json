@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "strict": true,
+    "outDir": "../dist/cli",
+    "rootDir": "..",
+    "baseUrl": "..",
+    "paths": {
+      "shared/*": ["shared/*"]
+    },
+    "declaration": false,
+    "sourceMap": true
+  },
+  "include": ["**/*.ts", "../shared/**/*.ts"],
+  "exclude": ["node_modules"]
+}

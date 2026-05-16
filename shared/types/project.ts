@@ -1,15 +1,15 @@
-import { DynamicVariable, PostmanCollection } from './';
-import { HistoryEntry } from './history';
-import { SettingsState } from '../store/slices/settingsSlice';
-import { Environment } from './environment';
+import { PostmanCollection } from './postman';
+import { DynamicVariable, Environment } from './environment';
 
-/** Data payload inside a .rentgen export file */
+/** Data payload inside a .rentgen export file. `history` and `settings`
+ *  are opaque to shared consumers (the CLI does not interpret them). The
+ *  renderer narrows them at dispatch sites via `as` casts. */
 export interface ProjectData {
   collection: PostmanCollection;
   environments: Environment[];
   dynamicVariables: DynamicVariable[];
-  history: HistoryEntry[];
-  settings: SettingsState;
+  history: unknown[];
+  settings: Record<string, unknown>;
 }
 
 /** Metadata header of a .rentgen export file */
