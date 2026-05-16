@@ -13,18 +13,13 @@ import { DataType, DynamicVariable, Environment, EnvironmentVariable } from '../
 import { generateEnvironmentId } from '../../utils';
 import { findRequestWithFolder } from '../../utils/collection';
 import { extractMultipleDynamicVariablesFromResponse } from '../../utils/dynamicVariable';
+import { useTranslation } from 'react-i18next';
 import Button, { ButtonType } from '../buttons/Button';
 import Input from '../inputs/Input';
 import Select, { SelectOption } from '../inputs/Select';
 import Panel from '../panels/Panel';
 
 const COLOR_OPTIONS = ['#EF4444', '#F97316', '#EAB308', '#22C55E', '#3B82F6', '#8B5CF6', '#EC4899', '#6B7280'];
-
-const valueOptions: SelectOption<DataType>[] = [
-  { value: 'randomEmail', label: 'Random email' },
-  { value: 'randomInt', label: 'Random integer' },
-  { value: 'randomString', label: 'Random string' },
-];
 
 interface Props {
   environment: Environment | null;
@@ -34,6 +29,13 @@ interface Props {
 
 export default function EnvironmentEditor({ environment, isNew, onSave }: Props) {
   const dispatch = useAppDispatch();
+  const { t } = useTranslation();
+
+  const valueOptions: SelectOption<DataType>[] = [
+    { value: 'randomEmail', label: t('environment.randomEmail') },
+    { value: 'randomInt', label: t('environment.randomInteger') },
+    { value: 'randomString', label: t('environment.randomString') },
+  ];
   const collection = useAppSelector(selectCollectionData);
   const allDynamicVariables = useAppSelector(selectDynamicVariables);
   const selectedEnvironmentId = useAppSelector(selectSelectedEnvironmentId);
@@ -95,7 +97,7 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
       const nonEmptyVariables = variables.filter((v) => v.key.trim() !== '');
       onSave({
         id: environment.id,
-        title: title.trim() || 'Untitled',
+        title: title.trim() || t('environment.untitled'),
         color,
         variables: nonEmptyVariables,
       });
@@ -155,7 +157,7 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
 
     const savedEnvironment: Environment = {
       id: environment?.id || generateEnvironmentId(),
-      title: title.trim() || 'Untitled',
+      title: title.trim() || t('environment.untitled'),
       color,
       variables: nonEmptyVariables,
     };
@@ -253,14 +255,14 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
   }, [dynamicVariables, collection, dispatch]);
 
   return (
-    <Panel title={isNew ? 'New Environment' : 'Edit Environment'}>
+    <Panel title={isNew ? t('environment.newEnvironment') : t('environment.editEnvironment')}>
       <div className="p-4 border-t border-border dark:border-dark-body">
         {/* Title Input */}
         <div className="mb-4">
-          <label className="block mb-1 font-bold text-sm">Environment Name</label>
+          <label className="block mb-1 font-bold text-sm">{t('environment.environmentName')}</label>
           <Input
             className="w-full dark:bg-dark-body"
-            placeholder="e.g., Production, Staging, Local"
+            placeholder={t('environment.environmentNamePlaceholder')}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
           />
@@ -268,7 +270,7 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
 
         {/* Color Picker */}
         <div className="mb-4">
-          <label className="block mb-1 font-bold text-sm">Color</label>
+          <label className="block mb-1 font-bold text-sm">{t('environment.color')}</label>
           <div className="flex items-center gap-2">
             {COLOR_OPTIONS.map((c) => (
               <button
@@ -294,19 +296,19 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
 
         {/* Variables Table */}
         <div className="mb-4">
-          <label className="block mb-1 font-bold text-sm">Variables</label>
+          <label className="block mb-1 font-bold text-sm">{t('environment.variables')}</label>
           <div className="border border-border dark:border-dark-body rounded-md overflow-hidden">
             <DataTable
               className="rounded-none!"
               columns={[
                 {
-                  name: 'Variable Name',
+                  name: t('environment.variableName'),
                   grow: 0,
                   width: nameColumnWidth,
                   cell: (row) => (
                     <Input
                       className="w-full border-0 bg-transparent"
-                      placeholder="Add variable"
+                      placeholder={t('environment.addVariable')}
                       title={row.key}
                       value={row.key}
                       onChange={(e) =>
@@ -318,7 +320,7 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
                   ),
                 },
                 {
-                  name: 'Value',
+                  name: t('environment.value'),
                   grow: 3,
                   cell: (row) => {
                     if (row.type === 'static')
@@ -334,7 +336,7 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
                           isCreatable={true}
                           menuPosition="fixed"
                           options={valueOptions}
-                          placeholder="value"
+                          placeholder={t('environment.value')}
                           value={
                             valueOptions.find((option) => option.value == (row as EnvironmentVariable).value) || {
                               value: (row as EnvironmentVariable).value,
@@ -366,7 +368,7 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
                       <button
                         className="p-1 hover:bg-body dark:hover:bg-dark-body rounded text-text-secondary hover:text-text dark:text-dark-text-secondary dark:hover:text-dark-text"
                         onClick={() => handleRefreshDynamicVariable(row as DynamicVariable)}
-                        title="Refresh value"
+                        title={t('environment.refreshValue')}
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path
@@ -440,7 +442,7 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
             {dynamicVariables.length > 0 && (
               <div className="flex justify-end p-2 border-t border-border dark:border-dark-body bg-body dark:bg-dark-body">
                 <Button buttonType={ButtonType.SECONDARY} onClick={handleRefreshAllDynamicVariables}>
-                  Refresh All
+                  {t('environment.refreshAll')}
                 </Button>
               </div>
             )}
@@ -450,14 +452,14 @@ export default function EnvironmentEditor({ environment, isNew, onSave }: Props)
         {/* Action Buttons - only show Create for new environments */}
         {isNew && (
           <div className="flex items-center justify-end gap-2">
-            <Button onClick={handleSave}>Create</Button>
+            <Button onClick={handleSave}>{t('common.create')}</Button>
           </div>
         )}
 
         {/* Saved indicator for existing environments */}
         {!isNew && saved && (
           <div className="flex items-center justify-end">
-            <span className="text-xs text-green-500">Saved</span>
+            <span className="text-xs text-green-500">{t('common.saved')}</span>
           </div>
         )}
       </div>

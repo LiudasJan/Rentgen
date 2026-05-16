@@ -8,6 +8,7 @@ import {
   useSensors,
 } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { useTranslation } from 'react-i18next';
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
 import { selectEnvironments } from '../../../store/selectors';
 import { environmentActions } from '../../../store/slices/environmentSlice';
@@ -18,6 +19,7 @@ import AddIcon from '../../../assets/icons/add-icon.svg';
 export default function EnvironmentPanel() {
   const dispatch = useAppDispatch();
   const environments = useAppSelector(selectEnvironments);
+  const { t } = useTranslation();
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -45,7 +47,9 @@ export default function EnvironmentPanel() {
         onClick={() => dispatch(environmentActions.startAddEnvironment())}
       >
         <AddIcon className="w-4 h-4 text-text-secondary dark:text-dark-text-secondary" />
-        <span className="text-xs text-text-secondary dark:text-dark-text-secondary">New Environment</span>
+        <span className="text-xs text-text-secondary dark:text-dark-text-secondary">
+          {t('environment.newEnvironment')}
+        </span>
       </div>
 
       {/* Environment List */}
@@ -61,7 +65,7 @@ export default function EnvironmentPanel() {
         </div>
       ) : (
         <div className="flex items-center justify-center h-full w-full p-0 text-xs text-text-secondary dark:text-dark-text-secondary">
-          No environments created
+          {t('environment.noEnvironmentsCreated')}
         </div>
       )}
     </>

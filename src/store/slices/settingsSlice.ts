@@ -1,4 +1,6 @@
 import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
+import i18n from '../../i18n';
+import { Language } from '../../i18n/languages';
 import { appConfig } from '../../constants/appConfig';
 import { Interval } from '../../types';
 
@@ -36,6 +38,7 @@ export interface SettingsState {
     };
   };
   theme: 'light' | 'dark';
+  language: Language;
 }
 
 export const initialState: SettingsState = {
@@ -76,6 +79,7 @@ export const initialState: SettingsState = {
     },
   },
   theme: 'light',
+  language: 'en',
 };
 
 export const loadSettings = createAsyncThunk('settings/load', async () => {
@@ -137,9 +141,14 @@ export const settingsSlice = createSlice({
       state.theme = action.payload;
       applyTheme(state);
     },
+    setLanguage: (state, action: PayloadAction<Language>) => {
+      state.language = action.payload;
+      i18n.changeLanguage(action.payload);
+    },
     replaceSettings: (state, action: PayloadAction<SettingsState>) => {
       Object.assign(state, action.payload);
       applyTheme(state);
+      if (action.payload.language) i18n.changeLanguage(action.payload.language);
     },
   },
   extraReducers: (builder) => {
@@ -147,7 +156,9 @@ export const settingsSlice = createSlice({
       state.cli = action.payload.cli;
       state.testEngine = { ...state.testEngine, ...action.payload.testEngine };
       state.theme = action.payload.theme;
+      state.language = action.payload.language || 'en';
 
+      if (action.payload.language) i18n.changeLanguage(action.payload.language);
       if (action.payload.theme === 'dark') document.documentElement.classList.add('dark');
     });
   },

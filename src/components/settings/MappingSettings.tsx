@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { appConfig } from '../../constants/appConfig';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { selectTestEngineConfiguration } from '../../store/selectors';
@@ -17,18 +18,19 @@ export function MappingSettings() {
   const enumConfiguration = testEngineConfiguration.enum;
   const numberConfiguration = testEngineConfiguration.number;
   const stringConfiguration = testEngineConfiguration.string;
+  const { t } = useTranslation();
 
   return (
     <div className="flex flex-col gap-4">
-      <h5 className="m-0 pb-1.5 border-b border-b-border dark:border-b-dark-border">Configuration</h5>
-      <p className="m-0 text-xs text-text-secondary">
-        Configure rules and limits for generating random test data values.
-      </p>
+      <h5 className="m-0 pb-1.5 border-b border-b-border dark:border-b-dark-border">
+        {t('settings.configuration.title')}
+      </h5>
+      <p className="m-0 text-xs text-text-secondary">{t('settings.configuration.description')}</p>
       <div className="flex flex-col border border-border dark:border-dark-border rounded-md divide-y divide-border dark:divide-dark-border overflow-hidden">
         <div className="flex flex-col gap-2 py-1.75 px-3 text-xs">
-          <label className="m-0 font-bold">Email</label>
+          <label className="m-0 font-bold">{t('settings.configuration.email')}</label>
           <div className="flex items-center justify-between">
-            <span>Domain</span>
+            <span>{t('settings.configuration.domain')}</span>
             <Input
               className="w-32 py-1.5"
               value={emailConfiguration.domain}
@@ -40,7 +42,7 @@ export function MappingSettings() {
             />
           </div>
           <div className="flex items-center justify-between">
-            <span>Random Email Length</span>
+            <span>{t('settings.configuration.randomEmailLength')}</span>
             <Input
               className="w-32 py-1.5"
               type="number"
@@ -57,9 +59,9 @@ export function MappingSettings() {
           </div>
         </div>
         <div className="flex flex-col gap-2 py-1.75 px-3 text-xs">
-          <label className="m-0 font-bold">Enum</label>
+          <label className="m-0 font-bold">{t('settings.configuration.enum')}</label>
           <div className="flex items-center justify-between">
-            <span>Enter all valid values separated by ","</span>
+            <span>{t('settings.configuration.enumDescription')}</span>
             <Input
               className="w-32 py-1.5"
               value={enumConfiguration}
@@ -68,9 +70,9 @@ export function MappingSettings() {
           </div>
         </div>
         <div className="flex flex-col gap-2 py-1.75 px-3 text-xs">
-          <label className="m-0 font-bold">Number</label>
+          <label className="m-0 font-bold">{t('settings.configuration.number')}</label>
           <div className="flex items-center justify-between">
-            <span>Minimum Value</span>
+            <span>{t('settings.configuration.minimumValue')}</span>
             <Input
               type="number"
               className="w-32 py-1.5"
@@ -87,7 +89,7 @@ export function MappingSettings() {
             />
           </div>
           <div className="flex items-center justify-between">
-            <span>Maximum Value</span>
+            <span>{t('settings.configuration.maximumValue')}</span>
             <Input
               type="number"
               className="w-32 py-1.5"
@@ -105,9 +107,9 @@ export function MappingSettings() {
           </div>
         </div>
         <div className="flex flex-col gap-2 py-1.75 px-3 text-xs">
-          <label className="m-0 font-bold">String</label>
+          <label className="m-0 font-bold">{t('settings.configuration.string')}</label>
           <div className="flex items-center justify-between">
-            <span>Maximum Value Length</span>
+            <span>{t('settings.configuration.maximumValueLength')}</span>
             <Input
               type="number"
               className="w-32 py-1.5"
@@ -124,9 +126,9 @@ export function MappingSettings() {
           </div>
         </div>
         <div className="flex flex-col gap-2 py-1.75 px-3 text-xs">
-          <label className="m-0 font-bold">Random Integer</label>
+          <label className="m-0 font-bold">{t('settings.configuration.randomInteger')}</label>
           <div className="flex items-center justify-between">
-            <span>Minimum Value</span>
+            <span>{t('settings.configuration.minimumValue')}</span>
             <Input
               type="number"
               className="w-32 py-1.5"
@@ -145,7 +147,7 @@ export function MappingSettings() {
             />
           </div>
           <div className="flex items-center justify-between">
-            <span>Maximum Value</span>
+            <span>{t('settings.configuration.maximumValue')}</span>
             <Input
               type="number"
               className="w-32 py-1.5"
@@ -167,9 +169,9 @@ export function MappingSettings() {
           </div>
         </div>
         <div className="flex flex-col gap-2 py-1.75 px-3 text-xs">
-          <label className="m-0 font-bold">Random String</label>
+          <label className="m-0 font-bold">{t('settings.configuration.randomString')}</label>
           <div className="flex items-center justify-between">
-            <span>Length</span>
+            <span>{t('settings.configuration.length')}</span>
             <Input
               type="number"
               className="w-32 py-1.5"

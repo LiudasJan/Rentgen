@@ -19,8 +19,8 @@ export function registerHttpHandlers(): void {
         validateStatus: () => true,
       });
       const responseTime = performance.now() - requestStartTime;
-      const contentType =
-        (response.headers && (response.headers['content-type'] || response.headers['Content-Type'])) || '';
+      const contentTypeRaw = response.headers && (response.headers['content-type'] || response.headers['Content-Type']);
+      const contentType = typeof contentTypeRaw === 'string' ? contentTypeRaw : '';
       const data = response.data;
       let responseBody: string;
 

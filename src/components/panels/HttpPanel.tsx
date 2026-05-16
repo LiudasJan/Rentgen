@@ -1,4 +1,5 @@
 import cn from 'classnames';
+import { useTranslation } from 'react-i18next';
 import { HttpRequest, HttpResponse } from '../../types';
 import { CopyButton } from '../buttons/CopyButton';
 import { JsonViewer } from '../viewers/JsonViewer';
@@ -9,12 +10,13 @@ interface Props extends PanelProps {
 }
 
 export function HttpPanel({ className, children, source, title, ...otherProps }: Props) {
+  const { t } = useTranslation();
   return (
     <div className={cn('relative flex flex-col gap-2.5', className)} {...otherProps}>
       <h4 className="m-0 text-text dark:text-dark-text">{title}</h4>
       {source && (
         <CopyButton className="absolute top-0 right-0" textToCopy={JSON.stringify(source, null, 2)}>
-          Copy
+          {t('common.copy')}
         </CopyButton>
       )}
       <div

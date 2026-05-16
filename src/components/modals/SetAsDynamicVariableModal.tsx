@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { selectDynamicVariables, selectEnvironments, selectSetAsDynamicVariableModal } from '../../store/selectors';
 import { uiActions } from '../../store/slices/uiSlice';
@@ -34,6 +35,7 @@ export default function SetAsDynamicVariableModal() {
   const [selectedEnvironment, setSelectedEnvironment] = useState<EnvironmentOption | null>(null);
   const [duplicateToOverwrite, setDuplicateToOverwrite] = useState<string | null>(null); // ID of dynamic var to overwrite
   const [error, setError] = useState('');
+  const { t } = useTranslation();
 
   const isEditing = !!modalState.editingVariableId;
 
@@ -47,16 +49,18 @@ export default function SetAsDynamicVariableModal() {
         setName(sanitizeToVariableName(modalState.initialSelector));
       }
       setSelector(modalState.initialSelector);
-      setSelectedEnvironment({ value: ALL_ENVIRONMENTS_VALUE, label: 'All Environments' });
+      setSelectedEnvironment({ value: ALL_ENVIRONMENTS_VALUE, label: t('modals.setDynamicVariable.allEnvironments') });
       setDuplicateToOverwrite(null);
       setError('');
     }
   }, [modalState.isOpen, modalState.initialSelector, modalState.editingVariableName]);
 
   const environmentOptions: EnvironmentOption[] = useMemo(() => {
-    const options: EnvironmentOption[] = [{ value: ALL_ENVIRONMENTS_VALUE, label: 'All Environments' }];
+    const options: EnvironmentOption[] = [
+      { value: ALL_ENVIRONMENTS_VALUE, label: t('modals.setDynamicVariable.allEnvironments') },
+    ];
     environments.forEach((env) => {
-      options.push({ value: env.id, label: env.title || 'Untitled Environment' });
+      options.push({ value: env.id, label: env.title || t('modals.setDynamicVariable.untitledEnvironment') });
     });
     return options;
   }, [environments]);
@@ -94,17 +98,17 @@ export default function SetAsDynamicVariableModal() {
 
     // Validation
     if (!sanitizedName) {
-      setError('Variable name is required');
+      setError(t('modals.setDynamicVariable.variableNameRequired'));
       return;
     }
 
     if (!sanitizedSelector) {
-      setError('Selector is required');
+      setError(t('modals.setDynamicVariable.selectorRequired'));
       return;
     }
 
     if (!selectedEnvironment) {
-      setError('Please select an environment');
+      setError(t('modals.setDynamicVariable.selectEnvironmentError'));
       return;
     }
 
@@ -170,14 +174,14 @@ export default function SetAsDynamicVariableModal() {
     <Modal isOpen={modalState.isOpen} onClose={handleClose}>
       <div className="flex flex-col gap-4 min-w-100">
         <h2 className="text-lg font-bold text-text dark:text-dark-text m-0">
-          {isEditing ? 'Edit Dynamic Variable' : 'Set as Dynamic Variable'}
+          {isEditing ? t('modals.setDynamicVariable.editTitle') : t('modals.setDynamicVariable.title')}
         </h2>
 
         {/* Variable Name */}
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-text dark:text-dark-text">Variable Name</label>
+          <label className="text-xs text-text dark:text-dark-text">{t('modals.setDynamicVariable.variableName')}</label>
           <Input
-            placeholder="variable_name"
+            placeholder={t('modals.setDynamicVariable.variableNamePlaceholder')}
             value={name}
             onChange={(e) => {
               setName(e.target.value);
@@ -192,7 +196,7 @@ export default function SetAsDynamicVariableModal() {
         <div className="flex flex-col gap-1">
           {modalState.initialValue && (
             <p className="text-xs text-text-secondary dark:text-dark-text-secondary m-0">
-              Preview: &quot;
+              {t('modals.setDynamicVariable.preview')} &quot;
               {modalState.initialValue.length > 50
                 ? modalState.initialValue.substring(0, 47) + '...'
                 : modalState.initialValue}
@@ -203,7 +207,7 @@ export default function SetAsDynamicVariableModal() {
 
         {/* Environment */}
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-text dark:text-dark-text">Environment</label>
+          <label className="text-xs text-text dark:text-dark-text">{t('modals.setDynamicVariable.environment')}</label>
           <Select
             options={environmentOptions}
             value={selectedEnvironment}
@@ -212,13 +216,15 @@ export default function SetAsDynamicVariableModal() {
               setError('');
               setDuplicateToOverwrite(null);
             }}
-            placeholder="Select environment..."
+            placeholder={t('modals.setDynamicVariable.selectEnvironment')}
           />
         </div>
 
         {/* Linked Request (read-only) */}
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-text dark:text-dark-text">Linked Request</label>
+          <label className="text-xs text-text dark:text-dark-text">
+            {t('modals.setDynamicVariable.linkedRequest')}
+          </label>
           <div className="px-3 py-2 bg-body dark:bg-dark-body rounded-md text-sm text-text-secondary dark:text-dark-text-secondary">
             <span className="mr-1">📁</span>
             {modalState.collectionName} → {modalState.requestName}
@@ -229,16 +235,20 @@ export default function SetAsDynamicVariableModal() {
 
         {duplicateToOverwrite && (
           <p className="text-xs text-yellow-600 dark:text-yellow-400 m-0">
-            A variable with this name already exists. It will be overwritten.
+            {t('modals.setDynamicVariable.duplicateWarning')}
           </p>
         )}
 
         <div className="flex justify-end gap-2 mt-2">
           <Button buttonType={ButtonType.SECONDARY} onClick={handleClose}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button onClick={handleSave}>
-            {duplicateToOverwrite ? 'Overwrite' : isEditing ? 'Update Variable' : 'Save Variable'}
+            {duplicateToOverwrite
+              ? t('common.overwrite')
+              : isEditing
+                ? t('modals.setDynamicVariable.updateVariable')
+                : t('modals.setDynamicVariable.saveVariable')}
           </Button>
         </div>
       </div>

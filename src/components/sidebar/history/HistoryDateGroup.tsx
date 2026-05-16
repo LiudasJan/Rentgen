@@ -1,5 +1,6 @@
 import cn from 'classnames';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { HistoryEntry } from '../../../types/history';
 import HistoryItem from './HistoryItem';
 
@@ -13,8 +14,10 @@ interface Props {
 }
 
 export default function HistoryDateGroup({ label, entries, searchTerm, isSearching }: Props) {
+  const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(true);
   const effectiveExpanded = isSearching || isExpanded;
+  const displayLabel = label === 'today' ? t('history.today') : label === 'yesterday' ? t('history.yesterday') : label;
 
   return (
     <>
@@ -27,7 +30,7 @@ export default function HistoryDateGroup({ label, entries, searchTerm, isSearchi
             'rotate-90': effectiveExpanded,
           })}
         />
-        <span className="text-xs font-bold truncate">{label}</span>
+        <span className="text-xs font-bold truncate">{displayLabel}</span>
         <span className="text-xs text-text-secondary dark:text-dark-text-secondary">{entries.length}</span>
       </div>
 

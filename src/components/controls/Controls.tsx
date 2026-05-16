@@ -1,5 +1,6 @@
 import cn from 'classnames';
 import { HTMLAttributes } from 'react';
+import { useTranslation } from 'react-i18next';
 import Button, { ButtonSize } from '../buttons/Button';
 import Loader from '../loaders/Loader';
 
@@ -9,6 +10,7 @@ interface Props extends HTMLAttributes<HTMLDivElement> {
 }
 
 export function Controls({ className, children, isRunning, executeTest, ...otherProps }: Props) {
+  const { t } = useTranslation();
   return (
     <div className={cn('flex items-end gap-1.5', className)} {...otherProps}>
       {children}
@@ -21,7 +23,7 @@ export function Controls({ className, children, isRunning, executeTest, ...other
         {isRunning ? (
           <Loader className="h-3 w-3 my-0.5 [&>span]:border-2! [&>span]:border-white! [&>span]:border-b-button-primary!" />
         ) : (
-          'Run'
+          t('common.run')
         )}
       </Button>
     </div>

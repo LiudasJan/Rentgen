@@ -1,4 +1,5 @@
 import { createContext, PropsWithChildren, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { selectCollectionData, selectSelectedRequestId } from '../../store/selectors';
 import { uiActions } from '../../store/slices/uiSlice';
@@ -31,6 +32,7 @@ export default function GlobalContextMenuProvider({ children }: PropsWithChildre
   const dispatch = useAppDispatch();
   const collection = useAppSelector(selectCollectionData);
   const selectedRequestId = useAppSelector(selectSelectedRequestId);
+  const { t } = useTranslation();
   const [htmlElement, setHtmlElement] = useState<HTMLElement>(null);
   const [menuState, setMenuState] = useState<MenuState>({
     isOpen: false,
@@ -151,16 +153,18 @@ export default function GlobalContextMenuProvider({ children }: PropsWithChildre
       {children}
       <ContextMenu isOpen={menuState.isOpen} position={menuState.position} onClose={closeMenu}>
         {htmlElement && isInputOrTextarea(htmlElement) && (
-          <ContextMenuItem label="Cut" onClick={handleCut} disabled={!hasSelection} />
+          <ContextMenuItem label={t('common.cut')} onClick={handleCut} disabled={!hasSelection} />
         )}
-        <ContextMenuItem label="Copy" onClick={handleCopy} disabled={!hasSelection} />
-        {htmlElement && isInputOrTextarea(htmlElement) && <ContextMenuItem label="Paste" onClick={handlePaste} />}
+        <ContextMenuItem label={t('common.copy')} onClick={handleCopy} disabled={!hasSelection} />
+        {htmlElement && isInputOrTextarea(htmlElement) && (
+          <ContextMenuItem label={t('common.paste')} onClick={handlePaste} />
+        )}
         {responsePanelContext && (
           <ContextMenuItem
-            label="Set as Variable"
+            label={t('contextMenu.setAsVariable')}
             onClick={handleSetAsVariable}
             disabled={!hasSelection || !currentRequestWithFolder}
-            title={!currentRequestWithFolder ? 'Save request to collection first' : undefined}
+            title={!currentRequestWithFolder ? t('contextMenu.saveRequestFirst') : undefined}
             divider
           />
         )}

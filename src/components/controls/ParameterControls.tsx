@@ -1,5 +1,6 @@
 import cn from 'classnames';
 import { ChangeEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAppSelector } from '../../store/hooks';
 import { selectTestEngineConfiguration } from '../../store/selectors';
 import { isParameterTestSkipped } from '../../tests';
@@ -15,22 +16,6 @@ import ClearCrossIcon from '../../assets/icons/clear-cross-icon.svg';
 const MAX_INT32 = 2147483647;
 const TRAILING_ZEROS_PATTERN = /^-?\d+[.,]0+$/;
 
-const parameterOptions: SelectOption<DataType>[] = [
-  { value: 'do-not-test', label: 'Do not test' },
-  { value: 'randomEmail', label: 'Random email' },
-  { value: 'randomInt', label: 'Random integer' },
-  { value: 'randomString', label: 'Random string' },
-  { value: 'boolean', label: 'Boolean' },
-  { value: 'currency', label: 'Currency' },
-  { value: 'date_yyyy_mm_dd', label: 'Date (YYYY-MM-DD)' },
-  { value: 'email', label: 'Email' },
-  { value: 'enum', label: 'Enum' },
-  { value: 'number', label: 'Number' },
-  { value: 'phone', label: 'Phone' },
-  { value: 'string', label: 'String' },
-  { value: 'url', label: 'Url' },
-];
-
 interface Props {
   dynamicValue: DynamicValue;
   onChange: (value: DynamicValue) => void;
@@ -38,6 +23,23 @@ interface Props {
 
 export function ParameterControls({ dynamicValue, onChange }: Props) {
   const testEngineConfiguration = useAppSelector(selectTestEngineConfiguration);
+  const { t } = useTranslation();
+
+  const parameterOptions: SelectOption<DataType>[] = [
+    { value: 'do-not-test', label: t('parameterTypes.doNotTest') },
+    { value: 'randomEmail', label: t('parameterTypes.randomEmail') },
+    { value: 'randomInt', label: t('parameterTypes.randomInteger') },
+    { value: 'randomString', label: t('parameterTypes.randomString') },
+    { value: 'boolean', label: t('parameterTypes.boolean') },
+    { value: 'currency', label: t('parameterTypes.currency') },
+    { value: 'date_yyyy_mm_dd', label: t('parameterTypes.dateYYYYMMDD') },
+    { value: 'email', label: t('parameterTypes.email') },
+    { value: 'enum', label: t('parameterTypes.enum') },
+    { value: 'number', label: t('parameterTypes.number') },
+    { value: 'phone', label: t('parameterTypes.phone') },
+    { value: 'string', label: t('parameterTypes.string') },
+    { value: 'url', label: t('parameterTypes.url') },
+  ];
   const { mandatory, type, value } = dynamicValue;
   const inputClassName = 'w-full p-[5px] rounded-none dark:border-border/20';
 
@@ -56,7 +58,7 @@ export function ParameterControls({ dynamicValue, onChange }: Props) {
           <div className="flex items-center gap-2">
             <Input
               className={inputClassName}
-              placeholder="Min"
+              placeholder={t('controls.minPlaceholder')}
               step={0.01}
               type="number"
               value={normalizeDecimal((value as Interval).min) ?? ''}
@@ -73,7 +75,7 @@ export function ParameterControls({ dynamicValue, onChange }: Props) {
             />
             <Input
               className={inputClassName}
-              placeholder="Max"
+              placeholder={t('controls.maxPlaceholder')}
               step={0.01}
               type="number"
               value={normalizeDecimal((value as Interval).max) ?? ''}
@@ -116,11 +118,7 @@ export function ParameterControls({ dynamicValue, onChange }: Props) {
           <Toggle
             checked={mandatory}
             disabled={isParameterTestSkipped(type)}
-            title={
-              !isParameterTestSkipped(type)
-                ? 'Enabled = Mandatory → Rentgen generates tests based on this setting'
-                : undefined
-            }
+            title={!isParameterTestSkipped(type) ? t('controls.mandatoryToggle') : undefined}
             onChange={(e) => onChange({ ...dynamicValue, mandatory: e.target.checked })}
           />
         </div>
@@ -132,13 +130,13 @@ export function ParameterControls({ dynamicValue, onChange }: Props) {
     let label: string | null = null;
     switch (type) {
       case 'enum':
-        label = 'Enter all valid values separated by ","';
+        label = t('controls.enumLabel');
         break;
       case 'number':
-        label = 'Set Min/Max range for boundary test. 0 - integer, 0.00 - decimal';
+        label = t('controls.numberLabel');
         break;
       case 'string':
-        label = 'Value max length';
+        label = t('controls.stringLabel');
         break;
     }
 
