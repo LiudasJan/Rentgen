@@ -1,5 +1,6 @@
 import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import i18n from '../../i18n';
+import { Language } from '../../i18n/languages';
 import { appConfig } from '../../constants/appConfig';
 import { Interval } from '../../types';
 
@@ -37,7 +38,7 @@ export interface SettingsState {
     };
   };
   theme: 'light' | 'dark';
-  language: 'en' | 'lt' | 'pl' | 'uk' | 'es';
+  language: Language;
 }
 
 export const initialState: SettingsState = {
@@ -140,7 +141,7 @@ export const settingsSlice = createSlice({
       state.theme = action.payload;
       applyTheme(state);
     },
-    setLanguage: (state, action: PayloadAction<'en' | 'lt' | 'pl' | 'uk' | 'es'>) => {
+    setLanguage: (state, action: PayloadAction<Language>) => {
       state.language = action.payload;
       i18n.changeLanguage(action.payload);
     },
