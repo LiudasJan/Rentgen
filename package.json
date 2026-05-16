@@ -13,10 +13,15 @@
     "make": "electron-forge make",
     "publish": "electron-forge publish",
     "lint": "eslint .",
+    "check:i18n": "tsx scripts/check-i18n.ts",
     "build:cli": "tsup cli/index.ts --format cjs --target node22 --out-dir dist/cli",
     "build:cli:bin": "node scripts/build-cli-bin.cjs",
     "build:cli:bundle": "tsup --config cli/tsup.bundle.config.ts",
-    "dev:cli": "tsx cli/index.ts"
+    "dev:cli": "tsx cli/index.ts",
+    "prepare": "simple-git-hooks"
+  },
+  "simple-git-hooks": {
+    "pre-push": "npm run lint && npm run check:i18n"
   },
   "keywords": [],
   "author": {
@@ -60,6 +65,7 @@
     "monaco-editor-webpack-plugin": "^7.1.1",
     "node-loader": "^2.1.0",
     "postcss-loader": "^8.2.0",
+    "simple-git-hooks": "^2.13.1",
     "style-loader": "^4.0.0",
     "ts-loader": "^9.5.4",
     "tsup": "^8.5.1",
